@@ -213,11 +213,11 @@ private fun ExpandedPlayerContent(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ExpandedPlayerToolbar(onCollapse = onCollapse)
-        state.errorMessage?.let { errorMsg ->
+        state.error?.takeIf { it.isPlaybackError }?.let { playerError ->
             Spacer(modifier = Modifier.height(8.dp))
             ErrorBanner(
-                title = stringResource(R.string.error_playback_title),
-                subtitle = errorMsg,
+                title = playerError.title,
+                subtitle = playerError.message,
                 onRetry = onClearError,
             )
         }

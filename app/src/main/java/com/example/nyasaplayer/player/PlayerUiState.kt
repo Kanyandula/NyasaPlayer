@@ -10,6 +10,12 @@ sealed interface PlayerMode {
 
 enum class RepeatMode { Off, All, One }
 
+data class PlayerError(
+    val title: String,
+    val message: String,
+    val isPlaybackError: Boolean = true,
+)
+
 data class PlayerUiState(
     val playerMode: PlayerMode = PlayerMode.Hidden,
     val currentSong: Song? = null,
@@ -22,5 +28,5 @@ data class PlayerUiState(
     val repeatMode: RepeatMode = RepeatMode.Off,
     val isCurrentSongLiked: Boolean = false,
     val isShuffled: Boolean = false,
-    val errorMessage: String? = null,
+    val error: PlayerError? = null,
 )

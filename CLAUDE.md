@@ -97,17 +97,16 @@ Requires `app/google-services.json`. Firebase console must have:
 
 ## Known Gaps
 
-- **No `CoroutineExceptionHandler`** in ViewModels — all error handling relies on local try/catch and flow `.catch {}` operators
-- **Player error display is basic** — `ExpandedPlayer` shows an `ErrorBanner` on playback errors and `MiniPlayer` tints its progress bar red; `restorePlaybackState()` failures are silently swallowed (best-effort)
-- **Silent failures** — profile creation, recently-played logging, and like-state observation fail silently with no user feedback
 - No Room/local database — all data from Firebase with implicit Firestore offline cache only
 - Tests are stub-only — no real unit or integration tests yet
 - README "Not Yet Implemented" section tracks planned features (playlists, downloads, queue management, artist/album detail screens, etc.)
 
 ### Error handling that IS in place
 
+- **`CoroutineExceptionHandler`** — all 7 ViewModels have a `private val exceptionHandler` CEH as a safety net for uncaught exceptions in `viewModelScope.launch`; maps errors to the ViewModel's error state (existing try/catch and `.catch {}` remain as primary handling)
 - **`NetworkMonitor`** (`util/`) — singleton using `ConnectivityManager` exposing `isOnline: StateFlow<Boolean>`; used by ForYou, Library, Profile, and Search ViewModels
 - **`ErrorMessages.kt`** — `isNetworkError()` extension distinguishes `FirebaseNetworkException`/`UnknownHostException` from other errors
 - **All main screens have error UI**: ForYouScreen, LibraryScreen, SearchScreen show full-screen `NyasaErrorScreen` with retry; ProfileScreen shows `ErrorBanner` with retry while still displaying cached data; auth screens show inline error text
-- **Player error UI**: `ExpandedPlayer` shows `ErrorBanner` below toolbar with dismiss/retry; `MiniPlayer` progress bar turns red (`NyasaError`); when player is not expanded, errors show via `Snackbar` in `NyasaPlayerApp`; `PlayerViewModel.restorePlaybackState()` is wrapped in try/catch for best-effort recovery
+- **Player error UI**: `PlayerError` data class (title, message, isPlaybackError) routes errors — playback errors show `ErrorBanner` in `ExpandedPlayer`; non-playback errors (sync, restore) always show via `Snackbar` in `NyasaPlayerApp`; `MiniPlayer` progress bar turns red on any error; `toggleLike()` shows a Snackbar on failure alongside optimistic rollback; `restorePlaybackState()` shows a Snackbar on failure
+- **Intentionally silent failures**: profile creation during auth, recently-played logging, and like-state observation fail silently (non-critical, Firestore offline cache retries profile creation)
 - **Repository error handling**: Read suspend functions (`getSongsByIds`, `getArtistById`, `getPlaybackState`) catch exceptions and return safe defaults; write operations throw and are caught by their callers (PlayerViewModel, PlaybackStatePersistence, AuthViewModel, SignUpViewModel all have try/catch)

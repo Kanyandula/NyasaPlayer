@@ -116,10 +116,15 @@ com.example.nyasaplayer/
 - Sign Out functionality
 
 ### Music Player
-- **MiniPlayer**: Collapsed bar at bottom showing current song, play/pause, artwork
-- **ExpandedPlayer**: Full-screen with large artwork (animated scale on play/pause), song info, play/pause/skip controls, styled progress slider with time labels
-- ExoPlayer (Media3) integration for actual audio streaming
-- Play/pause, next, previous controls
+- **MiniPlayer**: Collapsed bar at bottom showing current song, play/pause/skip controls, artwork; swipe-to-dismiss; progress bar (turns red on error)
+- **ExpandedPlayer**: Full-screen with large artwork (animated scale on play/pause), song info, like button, play/pause/skip/shuffle/repeat controls, styled progress slider with time labels; drag-down-to-collapse gesture; error banner for playback errors
+- **Playback engine**: ExoPlayer (Media3) via `PlayerManager` wrapper for audio streaming
+- **Queue management**: `PlaybackQueueManager` handles queue state, skip next/previous, shuffle (keeps current song at index 0), repeat modes (Off/All/One)
+- **Like/unlike**: Optimistic UI toggle with Firestore persistence; real-time like-state observation via snapshot listener
+- **Background playback**: `PlaybackService` foreground service keeps audio playing when app is backgrounded
+- **State persistence**: `PlaybackStatePersistence` saves/restores queue, position, and repeat mode to disk across app restarts
+- **Recently played**: Logged per song play, displayed in Home screen
+- **Error handling**: `PlayerError` model routes playback errors to ErrorBanner in ExpandedPlayer and non-playback errors (sync, restore) to Snackbar; `CoroutineExceptionHandler` safety net in all ViewModels
 
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)
@@ -137,15 +142,13 @@ com.example.nyasaplayer/
 
 | Feature | Status |
 |---------|--------|
-| Actual "Liked Songs" persistence | Songs are loaded from Firestore but like/unlike toggling is not wired |
-| Shuffle / repeat modes | UI buttons exist but no shuffle/repeat logic in PlayerViewModel |
 | Audio quality settings | Profile menu item present, no settings screen |
 | Playlist creation / management | Not started |
 | Artist / album detail screens | Not started |
 | Download / offline playback | Not started |
 | Notifications (push) | Not started |
 | "See All" section expansion | Headers have chevrons but no navigation |
-| Queue management | Not started |
+| Queue management UI | Queue is managed internally but no user-facing screen to view/reorder |
 | Search history | Not started |
 | Apple Sign-In | Button placeholder only |
 | User profile editing | Not started |

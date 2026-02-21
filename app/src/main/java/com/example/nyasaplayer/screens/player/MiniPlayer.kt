@@ -119,7 +119,7 @@ private fun MiniPlayerContent(
                     .fillMaxWidth()
                     .height(2.dp)
                     .padding(horizontal = 12.dp),
-                color = if (state.errorMessage != null) NyasaError else NyasaPrimary,
+                color = if (state.error != null) NyasaError else NyasaPrimary,
                 trackColor = NyasaSurface4,
             )
             Spacer(modifier = Modifier.height(4.dp))

@@ -9,11 +9,13 @@ import com.example.nyasaplayer.models.Song
 import com.example.nyasaplayer.util.NetworkMonitor
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -36,6 +38,16 @@ class LibraryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                errorMessage = throwable.message ?: "An unexpected error occurred",
+                isNetworkError = (throwable as? Exception)?.isNetworkError() == true,
+            )
+        }
+    }
+
     init {
         loadLikedSongs()
     }
@@ -47,7 +59,7 @@ class LibraryViewModel @Inject constructor(
 
     private fun loadLikedSongs() {
         val userId = authRepository.currentUser?.uid ?: return
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             if (!networkMonitor.isOnline.value) {
                 _uiState.value = LibraryUiState(
                     isLoading = false,

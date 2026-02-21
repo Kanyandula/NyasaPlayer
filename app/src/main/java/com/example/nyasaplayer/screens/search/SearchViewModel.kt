@@ -9,6 +9,7 @@ import com.example.nyasaplayer.models.Song
 import com.example.nyasaplayer.util.NetworkMonitor
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +41,16 @@ class SearchViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                errorMessage = throwable.message ?: "An unexpected error occurred",
+                isNetworkError = (throwable as? Exception)?.isNetworkError() == true,
+            )
+        }
+    }
+
     init {
         loadData()
     }
@@ -50,7 +61,7 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun loadData() {
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             if (!networkMonitor.isOnline.value) {
                 _uiState.value = SearchUiState(
                     isLoading = false,

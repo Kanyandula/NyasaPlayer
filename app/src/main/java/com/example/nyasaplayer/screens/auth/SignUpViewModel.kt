@@ -8,6 +8,7 @@ import com.example.nyasaplayer.data.UserRepository
 import com.example.nyasaplayer.models.UserProfile
 import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +37,15 @@ class SignUpViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SignUpUiState())
     val uiState: StateFlow<SignUpUiState> = _uiState.asStateFlow()
 
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                errorMessage = throwable.message ?: "An unexpected error occurred",
+            )
+        }
+    }
+
     fun onEmailChange(email: String) {
         _uiState.update { it.copy(email = email, errorMessage = null) }
     }
@@ -62,7 +72,7 @@ class SignUpViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "Password must be at least $MinPasswordLength characters") }
             return
         }
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = authRepository.signUpWithEmail(state.email, state.password)) {
                 is AuthResult.Success -> {

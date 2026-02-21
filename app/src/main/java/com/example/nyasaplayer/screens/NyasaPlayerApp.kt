@@ -44,10 +44,10 @@ fun NyasaPlayerApp(
         playerViewModel.restorePlaybackState()
     }
 
-    LaunchedEffect(playerState.errorMessage, playerState.playerMode) {
-        val message = playerState.errorMessage ?: return@LaunchedEffect
-        if (playerState.playerMode != PlayerMode.Expanded) {
-            snackbarHostState.showSnackbar(message)
+    LaunchedEffect(playerState.error, playerState.playerMode) {
+        val error = playerState.error ?: return@LaunchedEffect
+        if (playerState.playerMode != PlayerMode.Expanded || !error.isPlaybackError) {
+            snackbarHostState.showSnackbar(error.message)
             playerViewModel.clearError()
         }
     }

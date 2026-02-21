@@ -9,6 +9,7 @@ import com.example.nyasaplayer.data.AuthRepository
 import com.example.nyasaplayer.data.UserRepository
 import com.example.nyasaplayer.models.Song
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,17 @@ class PlayerViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        _uiState.update {
+            it.copy(
+                error = PlayerError(
+                    title = "Playback Error",
+                    message = throwable.message ?: "An unexpected error occurred",
+                ),
+            )
+        }
+    }
 
     private var likeObserverJob: Job? = null
 
@@ -174,7 +186,7 @@ class PlayerViewModel @Inject constructor(
         val wasLiked = _uiState.value.isCurrentSongLiked
         // Optimistic UI update to prevent double-tap flicker
         _uiState.update { it.copy(isCurrentSongLiked = !wasLiked) }
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             try {
                 if (wasLiked) {
                     userRepository.unlikeSong(uid, mediaId)
@@ -183,19 +195,30 @@ class PlayerViewModel @Inject constructor(
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
-                _uiState.update { it.copy(isCurrentSongLiked = wasLiked) }
+            } catch (
+                @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
+            ) {
+                _uiState.update {
+                    it.copy(
+                        isCurrentSongLiked = wasLiked,
+                        error = PlayerError(
+                            title = "Sync Error",
+                            message = "Couldn't update like status",
+                            isPlaybackError = false,
+                        ),
+                    )
+                }
             }
         }
     }
 
     fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
+        _uiState.update { it.copy(error = null) }
     }
 
     private fun logRecentlyPlayedSafe(mediaId: String) {
         userId?.let { uid ->
-            viewModelScope.launch {
+            viewModelScope.launch(exceptionHandler) {
                 try {
                     userRepository.logRecentlyPlayed(uid, mediaId)
                 } catch (e: CancellationException) {
@@ -210,7 +233,7 @@ class PlayerViewModel @Inject constructor(
     private fun observeCurrentSongLikeState(mediaId: String) {
         likeObserverJob?.cancel()
         val uid = userId ?: return
-        likeObserverJob = viewModelScope.launch {
+        likeObserverJob = viewModelScope.launch(exceptionHandler) {
             try {
                 userRepository.isLiked(uid, mediaId).collect { liked ->
                     _uiState.update { it.copy(isCurrentSongLiked = liked) }
@@ -226,7 +249,7 @@ class PlayerViewModel @Inject constructor(
     // ── Playback State Persistence ──
 
     fun restorePlaybackState() {
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             try {
                 val restored = persistence.restore() ?: return@launch
 
@@ -249,8 +272,18 @@ class PlayerViewModel @Inject constructor(
                 observeCurrentSongLikeState(restored.song.mediaId)
             } catch (e: CancellationException) {
                 throw e
-            } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
-                // Silent fail — restoration is best-effort
+            } catch (
+                @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
+            ) {
+                _uiState.update {
+                    it.copy(
+                        error = PlayerError(
+                            title = "Restore Error",
+                            message = "Couldn't restore previous session",
+                            isPlaybackError = false,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -284,12 +317,17 @@ class PlayerViewModel @Inject constructor(
 
             override fun onPlayerError(error: PlaybackException) {
                 _uiState.update {
-                    it.copy(errorMessage = error.message ?: "Playback error")
+                    it.copy(
+                        error = PlayerError(
+                            title = "Playback Error",
+                            message = error.message ?: "Playback error",
+                        ),
+                    )
                 }
             }
         })
 
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             while (true) {
                 delay(PositionUpdateIntervalMs)
                 if (playerManager.isPlaying || _uiState.value.playerMode != PlayerMode.Hidden) {

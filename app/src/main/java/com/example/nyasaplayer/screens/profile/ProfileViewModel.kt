@@ -7,6 +7,7 @@ import com.example.nyasaplayer.data.UserRepository
 import com.example.nyasaplayer.util.NetworkMonitor
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +36,15 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        _uiState.update {
+            it.copy(
+                errorMessage = throwable.message ?: "An unexpected error occurred",
+                isNetworkError = (throwable as? Exception)?.isNetworkError() == true,
+            )
+        }
+    }
+
     init {
         loadProfile()
     }
@@ -58,7 +68,7 @@ class ProfileViewModel @Inject constructor(
                 )
             }
         }
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             try {
                 userRepository.getUserProfile(user.uid).collect { profile ->
                     if (profile != null) {

@@ -11,6 +11,7 @@ import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +38,15 @@ class AuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                errorMessage = throwable.message ?: "An unexpected error occurred",
+            )
+        }
+    }
+
     fun onEmailChange(email: String) {
         _uiState.update { it.copy(email = email, errorMessage = null, successMessage = null) }
     }
@@ -51,7 +61,7 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "Email and password are required") }
             return
         }
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = authRepository.signInWithEmail(state.email, state.password)) {
                 is AuthResult.Success -> {
@@ -66,7 +76,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signInWithCredential(credential: AuthCredential) {
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = authRepository.signInWithCredential(credential)) {
                 is AuthResult.Success -> {
@@ -86,7 +96,7 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "Enter your email first") }
             return
         }
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             val result = authRepository.sendPasswordResetEmail(email)
             result.fold(
                 onSuccess = {

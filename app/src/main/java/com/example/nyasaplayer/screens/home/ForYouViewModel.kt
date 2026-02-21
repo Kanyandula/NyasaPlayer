@@ -12,12 +12,14 @@ import com.example.nyasaplayer.models.Song
 import com.example.nyasaplayer.util.NetworkMonitor
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -50,6 +52,16 @@ class ForYouViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ForYouUiState())
     val uiState: StateFlow<ForYouUiState> = _uiState.asStateFlow()
 
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                errorMessage = throwable.message ?: "An unexpected error occurred",
+                isNetworkError = (throwable as? Exception)?.isNetworkError() == true,
+            )
+        }
+    }
+
     init {
         loadFeed()
     }
@@ -60,7 +72,7 @@ class ForYouViewModel @Inject constructor(
     }
 
     private fun loadFeed() {
-        viewModelScope.launch {
+        viewModelScope.launch(exceptionHandler) {
             if (!networkMonitor.isOnline.value) {
                 _uiState.value = ForYouUiState(
                     isLoading = false,
