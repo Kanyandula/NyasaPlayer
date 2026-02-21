@@ -97,8 +97,16 @@ Requires `app/google-services.json`. Firebase console must have:
 
 ## Known Gaps
 
-- Network error handling is minimal — only auth screens have error states; other screens have no error UI or retry logic
-- No offline mode, no connectivity checks, no `CoroutineExceptionHandler` in ViewModels
+- **Repository error handling is incomplete** — `AuthRepository` has full error handling (`AuthResult` sealed class), but most other repositories (Song, Genre, Artist, HomeFeed) only pass listener errors via `callbackFlow`; write operations in `UserRepository` (like/unlike, profile update) have no try/catch
+- **No `CoroutineExceptionHandler`** in ViewModels — all error handling relies on local try/catch and flow `.catch {}` operators
+- **Player error display unclear** — `PlayerViewModel` captures `PlaybackException` in state, but MiniPlayer/ExpandedPlayer may not surface it to the user
+- **Silent failures** — profile creation, recently-played logging, and like-state observation fail silently with no user feedback
 - No Room/local database — all data from Firebase with implicit Firestore offline cache only
 - Tests are stub-only — no real unit or integration tests yet
 - README "Not Yet Implemented" section tracks planned features (playlists, downloads, queue management, artist/album detail screens, etc.)
+
+### Error handling that IS in place
+
+- **`NetworkMonitor`** (`util/`) — singleton using `ConnectivityManager` exposing `isOnline: StateFlow<Boolean>`; used by ForYou, Library, Profile, and Search ViewModels
+- **`ErrorMessages.kt`** — `isNetworkError()` extension distinguishes `FirebaseNetworkException`/`UnknownHostException` from other errors
+- **All main screens have error UI**: ForYouScreen, LibraryScreen, SearchScreen show full-screen `NyasaErrorScreen` with retry; ProfileScreen shows `ErrorBanner` with retry while still displaying cached data; auth screens show inline error text
