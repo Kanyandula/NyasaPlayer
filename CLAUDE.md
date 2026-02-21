@@ -97,9 +97,8 @@ Requires `app/google-services.json`. Firebase console must have:
 
 ## Known Gaps
 
-- **Repository error handling is incomplete** — `AuthRepository` has full error handling (`AuthResult` sealed class), but most other repositories (Song, Genre, Artist, HomeFeed) only pass listener errors via `callbackFlow`; write operations in `UserRepository` (like/unlike, profile update) have no try/catch
 - **No `CoroutineExceptionHandler`** in ViewModels — all error handling relies on local try/catch and flow `.catch {}` operators
-- **Player error display unclear** — `PlayerViewModel` captures `PlaybackException` in state, but MiniPlayer/ExpandedPlayer may not surface it to the user
+- **Player error display is basic** — `ExpandedPlayer` shows an `ErrorBanner` on playback errors and `MiniPlayer` tints its progress bar red; `restorePlaybackState()` failures are silently swallowed (best-effort)
 - **Silent failures** — profile creation, recently-played logging, and like-state observation fail silently with no user feedback
 - No Room/local database — all data from Firebase with implicit Firestore offline cache only
 - Tests are stub-only — no real unit or integration tests yet
@@ -110,3 +109,5 @@ Requires `app/google-services.json`. Firebase console must have:
 - **`NetworkMonitor`** (`util/`) — singleton using `ConnectivityManager` exposing `isOnline: StateFlow<Boolean>`; used by ForYou, Library, Profile, and Search ViewModels
 - **`ErrorMessages.kt`** — `isNetworkError()` extension distinguishes `FirebaseNetworkException`/`UnknownHostException` from other errors
 - **All main screens have error UI**: ForYouScreen, LibraryScreen, SearchScreen show full-screen `NyasaErrorScreen` with retry; ProfileScreen shows `ErrorBanner` with retry while still displaying cached data; auth screens show inline error text
+- **Player error UI**: `ExpandedPlayer` shows `ErrorBanner` below toolbar with dismiss/retry; `MiniPlayer` progress bar turns red (`NyasaError`); when player is not expanded, errors show via `Snackbar` in `NyasaPlayerApp`; `PlayerViewModel.restorePlaybackState()` is wrapped in try/catch for best-effort recovery
+- **Repository error handling**: Read suspend functions (`getSongsByIds`, `getArtistById`, `getPlaybackState`) catch exceptions and return safe defaults; write operations throw and are caught by their callers (PlayerViewModel, PlaybackStatePersistence, AuthViewModel, SignUpViewModel all have try/catch)

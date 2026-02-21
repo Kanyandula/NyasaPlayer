@@ -227,25 +227,31 @@ class PlayerViewModel @Inject constructor(
 
     fun restorePlaybackState() {
         viewModelScope.launch {
-            val restored = persistence.restore() ?: return@launch
+            try {
+                val restored = persistence.restore() ?: return@launch
 
-            queueManager.restoreQueue(restored.queue, restored.index)
-            playerManager.setRepeatMode(restored.repeatMode)
-            playerManager.prepareOnly(restored.song)
-            playerManager.seekTo(restored.positionMs)
+                queueManager.restoreQueue(restored.queue, restored.index)
+                playerManager.setRepeatMode(restored.repeatMode)
+                playerManager.prepareOnly(restored.song)
+                playerManager.seekTo(restored.positionMs)
 
-            _uiState.update {
-                it.copy(
-                    playerMode = PlayerMode.Mini,
-                    currentSong = restored.song,
-                    isPlaying = false,
-                    currentPositionMs = restored.positionMs,
-                    hasPrevious = queueManager.hasPrevious,
-                    hasNext = queueManager.hasNext(restored.repeatMode),
-                    repeatMode = restored.repeatMode,
-                )
+                _uiState.update {
+                    it.copy(
+                        playerMode = PlayerMode.Mini,
+                        currentSong = restored.song,
+                        isPlaying = false,
+                        currentPositionMs = restored.positionMs,
+                        hasPrevious = queueManager.hasPrevious,
+                        hasNext = queueManager.hasNext(restored.repeatMode),
+                        repeatMode = restored.repeatMode,
+                    )
+                }
+                observeCurrentSongLikeState(restored.song.mediaId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
+                // Silent fail — restoration is best-effort
             }
-            observeCurrentSongLikeState(restored.song.mediaId)
         }
     }
 

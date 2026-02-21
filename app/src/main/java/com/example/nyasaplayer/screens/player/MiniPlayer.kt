@@ -44,6 +44,7 @@ import com.example.nyasaplayer.player.PlayerUiState
 import com.example.nyasaplayer.ui.icons.PauseIcon
 import com.example.nyasaplayer.ui.preview.PreviewPlayerStateMini
 import com.example.nyasaplayer.ui.theme.AppTheme
+import com.example.nyasaplayer.ui.theme.NyasaError
 import com.example.nyasaplayer.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.ui.theme.NyasaSurface4
@@ -118,7 +119,7 @@ private fun MiniPlayerContent(
                     .fillMaxWidth()
                     .height(2.dp)
                     .padding(horizontal = 12.dp),
-                color = NyasaPrimary,
+                color = if (state.errorMessage != null) NyasaError else NyasaPrimary,
                 trackColor = NyasaSurface4,
             )
             Spacer(modifier = Modifier.height(4.dp))

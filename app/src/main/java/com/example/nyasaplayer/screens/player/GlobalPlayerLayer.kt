@@ -37,6 +37,7 @@ fun GlobalPlayerLayer(
     onToggleRepeatMode: () -> Unit,
     onToggleLike: () -> Unit,
     onToggleShuffle: () -> Unit,
+    onClearError: () -> Unit,
     modifier: Modifier = Modifier,
     bottomOffset: Dp = 0.dp,
 ) {
@@ -79,6 +80,7 @@ fun GlobalPlayerLayer(
                 onToggleRepeatMode = onToggleRepeatMode,
                 onToggleLike = onToggleLike,
                 onToggleShuffle = onToggleShuffle,
+                onClearError = onClearError,
                 modifier = Modifier.fillMaxSize(),
             )
         }

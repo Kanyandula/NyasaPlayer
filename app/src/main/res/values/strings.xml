@@ -77,6 +77,7 @@
     <string name="error_showing_cached">Showing cached content</string>
     <string name="try_again">Try Again</string>
     <string name="retry">Retry</string>
+    <string name="error_playback_title">Playback Error</string>
     <string name="show_password">Show password</string>
     <string name="hide_password">Hide password</string>
 </resources>

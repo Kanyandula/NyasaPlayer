@@ -24,6 +24,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.rememberNavController
 import com.example.nyasaplayer.navigation.NyasaBottomNavBar
 import com.example.nyasaplayer.navigation.NyasaPlayerNavHost
+import com.example.nyasaplayer.player.PlayerMode
 import com.example.nyasaplayer.player.PlayerViewModel
 import com.example.nyasaplayer.screens.player.GlobalPlayerLayer
 import com.example.nyasaplayer.ui.theme.NyasaSurface3
@@ -43,10 +44,12 @@ fun NyasaPlayerApp(
         playerViewModel.restorePlaybackState()
     }
 
-    LaunchedEffect(playerState.errorMessage) {
+    LaunchedEffect(playerState.errorMessage, playerState.playerMode) {
         val message = playerState.errorMessage ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(message)
-        playerViewModel.clearError()
+        if (playerState.playerMode != PlayerMode.Expanded) {
+            snackbarHostState.showSnackbar(message)
+            playerViewModel.clearError()
+        }
     }
 
     val density = LocalDensity.current
@@ -87,6 +90,7 @@ fun NyasaPlayerApp(
             onToggleRepeatMode = playerViewModel::toggleRepeatMode,
             onToggleLike = playerViewModel::toggleLike,
             onToggleShuffle = playerViewModel::toggleShuffle,
+            onClearError = playerViewModel::clearError,
             bottomOffset = navBarHeight,
         )
     }

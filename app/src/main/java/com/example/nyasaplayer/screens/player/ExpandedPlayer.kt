@@ -65,6 +65,7 @@ import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
 import com.example.nyasaplayer.player.PlayerUiState
 import com.example.nyasaplayer.player.RepeatMode
+import com.example.nyasaplayer.ui.components.ErrorBanner
 import com.example.nyasaplayer.ui.icons.LyricsIcon
 import com.example.nyasaplayer.ui.icons.PauseIcon
 import com.example.nyasaplayer.ui.icons.QueueMusicIcon
@@ -101,6 +102,7 @@ fun ExpandedPlayer(
     onToggleRepeatMode: () -> Unit,
     onToggleLike: () -> Unit,
     onToggleShuffle: () -> Unit,
+    onClearError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dragOffset = remember { Animatable(0f) }
@@ -134,6 +136,7 @@ fun ExpandedPlayer(
             onToggleRepeatMode = onToggleRepeatMode,
             onToggleLike = onToggleLike,
             onToggleShuffle = onToggleShuffle,
+            onClearError = onClearError,
         )
     }
 }
@@ -199,6 +202,7 @@ private fun ExpandedPlayerContent(
     onToggleRepeatMode: () -> Unit,
     onToggleLike: () -> Unit,
     onToggleShuffle: () -> Unit,
+    onClearError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -209,6 +213,14 @@ private fun ExpandedPlayerContent(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ExpandedPlayerToolbar(onCollapse = onCollapse)
+        state.errorMessage?.let { errorMsg ->
+            Spacer(modifier = Modifier.height(8.dp))
+            ErrorBanner(
+                title = stringResource(R.string.error_playback_title),
+                subtitle = errorMsg,
+                onRetry = onClearError,
+            )
+        }
         Spacer(modifier = Modifier.height(24.dp))
         ExpandedPlayerArtwork(state = state)
         Spacer(modifier = Modifier.height(32.dp))
@@ -540,6 +552,7 @@ private fun ExpandedPlayerPlayingPreview() {
             onToggleRepeatMode = {},
             onToggleLike = {},
             onToggleShuffle = {},
+            onClearError = {},
         )
     }
 }
@@ -559,6 +572,7 @@ private fun ExpandedPlayerPausedPreview() {
             onToggleRepeatMode = {},
             onToggleLike = {},
             onToggleShuffle = {},
+            onClearError = {},
         )
     }
 }
