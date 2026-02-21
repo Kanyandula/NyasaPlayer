@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
 
 private const val PlaybackSaveIntervalMs = 30_000L
@@ -23,6 +24,7 @@ data class RestoredPlayback(
     val repeatMode: RepeatMode,
 )
 
+@Singleton
 class PlaybackStatePersistence @Inject constructor(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
