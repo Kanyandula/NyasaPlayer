@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Accessibility: missing content descriptions should be errors -->
+    <issue id="ContentDescription" severity="error" />
+
+    <!-- Hardcoded strings should be extracted to resources -->
+    <issue id="HardcodedText" severity="warning" />
+
+    <!-- Missing translations are warnings, not errors -->
+    <issue id="MissingTranslation" severity="warning" />
+
+    <!-- Flag unused resources to keep the project clean -->
+    <issue id="UnusedResources" severity="warning" />
+
+    <!-- False positive from transitive gRPC/Firebase dependencies -->
+    <issue id="InvalidPackage" severity="ignore" />
+</lint>

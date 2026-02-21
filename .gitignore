@@ -1,0 +1,35 @@
+*.iml
+.DS_Store
+
+# Gradle
+.gradle/
+/build
+/app/build
+
+# Local properties (contains SDK path, secrets)
+local.properties
+
+# Firebase config (contributors add their own)
+app/google-services.json
+
+# Signing
+*.jks
+*.keystore
+signing.properties
+
+# Environment / secrets
+.env
+.env.*
+secrets.properties
+
+# IDE
+/.idea/
+
+# Claude Code (user-specific)
+.claude/
+CLAUDE.md
+
+# Native build
+.externalNativeBuild
+.cxx
+/captures

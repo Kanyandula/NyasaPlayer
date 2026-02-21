@@ -1,0 +1,148 @@
+package com.example.nyasaplayer.player
+
+import com.example.nyasaplayer.data.AuthRepository
+import com.example.nyasaplayer.data.SongRepository
+import com.example.nyasaplayer.data.UserRepository
+import com.example.nyasaplayer.models.PlaybackState
+import com.example.nyasaplayer.models.Song
+import com.google.firebase.Timestamp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
+
+private const val PlaybackSaveIntervalMs = 30_000L
+
+data class RestoredPlayback(
+    val queue: List<Song>,
+    val index: Int,
+    val song: Song,
+    val positionMs: Long,
+    val repeatMode: RepeatMode,
+)
+
+class PlaybackStatePersistence @Inject constructor(
+    private val userRepository: UserRepository,
+    private val authRepository: AuthRepository,
+    private val songRepository: SongRepository,
+) {
+    private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var lastSaveTimeMs: Long = 0L
+
+    private val userId: String? get() = authRepository.currentUser?.uid
+
+    fun save(
+        scope: CoroutineScope,
+        currentSong: Song,
+        positionMs: Long,
+        queueSongIds: List<String>,
+        queueIndex: Int,
+        repeatMode: RepeatMode,
+    ) {
+        val uid = userId ?: return
+        scope.launch {
+            try {
+                userRepository.savePlaybackState(
+                    uid,
+                    buildState(currentSong, positionMs, queueSongIds, queueIndex, repeatMode),
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
+                // Silent fail — persistence is best-effort
+            }
+        }
+    }
+
+    fun saveIfThrottleElapsed(
+        scope: CoroutineScope,
+        currentSong: Song,
+        positionMs: Long,
+        queueSongIds: List<String>,
+        queueIndex: Int,
+        repeatMode: RepeatMode,
+    ) {
+        val now = System.currentTimeMillis()
+        if (now - lastSaveTimeMs >= PlaybackSaveIntervalMs) {
+            lastSaveTimeMs = now
+            save(scope, currentSong, positionMs, queueSongIds, queueIndex, repeatMode)
+        }
+    }
+
+    fun saveFinal(
+        currentSong: Song?,
+        positionMs: Long,
+        queueSongIds: List<String>,
+        queueIndex: Int,
+        repeatMode: RepeatMode,
+    ) {
+        val uid = userId ?: return
+        val song = currentSong ?: return
+        saveScope.launch {
+            try {
+                userRepository.savePlaybackState(
+                    uid,
+                    buildState(song, positionMs, queueSongIds, queueIndex, repeatMode),
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
+                // Silent fail — final save is best-effort
+            }
+        }
+    }
+
+    @Suppress("ReturnCount")
+    suspend fun restore(): RestoredPlayback? {
+        return try {
+            val uid = userId ?: return null
+            val saved = userRepository.getPlaybackState(uid) ?: return null
+            if (saved.currentSongId.isBlank()) return null
+
+            val songs = songRepository.getSongsByIds(saved.queueSongIds)
+            if (songs.isEmpty()) return null
+
+            val songMap = songs.associateBy { it.mediaId }
+            val orderedQueue = saved.queueSongIds.mapNotNull { songMap[it] }
+            if (orderedQueue.isEmpty()) return null
+
+            val restoredIndex = saved.queueIndex.coerceIn(0, orderedQueue.lastIndex)
+            val restoredSong = orderedQueue[restoredIndex]
+
+            val restoredRepeatMode = try {
+                RepeatMode.valueOf(saved.repeatMode)
+            } catch (_: IllegalArgumentException) {
+                RepeatMode.Off
+            }
+
+            RestoredPlayback(
+                queue = orderedQueue,
+                index = restoredIndex,
+                song = restoredSong,
+                positionMs = saved.positionMs,
+                repeatMode = restoredRepeatMode,
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
+            null
+        }
+    }
+
+    private fun buildState(
+        currentSong: Song,
+        positionMs: Long,
+        queueSongIds: List<String>,
+        queueIndex: Int,
+        repeatMode: RepeatMode,
+    ) = PlaybackState(
+        currentSongId = currentSong.mediaId,
+        positionMs = positionMs,
+        queueSongIds = queueSongIds,
+        queueIndex = queueIndex,
+        repeatMode = repeatMode.name,
+        savedAt = Timestamp.now(),
+    )
+}

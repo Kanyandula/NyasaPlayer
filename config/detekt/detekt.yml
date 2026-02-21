@@ -1,0 +1,98 @@
+build:
+  maxIssues: 0
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 60
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 10
+    ignoreAnnotated:
+      - "Composable"
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInClasses: 16
+    thresholdInInterfaces: 10
+    thresholdInObjects: 10
+    thresholdInEnums: 10
+
+naming:
+  FunctionNaming:
+    active: true
+    functionPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ignoreAnnotated:
+      - "Composable"
+  TopLevelPropertyNaming:
+    active: true
+    constantPattern: "[A-Z][A-Za-z0-9]*"
+  MatchingDeclarationName:
+    active: true
+    mustBeFirst: false
+
+style:
+  MagicNumber:
+    active: true
+    ignoreNumbers:
+      - "-1"
+      - "0"
+      - "1"
+      - "2"
+    ignoreHashCodeFunction: true
+    ignorePropertyDeclaration: true
+    ignoreLocalVariableDeclaration: true
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+    ignoreEnums: true
+    ignoreRanges: true
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+    excludeCommentStatements: true
+    excludePackageStatements: true
+    excludeImportStatements: true
+  WildcardImport:
+    active: true
+    excludeImports:
+      - "kotlinx.android.synthetic.*"
+  UnusedPrivateMember:
+    active: true
+    allowedNames: "(_|ignored|expected|serialVersionUID)"
+  ReturnCount:
+    active: true
+    max: 4
+    excludeGuardClauses: true
+  ForbiddenComment:
+    active: false
+
+formatting:
+  active: true
+  android: true
+  ImportOrdering:
+    active: true
+    layout: "*,java.**,javax.**,kotlin.**,^"
+  NoWildcardImports:
+    active: true
+  MaximumLineLength:
+    active: true
+    maxLineLength: 120
+  ParameterListWrapping:
+    active: true
+    maxLineLength: 120
+  TrailingCommaOnCallSite:
+    active: true
+    useTrailingCommaOnCallSite: true
+  TrailingCommaOnDeclarationSite:
+    active: true
+    useTrailingCommaOnDeclarationSite: true
+
+# Compose-specific rules (via io.nlopez.compose.rules:detekt)
+# These rules are auto-registered by the compose-rules plugin.
+# Override individual rules below only if needed.

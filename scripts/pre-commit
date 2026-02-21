@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Navigate to project root
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+cd "$PROJECT_ROOT"
+
+echo "=== Pre-commit hook: running static analysis ==="
+
+# --- Detekt ---
+echo ""
+echo "[1/2] Running Detekt..."
+if ! ./gradlew detekt --no-daemon --quiet; then
+    echo ""
+    echo "!! Detekt found issues. Commit aborted."
+    echo "   Run './gradlew detekt' to see the full report."
+    echo "   HTML report: build/reports/detekt/detekt.html"
+    echo "   See docs/PRODUCTIVITY_TIPS.md for help fixing common issues."
+    exit 1
+fi
+echo "  Detekt passed."
+
+# --- Android Lint ---
+echo ""
+echo "[2/2] Running Android Lint..."
+if ! ./gradlew :app:lintDebug --no-daemon --quiet; then
+    echo ""
+    echo "!! Lint found errors. Commit aborted."
+    echo "   Run './gradlew :app:lintDebug' to see the full report."
+    echo "   HTML report: app/build/reports/lint-results-debug.html"
+    echo "   See docs/PRODUCTIVITY_TIPS.md for help fixing common issues."
+    exit 1
+fi
+echo "  Lint passed."
+
+echo ""
+echo "=== All checks passed. Proceeding with commit. ==="

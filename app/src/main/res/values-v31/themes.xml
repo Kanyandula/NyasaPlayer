@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.NyasaPlayer" parent="Theme.SplashScreen">
+        <item name="android:windowSplashScreenBackground">@color/nyasa_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/nyasa_primary_dark</item>
+        <item name="postSplashScreenTheme">@style/Theme.NyasaPlayer.Main</item>
+    </style>
+    <style name="Theme.NyasaPlayer.Main" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

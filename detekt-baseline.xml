@@ -1,0 +1,36 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ArgumentListWrapping:NyasaPlayerScreen.kt$(id = android.R.drawable.ic_media_ff)</ID>
+    <ID>ArgumentListWrapping:NyasaPlayerScreen.kt$(id = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)</ID>
+    <ID>ArgumentListWrapping:NyasaPlayerScreen.kt$(painter = painterResource(id = android.R.drawable.ic_media_ff), contentDescription = "Fast Forward")</ID>
+    <ID>ArgumentListWrapping:NyasaPlayerScreen.kt$(painter = painterResource(id = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play), contentDescription = "Play/Pause")</ID>
+    <ID>BlockCommentInitialStarAlignment:Type.kt$/* Other default text styles to override titleLarge = TextStyle( fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = 0.sp ), labelSmall = TextStyle( fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp ) */</ID>
+    <ID>FinalNewline:Color.kt$com.example.nyasaplayer.ui.theme.Color.kt</ID>
+    <ID>FinalNewline:NyasaPlayerViewModelFactory.kt$com.example.nyasaplayer.screens.home.NyasaPlayerViewModelFactory.kt</ID>
+    <ID>FinalNewline:Theme.kt$com.example.nyasaplayer.ui.theme.Theme.kt</ID>
+    <ID>FinalNewline:Type.kt$com.example.nyasaplayer.ui.theme.Type.kt</ID>
+    <ID>Indentation:MainActivity.kt$MainActivity$ </ID>
+    <ID>MaxLineLength:NyasaPlayerScreen.kt$Icon(painter = painterResource(id = android.R.drawable.ic_media_ff), contentDescription = "Fast Forward")</ID>
+    <ID>MaxLineLength:NyasaPlayerScreen.kt$Icon(painter = painterResource(id = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play), contentDescription = "Play/Pause")</ID>
+    <ID>MaximumLineLength:NyasaPlayerScreen.kt$ </ID>
+    <ID>ModifierMissing:NyasaPlayerScreen.kt$NyasaPlayerScreen</ID>
+    <ID>NewLineAtEndOfFile:Color.kt$com.example.nyasaplayer.ui.theme.Color.kt</ID>
+    <ID>NewLineAtEndOfFile:NyasaPlayerViewModelFactory.kt$com.example.nyasaplayer.screens.home.NyasaPlayerViewModelFactory.kt</ID>
+    <ID>NewLineAtEndOfFile:Theme.kt$com.example.nyasaplayer.ui.theme.Theme.kt</ID>
+    <ID>NewLineAtEndOfFile:Type.kt$com.example.nyasaplayer.ui.theme.Type.kt</ID>
+    <ID>NoConsecutiveBlankLines:Color.kt$ </ID>
+    <ID>NoConsecutiveBlankLines:MainActivity.kt$ </ID>
+    <ID>NoConsecutiveBlankLines:NyasaPlayerViewModel.kt$ </ID>
+    <ID>NoConsecutiveBlankLines:NyasaPlayerViewModel.kt$NyasaPlayerViewModel$ </ID>
+    <ID>NoMultipleSpaces:NyasaPlayerApplication.kt$NyasaPlayerApplication$ </ID>
+    <ID>TrailingCommaOnCallSite:NyasaPlayerScreen.kt$( painter = rememberAsyncImagePainter(currentSong.imageUrl), contentDescription = currentSong.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().height(300.dp) )</ID>
+    <ID>TrailingCommaOnCallSite:NyasaPlayerViewModel.kt$NyasaPlayerViewModel$( MediaMetadata.Builder() .setTitle(song.title) .setSubtitle(song.subtitle) .build() )</ID>
+    <ID>TrailingCommaOnCallSite:Theme.kt$( colorScheme = colorScheme, typography = Typography, shapes = shapes, content = content )</ID>
+    <ID>TrailingCommaOnCallSite:Type.kt$( bodyLarge = TextStyle( fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.5.sp ) /* Other default text styles to override titleLarge = TextStyle( fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = 0.sp ), labelSmall = TextStyle( fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp ) */ )</ID>
+    <ID>TrailingCommaOnCallSite:Type.kt$( fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.5.sp )</ID>
+    <ID>TrailingCommaOnDeclarationSite:Song.kt$Song$( val mediaId: String = "", val title: String = "", val subtitle: String = "", val imageUrl: String = "", val songUrl: String = "" )</ID>
+    <ID>TrailingCommaOnDeclarationSite:Theme.kt$( darkTheme: Boolean = isSystemInDarkTheme(), // Dynamic color is available on Android 12+ dynamicColor: Boolean = false, content: @Composable () -&gt; Unit )</ID>
+  </CurrentIssues>
+</SmellBaseline>
