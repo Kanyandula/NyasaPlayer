@@ -1,6 +1,8 @@
 # NyasaPlayer
 
 A modern Android music streaming application built with Jetpack Compose, Firebase, and ExoPlayer (Media3).
+## UI
+https://preview--nyasa-harmony-suite.lovable.app/screens
 
 ## Tech Stack
 
