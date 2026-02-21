@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val MinPasswordLength = 6
 
@@ -74,7 +75,13 @@ class SignUpViewModel @Inject constructor(
                         createdAt = Timestamp.now(),
                         accountType = "email",
                     )
-                    userRepository.createOrUpdateProfile(profile)
+                    try {
+                        userRepository.createOrUpdateProfile(profile)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
+                        // Silent fail — profile creation is non-critical during sign-up
+                    }
                     _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
                 }
                 is AuthResult.Error -> {

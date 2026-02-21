@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 
 @Singleton
 class ArtistRepository @Inject constructor(
@@ -30,10 +31,16 @@ class ArtistRepository @Inject constructor(
     }
 
     suspend fun getArtistById(artistId: String): Artist? {
-        val doc = firestore.collection("artists")
-            .document(artistId)
-            .get()
-            .await()
-        return doc.toObject<Artist>()?.copy(id = doc.id)
+        return try {
+            val doc = firestore.collection("artists")
+                .document(artistId)
+                .get()
+                .await()
+            doc.toObject<Artist>()?.copy(id = doc.id)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
     }
 }

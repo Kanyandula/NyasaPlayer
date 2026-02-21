@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 
 @Singleton
 class SongRepository @Inject constructor(
@@ -33,13 +34,19 @@ class SongRepository @Inject constructor(
 
     suspend fun getSongsByIds(ids: List<String>): List<Song> {
         if (ids.isEmpty()) return emptyList()
-        return ids.chunked(FIRESTORE_WHERE_IN_LIMIT).flatMap { chunk ->
-            firestore.collection("songs")
-                .whereIn("mediaId", chunk)
-                .get()
-                .await()
-                .documents
-                .mapNotNull { it.toObject<Song>() }
+        return try {
+            ids.chunked(FIRESTORE_WHERE_IN_LIMIT).flatMap { chunk ->
+                firestore.collection("songs")
+                    .whereIn("mediaId", chunk)
+                    .get()
+                    .await()
+                    .documents
+                    .mapNotNull { it.toObject<Song>() }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 
