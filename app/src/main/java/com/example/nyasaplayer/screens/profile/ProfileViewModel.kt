@@ -2,8 +2,8 @@ package com.example.nyasaplayer.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.AuthRepository
-import com.example.nyasaplayer.data.UserRepository
+import com.example.nyasaplayer.data.api.AuthRepository
+import com.example.nyasaplayer.data.api.UserRepository
 import com.example.nyasaplayer.util.NetworkMonitor
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel

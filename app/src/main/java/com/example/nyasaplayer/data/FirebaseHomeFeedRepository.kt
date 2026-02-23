@@ -1,5 +1,6 @@
 package com.example.nyasaplayer.data
 
+import com.example.nyasaplayer.data.api.HomeFeedRepository
 import com.example.nyasaplayer.models.HomeFeed
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.toObject
@@ -7,13 +8,11 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class HomeFeedRepository @Inject constructor(
+class FirebaseHomeFeedRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-) {
-    fun getHomeFeed(): Flow<HomeFeed?> = callbackFlow {
+) : HomeFeedRepository {
+    override fun getHomeFeed(): Flow<HomeFeed?> = callbackFlow {
         val registration = firestore.collection("homeFeed")
             .document("default")
             .addSnapshotListener { snapshot, error ->

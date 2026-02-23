@@ -2,8 +2,8 @@ package com.example.nyasaplayer.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.GenreRepository
-import com.example.nyasaplayer.data.SongRepository
+import com.example.nyasaplayer.data.api.GenreRepository
+import com.example.nyasaplayer.data.api.SongRepository
 import com.example.nyasaplayer.models.Genre
 import com.example.nyasaplayer.models.Song
 import com.example.nyasaplayer.util.NetworkMonitor

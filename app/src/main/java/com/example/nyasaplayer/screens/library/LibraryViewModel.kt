@@ -2,9 +2,9 @@ package com.example.nyasaplayer.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.AuthRepository
-import com.example.nyasaplayer.data.SongRepository
-import com.example.nyasaplayer.data.UserRepository
+import com.example.nyasaplayer.data.api.AuthRepository
+import com.example.nyasaplayer.data.api.SongRepository
+import com.example.nyasaplayer.data.api.UserRepository
 import com.example.nyasaplayer.models.Song
 import com.example.nyasaplayer.util.NetworkMonitor
 import com.example.nyasaplayer.util.isNetworkError

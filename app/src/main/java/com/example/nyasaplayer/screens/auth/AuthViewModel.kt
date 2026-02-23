@@ -2,9 +2,9 @@ package com.example.nyasaplayer.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.AuthRepository
-import com.example.nyasaplayer.data.AuthResult
-import com.example.nyasaplayer.data.UserRepository
+import com.example.nyasaplayer.data.api.AuthRepository
+import com.example.nyasaplayer.data.api.AuthResult
+import com.example.nyasaplayer.data.api.UserRepository
 import com.example.nyasaplayer.models.UserProfile
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.AuthCredential
