@@ -1,5 +1,7 @@
 package com.example.nyasaplayer.data
 
+import com.example.nyasaplayer.data.api.AuthRepository
+import com.example.nyasaplayer.data.api.AuthResult
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -8,24 +10,17 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
 
-sealed class AuthResult {
-    data class Success(val user: FirebaseUser) : AuthResult()
-    data class Error(val message: String) : AuthResult()
-}
-
 @Suppress("TooGenericExceptionCaught")
-@Singleton
-class AuthRepository @Inject constructor(
+class FirebaseAuthRepository @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
-) {
-    val currentUser: FirebaseUser? get() = firebaseAuth.currentUser
+) : AuthRepository {
+    override val currentUser: FirebaseUser? get() = firebaseAuth.currentUser
 
-    val isAuthenticated: Boolean get() = currentUser != null
+    override val isAuthenticated: Boolean get() = currentUser != null
 
-    fun authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
+    override fun authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { auth ->
             trySend(auth.currentUser)
         }
@@ -33,7 +28,7 @@ class AuthRepository @Inject constructor(
         awaitClose { firebaseAuth.removeAuthStateListener(listener) }
     }
 
-    suspend fun signInWithEmail(email: String, password: String): AuthResult {
+    override suspend fun signInWithEmail(email: String, password: String): AuthResult {
         return try {
             val result = firebaseAuth.signInWithEmailAndPassword(email, password).await()
             result.user?.let { AuthResult.Success(it) }
@@ -45,7 +40,7 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun signUpWithEmail(email: String, password: String): AuthResult {
+    override suspend fun signUpWithEmail(email: String, password: String): AuthResult {
         return try {
             val result = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
             result.user?.let { AuthResult.Success(it) }
@@ -57,7 +52,7 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun signInWithCredential(credential: AuthCredential): AuthResult {
+    override suspend fun signInWithCredential(credential: AuthCredential): AuthResult {
         return try {
             val result = firebaseAuth.signInWithCredential(credential).await()
             result.user?.let { AuthResult.Success(it) }
@@ -69,7 +64,7 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         return try {
             firebaseAuth.sendPasswordResetEmail(email).await()
             Result.success(Unit)
@@ -80,7 +75,7 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    fun signOut() {
+    override fun signOut() {
         firebaseAuth.signOut()
     }
 }

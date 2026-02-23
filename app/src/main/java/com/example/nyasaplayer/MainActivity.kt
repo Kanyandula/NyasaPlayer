@@ -11,7 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.media3.common.util.UnstableApi
-import com.example.nyasaplayer.data.AuthRepository
+import com.example.nyasaplayer.data.api.AuthRepository
 import com.example.nyasaplayer.navigation.LoginRoute
 import com.example.nyasaplayer.navigation.MainAppRoute
 import com.example.nyasaplayer.navigation.RootNavHost

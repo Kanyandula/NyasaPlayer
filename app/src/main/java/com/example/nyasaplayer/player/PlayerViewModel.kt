@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import com.example.nyasaplayer.data.AuthRepository
-import com.example.nyasaplayer.data.UserRepository
+import com.example.nyasaplayer.data.api.AuthRepository
+import com.example.nyasaplayer.data.api.UserRepository
 import com.example.nyasaplayer.models.Song
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
