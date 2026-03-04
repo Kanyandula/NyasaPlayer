@@ -14,8 +14,9 @@ https://preview--nyasa-harmony-suite.lovable.app/screens
 | Firebase Firestore | Song/genre/artist data |
 | Firebase Realtime Database | Home feed sections |
 | Firebase Auth | Email/password + Google Sign-In |
+| Room | Local database (offline-first catalog) |
 | ExoPlayer (Media3 1.5.1) | Audio playback |
-| Coil | Image loading |
+| Coil | Image loading (with offline disk cache) |
 | Compose Navigation | Screen navigation |
 
 ## Architecture
@@ -31,11 +32,24 @@ https://preview--nyasa-harmony-suite.lovable.app/screens
 com.example.nyasaplayer/
 ├── MainActivity.kt
 ├── data/
-│   ├── AuthRepository.kt          # Firebase Auth wrapper
-│   ├── SongRepository.kt          # Firestore song data
-│   └── models/                    # Data models (Song, Genre, Artist, etc.)
+│   ├── api/                        # Repository interfaces + Firebase implementations
+│   │   ├── AuthRepository.kt
+│   │   ├── SongRepository.kt       # Interface for song data
+│   │   └── ...
+│   ├── local/                      # Room database layer
+│   │   ├── NyasaDatabase.kt        # Room database class
+│   │   ├── dao/                    # SongDao, ArtistDao, GenreDao
+│   │   └── entity/                 # SongEntity, ArtistEntity, GenreEntity
+│   ├── offline/                    # Offline-first repository implementations
+│   │   ├── OfflineSongRepository.kt
+│   │   ├── OfflineArtistRepository.kt
+│   │   └── OfflineGenreRepository.kt
+│   └── sync/
+│       └── FirebaseSyncManager.kt  # Syncs Firestore → Room on startup
 ├── di/
-│   └── AppModule.kt               # Hilt providers (Firestore, RTDB, Auth, ExoPlayer)
+│   ├── AppModule.kt               # Firebase providers
+│   ├── DatabaseModule.kt          # Room database + DAOs
+│   └── RepositoryModule.kt        # Binds Offline*Repository → interfaces
 ├── navigation/
 │   ├── RootNavigation.kt          # Auth flow: Splash → Login/SignUp → MainApp
 │   └── NyasaPlayerNavigation.kt   # Bottom tab navigation
@@ -65,6 +79,8 @@ com.example.nyasaplayer/
 │       ├── MiniPlayer.kt          # Collapsed player bar
 │       ├── ExpandedPlayer.kt      # Full-screen player
 │       └── PlayerViewModel.kt     # Playback state + ExoPlayer control
+├── util/
+│   └── NetworkMonitor.kt          # Connectivity state (StateFlow<Boolean>)
 ├── ui/
 │   ├── theme/
 │   │   ├── Theme.kt               # AppTheme composable
@@ -127,6 +143,13 @@ com.example.nyasaplayer/
 - **State persistence**: `PlaybackStatePersistence` saves/restores queue, position, and repeat mode to disk across app restarts
 - **Recently played**: Logged per song play, displayed in Home screen
 - **Error handling**: `PlayerError` model routes playback errors to ErrorBanner in ExpandedPlayer and non-playback errors (sync, restore) to Snackbar; `CoroutineExceptionHandler` safety net in all ViewModels
+- **Offline UX**: Persistent offline banner across all screens; fail-fast playback (shows error instead of infinite buffering); `NetworkMonitor` singleton detects connectivity changes in real-time
+
+### Offline-First Data (Room)
+- **Room database**: Songs, artists, genres cached locally via `NyasaDatabase`
+- **Firebase sync**: `FirebaseSyncManager` syncs Firestore collections → Room on app startup
+- **Offline repositories**: `OfflineSongRepository`, `OfflineArtistRepository`, `OfflineGenreRepository` read from Room DAOs
+- **Image caching**: Coil configured with `respectCacheHeaders(false)` and 5% disk cache for offline artwork
 
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)

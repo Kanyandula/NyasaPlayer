@@ -33,7 +33,11 @@ There are no custom test suites yet — only example stubs exist under `app/src/
 ```
 Firestore / Realtime DB / Firebase Auth
         ↓
-   Repositories (data/)        — singleton @Provides, suspend funs + callbackFlow
+   FirebaseSyncManager         — syncs Firestore → Room on app start
+        ↓
+   Room Database (data/local/) — single source of truth for songs, artists, genres
+        ↓
+   Offline Repositories        — read from Room DAOs, expose Flow/suspend
         ↓
    ViewModels (screens/*/)     — @HiltViewModel, StateFlow for UI state
         ↓
@@ -57,20 +61,24 @@ Two nested `NavHost` layers:
 
 ### Data layer
 
-All data comes from Firebase. Repositories use `callbackFlow` with `addSnapshotListener` for reactive updates and `.await()` for one-shot reads.
+Offline-first for catalog data (songs, artists, genres): `FirebaseSyncManager` syncs Firestore → Room on app start; UI reads from Room via `Offline*Repository`. User-specific data (likes, recently played, profile) and home feed still read directly from Firebase.
 
 | Repository | Backend | Key collections/paths |
 |---|---|---|
 | `AuthRepository` | Firebase Auth | — |
-| `SongRepository` | Firestore | `songs` |
-| `GenreRepository` | Firestore | `genres` |
-| `ArtistRepository` | Firestore | `artists` |
+| `OfflineSongRepository` | Room (`SongDao`) | synced from Firestore `songs` |
+| `OfflineGenreRepository` | Room (`GenreDao`) | synced from Firestore `genres` |
+| `OfflineArtistRepository` | Room (`ArtistDao`) | synced from Firestore `artists` |
 | `UserRepository` | Firestore | `users/{uid}/likedSongs`, `users/{uid}/recentlyPlayed`, `users/{uid}/profile` |
 | `HomeFeedRepository` | Realtime Database | home feed sections |
 
+Room entities live in `data/local/entity/`, DAOs in `data/local/dao/`, and the database class in `data/local/NyasaDatabase.kt`. `FirebaseSyncManager` (`data/sync/`) handles one-shot Firestore → Room sync on startup.
+
 ### DI modules (`di/`)
 
-- `AppModule` — provides FirebaseFirestore, FirebaseDatabase, FirebaseAuth, all repositories
+- `AppModule` — provides FirebaseFirestore, FirebaseDatabase, FirebaseAuth, user/home repositories
+- `DatabaseModule` — provides Room `NyasaDatabase` and DAOs
+- `RepositoryModule` — binds `Offline*Repository` implementations to repository interfaces
 - `PlayerModule` — provides ExoPlayer instance
 
 ## Code Style & Static Analysis
@@ -97,14 +105,15 @@ Requires `app/google-services.json`. Firebase console must have:
 
 ## Known Gaps
 
-- No Room/local database — all data from Firebase with implicit Firestore offline cache only
 - Tests are stub-only — no real unit or integration tests yet
 - README "Not Yet Implemented" section tracks planned features (playlists, downloads, queue management, artist/album detail screens, etc.)
 
 ### Error handling that IS in place
 
 - **`CoroutineExceptionHandler`** — all 7 ViewModels have a `private val exceptionHandler` CEH as a safety net for uncaught exceptions in `viewModelScope.launch`; maps errors to the ViewModel's error state (existing try/catch and `.catch {}` remain as primary handling)
-- **`NetworkMonitor`** (`util/`) — singleton using `ConnectivityManager` exposing `isOnline: StateFlow<Boolean>`; used by ForYou, Library, Profile, and Search ViewModels
+- **`NetworkMonitor`** (`util/`) — singleton using `ConnectivityManager.registerDefaultNetworkCallback` exposing `isOnline: StateFlow<Boolean>`; used by `PlayerViewModel` (fail-fast offline playback, offline banner) and `ProfileViewModel`
+- **Offline banner** — persistent `OfflineBanner` composable shown at top of all screens when offline; driven by `PlayerUiState.isOffline` which observes `NetworkMonitor`
+- **Fail-fast offline playback** — `PlayerViewModel` checks `isOnline` before streaming; shows error instead of infinite buffering spinner
 - **`ErrorMessages.kt`** — `isNetworkError()` extension distinguishes `FirebaseNetworkException`/`UnknownHostException` from other errors
 - **All main screens have error UI**: ForYouScreen, LibraryScreen, SearchScreen show full-screen `NyasaErrorScreen` with retry; ProfileScreen shows `ErrorBanner` with retry while still displaying cached data; auth screens show inline error text
 - **Player error UI**: `PlayerError` data class (title, message, isPlaybackError) routes errors — playback errors show `ErrorBanner` in `ExpandedPlayer`; non-playback errors (sync, restore) always show via `Snackbar` in `NyasaPlayerApp`; `MiniPlayer` progress bar turns red on any error; `toggleLike()` shows a Snackbar on failure alongside optimistic rollback; `restorePlaybackState()` shows a Snackbar on failure
