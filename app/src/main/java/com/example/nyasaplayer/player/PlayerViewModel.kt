@@ -8,6 +8,7 @@ import androidx.media3.common.util.UnstableApi
 import com.example.nyasaplayer.data.api.AuthRepository
 import com.example.nyasaplayer.data.api.UserRepository
 import com.example.nyasaplayer.models.Song
+import com.example.nyasaplayer.util.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
@@ -15,6 +16,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -32,9 +35,10 @@ class PlayerViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val queueManager: PlaybackQueueManager,
     private val persistence: PlaybackStatePersistence,
+    private val networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(PlayerUiState())
+    private val _uiState = MutableStateFlow(PlayerUiState(isOffline = !networkMonitor.isOnline.value))
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
@@ -52,12 +56,19 @@ class PlayerViewModel @Inject constructor(
 
     private val userId: String? get() = authRepository.currentUser?.uid
 
+    private val isOnline: Boolean get() = networkMonitor.isOnline.value
+
     init {
         startObserving()
+        observeNetworkState()
     }
 
     fun playSong(songs: List<Song>, song: Song) {
         val resolved = queueManager.setQueue(songs, song)
+        if (!isOnline) {
+            showOfflineError(resolved)
+            return
+        }
         playerManager.play(resolved)
         _uiState.update {
             it.copy(
@@ -76,6 +87,10 @@ class PlayerViewModel @Inject constructor(
     fun shufflePlay(songs: List<Song>) {
         if (songs.isEmpty()) return
         val first = queueManager.setQueueShuffled(songs) ?: return
+        if (!isOnline) {
+            showOfflineError(first)
+            return
+        }
         playerManager.play(first)
         _uiState.update {
             it.copy(
@@ -113,6 +128,10 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun playSongAtCurrentIndex(song: Song) {
+        if (!isOnline) {
+            showOfflineError(song)
+            return
+        }
         playerManager.play(song)
         _uiState.update {
             it.copy(
@@ -156,6 +175,17 @@ class PlayerViewModel @Inject constructor(
                 _uiState.value.repeatMode,
             )
         } else {
+            if (!isOnline) {
+                _uiState.update {
+                    it.copy(
+                        error = PlayerError(
+                            title = "Offline",
+                            message = "Can't stream while offline. Download songs for offline playback.",
+                        ),
+                    )
+                }
+                return
+            }
             playerManager.resume()
             _uiState.update { it.copy(isPlaying = true) }
         }
@@ -177,6 +207,31 @@ class PlayerViewModel @Inject constructor(
     fun dismiss() {
         playerManager.stop()
         _uiState.update { PlayerUiState() }
+    }
+
+    // ── Offline Handling ──
+
+    private fun showOfflineError(song: Song) {
+        _uiState.update {
+            it.copy(
+                playerMode = PlayerMode.Expanded,
+                currentSong = song,
+                isPlaying = false,
+                isBuffering = false,
+                currentPositionMs = 0L,
+                durationMs = song.durationMs,
+                error = PlayerError(
+                    title = "Offline",
+                    message = "This song isn't available offline",
+                ),
+            )
+        }
+    }
+
+    private fun observeNetworkState() {
+        networkMonitor.isOnline.onEach { online ->
+            _uiState.update { it.copy(isOffline = !online) }
+        }.launchIn(viewModelScope)
     }
 
     // ── Like / Unlike ──
@@ -292,6 +347,20 @@ class PlayerViewModel @Inject constructor(
     private fun startObserving() {
         playerManager.player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_BUFFERING && !isOnline) {
+                    playerManager.pause()
+                    _uiState.update {
+                        it.copy(
+                            isBuffering = false,
+                            isPlaying = false,
+                            error = PlayerError(
+                                title = "Offline",
+                                message = "Connection lost. Download songs for offline playback.",
+                            ),
+                        )
+                    }
+                    return
+                }
                 _uiState.update {
                     it.copy(
                         isBuffering = playbackState == Player.STATE_BUFFERING,

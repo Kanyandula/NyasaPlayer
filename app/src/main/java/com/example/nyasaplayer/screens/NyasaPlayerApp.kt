@@ -1,6 +1,7 @@
 package com.example.nyasaplayer.screens
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -27,6 +28,7 @@ import com.example.nyasaplayer.navigation.NyasaPlayerNavHost
 import com.example.nyasaplayer.player.PlayerMode
 import com.example.nyasaplayer.player.PlayerViewModel
 import com.example.nyasaplayer.screens.player.GlobalPlayerLayer
+import com.example.nyasaplayer.ui.components.OfflineBanner
 import com.example.nyasaplayer.ui.theme.NyasaSurface3
 
 @UnstableApi
@@ -68,14 +70,16 @@ fun NyasaPlayerApp(
             },
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
         ) { innerPadding ->
-            NyasaPlayerNavHost(
-                navController = navController,
-                onSongClick = { songs, song -> playerViewModel.playSong(songs, song) },
-                onShufflePlay = playerViewModel::shufflePlay,
-                onSignOut = onSignOut,
-                currentlyPlayingMediaId = playerState.currentSong?.mediaId,
-                modifier = Modifier.padding(innerPadding),
-            )
+            Column(modifier = Modifier.padding(innerPadding)) {
+                OfflineBanner(isOffline = playerState.isOffline)
+                NyasaPlayerNavHost(
+                    navController = navController,
+                    onSongClick = { songs, song -> playerViewModel.playSong(songs, song) },
+                    onShufflePlay = playerViewModel::shufflePlay,
+                    onSignOut = onSignOut,
+                    currentlyPlayingMediaId = playerState.currentSong?.mediaId,
+                )
+            }
         }
 
         GlobalPlayerLayer(

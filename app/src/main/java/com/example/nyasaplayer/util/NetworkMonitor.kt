@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,18 +20,21 @@ class NetworkMonitor @Inject constructor(context: Context) {
     val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
 
     init {
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-        connectivityManager.registerNetworkCallback(
-            request,
+        connectivityManager.registerDefaultNetworkCallback(
             object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
-                    _isOnline.value = true
+                    _isOnline.value = checkCurrentConnectivity()
                 }
 
                 override fun onLost(network: Network) {
-                    _isOnline.value = false
+                    _isOnline.value = checkCurrentConnectivity()
+                }
+
+                override fun onCapabilitiesChanged(
+                    network: Network,
+                    capabilities: NetworkCapabilities,
+                ) {
+                    _isOnline.value = checkCurrentConnectivity()
                 }
             },
         )
@@ -41,6 +43,7 @@ class NetworkMonitor @Inject constructor(context: Context) {
     private fun checkCurrentConnectivity(): Boolean {
         val network = connectivityManager.activeNetwork ?: return false
         val caps = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 }
