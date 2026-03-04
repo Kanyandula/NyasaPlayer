@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -316,11 +317,17 @@ class PlayerViewModel @Inject constructor(
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                val isNetwork = error.cause is IOException
                 _uiState.update {
                     it.copy(
+                        isPlaying = false,
                         error = PlayerError(
-                            title = "Playback Error",
-                            message = error.message ?: "Playback error",
+                            title = if (isNetwork) "Offline" else "Playback Error",
+                            message = if (isNetwork) {
+                                "This song isn't available offline"
+                            } else {
+                                error.message ?: "Playback error"
+                            },
                         ),
                     )
                 }

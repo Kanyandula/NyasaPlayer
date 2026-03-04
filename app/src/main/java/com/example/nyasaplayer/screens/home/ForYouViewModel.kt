@@ -9,7 +9,6 @@ import com.example.nyasaplayer.data.api.UserRepository
 import com.example.nyasaplayer.models.HomeFeed
 import com.example.nyasaplayer.models.RecentlyPlayedEntry
 import com.example.nyasaplayer.models.Song
-import com.example.nyasaplayer.util.NetworkMonitor
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -46,7 +45,6 @@ class ForYouViewModel @Inject constructor(
     private val homeFeedRepository: HomeFeedRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
-    private val networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ForYouUiState())
@@ -73,14 +71,6 @@ class ForYouViewModel @Inject constructor(
 
     private fun loadFeed() {
         viewModelScope.launch(exceptionHandler) {
-            if (!networkMonitor.isOnline.value) {
-                _uiState.value = ForYouUiState(
-                    isLoading = false,
-                    errorMessage = "No internet connection",
-                    isNetworkError = true,
-                )
-                return@launch
-            }
             val userId = authRepository.currentUser?.uid
             val recentlyPlayedFlow = if (userId != null) {
                 userRepository.getRecentlyPlayed(userId)
