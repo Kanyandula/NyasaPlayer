@@ -28,5 +28,6 @@ data class PlayerUiState(
     val repeatMode: RepeatMode = RepeatMode.Off,
     val isCurrentSongLiked: Boolean = false,
     val isShuffled: Boolean = false,
+    val isOffline: Boolean = false,
     val error: PlayerError? = null,
 )
