@@ -1,6 +1,7 @@
 package com.example.nyasaplayer.data.sync
 
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.example.nyasaplayer.data.local.dao.ArtistDao
 import com.example.nyasaplayer.data.local.dao.GenreDao
 import com.example.nyasaplayer.data.local.dao.SongDao
@@ -116,15 +117,8 @@ class FirebaseSyncManager @Inject constructor(
         }.collect { onEach(it) }
     }
 
-    private fun calculateBackoff(attempt: Long): Long {
-        val shift = attempt.coerceAtMost(BACKOFF_SHIFT_CAP).toInt()
-        return (INITIAL_RETRY_DELAY_MS * (1L shl shift)).coerceAtMost(MAX_RETRY_DELAY_MS)
-    }
-
-    private fun isPermanentError(e: Throwable): Boolean =
-        e is FirebaseFirestoreException && e.code in PERMANENT_ERROR_CODES
-
-    private companion object {
+    @VisibleForTesting
+    internal companion object {
         const val TAG = "FirebaseSyncManager"
         const val MAX_RETRIES = 20
         const val INITIAL_RETRY_DELAY_MS = 5_000L
@@ -135,5 +129,13 @@ class FirebaseSyncManager @Inject constructor(
             FirebaseFirestoreException.Code.NOT_FOUND,
             FirebaseFirestoreException.Code.UNAUTHENTICATED,
         )
+
+        fun calculateBackoff(attempt: Long): Long {
+            val shift = attempt.coerceAtMost(BACKOFF_SHIFT_CAP).toInt()
+            return (INITIAL_RETRY_DELAY_MS * (1L shl shift)).coerceAtMost(MAX_RETRY_DELAY_MS)
+        }
+
+        fun isPermanentError(e: Throwable): Boolean =
+            e is FirebaseFirestoreException && e.code in PERMANENT_ERROR_CODES
     }
 }
