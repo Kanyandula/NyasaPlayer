@@ -32,6 +32,6 @@ class NyasaPlayerApplication : Application(), ImageLoaderFactory {
             .build()
 
     private companion object {
-        const val IMAGE_CACHE_MAX_SIZE_PERCENT = 0.05
+        const val IMAGE_CACHE_MAX_SIZE_PERCENT = 0.10
     }
 }

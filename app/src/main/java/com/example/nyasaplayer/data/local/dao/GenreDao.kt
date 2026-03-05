@@ -1,10 +1,9 @@
 package com.example.nyasaplayer.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import com.example.nyasaplayer.data.local.entity.GenreEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -14,15 +13,15 @@ interface GenreDao {
     @Query("SELECT * FROM genres")
     fun getAll(): Flow<List<GenreEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(genres: List<GenreEntity>)
+    @Upsert
+    suspend fun upsertAll(genres: List<GenreEntity>)
 
-    @Query("DELETE FROM genres")
-    suspend fun deleteAll()
+    @Query("DELETE FROM genres WHERE id NOT IN (:ids)")
+    suspend fun deleteNotIn(ids: List<String>)
 
     @Transaction
-    suspend fun replaceAll(genres: List<GenreEntity>) {
-        deleteAll()
-        insertAll(genres)
+    suspend fun sync(genres: List<GenreEntity>) {
+        upsertAll(genres)
+        deleteNotIn(genres.map { it.id })
     }
 }
