@@ -3,8 +3,6 @@ package com.example.nyasaplayer.data.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.nyasaplayer.data.local.fromPipeDelimited
-import com.example.nyasaplayer.data.local.toPipeDelimited
 import com.example.nyasaplayer.models.Genre
 
 @Entity(tableName = "genres")
@@ -17,7 +15,7 @@ data class GenreEntity(
     val imageUrl: String,
     val popularity: Int,
     @ColumnInfo(name = "song_ids")
-    val songIds: String,
+    val songIds: List<String>,
 ) {
     fun toDomain(): Genre = Genre(
         id = id,
@@ -25,7 +23,7 @@ data class GenreEntity(
         color = color,
         imageUrl = imageUrl,
         popularity = popularity,
-        songIds = fromPipeDelimited(songIds),
+        songIds = songIds,
     )
 
     companion object {
@@ -35,7 +33,7 @@ data class GenreEntity(
             color = genre.color,
             imageUrl = genre.imageUrl,
             popularity = genre.popularity,
-            songIds = toPipeDelimited(genre.songIds),
+            songIds = genre.songIds,
         )
     }
 }

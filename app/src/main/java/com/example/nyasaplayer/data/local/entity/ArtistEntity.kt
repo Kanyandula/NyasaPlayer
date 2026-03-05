@@ -3,8 +3,6 @@ package com.example.nyasaplayer.data.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.nyasaplayer.data.local.fromPipeDelimited
-import com.example.nyasaplayer.data.local.toPipeDelimited
 import com.example.nyasaplayer.models.Artist
 
 @Entity(tableName = "artists")
@@ -14,7 +12,7 @@ data class ArtistEntity(
     val name: String,
     @ColumnInfo(name = "image_url")
     val imageUrl: String,
-    val genres: String,
+    val genres: List<String>,
     val popularity: Int,
     @ColumnInfo(name = "song_count")
     val songCount: Int,
@@ -23,7 +21,7 @@ data class ArtistEntity(
         id = id,
         name = name,
         imageUrl = imageUrl,
-        genres = fromPipeDelimited(genres),
+        genres = genres,
         popularity = popularity,
         songCount = songCount,
     )
@@ -33,7 +31,7 @@ data class ArtistEntity(
             id = artist.id,
             name = artist.name,
             imageUrl = artist.imageUrl,
-            genres = toPipeDelimited(artist.genres),
+            genres = artist.genres,
             popularity = artist.popularity,
             songCount = artist.songCount,
         )

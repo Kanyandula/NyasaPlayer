@@ -11,14 +11,17 @@ import com.example.nyasaplayer.models.Artist
 import com.example.nyasaplayer.models.Genre
 import com.example.nyasaplayer.models.Song
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.retry
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,13 +34,26 @@ class FirebaseSyncManager @Inject constructor(
     private val genreDao: GenreDao,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var syncJob: Job? = null
 
+    @Synchronized
     fun start() {
-        scope.launch { collectWithRetry(songsFlow()) { songDao.replaceAll(it) } }
-        scope.launch { collectWithRetry(artistsFlow()) { artistDao.replaceAll(it) } }
-        scope.launch { collectWithRetry(genresFlow()) { genreDao.replaceAll(it) } }
+        if (syncJob?.isActive == true) return
+        syncJob = scope.launch {
+            launch { collectWithRetry(songsFlow()) { songDao.sync(it) } }
+            launch { collectWithRetry(artistsFlow()) { artistDao.sync(it) } }
+            launch { collectWithRetry(genresFlow()) { genreDao.sync(it) } }
+        }
     }
 
+    @Synchronized
+    fun stop() {
+        syncJob?.cancel()
+        syncJob = null
+    }
+
+    // Songs use Firestore's toObject<Song>() directly — doc IDs (e.g. "song") differ from
+    // the mediaId field (e.g. "8") because songs are keyed by mediaId in Room.
     private fun songsFlow(): Flow<List<SongEntity>> = callbackFlow {
         val registration = firestore.collection("songs")
             .addSnapshotListener { snapshot, error ->
@@ -87,15 +103,37 @@ class FirebaseSyncManager @Inject constructor(
     }
 
     private suspend fun <T> collectWithRetry(flow: Flow<List<T>>, onEach: suspend (List<T>) -> Unit) {
-        flow.retry(Long.MAX_VALUE) { e ->
-            Log.e(TAG, "Sync error, retrying in ${RETRY_DELAY_MS}ms", e)
-            kotlinx.coroutines.delay(RETRY_DELAY_MS)
-            true
+        flow.retryWhen { cause, attempt ->
+            if (isPermanentError(cause) || attempt >= MAX_RETRIES) {
+                Log.e(TAG, "Sync error, giving up after ${attempt + 1} attempts", cause)
+                false
+            } else {
+                val delayMs = calculateBackoff(attempt)
+                Log.e(TAG, "Sync error, retrying in ${delayMs}ms (attempt ${attempt + 1}/$MAX_RETRIES)", cause)
+                delay(delayMs)
+                true
+            }
         }.collect { onEach(it) }
     }
 
+    private fun calculateBackoff(attempt: Long): Long {
+        val shift = attempt.coerceAtMost(BACKOFF_SHIFT_CAP).toInt()
+        return (INITIAL_RETRY_DELAY_MS * (1L shl shift)).coerceAtMost(MAX_RETRY_DELAY_MS)
+    }
+
+    private fun isPermanentError(e: Throwable): Boolean =
+        e is FirebaseFirestoreException && e.code in PERMANENT_ERROR_CODES
+
     private companion object {
         const val TAG = "FirebaseSyncManager"
-        const val RETRY_DELAY_MS = 5_000L
+        const val MAX_RETRIES = 20
+        const val INITIAL_RETRY_DELAY_MS = 5_000L
+        const val MAX_RETRY_DELAY_MS = 300_000L
+        const val BACKOFF_SHIFT_CAP = 6L
+        val PERMANENT_ERROR_CODES = setOf(
+            FirebaseFirestoreException.Code.PERMISSION_DENIED,
+            FirebaseFirestoreException.Code.NOT_FOUND,
+            FirebaseFirestoreException.Code.UNAUTHENTICATED,
+        )
     }
 }

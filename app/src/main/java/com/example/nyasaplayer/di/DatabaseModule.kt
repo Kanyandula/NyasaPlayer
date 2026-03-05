@@ -25,11 +25,14 @@ object DatabaseModule {
             .build()
 
     @Provides
+    @Singleton
     fun provideSongDao(database: NyasaDatabase): SongDao = database.songDao()
 
     @Provides
+    @Singleton
     fun provideArtistDao(database: NyasaDatabase): ArtistDao = database.artistDao()
 
     @Provides
+    @Singleton
     fun provideGenreDao(database: NyasaDatabase): GenreDao = database.genreDao()
 }

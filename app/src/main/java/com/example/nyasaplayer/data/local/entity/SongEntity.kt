@@ -3,8 +3,6 @@ package com.example.nyasaplayer.data.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.nyasaplayer.data.local.fromPipeDelimited
-import com.example.nyasaplayer.data.local.toPipeDelimited
 import com.example.nyasaplayer.models.Song
 
 @Entity(tableName = "songs")
@@ -29,7 +27,7 @@ data class SongEntity(
     @ColumnInfo(name = "duration_ms")
     val durationMs: Long,
     @ColumnInfo(name = "genre_ids")
-    val genreIds: String,
+    val genreIds: List<String>,
     @ColumnInfo(name = "cover_url")
     val coverUrl: String,
     @ColumnInfo(name = "audio_url")
@@ -49,7 +47,7 @@ data class SongEntity(
         albumId = albumId,
         albumName = albumName,
         durationMs = durationMs,
-        genreIds = fromPipeDelimited(genreIds),
+        genreIds = genreIds,
         coverUrl = coverUrl,
         audioUrl = audioUrl,
         popularity = popularity,
@@ -68,7 +66,7 @@ data class SongEntity(
             albumId = song.albumId,
             albumName = song.albumName,
             durationMs = song.durationMs,
-            genreIds = toPipeDelimited(song.genreIds),
+            genreIds = song.genreIds,
             coverUrl = song.coverUrl,
             audioUrl = song.audioUrl,
             popularity = song.popularity,

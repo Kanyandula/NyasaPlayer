@@ -20,9 +20,11 @@ class OfflineSongRepository @Inject constructor(
 
     override suspend fun getSongsByIds(ids: List<String>): List<Song> {
         if (ids.isEmpty()) return emptyList()
-        return ids.chunked(SQLITE_BIND_VARIABLE_LIMIT).flatMap { chunk ->
+        val songs = ids.chunked(SQLITE_BIND_VARIABLE_LIMIT).flatMap { chunk ->
             songDao.getByMediaIds(chunk).map { it.toDomain() }
         }
+        val songMap = songs.associateBy { it.mediaId }
+        return ids.mapNotNull { songMap[it] }
     }
 
     override fun getSongsByArtist(artistId: String): Flow<List<Song>> =
