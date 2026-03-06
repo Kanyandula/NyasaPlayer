@@ -57,7 +57,7 @@ Write tests for:
 Test naming convention — `methodUnderTest_condition_expectedResult`:
 ```kotlin
 @Test
-fun getSongsByIds_emptyList_returnsEmpty() = runTest { ... }
+fun getSongsByIds_emptyList_returnsEmpty() = runTest { }
 ```
 
 ## Commit Workflow
