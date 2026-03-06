@@ -30,10 +30,10 @@ The configuration enforces `maxIssues: 0`, meaning any issue will fail the build
 
 ### Android Lint
 
-Android Lint is configured per-module in `app/build.gradle.kts`.
+Android Lint is configured per-module.
 
 - **Config file**: `app/lint.xml`
-- **Run manually**: `./gradlew :app:lintDebug`
+- **Run manually**: `./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug`
 - **Report location**: `app/build/reports/lint-results-debug.html`
 
 Custom severity overrides in `lint.xml`:
@@ -79,7 +79,7 @@ Or via Gradle:
 ### What the hook does
 
 1. Runs `./gradlew detekt` — fails the commit if any issues are found
-2. Runs `./gradlew :app:lintDebug` — fails the commit if any lint errors are found
+2. Runs `./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug` — fails the commit if any lint errors are found
 
 ### Bypassing the hook
 

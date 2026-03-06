@@ -28,80 +28,48 @@ https://preview--nyasa-harmony-suite.lovable.app/screens
 
 ## Project Structure
 
+Multi-module Gradle project: `:core:common` <- `:core:data` <- `:app`
+
 ```
-com.example.nyasaplayer/
+:core:common  (com.example.nyasaplayer.core.common)
+├── models/                         # Domain models (Song, Artist, Genre, HomeFeed, UserData)
+├── ui/
+│   ├── theme/                      # Color, Theme, Type
+│   ├── icons/NyasaIcons.kt        # Custom ImageVector icons
+│   └── components/                 # ErrorBanner, NyasaErrorScreen, OfflineBanner, SongOverflowSheet
+└── util/                           # FormatDuration, Greeting, NetworkMonitor
+
+:core:data  (com.example.nyasaplayer.core.data)
+├── api/                            # Repository interfaces (SongRepository, AuthRepository, etc.)
+├── dto/                            # Firestore DTOs
+├── local/                          # Room database, DAOs, entities
+├── offline/                        # Offline-first repository implementations
+├── sync/FirebaseSyncManager.kt     # Syncs Firestore -> Room on startup
+├── Firebase*Repository.kt          # Firebase implementations
+└── di/                             # DatabaseModule, RepositoryModule
+
+:app  (com.example.nyasaplayer)
 ├── MainActivity.kt
-├── data/
-│   ├── api/                        # Repository interfaces + Firebase implementations
-│   │   ├── AuthRepository.kt
-│   │   ├── SongRepository.kt       # Interface for song data
-│   │   └── ...
-│   ├── local/                      # Room database layer
-│   │   ├── NyasaDatabase.kt        # Room database class
-│   │   ├── dao/                    # SongDao, ArtistDao, GenreDao
-│   │   └── entity/                 # SongEntity, ArtistEntity, GenreEntity
-│   ├── offline/                    # Offline-first repository implementations
-│   │   ├── OfflineSongRepository.kt
-│   │   ├── OfflineArtistRepository.kt
-│   │   └── OfflineGenreRepository.kt
-│   └── sync/
-│       └── FirebaseSyncManager.kt  # Syncs Firestore → Room on startup
-├── di/
-│   ├── AppModule.kt               # Firebase providers
-│   ├── DatabaseModule.kt          # Room database + DAOs
-│   └── RepositoryModule.kt        # Binds Offline*Repository → interfaces
-├── navigation/
-│   ├── RootNavigation.kt          # Auth flow: Splash → Login/SignUp → MainApp
-│   └── NyasaPlayerNavigation.kt   # Bottom tab navigation
+├── di/                             # AppModule (Firebase providers), PlayerModule
+├── navigation/                     # RootNavigation, NyasaPlayerNavigation, NyasaBottomNavBar
 ├── screens/
 │   ├── NyasaPlayerApp.kt          # Main app shell with bottom nav
-│   ├── splash/
-│   │   ├── SplashScreen.kt        # Compose splash with branding
-│   │   └── SplashViewModel.kt     # Auth check + navigation routing
-│   ├── auth/
-│   │   ├── LoginScreen.kt         # Email/password + Google Sign-In
-│   │   ├── SignUpScreen.kt         # Registration screen
-│   │   ├── AuthViewModel.kt       # Login state management
-│   │   ├── SignUpViewModel.kt      # Registration state management
-│   │   └── AuthComponents.kt      # Shared auth UI components
-│   ├── home/
-│   │   ├── ForYouScreen.kt        # Home feed with sections
-│   │   └── ForYouViewModel.kt     # Home data loading
-│   ├── search/
-│   │   ├── SearchScreen.kt        # Search + genre browsing
-│   │   └── SearchViewModel.kt     # Search/filter logic
-│   ├── library/
-│   │   ├── LibraryScreen.kt       # Liked songs / favorites
-│   │   └── LibraryViewModel.kt    # Library data
-│   ├── profile/
-│   │   └── ProfileScreen.kt       # User profile + settings menu
-│   └── player/
-│       ├── MiniPlayer.kt          # Collapsed player bar
-│       ├── ExpandedPlayer.kt      # Full-screen player
-│       └── PlayerViewModel.kt     # Playback state + ExoPlayer control
-├── util/
-│   └── NetworkMonitor.kt          # Connectivity state (StateFlow<Boolean>)
-├── ui/
-│   ├── theme/
-│   │   ├── Theme.kt               # AppTheme composable
-│   │   └── Color.kt               # NyasaPrimary, NyasaBackground, surfaces, etc.
-│   ├── icons/
-│   │   └── NyasaIcons.kt          # Custom ImageVector icons
-│   └── preview/
-│       └── PreviewData.kt         # Preview/mock data
-└── res/
-    ├── values/strings.xml
-    ├── values/colors.xml
-    ├── values/themes.xml
-    └── values-v31/themes.xml
+│   ├── auth/                       # LoginScreen, SignUpScreen, AuthViewModel, SignUpViewModel
+│   ├── home/                       # ForYouScreen, ForYouViewModel
+│   ├── search/                     # SearchScreen, SearchViewModel
+│   ├── library/                    # LibraryScreen, LibraryViewModel
+│   ├── profile/                    # ProfileScreen, ProfileViewModel
+│   └── player/                     # MiniPlayer, ExpandedPlayer, PlayerViewModel
+├── player/                         # PlayerManager, PlaybackQueueManager, PlaybackService, etc.
+├── util/ErrorMessages.kt           # Firebase error classification
+└── ui/preview/PreviewData.kt       # Preview/mock data
 ```
 
 ## Implemented Features
 
 ### Splash Screen
-- System splash (AndroidX SplashScreen API) with dark background blending into Compose splash
-- Compose splash: 120dp purple music note icon with glow effect, "NyasaPlayer" title, "YOUR MUSIC, YOUR VIBE" tagline, loading spinner
-- 2-second delay then routes to Login (unauthenticated) or MainApp (authenticated)
+- System splash (AndroidX SplashScreen API) with dark background
+- Routes to Login (unauthenticated) or MainApp (authenticated)
 
 ### Authentication (Firebase Auth)
 - **Login Screen**: Email/password fields, "Forgot password?" link, gradient "Sign In" button, Google Sign-In via Credential Manager API, "OR" divider, navigation to Sign Up
@@ -149,7 +117,7 @@ com.example.nyasaplayer/
 - **Room database**: Songs, artists, genres cached locally via `NyasaDatabase`
 - **Firebase sync**: `FirebaseSyncManager` syncs Firestore collections → Room on app startup
 - **Offline repositories**: `OfflineSongRepository`, `OfflineArtistRepository`, `OfflineGenreRepository` read from Room DAOs
-- **Image caching**: Coil configured with `respectCacheHeaders(false)` and 5% disk cache for offline artwork
+- **Image caching**: Coil configured with `respectCacheHeaders(false)` and 10% disk cache for offline artwork
 
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)
