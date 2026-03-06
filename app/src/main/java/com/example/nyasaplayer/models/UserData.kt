@@ -1,24 +1,22 @@
 package com.example.nyasaplayer.models
 
-import com.google.firebase.Timestamp
-
 data class UserProfile(
     val userId: String = "",
     val displayName: String = "",
     val email: String = "",
     val photoUrl: String = "",
-    val createdAt: Timestamp? = null,
+    val createdAt: Long? = null,
     val accountType: String = "free",
 )
 
 data class LikedSong(
     val mediaId: String = "",
-    val likedAt: Timestamp? = null,
+    val likedAt: Long? = null,
 )
 
 data class RecentlyPlayedEntry(
     val mediaId: String = "",
-    val playedAt: Timestamp? = null,
+    val playedAt: Long? = null,
 )
 
 data class PlaybackState(
@@ -27,5 +25,5 @@ data class PlaybackState(
     val queueSongIds: List<String> = emptyList(),
     val queueIndex: Int = 0,
     val repeatMode: String = "Off",
-    val savedAt: Timestamp? = null,
+    val savedAt: Long? = null,
 )

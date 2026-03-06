@@ -1,6 +1,10 @@
 package com.example.nyasaplayer.data
 
 import com.example.nyasaplayer.data.api.UserRepository
+import com.example.nyasaplayer.data.dto.FirestoreLikedSongDto
+import com.example.nyasaplayer.data.dto.FirestorePlaybackStateDto
+import com.example.nyasaplayer.data.dto.FirestoreRecentlyPlayedDto
+import com.example.nyasaplayer.data.dto.FirestoreUserProfileDto
 import com.example.nyasaplayer.models.LikedSong
 import com.example.nyasaplayer.models.PlaybackState
 import com.example.nyasaplayer.models.RecentlyPlayedEntry
@@ -31,13 +35,13 @@ class FirebaseUserRepository @Inject constructor(
                     close(error)
                     return@addSnapshotListener
                 }
-                trySend(snapshot?.toObject<UserProfile>())
+                trySend(snapshot?.toObject<FirestoreUserProfileDto>()?.toDomain())
             }
         awaitClose { registration.remove() }
     }
 
     override suspend fun createOrUpdateProfile(profile: UserProfile) {
-        userDoc(profile.userId).set(profile, SetOptions.merge()).await()
+        userDoc(profile.userId).set(FirestoreUserProfileDto.fromDomain(profile), SetOptions.merge()).await()
     }
 
     // ── Liked Songs ──
@@ -50,15 +54,17 @@ class FirebaseUserRepository @Inject constructor(
                     close(error)
                     return@addSnapshotListener
                 }
-                val songs = snapshot?.documents?.mapNotNull { it.toObject<LikedSong>() }.orEmpty()
+                val songs = snapshot?.documents
+                    ?.mapNotNull { it.toObject<FirestoreLikedSongDto>()?.toDomain() }
+                    .orEmpty()
                 trySend(songs)
             }
         awaitClose { registration.remove() }
     }
 
     override suspend fun likeSong(userId: String, mediaId: String) {
-        val likedSong = LikedSong(mediaId = mediaId, likedAt = Timestamp.now())
-        userDoc(userId).collection("likedSongs").document(mediaId).set(likedSong).await()
+        val dto = FirestoreLikedSongDto(mediaId = mediaId, likedAt = Timestamp.now())
+        userDoc(userId).collection("likedSongs").document(mediaId).set(dto).await()
     }
 
     override suspend fun unlikeSong(userId: String, mediaId: String) {
@@ -90,7 +96,7 @@ class FirebaseUserRepository @Inject constructor(
                         return@addSnapshotListener
                     }
                     val entries =
-                        snapshot?.documents?.mapNotNull { it.toObject<RecentlyPlayedEntry>() }
+                        snapshot?.documents?.mapNotNull { it.toObject<FirestoreRecentlyPlayedDto>()?.toDomain() }
                             .orEmpty()
                     trySend(entries)
                 }
@@ -98,20 +104,21 @@ class FirebaseUserRepository @Inject constructor(
         }
 
     override suspend fun logRecentlyPlayed(userId: String, mediaId: String) {
-        val entry = RecentlyPlayedEntry(mediaId = mediaId, playedAt = Timestamp.now())
-        userDoc(userId).collection("recentlyPlayed").add(entry).await()
+        val dto = FirestoreRecentlyPlayedDto(mediaId = mediaId, playedAt = Timestamp.now())
+        userDoc(userId).collection("recentlyPlayed").add(dto).await()
     }
 
     // ── Playback State ──
 
     override suspend fun savePlaybackState(userId: String, state: PlaybackState) {
-        userDoc(userId).collection("playbackState").document("current").set(state).await()
+        userDoc(userId).collection("playbackState").document("current")
+            .set(FirestorePlaybackStateDto.fromDomain(state)).await()
     }
 
     override suspend fun getPlaybackState(userId: String): PlaybackState? {
         return try {
             userDoc(userId).collection("playbackState").document("current")
-                .get().await().toObject<PlaybackState>()
+                .get().await().toObject<FirestorePlaybackStateDto>()?.toDomain()
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
