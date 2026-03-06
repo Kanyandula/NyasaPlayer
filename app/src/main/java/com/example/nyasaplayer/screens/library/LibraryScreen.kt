@@ -46,20 +46,20 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
-import com.example.nyasaplayer.models.Song
-import com.example.nyasaplayer.ui.components.NyasaErrorScreen
-import com.example.nyasaplayer.ui.components.SongOverflowSheet
-import com.example.nyasaplayer.ui.icons.HeartIcon
-import com.example.nyasaplayer.ui.icons.MoreHorizIcon
-import com.example.nyasaplayer.ui.icons.ShuffleIcon
+import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
+import com.example.nyasaplayer.core.common.ui.components.SongOverflowSheet
+import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
+import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
+import com.example.nyasaplayer.core.common.ui.icons.ShuffleIcon
+import com.example.nyasaplayer.core.common.ui.theme.AppTheme
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
+import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
+import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.ui.preview.PreviewSongsWithDuration
-import com.example.nyasaplayer.ui.theme.AppTheme
-import com.example.nyasaplayer.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.ui.theme.NyasaTextSecondary
-import com.example.nyasaplayer.ui.theme.NyasaTextTertiary
-import com.example.nyasaplayer.util.formatDuration
 
 @Composable
 fun LibraryScreen(

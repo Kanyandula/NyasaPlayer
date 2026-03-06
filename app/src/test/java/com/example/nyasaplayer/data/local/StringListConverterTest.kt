@@ -1,5 +1,6 @@
 package com.example.nyasaplayer.data.local
 
+import com.example.nyasaplayer.core.data.local.StringListConverter
 import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Test

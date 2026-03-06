@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.8.0" type="partial_results">
+    <map id="UnusedResources">
+        <entry
+            name="model"
+            string="string[good_morning(U),good_afternoon(U),good_evening(U),close(U),share(U),favorite(U),play_next(U),start_mix(U),add_to_queue(U),save_to_library(U),download(U),save_to_playlist(U),remove_from_playlist(U),go_to_album(U),go_to_artist(U)];;;;"/>
+    </map>
+
+</incidents>

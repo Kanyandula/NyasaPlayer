@@ -2,10 +2,10 @@ package com.example.nyasaplayer.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.api.GenreRepository
-import com.example.nyasaplayer.data.api.SongRepository
-import com.example.nyasaplayer.models.Genre
-import com.example.nyasaplayer.models.Song
+import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.api.GenreRepository
+import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler

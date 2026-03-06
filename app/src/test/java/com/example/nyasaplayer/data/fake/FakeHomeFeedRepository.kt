@@ -1,7 +1,7 @@
 package com.example.nyasaplayer.data.fake
 
-import com.example.nyasaplayer.data.api.HomeFeedRepository
-import com.example.nyasaplayer.models.HomeFeed
+import com.example.nyasaplayer.core.common.models.HomeFeed
+import com.example.nyasaplayer.core.data.api.HomeFeedRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 

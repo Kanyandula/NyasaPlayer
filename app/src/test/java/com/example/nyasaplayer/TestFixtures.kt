@@ -1,11 +1,11 @@
 package com.example.nyasaplayer
 
-import com.example.nyasaplayer.data.local.entity.ArtistEntity
-import com.example.nyasaplayer.data.local.entity.GenreEntity
-import com.example.nyasaplayer.data.local.entity.SongEntity
-import com.example.nyasaplayer.models.Artist
-import com.example.nyasaplayer.models.Genre
-import com.example.nyasaplayer.models.Song
+import com.example.nyasaplayer.core.common.models.Artist
+import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.local.entity.ArtistEntity
+import com.example.nyasaplayer.core.data.local.entity.GenreEntity
+import com.example.nyasaplayer.core.data.local.entity.SongEntity
 
 fun song(
     mediaId: String = "1",

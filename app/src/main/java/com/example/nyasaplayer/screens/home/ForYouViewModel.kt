@@ -2,13 +2,13 @@ package com.example.nyasaplayer.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.api.AuthRepository
-import com.example.nyasaplayer.data.api.HomeFeedRepository
-import com.example.nyasaplayer.data.api.SongRepository
-import com.example.nyasaplayer.data.api.UserRepository
-import com.example.nyasaplayer.models.HomeFeed
-import com.example.nyasaplayer.models.RecentlyPlayedEntry
-import com.example.nyasaplayer.models.Song
+import com.example.nyasaplayer.core.common.models.HomeFeed
+import com.example.nyasaplayer.core.common.models.RecentlyPlayedEntry
+import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.HomeFeedRepository
+import com.example.nyasaplayer.core.data.api.SongRepository
+import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler

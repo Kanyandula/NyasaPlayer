@@ -4,7 +4,7 @@ import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
-import com.example.nyasaplayer.data.sync.FirebaseSyncManager
+import com.example.nyasaplayer.core.data.sync.FirebaseSyncManager
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 

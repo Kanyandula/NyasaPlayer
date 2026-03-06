@@ -1,10 +1,10 @@
 package com.example.nyasaplayer.data.fake
 
-import com.example.nyasaplayer.data.api.UserRepository
-import com.example.nyasaplayer.models.LikedSong
-import com.example.nyasaplayer.models.PlaybackState
-import com.example.nyasaplayer.models.RecentlyPlayedEntry
-import com.example.nyasaplayer.models.UserProfile
+import com.example.nyasaplayer.core.common.models.LikedSong
+import com.example.nyasaplayer.core.common.models.PlaybackState
+import com.example.nyasaplayer.core.common.models.RecentlyPlayedEntry
+import com.example.nyasaplayer.core.common.models.UserProfile
+import com.example.nyasaplayer.core.data.api.UserRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map

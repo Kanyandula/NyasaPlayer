@@ -1,6 +1,6 @@
 package com.example.nyasaplayer.player
 
-import com.example.nyasaplayer.models.Song
+import com.example.nyasaplayer.core.common.models.Song
 
 sealed interface PlayerMode {
     data object Hidden : PlayerMode

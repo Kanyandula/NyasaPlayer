@@ -1,10 +1,10 @@
 package com.example.nyasaplayer.player
 
-import com.example.nyasaplayer.data.api.AuthRepository
-import com.example.nyasaplayer.data.api.SongRepository
-import com.example.nyasaplayer.data.api.UserRepository
-import com.example.nyasaplayer.models.PlaybackState
-import com.example.nyasaplayer.models.Song
+import com.example.nyasaplayer.core.common.models.PlaybackState
+import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.SongRepository
+import com.example.nyasaplayer.core.data.api.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

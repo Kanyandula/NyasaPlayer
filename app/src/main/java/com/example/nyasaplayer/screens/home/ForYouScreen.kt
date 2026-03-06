@@ -41,17 +41,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
-import com.example.nyasaplayer.models.Song
-import com.example.nyasaplayer.ui.components.NyasaErrorScreen
-import com.example.nyasaplayer.ui.icons.ChevronRightIcon
-import com.example.nyasaplayer.ui.icons.NotificationIcon
-import com.example.nyasaplayer.ui.icons.ProfileIcon
+import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
+import com.example.nyasaplayer.core.common.ui.icons.ChevronRightIcon
+import com.example.nyasaplayer.core.common.ui.icons.NotificationIcon
+import com.example.nyasaplayer.core.common.ui.icons.ProfileIcon
+import com.example.nyasaplayer.core.common.ui.theme.AppTheme
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
+import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.util.greetingResource
 import com.example.nyasaplayer.ui.preview.PreviewForYouUiState
-import com.example.nyasaplayer.ui.theme.AppTheme
-import com.example.nyasaplayer.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.ui.theme.NyasaSurface3
-import com.example.nyasaplayer.ui.theme.NyasaTextSecondary
-import com.example.nyasaplayer.util.greetingResource
 
 @Composable
 fun ForYouScreen(
