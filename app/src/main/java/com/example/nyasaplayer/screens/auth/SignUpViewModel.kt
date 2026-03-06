@@ -6,7 +6,6 @@ import com.example.nyasaplayer.data.api.AuthRepository
 import com.example.nyasaplayer.data.api.AuthResult
 import com.example.nyasaplayer.data.api.UserRepository
 import com.example.nyasaplayer.models.UserProfile
-import com.google.firebase.Timestamp
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,7 +81,7 @@ class SignUpViewModel @Inject constructor(
                         displayName = user.displayName.orEmpty(),
                         email = user.email.orEmpty(),
                         photoUrl = user.photoUrl?.toString().orEmpty(),
-                        createdAt = Timestamp.now(),
+                        createdAt = System.currentTimeMillis(),
                         accountType = "email",
                     )
                     try {

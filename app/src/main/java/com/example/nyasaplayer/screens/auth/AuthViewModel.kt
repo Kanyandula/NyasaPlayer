@@ -6,7 +6,6 @@ import com.example.nyasaplayer.data.api.AuthRepository
 import com.example.nyasaplayer.data.api.AuthResult
 import com.example.nyasaplayer.data.api.UserRepository
 import com.example.nyasaplayer.models.UserProfile
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -129,7 +128,7 @@ class AuthViewModel @Inject constructor(
                 displayName = user.displayName.orEmpty(),
                 email = user.email.orEmpty(),
                 photoUrl = user.photoUrl?.toString().orEmpty(),
-                createdAt = Timestamp.now(),
+                createdAt = System.currentTimeMillis(),
                 accountType = if (
                     user.providerData.any { it.providerId == "google.com" }
                 ) {

@@ -5,7 +5,6 @@ import com.example.nyasaplayer.data.api.SongRepository
 import com.example.nyasaplayer.data.api.UserRepository
 import com.example.nyasaplayer.models.PlaybackState
 import com.example.nyasaplayer.models.Song
-import com.google.firebase.Timestamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -145,6 +144,6 @@ class PlaybackStatePersistence @Inject constructor(
         queueSongIds = queueSongIds,
         queueIndex = queueIndex,
         repeatMode = repeatMode.name,
-        savedAt = Timestamp.now(),
+        savedAt = System.currentTimeMillis(),
     )
 }
