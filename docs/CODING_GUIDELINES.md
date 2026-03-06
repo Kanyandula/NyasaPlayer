@@ -54,10 +54,10 @@ Write tests for:
 3. **Edge Cases** — Null inputs, empty collections, boundary values, error states
 4. **Integration Points** — Repository-to-network boundaries, database queries, navigation
 
-Test naming convention:
+Test naming convention — `methodUnderTest_condition_expectedResult`:
 ```kotlin
 @Test
-fun `should return empty list when no songs match the query`() { ... }
+fun getSongsByIds_emptyList_returnsEmpty() = runTest { ... }
 ```
 
 ## Commit Workflow
