@@ -5,7 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.nyasaplayer.models.Song
+import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.screens.home.ForYouScreen
 import com.example.nyasaplayer.screens.library.LibraryScreen
 import com.example.nyasaplayer.screens.profile.ProfileScreen

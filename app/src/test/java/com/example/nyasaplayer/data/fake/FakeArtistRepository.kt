@@ -1,7 +1,7 @@
 package com.example.nyasaplayer.data.fake
 
-import com.example.nyasaplayer.data.api.ArtistRepository
-import com.example.nyasaplayer.models.Artist
+import com.example.nyasaplayer.core.common.models.Artist
+import com.example.nyasaplayer.core.data.api.ArtistRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 

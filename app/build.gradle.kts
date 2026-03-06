@@ -71,11 +71,10 @@ android {
     }
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
-
 dependencies {
+
+    implementation(project(":core:common"))
+    implementation(project(":core:data"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
@@ -89,7 +88,6 @@ dependencies {
 
     // Firebase
     implementation(libs.firebase.auth.ktx)
-    implementation(libs.firebase.database)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.play.services.auth)
     implementation(libs.androidx.credentials)
@@ -109,7 +107,6 @@ dependencies {
     //Kotlin Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.coroutines.playservices)
 
     // Lifecycle ViewModel and LiveData
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
@@ -122,13 +119,6 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
-
-    // Room
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-
-
 
 
 

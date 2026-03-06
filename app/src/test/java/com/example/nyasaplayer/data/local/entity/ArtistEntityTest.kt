@@ -1,6 +1,6 @@
-package com.example.nyasaplayer.data.local.entity
+package com.example.nyasaplayer.core.data.local.entity
 
-import com.example.nyasaplayer.models.Artist
+import com.example.nyasaplayer.core.common.models.Artist
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

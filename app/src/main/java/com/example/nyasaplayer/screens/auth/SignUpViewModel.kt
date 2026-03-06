@@ -2,10 +2,10 @@ package com.example.nyasaplayer.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.api.AuthRepository
-import com.example.nyasaplayer.data.api.AuthResult
-import com.example.nyasaplayer.data.api.UserRepository
-import com.example.nyasaplayer.models.UserProfile
+import com.example.nyasaplayer.core.common.models.UserProfile
+import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.AuthResult
+import com.example.nyasaplayer.core.data.api.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow

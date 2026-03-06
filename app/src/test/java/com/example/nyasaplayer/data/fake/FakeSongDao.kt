@@ -1,7 +1,7 @@
 package com.example.nyasaplayer.data.fake
 
-import com.example.nyasaplayer.data.local.dao.SongDao
-import com.example.nyasaplayer.data.local.entity.SongEntity
+import com.example.nyasaplayer.core.data.local.dao.SongDao
+import com.example.nyasaplayer.core.data.local.entity.SongEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map

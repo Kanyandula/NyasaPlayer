@@ -21,4 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "NyasaPlayer"
 include(":app")
+include(":core:common")
+include(":core:data")
  

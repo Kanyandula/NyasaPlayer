@@ -1,5 +1,6 @@
 package com.example.nyasaplayer.data.sync
 
+import com.example.nyasaplayer.core.data.sync.FirebaseSyncManager
 import com.google.firebase.firestore.FirebaseFirestoreException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -1,7 +1,7 @@
 package com.example.nyasaplayer.data.fake
 
-import com.example.nyasaplayer.data.api.AuthResult
-import com.example.nyasaplayer.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.AuthResult
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
