@@ -88,7 +88,7 @@ Room entities live in `core/data/.../local/entity/`, DAOs in `core/data/.../loca
 
 ### DI modules
 
-- `AppModule` (`:app` `di/`) — provides FirebaseFirestore, FirebaseDatabase, FirebaseAuth
+- `AppModule` (`:app` `di/`) — provides FirebaseFirestore, FirebaseAuth, and ApplicationContext
 - `DatabaseModule` (`:core:data` `di/`) — provides Room `NyasaDatabase` and DAOs
 - `RepositoryModule` (`:core:data` `di/`) — binds `Offline*Repository` implementations to repository interfaces
 - `PlayerModule` (`:app` `di/`) — provides ExoPlayer instance

@@ -54,8 +54,6 @@ class PlaybackQueueManager @Inject constructor() {
         }
     }
 
-    fun currentSong(): Song? = queue.getOrNull(currentIndex)
-
     fun skipNext(repeatMode: RepeatMode): Song? {
         if (currentIndex < queue.lastIndex) {
             currentIndex++
