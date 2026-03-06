@@ -2,14 +2,15 @@ package com.example.nyasaplayer.player
 
 import com.example.nyasaplayer.core.common.models.Song
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class PlaybackQueueManager @Inject constructor() {
 
     var queue: List<Song> = emptyList()
         private set
 
     var currentIndex: Int = -1
-        private set
 
     private var originalQueue: List<Song> = emptyList()
 

@@ -42,10 +42,6 @@ fun NyasaPlayerApp(
     val playerState by playerViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) {
-        playerViewModel.restorePlaybackState()
-    }
-
     LaunchedEffect(playerState.error, playerState.playerMode) {
         val error = playerState.error ?: return@LaunchedEffect
         if (playerState.playerMode != PlayerMode.Expanded || !error.isPlaybackError) {
