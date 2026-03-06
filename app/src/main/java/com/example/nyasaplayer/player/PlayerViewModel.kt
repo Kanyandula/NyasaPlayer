@@ -1,14 +1,19 @@
 package com.example.nyasaplayer.player
 
+import android.os.Bundle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionCommand
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
+import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
@@ -21,6 +26,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
+import java.util.concurrent.ExecutionException
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -28,17 +34,18 @@ private const val PositionUpdateIntervalMs = 250L
 
 @UnstableApi
 @HiltViewModel
-@Suppress("TooManyFunctions") // ViewModel centralises all playback actions
+@Suppress("TooManyFunctions")
 class PlayerViewModel @Inject constructor(
-    private val playerManager: PlayerManager,
+    private val controllerFuture: ListenableFuture<MediaController>,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
-    private val queueManager: PlaybackQueueManager,
     private val persistence: PlaybackStatePersistence,
     private val networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(PlayerUiState(isOffline = !networkMonitor.isOnline.value))
+    private val _uiState = MutableStateFlow(
+        PlayerUiState(isOffline = !networkMonitor.isOnline.value),
+    )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
@@ -52,128 +59,200 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    private var mediaController: MediaController? = null
     private var likeObserverJob: Job? = null
 
     private val userId: String? get() = authRepository.currentUser?.uid
-
     private val isOnline: Boolean get() = networkMonitor.isOnline.value
 
     init {
-        startObserving()
+        connectController()
         observeNetworkState()
     }
 
+    private fun connectController() {
+        controllerFuture.addListener(
+            {
+                try {
+                    val controller = controllerFuture.get()
+                    mediaController = controller
+                    controller.addListener(controllerListener)
+                    startPositionPolling()
+                    restorePlaybackState()
+                } catch (_: ExecutionException) {
+                    _uiState.update {
+                        it.copy(
+                            error = PlayerError(
+                                title = "Player Error",
+                                message = "Could not connect to playback service",
+                                isPlaybackError = false,
+                            ),
+                        )
+                    }
+                }
+            },
+            { it.run() },
+        )
+    }
+
+    // ── MediaController.Listener ──
+
+    private val controllerListener = object : Player.Listener {
+        override fun onMediaMetadataChanged(
+            mediaMetadata: androidx.media3.common.MediaMetadata,
+        ) {
+            val item = mediaController?.currentMediaItem ?: return
+            updateCurrentSong(item)
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            if (mediaItem == null) return
+            updateCurrentSong(mediaItem)
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            _uiState.update { it.copy(isPlaying = isPlaying) }
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            val controller = mediaController ?: return
+            if (playbackState == Player.STATE_BUFFERING && !isOnline) {
+                controller.pause()
+                _uiState.update {
+                    it.copy(
+                        isBuffering = false,
+                        isPlaying = false,
+                        error = PlayerError(
+                            title = "Offline",
+                            message = "Connection lost. Download songs for offline playback.",
+                        ),
+                    )
+                }
+                return
+            }
+            _uiState.update {
+                it.copy(
+                    isBuffering = playbackState == Player.STATE_BUFFERING,
+                    isPlaying = controller.isPlaying,
+                )
+            }
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            _uiState.update { it.copy(isShuffled = shuffleModeEnabled) }
+        }
+
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            val mode = repeatMode.toAppRepeatMode()
+            _uiState.update {
+                it.copy(
+                    repeatMode = mode,
+                    hasNext = hasNextTrack(mode),
+                )
+            }
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            val isNetwork = error.cause is IOException
+            _uiState.update {
+                it.copy(
+                    isPlaying = false,
+                    error = PlayerError(
+                        title = if (isNetwork) "Offline" else "Playback Error",
+                        message = if (isNetwork) {
+                            "This song isn't available offline"
+                        } else {
+                            error.message ?: "Playback error"
+                        },
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun updateCurrentSong(mediaItem: MediaItem) {
+        val song = mediaItem.toSong()
+        val controller = mediaController ?: return
+        _uiState.update {
+            it.copy(
+                currentSong = song,
+                durationMs = song.durationMs,
+                hasPrevious = controller.hasPreviousMediaItem(),
+                hasNext = hasNextTrack(it.repeatMode),
+            )
+        }
+        observeCurrentSongLikeState(song.mediaId)
+    }
+
+    // ── Playback Actions ──
+
     fun playSong(songs: List<Song>, song: Song) {
-        val resolved = queueManager.setQueue(songs, song)
-        if (!isOnline) {
-            showOfflineError(resolved)
-            return
-        }
-        playerManager.play(resolved)
-        _uiState.update {
-            it.copy(
-                playerMode = PlayerMode.Expanded,
-                currentSong = resolved,
-                isPlaying = true,
-                hasPrevious = queueManager.hasPrevious,
-                hasNext = queueManager.hasNext(_uiState.value.repeatMode),
-                isShuffled = false,
-            )
-        }
-        observeCurrentSongLikeState(resolved.mediaId)
-        logRecentlyPlayedSafe(resolved.mediaId)
-    }
-
-    fun shufflePlay(songs: List<Song>) {
-        if (songs.isEmpty()) return
-        val first = queueManager.setQueueShuffled(songs) ?: return
-        if (!isOnline) {
-            showOfflineError(first)
-            return
-        }
-        playerManager.play(first)
-        _uiState.update {
-            it.copy(
-                playerMode = PlayerMode.Expanded,
-                currentSong = first,
-                isPlaying = true,
-                hasPrevious = queueManager.hasPrevious,
-                hasNext = queueManager.hasNext(_uiState.value.repeatMode),
-                isShuffled = true,
-            )
-        }
-        observeCurrentSongLikeState(first.mediaId)
-        logRecentlyPlayedSafe(first.mediaId)
-    }
-
-    fun toggleShuffle() {
-        queueManager.toggleShuffle()
-        _uiState.update {
-            it.copy(
-                isShuffled = queueManager.isShuffled,
-                hasPrevious = queueManager.hasPrevious,
-                hasNext = queueManager.hasNext(_uiState.value.repeatMode),
-            )
-        }
-    }
-
-    fun skipNext() {
-        val song = queueManager.skipNext(_uiState.value.repeatMode) ?: return
-        playSongAtCurrentIndex(song)
-    }
-
-    fun skipPrevious() {
-        val song = queueManager.skipPrevious() ?: return
-        playSongAtCurrentIndex(song)
-    }
-
-    private fun playSongAtCurrentIndex(song: Song) {
         if (!isOnline) {
             showOfflineError(song)
             return
         }
-        playerManager.play(song)
+        val startIndex = songs.indexOf(song).coerceAtLeast(0)
+        sendSetQueueCommand(songs, startIndex)
         _uiState.update {
             it.copy(
+                playerMode = PlayerMode.Expanded,
                 currentSong = song,
                 isPlaying = true,
-                currentPositionMs = 0L,
-                durationMs = song.durationMs,
-                hasPrevious = queueManager.hasPrevious,
-                hasNext = queueManager.hasNext(_uiState.value.repeatMode),
+                isShuffled = false,
             )
         }
         observeCurrentSongLikeState(song.mediaId)
         logRecentlyPlayedSafe(song.mediaId)
     }
 
-    fun toggleRepeatMode() {
-        val newMode = when (_uiState.value.repeatMode) {
-            RepeatMode.Off -> RepeatMode.All
-            RepeatMode.All -> RepeatMode.One
-            RepeatMode.One -> RepeatMode.Off
+    fun shufflePlay(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        if (!isOnline) {
+            showOfflineError(songs.first())
+            return
         }
-        playerManager.setRepeatMode(newMode)
+        sendShufflePlayCommand(songs)
         _uiState.update {
             it.copy(
-                repeatMode = newMode,
-                hasNext = queueManager.hasNext(newMode),
+                playerMode = PlayerMode.Expanded,
+                isPlaying = true,
+                isShuffled = true,
             )
         }
     }
 
+    fun toggleShuffle() {
+        val controller = mediaController ?: return
+        controller.shuffleModeEnabled = !controller.shuffleModeEnabled
+    }
+
+    fun skipNext() {
+        val controller = mediaController ?: return
+        if (controller.hasNextMediaItem()) {
+            controller.seekToNextMediaItem()
+        }
+    }
+
+    fun skipPrevious() {
+        val controller = mediaController ?: return
+        if (controller.hasPreviousMediaItem()) {
+            controller.seekToPreviousMediaItem()
+        }
+    }
+
+    fun toggleRepeatMode() {
+        val controller = mediaController ?: return
+        controller.repeatMode = when (controller.repeatMode) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+            else -> Player.REPEAT_MODE_OFF
+        }
+    }
+
     fun togglePlayPause() {
-        if (playerManager.isPlaying) {
-            playerManager.pause()
-            _uiState.update { it.copy(isPlaying = false) }
-            persistence.save(
-                viewModelScope,
-                _uiState.value.currentSong ?: return,
-                playerManager.currentPosition,
-                queueManager.queueSongIds(),
-                queueManager.currentIndex,
-                _uiState.value.repeatMode,
-            )
+        val controller = mediaController ?: return
+        if (controller.isPlaying) {
+            controller.pause()
         } else {
             if (!isOnline) {
                 _uiState.update {
@@ -186,13 +265,12 @@ class PlayerViewModel @Inject constructor(
                 }
                 return
             }
-            playerManager.resume()
-            _uiState.update { it.copy(isPlaying = true) }
+            controller.play()
         }
     }
 
     fun seekTo(positionMs: Long) {
-        playerManager.seekTo(positionMs)
+        mediaController?.seekTo(positionMs)
         _uiState.update { it.copy(currentPositionMs = positionMs) }
     }
 
@@ -205,8 +283,48 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun dismiss() {
-        playerManager.stop()
+        mediaController?.stop()
+        mediaController?.clearMediaItems()
         _uiState.update { PlayerUiState() }
+    }
+
+    // ── Custom Commands ──
+
+    private fun sendSetQueueCommand(songs: List<Song>, startIndex: Int) {
+        val controller = mediaController ?: return
+        val args = Bundle().apply {
+            putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
+            putInt(PlaybackCommands.KEY_START_INDEX, startIndex)
+        }
+        controller.sendCustomCommand(
+            SessionCommand(PlaybackCommands.CMD_SET_QUEUE, Bundle.EMPTY),
+            args,
+        )
+    }
+
+    private fun sendShufflePlayCommand(songs: List<Song>) {
+        val controller = mediaController ?: return
+        val args = Bundle().apply {
+            putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
+        }
+        controller.sendCustomCommand(
+            SessionCommand(PlaybackCommands.CMD_SHUFFLE_PLAY, Bundle.EMPTY),
+            args,
+        )
+    }
+
+    private fun sendRestoreCommand(restored: RestoredPlayback) {
+        val controller = mediaController ?: return
+        val args = Bundle().apply {
+            putBundle(PlaybackCommands.KEY_SONGS, restored.queue.toBundle())
+            putInt(PlaybackCommands.KEY_START_INDEX, restored.index)
+            putLong(PlaybackCommands.KEY_POSITION_MS, restored.positionMs)
+            putString(PlaybackCommands.KEY_REPEAT_MODE, restored.repeatMode.name)
+        }
+        controller.sendCustomCommand(
+            SessionCommand(PlaybackCommands.CMD_RESTORE_STATE, Bundle.EMPTY),
+            args,
+        )
     }
 
     // ── Offline Handling ──
@@ -240,7 +358,6 @@ class PlayerViewModel @Inject constructor(
         val uid = userId ?: return
         val mediaId = _uiState.value.currentSong?.mediaId ?: return
         val wasLiked = _uiState.value.isCurrentSongLiked
-        // Optimistic UI update to prevent double-tap flicker
         _uiState.update { it.copy(isCurrentSongLiked = !wasLiked) }
         viewModelScope.launch(exceptionHandler) {
             try {
@@ -304,24 +421,19 @@ class PlayerViewModel @Inject constructor(
 
     // ── Playback State Persistence ──
 
-    fun restorePlaybackState() {
+    private fun restorePlaybackState() {
         viewModelScope.launch(exceptionHandler) {
             try {
                 val restored = persistence.restore() ?: return@launch
-
-                queueManager.restoreQueue(restored.queue, restored.index)
-                playerManager.setRepeatMode(restored.repeatMode)
-                playerManager.prepareOnly(restored.song)
-                playerManager.seekTo(restored.positionMs)
-
+                sendRestoreCommand(restored)
                 _uiState.update {
                     it.copy(
                         playerMode = PlayerMode.Mini,
                         currentSong = restored.song,
                         isPlaying = false,
                         currentPositionMs = restored.positionMs,
-                        hasPrevious = queueManager.hasPrevious,
-                        hasNext = queueManager.hasNext(restored.repeatMode),
+                        hasPrevious = restored.index > 0,
+                        hasNext = restored.index < restored.queue.lastIndex,
                         repeatMode = restored.repeatMode,
                     )
                 }
@@ -344,84 +456,18 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun startObserving() {
-        playerManager.player.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_BUFFERING && !isOnline) {
-                    playerManager.pause()
-                    _uiState.update {
-                        it.copy(
-                            isBuffering = false,
-                            isPlaying = false,
-                            error = PlayerError(
-                                title = "Offline",
-                                message = "Connection lost. Download songs for offline playback.",
-                            ),
-                        )
-                    }
-                    return
-                }
-                _uiState.update {
-                    it.copy(
-                        isBuffering = playbackState == Player.STATE_BUFFERING,
-                        isPlaying = playerManager.isPlaying,
-                    )
-                }
-                if (playbackState == Player.STATE_ENDED) {
-                    val repeatMode = _uiState.value.repeatMode
-                    if (repeatMode != RepeatMode.One) {
-                        val nextSong = queueManager.skipNext(repeatMode)
-                        if (nextSong != null) {
-                            playSongAtCurrentIndex(nextSong)
-                        } else {
-                            _uiState.update { it.copy(isPlaying = false) }
-                        }
-                    }
-                    // RepeatMode.One is handled natively by ExoPlayer's REPEAT_MODE_ONE
-                }
-            }
+    // ── Position Polling ──
 
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                _uiState.update { it.copy(isPlaying = isPlaying) }
-            }
-
-            override fun onPlayerError(error: PlaybackException) {
-                val isNetwork = error.cause is IOException
-                _uiState.update {
-                    it.copy(
-                        isPlaying = false,
-                        error = PlayerError(
-                            title = if (isNetwork) "Offline" else "Playback Error",
-                            message = if (isNetwork) {
-                                "This song isn't available offline"
-                            } else {
-                                error.message ?: "Playback error"
-                            },
-                        ),
-                    )
-                }
-            }
-        })
-
+    private fun startPositionPolling() {
         viewModelScope.launch(exceptionHandler) {
             while (true) {
                 delay(PositionUpdateIntervalMs)
-                if (playerManager.isPlaying || _uiState.value.playerMode != PlayerMode.Hidden) {
+                val controller = mediaController ?: continue
+                if (controller.isPlaying || _uiState.value.playerMode != PlayerMode.Hidden) {
                     _uiState.update {
                         it.copy(
-                            currentPositionMs = playerManager.currentPosition,
-                            durationMs = playerManager.duration,
-                        )
-                    }
-                    val currentSong = _uiState.value.currentSong
-                    if (playerManager.isPlaying && currentSong != null) {
-                        persistence.saveIfThrottleElapsed(
-                            viewModelScope,
-                            currentSong,
-                            playerManager.currentPosition,
-                            queueManager.queueSongIds(),
-                            queueManager.currentIndex,
-                            _uiState.value.repeatMode,
+                            currentPositionMs = controller.currentPosition,
+                            durationMs = controller.duration.coerceAtLeast(0L),
                         )
                     }
                 }
@@ -429,14 +475,22 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    // ── Helpers ──
+
+    private fun hasNextTrack(repeatMode: RepeatMode): Boolean {
+        val controller = mediaController ?: return false
+        return controller.hasNextMediaItem() ||
+            repeatMode == RepeatMode.All
+    }
+
+    private fun Int.toAppRepeatMode(): RepeatMode = when (this) {
+        Player.REPEAT_MODE_ALL -> RepeatMode.All
+        Player.REPEAT_MODE_ONE -> RepeatMode.One
+        else -> RepeatMode.Off
+    }
+
     override fun onCleared() {
         super.onCleared()
-        persistence.saveFinal(
-            _uiState.value.currentSong,
-            playerManager.currentPosition,
-            queueManager.queueSongIds(),
-            queueManager.currentIndex,
-            _uiState.value.repeatMode,
-        )
+        MediaController.releaseFuture(controllerFuture)
     }
 }
