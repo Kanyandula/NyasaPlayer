@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Static analysis (both enforced by pre-commit hook)
 ./gradlew detekt                 # Run Detekt — maxIssues: 0, any issue fails
-./gradlew :app:lintDebug         # Run Android Lint
+./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug  # Run Android Lint
 
 # Reports
 open build/reports/detekt/detekt.html
@@ -24,24 +24,36 @@ open app/build/reports/lint-results-debug.html
 ./scripts/install-hooks.sh       # or: ./gradlew installGitHooks
 ```
 
-There are no custom test suites yet — only example stubs exist under `app/src/test/` and `app/src/androidTest/`.
+Unit tests live in `core/data/src/test/`. Run with `./gradlew test`.
 
 ## Architecture
 
-**MVVM + Repository pattern** with Hilt DI, single `app` module.
+**MVVM + Repository pattern** with Hilt DI, multi-module Gradle project.
+
+### Module structure
+
+```
+:core:common  ←──  :core:data  ←──  :app
+(models,          (repos, Room,    (screens, player,
+ theme, utils)     Firebase, sync)  navigation, DI roots)
+```
+
+- **`:core:common`** (`com.example.nyasaplayer.core.common`) — domain models, theme, UI components, utilities
+- **`:core:data`** (`com.example.nyasaplayer.core.data`) — repository interfaces & implementations, Room DB, Firebase sync, DTOs, DI modules
+- **`:app`** — screens, ViewModels, player subsystem, navigation, `AppModule`/`PlayerModule`
 
 ```
 Firestore / Realtime DB / Firebase Auth
         ↓
-   FirebaseSyncManager         — syncs Firestore → Room on app start
+   FirebaseSyncManager              — syncs Firestore → Room on app start (:core:data)
         ↓
-   Room Database (data/local/) — single source of truth for songs, artists, genres
+   Room Database (core/data/local/) — single source of truth for songs, artists, genres
         ↓
-   Offline Repositories        — read from Room DAOs, expose Flow/suspend
+   Offline Repositories             — read from Room DAOs, expose Flow/suspend (:core:data)
         ↓
-   ViewModels (screens/*/)     — @HiltViewModel, StateFlow for UI state
+   ViewModels (screens/*/)          — @HiltViewModel, StateFlow for UI state (:app)
         ↓
-   Composable Screens          — collectAsState(), callbacks passed up
+   Composable Screens               — collectAsState(), callbacks passed up (:app)
 ```
 
 ### Navigation
@@ -72,14 +84,14 @@ Offline-first for catalog data (songs, artists, genres): `FirebaseSyncManager` s
 | `UserRepository` | Firestore | `users/{uid}/likedSongs`, `users/{uid}/recentlyPlayed`, `users/{uid}/profile` |
 | `HomeFeedRepository` | Realtime Database | home feed sections |
 
-Room entities live in `data/local/entity/`, DAOs in `data/local/dao/`, and the database class in `data/local/NyasaDatabase.kt`. `FirebaseSyncManager` (`data/sync/`) handles one-shot Firestore → Room sync on startup.
+Room entities live in `core/data/.../local/entity/`, DAOs in `core/data/.../local/dao/`, and the database class in `core/data/.../local/NyasaDatabase.kt`. `FirebaseSyncManager` (`core/data/.../sync/`) handles one-shot Firestore → Room sync on startup.
 
-### DI modules (`di/`)
+### DI modules
 
-- `AppModule` — provides FirebaseFirestore, FirebaseDatabase, FirebaseAuth, user/home repositories
-- `DatabaseModule` — provides Room `NyasaDatabase` and DAOs
-- `RepositoryModule` — binds `Offline*Repository` implementations to repository interfaces
-- `PlayerModule` — provides ExoPlayer instance
+- `AppModule` (`:app` `di/`) — provides FirebaseFirestore, FirebaseDatabase, FirebaseAuth
+- `DatabaseModule` (`:core:data` `di/`) — provides Room `NyasaDatabase` and DAOs
+- `RepositoryModule` (`:core:data` `di/`) — binds `Offline*Repository` implementations to repository interfaces
+- `PlayerModule` (`:app` `di/`) — provides ExoPlayer instance
 
 ## Code Style & Static Analysis
 
@@ -94,7 +106,7 @@ Common Detekt fixes: `MagicNumber` → extract to `const val`; `ModifierMissing`
 
 ## Design System
 
-Dark theme only. Key colors: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED). Five surface levels with increasing lightness. Gradient buttons via `Brush.horizontalGradient`. Custom `ImageVector` icons in `ui/icons/NyasaIcons.kt`.
+Dark theme only. Key colors: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED). Five surface levels with increasing lightness. Gradient buttons via `Brush.horizontalGradient`. Custom `ImageVector` icons in `core/common/.../ui/icons/NyasaIcons.kt`.
 
 ## Firebase Setup
 
@@ -105,13 +117,13 @@ Requires `app/google-services.json`. Firebase console must have:
 
 ## Known Gaps
 
-- Tests are stub-only — no real unit or integration tests yet
+- Unit tests live in `:core:data` (`core/data/src/test/`) covering entities, converters, offline repos, and sync backoff
 - README "Not Yet Implemented" section tracks planned features (playlists, downloads, queue management, artist/album detail screens, etc.)
 
 ### Error handling that IS in place
 
 - **`CoroutineExceptionHandler`** — all 7 ViewModels have a `private val exceptionHandler` CEH as a safety net for uncaught exceptions in `viewModelScope.launch`; maps errors to the ViewModel's error state (existing try/catch and `.catch {}` remain as primary handling)
-- **`NetworkMonitor`** (`util/`) — singleton using `ConnectivityManager.registerDefaultNetworkCallback` exposing `isOnline: StateFlow<Boolean>`; used by `PlayerViewModel` (fail-fast offline playback, offline banner) and `ProfileViewModel`
+- **`NetworkMonitor`** (`:core:common` `util/`) — singleton using `ConnectivityManager.registerDefaultNetworkCallback` exposing `isOnline: StateFlow<Boolean>`; used by `PlayerViewModel` (fail-fast offline playback, offline banner) and `ProfileViewModel`
 - **Offline banner** — persistent `OfflineBanner` composable shown at top of all screens when offline; driven by `PlayerUiState.isOffline` which observes `NetworkMonitor`
 - **Fail-fast offline playback** — `PlayerViewModel` checks `isOnline` before streaming; shows error instead of infinite buffering spinner
 - **`ErrorMessages.kt`** — `isNetworkError()` extension distinguishes `FirebaseNetworkException`/`UnknownHostException` from other errors

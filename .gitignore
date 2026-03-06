@@ -3,8 +3,7 @@
 
 # Gradle
 .gradle/
-/build
-/app/build
+**/build/
 
 # Local properties (contains SDK path, secrets)
 local.properties

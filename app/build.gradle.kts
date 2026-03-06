@@ -100,11 +100,10 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.core.ktx.v1120)
 
-
     // Coil
     implementation(libs.coil.compose)
 
-    //Kotlin Coroutines
+    // Kotlin Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
@@ -120,12 +119,8 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
-
-
-
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.org.json)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

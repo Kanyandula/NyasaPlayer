@@ -118,7 +118,7 @@ class FirebaseSyncManager @Inject constructor(
     }
 
     @VisibleForTesting
-    companion object {
+    internal companion object {
         const val TAG = "FirebaseSyncManager"
         const val MAX_RETRIES = 20
         const val INITIAL_RETRY_DELAY_MS = 5_000L
