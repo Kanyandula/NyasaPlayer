@@ -79,5 +79,4 @@ class PlayerManager @Inject constructor(
     val isPlaying: Boolean get() = exoPlayer.isPlaying
     val currentPosition: Long get() = exoPlayer.currentPosition
     val duration: Long get() = exoPlayer.duration.coerceAtLeast(0L)
-    val isBuffering: Boolean get() = exoPlayer.playbackState == Player.STATE_BUFFERING
 }
