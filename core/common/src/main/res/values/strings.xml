@@ -2,6 +2,7 @@
     <string name="good_morning">Good Morning</string>
     <string name="good_afternoon">Good Afternoon</string>
     <string name="good_evening">Good Evening</string>
+    <!-- Also defined in :app — keep in sync (non-transitive R classes) -->
     <string name="close">Close player</string>
     <string name="share">Share</string>
     <string name="favorite">Favorite</string>

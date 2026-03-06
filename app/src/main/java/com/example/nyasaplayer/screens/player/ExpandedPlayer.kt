@@ -212,6 +212,7 @@ private fun ExpandedPlayerContent(
             .padding(top = 16.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Spacer(modifier = Modifier.height(24.dp))
         ExpandedPlayerToolbar(onCollapse = onCollapse)
         state.error?.takeIf { it.isPlaybackError }?.let { playerError ->
             Spacer(modifier = Modifier.height(8.dp))

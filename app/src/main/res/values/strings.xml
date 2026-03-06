@@ -45,6 +45,7 @@
     <string name="shuffle_play">Shuffle Play</string>
     <string name="sort">Sort</string>
     <string name="filter">Filter</string>
+    <!-- Also defined in core:common — keep in sync (non-transitive R classes) -->
     <string name="close">Close player</string>
     <string name="share">Share</string>
     <string name="favorite">Favorite</string>
