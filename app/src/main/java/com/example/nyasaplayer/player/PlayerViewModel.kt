@@ -81,7 +81,11 @@ class PlayerViewModel @Inject constructor(
                     mediaController = controller
                     controller.addListener(controllerListener)
                     startPositionPolling()
-                    restorePlaybackState()
+                    if (controller.isPlaying || controller.mediaItemCount > 0) {
+                        syncFromLivePlayer(controller)
+                    } else {
+                        restorePlaybackState()
+                    }
                 } catch (_: ExecutionException) {
                     _uiState.update {
                         it.copy(
@@ -432,6 +436,24 @@ class PlayerViewModel @Inject constructor(
     }
 
     // ── Playback State Persistence ──
+
+    private fun syncFromLivePlayer(controller: MediaController) {
+        val mediaItem = controller.currentMediaItem ?: return
+        val song = mediaItem.toSong()
+        _uiState.update {
+            it.copy(
+                playerMode = PlayerMode.Mini,
+                currentSong = song,
+                isPlaying = controller.isPlaying,
+                currentPositionMs = controller.currentPosition,
+                durationMs = controller.duration.coerceAtLeast(0L),
+                hasPrevious = controller.hasPreviousMediaItem(),
+                hasNext = hasNextTrack(controller.repeatMode.toAppRepeatMode()),
+                repeatMode = controller.repeatMode.toAppRepeatMode(),
+            )
+        }
+        observeCurrentSongLikeState(song.mediaId)
+    }
 
     private fun restorePlaybackState() {
         viewModelScope.launch(exceptionHandler) {
