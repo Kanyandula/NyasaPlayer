@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 data class SearchUiState(
@@ -43,6 +45,7 @@ class SearchViewModel @Inject constructor(
     private val authRepository: AuthRepository,
 ) : ViewModel() {
 
+    private val likeMutex = Mutex()
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
@@ -134,11 +137,13 @@ class SearchViewModel @Inject constructor(
     fun toggleLikeSong(mediaId: String) {
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch(exceptionHandler) {
-            val liked = userRepository.isLiked(userId, mediaId).first()
-            if (liked) {
-                userRepository.unlikeSong(userId, mediaId)
-            } else {
-                userRepository.likeSong(userId, mediaId)
+            likeMutex.withLock {
+                val liked = userRepository.isLiked(userId, mediaId).first()
+                if (liked) {
+                    userRepository.unlikeSong(userId, mediaId)
+                } else {
+                    userRepository.likeSong(userId, mediaId)
+                }
             }
         }
     }

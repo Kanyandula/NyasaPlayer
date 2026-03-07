@@ -302,7 +302,7 @@ private fun GenreSongsSection(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.navigate_back),
                     tint = Color.White,
                 )
             }
@@ -322,7 +322,7 @@ private fun GenreSongsSection(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No songs in this genre",
+                    text = stringResource(R.string.no_songs_in_genre),
                     style = MaterialTheme.typography.bodyLarge,
                     color = NyasaTextSecondary,
                 )
@@ -356,7 +356,7 @@ private fun SearchResults(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "No results found",
+                text = stringResource(R.string.no_results_found),
                 style = MaterialTheme.typography.bodyLarge,
                 color = NyasaTextSecondary,
             )
