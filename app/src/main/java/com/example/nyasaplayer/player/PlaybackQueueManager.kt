@@ -10,6 +10,7 @@ class PlaybackQueueManager @Inject constructor() {
     var queue: List<Song> = emptyList()
         private set
 
+    @Volatile
     var currentIndex: Int = -1
 
     private var originalQueue: List<Song> = emptyList()
