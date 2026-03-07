@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,6 +57,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
+import com.example.nyasaplayer.screens.common.AnimatedEqualizer
 
 private const val BytesPerMb = 1_048_576.0
 private const val MbPerGb = 1024.0
@@ -69,6 +69,7 @@ fun DownloadsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
+    isCurrentlyPlaying: Boolean = false,
     viewModel: DownloadsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -92,6 +93,7 @@ fun DownloadsScreen(
             downloadCount = uiState.downloadCount,
             totalSizeBytes = uiState.totalSizeBytes,
             currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isCurrentlyPlaying = isCurrentlyPlaying,
             onSongClick = onSongClick,
             onShufflePlay = onShufflePlay,
             onBack = onBack,
@@ -108,6 +110,7 @@ private fun DownloadsContent(
     downloadCount: Int,
     totalSizeBytes: Long,
     currentlyPlayingMediaId: String?,
+    isCurrentlyPlaying: Boolean,
     onSongClick: (List<Song>, Song) -> Unit,
     onShufflePlay: (List<Song>) -> Unit,
     onBack: () -> Unit,
@@ -149,10 +152,12 @@ private fun DownloadsContent(
                 modifier = Modifier.weight(1f),
             ) {
                 itemsIndexed(songs, key = { _, song -> song.mediaId }) { index, song ->
+                    val isCurrentTrack = song.mediaId == currentlyPlayingMediaId
                     DownloadSongRow(
                         song = song,
                         trackNumber = index + 1,
-                        isPlaying = song.mediaId == currentlyPlayingMediaId,
+                        isCurrentTrack = isCurrentTrack,
+                        isAnimating = isCurrentTrack && isCurrentlyPlaying,
                         onClick = { onSongClick(songs, song) },
                         onRemove = { onRemoveDownload(song.mediaId) },
                     )
@@ -326,18 +331,13 @@ private val SongRowThumbnailSize = 48.dp
 private val SongRowThumbnailRadius = 8.dp
 
 @Composable
-private fun TrackNumberIndicator(trackNumber: Int, isPlaying: Boolean) {
+private fun TrackNumberIndicator(trackNumber: Int, isCurrentTrack: Boolean, isAnimating: Boolean) {
     Box(
         modifier = Modifier.width(28.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (isPlaying) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = NyasaPrimary,
-                modifier = Modifier.size(20.dp),
-            )
+        if (isCurrentTrack) {
+            AnimatedEqualizer(animate = isAnimating)
         } else {
             Text(
                 text = trackNumber.toString(),
@@ -352,13 +352,14 @@ private fun TrackNumberIndicator(trackNumber: Int, isPlaying: Boolean) {
 private fun DownloadSongRow(
     song: Song,
     trackNumber: Int,
-    isPlaying: Boolean,
+    isCurrentTrack: Boolean,
+    isAnimating: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val rowBackground = if (isPlaying) NyasaPrimary.copy(alpha = 0.15f) else Color.Transparent
-    val titleColor = if (isPlaying) NyasaPrimary else Color.White
+    val rowBackground = if (isCurrentTrack) NyasaPrimary.copy(alpha = 0.15f) else Color.Transparent
+    val titleColor = if (isCurrentTrack) NyasaPrimary else Color.White
 
     Row(
         modifier = modifier
@@ -368,7 +369,11 @@ private fun DownloadSongRow(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TrackNumberIndicator(trackNumber = trackNumber, isPlaying = isPlaying)
+        TrackNumberIndicator(
+            trackNumber = trackNumber,
+            isCurrentTrack = isCurrentTrack,
+            isAnimating = isAnimating,
+        )
         Spacer(modifier = Modifier.width(8.dp))
         AsyncImage(
             model = song.resolvedCoverUrl,
