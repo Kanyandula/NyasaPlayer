@@ -11,9 +11,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface DownloadDao {
 
-    @Query("SELECT * FROM downloads WHERE status = :status ORDER BY downloaded_at DESC")
-    fun getByStatus(status: DownloadStatus): Flow<List<DownloadEntity>>
-
     @Query("SELECT * FROM downloads WHERE status = 'Completed' ORDER BY downloaded_at DESC")
     fun getCompleted(): Flow<List<DownloadEntity>>
 

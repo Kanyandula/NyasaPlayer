@@ -119,6 +119,14 @@ Multi-module Gradle project: `:core:common` <- `:core:data` <- `:app`
 - **Offline repositories**: `OfflineSongRepository`, `OfflineArtistRepository`, `OfflineGenreRepository` read from Room DAOs
 - **Image caching**: Coil configured with `respectCacheHeaders(false)` and 10% disk cache for offline artwork
 
+### Downloads & Offline Playback
+- **Download songs**: Tap overflow menu on any song to download for offline playback
+- **Downloads screen**: Accessible from Library, shows all downloaded songs with storage summary
+- **Offline playback**: Downloaded songs play from local file when offline; non-downloaded songs show error
+- **Download management**: Remove individual downloads or all at once (with confirmation dialog)
+- **Progress tracking**: Room `DownloadEntity` tracks status (Pending/Downloading/Completed/Failed)
+- **Stale download recovery**: Pending/Downloading states reset to Failed on app restart
+
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)
 - Surface hierarchy: Surface1-5 with increasing lightness
@@ -133,19 +141,49 @@ Multi-module Gradle project: `:core:common` <- `:core:data` <- `:app`
 
 ## Not Yet Implemented
 
-| Feature | Status |
-|---------|--------|
-| Audio quality settings | Profile menu item present, no settings screen |
-| Playlist creation / management | Not started |
-| Artist / album detail screens | Not started |
-| Download / offline playback | Not started |
-| Notifications (push) | Not started |
-| "See All" section expansion | Headers have chevrons but no navigation |
-| Queue management UI | Queue is managed internally but no user-facing screen to view/reorder |
-| Search history | Not started |
-| Apple Sign-In | Button placeholder only |
-| User profile editing | Not started |
-| Onboarding / genre selection | Not started |
+### Screens & Navigation
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Settings screen | Stub | Profile menu item present (`ProfileScreen.kt`), no screen |
+| Audio quality settings | Stub | Profile menu item present, no screen |
+| About screen | Stub | Profile menu item present, no screen |
+| Artist detail screen | Not started | No route or screen |
+| Album detail screen | Not started | No route or screen |
+| "See All" section expansion | Stub | Home headers have chevrons but no navigation callback |
+| Queue management UI | Not started | Queue managed internally but no user-facing screen to view/reorder |
+| Playlist creation / management | Not started | No route, screen, or data model |
+| User profile editing | Not started | No edit screen or update flow |
+| Onboarding / genre selection | Not started | No onboarding flow after sign-up |
+
+### Player Features
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Share song | Stub | Empty `onClick` in `ExpandedPlayer.kt` toolbar |
+| Volume control | Stub | Empty `onClick` in `ExpandedPlayer.kt` bottom bar |
+| Lyrics display | Stub | Visual placeholder only in `ExpandedPlayer.kt` |
+| Queue viewer (in player) | Stub | Visual placeholder only in `ExpandedPlayer.kt` |
+
+### Search & Library
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Search history | Not started | No persistence of past queries |
+| Sort / Filter in Library | Stub | Chips displayed (`LibraryScreen.kt`) with empty click handlers |
+
+### Other
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Notifications (push) | Not started | Bell icon stub in `ForYouScreen.kt` |
+| Hardcoded strings | Minor | `SearchScreen.kt` has "No songs in this genre" and "No results found" not in `strings.xml` |
+
+### Architectural Debt
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Phase 3: Domain model separation | Deferred | Firebase Timestamp in UserProfile/LikedSong/PlaybackState; TODO comments in `AuthRepository.kt`, `AuthResult.kt` |
 
 ## Setup
 

@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 @Suppress("TooManyFunctions")
 interface DownloadRepository {
     fun getCompletedDownloads(): Flow<List<DownloadEntity>>
+
+    // Used by future per-song and batch download progress UI
     fun observeDownload(mediaId: String): Flow<DownloadEntity?>
     fun observeDownloads(mediaIds: List<String>): Flow<List<DownloadEntity>>
     fun getDownloadedMediaIds(): Flow<List<String>>
