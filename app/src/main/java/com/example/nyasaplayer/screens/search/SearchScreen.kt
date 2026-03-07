@@ -51,8 +51,6 @@ import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
-import com.example.nyasaplayer.core.common.ui.components.SongDownloadState
-import com.example.nyasaplayer.core.common.ui.components.SongOverflowSheet
 import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
@@ -62,6 +60,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.download.SongDownloadManager
+import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
 import com.example.nyasaplayer.ui.preview.PreviewGenres
 
 @Composable
@@ -171,43 +170,6 @@ private fun SearchContent(
             downloadManager = downloadManager,
             onDismiss = { selectedSong = null },
         )
-    }
-}
-
-@Composable
-private fun SongOverflowWithDownload(
-    song: Song,
-    downloadManager: SongDownloadManager?,
-    onDismiss: () -> Unit,
-) {
-    val downloadState = remember(song.mediaId) {
-        resolveDownloadState(song.mediaId, downloadManager)
-    }
-    SongOverflowSheet(
-        song = song,
-        onDismiss = onDismiss,
-        downloadState = downloadState,
-        onDownloadClick = { s ->
-            downloadManager?.downloadSong(s.mediaId)
-            onDismiss()
-        },
-        onRemoveDownloadClick = { s ->
-            downloadManager?.removeDownload(s.mediaId)
-            onDismiss()
-        },
-    )
-}
-
-private fun resolveDownloadState(
-    mediaId: String,
-    downloadManager: SongDownloadManager?,
-): SongDownloadState {
-    if (downloadManager == null) return SongDownloadState.NotDownloaded
-    val localUri = downloadManager.getLocalFileUri(mediaId)
-    return when {
-        localUri != null -> SongDownloadState.Downloaded
-        downloadManager.activeDownloads.value.contains(mediaId) -> SongDownloadState.Downloading
-        else -> SongDownloadState.NotDownloaded
     }
 }
 

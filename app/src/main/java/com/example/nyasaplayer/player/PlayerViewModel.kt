@@ -208,8 +208,8 @@ class PlayerViewModel @Inject constructor(
     fun shufflePlay(songs: List<Song>) {
         if (songs.isEmpty()) return
         val resolvedSongs = songs.map { resolveSongUri(it) }
-        val hasPlayable = resolvedSongs.any {
-            isOnline || downloadManager.getLocalFileUri(it.mediaId) != null
+        val hasPlayable = isOnline || resolvedSongs.zip(songs).any { (resolved, original) ->
+            resolved.audioUrl != original.audioUrl
         }
         if (!hasPlayable) {
             showOfflineError(songs.first())

@@ -18,5 +18,6 @@ interface DownloadRepository {
     suspend fun markFailed(mediaId: String)
     suspend fun removeDownload(mediaId: String)
     suspend fun removeAllDownloads()
+    suspend fun resetStaleDownloads()
     fun getLocalFilePath(mediaId: String): String?
 }

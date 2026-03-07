@@ -42,16 +42,21 @@ interface DownloadDao {
     suspend fun updateProgress(mediaId: String, status: DownloadStatus, progress: Int)
 
     @Query(
-        "UPDATE downloads SET status = :status, file_path = :filePath, " +
+        "UPDATE downloads SET status = 'Completed', file_path = :filePath, " +
             "file_size_bytes = :fileSize, downloaded_at = :downloadedAt WHERE media_id = :mediaId",
     )
     suspend fun markCompleted(
         mediaId: String,
-        status: DownloadStatus = DownloadStatus.Completed,
         filePath: String,
         fileSize: Long,
         downloadedAt: Long,
     )
+
+    @Query("SELECT * FROM downloads WHERE status = 'Completed'")
+    suspend fun getAllCompletedOnce(): List<DownloadEntity>
+
+    @Query("UPDATE downloads SET status = 'Failed' WHERE status IN ('Pending', 'Downloading')")
+    suspend fun resetStaleDownloads()
 
     @Query("DELETE FROM downloads WHERE media_id = :mediaId")
     suspend fun delete(mediaId: String)

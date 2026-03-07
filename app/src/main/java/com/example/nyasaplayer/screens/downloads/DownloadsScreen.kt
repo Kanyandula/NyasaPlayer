@@ -22,15 +22,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +60,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
 
 private const val BytesPerMb = 1_048_576.0
+private const val MbPerGb = 1024.0
 
 @Composable
 fun DownloadsScreen(
@@ -67,6 +74,12 @@ fun DownloadsScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     when {
+        uiState.isLoading -> Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = NyasaPrimary)
+        }
         uiState.errorMessage != null -> NyasaErrorScreen(
             title = stringResource(R.string.error_generic_title),
             subtitle = stringResource(R.string.error_generic_subtitle),
@@ -102,6 +115,8 @@ private fun DownloadsContent(
     onRemoveAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showRemoveAllDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -112,7 +127,7 @@ private fun DownloadsContent(
             downloadCount = downloadCount,
             totalSizeBytes = totalSizeBytes,
             onBack = onBack,
-            onRemoveAll = onRemoveAll,
+            onRemoveAll = { showRemoveAllDialog = true },
             hasDownloads = songs.isNotEmpty(),
         )
 
@@ -145,6 +160,41 @@ private fun DownloadsContent(
             }
         }
     }
+
+    if (showRemoveAllDialog) {
+        RemoveAllConfirmationDialog(
+            onConfirm = {
+                showRemoveAllDialog = false
+                onRemoveAll()
+            },
+            onDismiss = { showRemoveAllDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun RemoveAllConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.remove_all_downloads_title)) },
+        text = { Text(text = stringResource(R.string.remove_all_downloads_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.remove_all_downloads),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -165,7 +215,7 @@ private fun DownloadsHeader(
         IconButton(onClick = onBack) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.collapse),
+                contentDescription = stringResource(R.string.navigate_back),
                 tint = Color.White,
             )
         }
@@ -365,9 +415,9 @@ private fun DownloadSongRow(
 
 private fun formatStorageSummary(count: Int, sizeBytes: Long): String {
     val sizeMb = sizeBytes / BytesPerMb
-    return if (sizeMb >= 1) {
-        "$count songs \u00B7 ${"%.1f".format(sizeMb)} MB"
-    } else {
-        "$count songs"
+    return when {
+        sizeMb >= MbPerGb -> "$count songs \u00B7 ${"%.1f".format(sizeMb / MbPerGb)} GB"
+        sizeMb >= 1 -> "$count songs \u00B7 ${"%.1f".format(sizeMb)} MB"
+        else -> "$count songs"
     }
 }
