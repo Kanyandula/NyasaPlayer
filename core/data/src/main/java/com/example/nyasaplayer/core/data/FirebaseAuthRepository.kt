@@ -5,9 +5,6 @@ import com.example.nyasaplayer.core.data.api.AuthResult
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -19,14 +16,6 @@ class FirebaseAuthRepository @Inject constructor(
     override val currentUser: FirebaseUser? get() = firebaseAuth.currentUser
 
     override val isAuthenticated: Boolean get() = currentUser != null
-
-    override fun authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
-        val listener = FirebaseAuth.AuthStateListener { auth ->
-            trySend(auth.currentUser)
-        }
-        firebaseAuth.addAuthStateListener(listener)
-        awaitClose { firebaseAuth.removeAuthStateListener(listener) }
-    }
 
     override suspend fun signInWithEmail(email: String, password: String): AuthResult {
         return try {

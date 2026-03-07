@@ -4,7 +4,6 @@ import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.AuthResult
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class FakeAuthRepository : AuthRepository {
@@ -19,8 +18,6 @@ class FakeAuthRepository : AuthRepository {
     override val currentUser: FirebaseUser? get() = user.value
 
     override val isAuthenticated: Boolean get() = user.value != null
-
-    override fun authStateFlow(): Flow<FirebaseUser?> = user
 
     override suspend fun signInWithEmail(email: String, password: String): AuthResult = signInResult
 

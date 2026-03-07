@@ -74,6 +74,7 @@ class SongDownloadManager @Inject constructor(
         }
     }
 
+    // Used by future download-in-progress UI
     fun cancelDownload(mediaId: String) {
         scope.launch {
             _activeDownloads.update { it - mediaId }
@@ -101,6 +102,7 @@ class SongDownloadManager @Inject constructor(
         }
     }
 
+    // Used by future failed-download retry UI
     fun retryDownload(mediaId: String) {
         downloadSong(mediaId)
     }
