@@ -35,6 +35,7 @@ fun NyasaPlayerNavHost(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
+    isCurrentlyPlaying: Boolean = false,
     downloadManager: SongDownloadManager? = null,
 ) {
     NavHost(
@@ -46,6 +47,8 @@ fun NyasaPlayerNavHost(
             ForYouScreen(
                 onSongClick = onSongClick,
                 onProfileClick = { navController.navigateToTab(ProfileRoute) },
+                currentlyPlayingMediaId = currentlyPlayingMediaId,
+                isCurrentlyPlaying = isCurrentlyPlaying,
             )
         }
         composable(SearchRoute) {
@@ -59,6 +62,7 @@ fun NyasaPlayerNavHost(
                 onSongClick = onSongClick,
                 onShufflePlay = onShufflePlay,
                 currentlyPlayingMediaId = currentlyPlayingMediaId,
+                isCurrentlyPlaying = isCurrentlyPlaying,
                 downloadManager = downloadManager,
             )
         }
@@ -75,6 +79,7 @@ fun NyasaPlayerNavHost(
                 onShufflePlay = onShufflePlay,
                 onBack = { navController.popBackStack() },
                 currentlyPlayingMediaId = currentlyPlayingMediaId,
+                isCurrentlyPlaying = isCurrentlyPlaying,
             )
         }
     }

@@ -19,8 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -59,6 +57,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.download.SongDownloadManager
+import com.example.nyasaplayer.screens.common.AnimatedEqualizer
 import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
 import com.example.nyasaplayer.ui.preview.PreviewSongsWithDuration
 
@@ -68,6 +67,7 @@ fun LibraryScreen(
     onShufflePlay: (List<Song>) -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
+    isCurrentlyPlaying: Boolean = false,
     downloadManager: SongDownloadManager? = null,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
@@ -93,6 +93,7 @@ fun LibraryScreen(
         else -> LibraryContent(
             songs = uiState.songs,
             currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isCurrentlyPlaying = isCurrentlyPlaying,
             onSongClick = onSongClick,
             onShufflePlay = onShufflePlay,
             downloadManager = downloadManager,
@@ -105,6 +106,7 @@ fun LibraryScreen(
 private fun LibraryContent(
     songs: List<Song>,
     currentlyPlayingMediaId: String?,
+    isCurrentlyPlaying: Boolean,
     onSongClick: (List<Song>, Song) -> Unit,
     onShufflePlay: (List<Song>) -> Unit,
     downloadManager: SongDownloadManager?,
@@ -138,10 +140,12 @@ private fun LibraryContent(
             modifier = Modifier.weight(1f),
         ) {
             itemsIndexed(songs, key = { _, song -> song.mediaId }) { index, song ->
+                val isCurrentTrack = song.mediaId == currentlyPlayingMediaId
                 LibrarySongRow(
                     song = song,
                     trackNumber = index + 1,
-                    isPlaying = song.mediaId == currentlyPlayingMediaId,
+                    isCurrentTrack = isCurrentTrack,
+                    isAnimating = isCurrentTrack && isCurrentlyPlaying,
                     onClick = { onSongClick(songs, song) },
                     onMoreClick = { selectedSong = song },
                 )
@@ -285,18 +289,13 @@ private val SongRowThumbnailRadius = 8.dp
 private val SongRowThumbnailSpacing = 12.dp
 
 @Composable
-private fun TrackNumberIndicator(trackNumber: Int, isPlaying: Boolean) {
+private fun TrackNumberIndicator(trackNumber: Int, isCurrentTrack: Boolean, isAnimating: Boolean) {
     Box(
         modifier = Modifier.width(28.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (isPlaying) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = NyasaPrimary,
-                modifier = Modifier.size(20.dp),
-            )
+        if (isCurrentTrack) {
+            AnimatedEqualizer(animate = isAnimating)
         } else {
             Text(
                 text = trackNumber.toString(),
@@ -311,13 +310,14 @@ private fun TrackNumberIndicator(trackNumber: Int, isPlaying: Boolean) {
 private fun LibrarySongRow(
     song: Song,
     trackNumber: Int,
-    isPlaying: Boolean,
+    isCurrentTrack: Boolean,
+    isAnimating: Boolean,
     onClick: () -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val rowBackground = if (isPlaying) NyasaPrimary.copy(alpha = 0.15f) else Color.Transparent
-    val titleColor = if (isPlaying) NyasaPrimary else Color.White
+    val rowBackground = if (isCurrentTrack) NyasaPrimary.copy(alpha = 0.15f) else Color.Transparent
+    val titleColor = if (isCurrentTrack) NyasaPrimary else Color.White
 
     Row(
         modifier = modifier
@@ -327,7 +327,11 @@ private fun LibrarySongRow(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TrackNumberIndicator(trackNumber = trackNumber, isPlaying = isPlaying)
+        TrackNumberIndicator(
+            trackNumber = trackNumber,
+            isCurrentTrack = isCurrentTrack,
+            isAnimating = isAnimating,
+        )
         Spacer(modifier = Modifier.width(8.dp))
         AsyncImage(
             model = song.resolvedCoverUrl,
@@ -380,6 +384,7 @@ private fun LibraryScreenPreview() {
         LibraryContent(
             songs = PreviewSongsWithDuration,
             currentlyPlayingMediaId = "1",
+            isCurrentlyPlaying = true,
             onSongClick = { _, _ -> },
             onShufflePlay = { },
             downloadManager = null,

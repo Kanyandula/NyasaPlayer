@@ -51,6 +51,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.util.greetingResource
+import com.example.nyasaplayer.screens.common.NowPlayingOverlay
 import com.example.nyasaplayer.ui.preview.PreviewForYouUiState
 
 @Composable
@@ -58,6 +59,8 @@ fun ForYouScreen(
     onSongClick: (List<Song>, Song) -> Unit,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
+    currentlyPlayingMediaId: String? = null,
+    isCurrentlyPlaying: Boolean = false,
     viewModel: ForYouViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -89,6 +92,8 @@ fun ForYouScreen(
             uiState = uiState,
             onSongClick = onSongClick,
             onProfileClick = onProfileClick,
+            currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isCurrentlyPlaying = isCurrentlyPlaying,
             modifier = modifier,
         )
     }
@@ -100,6 +105,8 @@ private fun ForYouContent(
     onSongClick: (List<Song>, Song) -> Unit,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
+    currentlyPlayingMediaId: String? = null,
+    isCurrentlyPlaying: Boolean = false,
 ) {
     LazyColumn(
         modifier = modifier
@@ -114,14 +121,16 @@ private fun ForYouContent(
                 modifier = Modifier.statusBarsPadding(),
             )
         }
-        recentlyPlayedSection(uiState.recentlyPlayed, onSongClick)
-        feedSections(uiState, onSongClick)
+        recentlyPlayedSection(uiState.recentlyPlayed, onSongClick, currentlyPlayingMediaId, isCurrentlyPlaying)
+        feedSections(uiState, onSongClick, currentlyPlayingMediaId, isCurrentlyPlaying)
     }
 }
 
 private fun LazyListScope.recentlyPlayedSection(
     recentlyPlayed: List<Song>,
     onSongClick: (List<Song>, Song) -> Unit,
+    currentlyPlayingMediaId: String?,
+    isCurrentlyPlaying: Boolean,
 ) {
     if (recentlyPlayed.isEmpty()) return
     item(key = "recently_played_header") {
@@ -133,9 +142,12 @@ private fun LazyListScope.recentlyPlayedSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(recentlyPlayed, key = { "recent_${it.mediaId}" }) { song ->
+                val isCurrentTrack = song.mediaId == currentlyPlayingMediaId
                 SongCard(
                     song = song,
                     onClick = { onSongClick(recentlyPlayed, song) },
+                    isCurrentTrack = isCurrentTrack,
+                    isPlaying = isCurrentTrack && isCurrentlyPlaying,
                 )
             }
         }
@@ -146,6 +158,8 @@ private fun LazyListScope.recentlyPlayedSection(
 private fun LazyListScope.feedSections(
     uiState: ForYouUiState,
     onSongClick: (List<Song>, Song) -> Unit,
+    currentlyPlayingMediaId: String?,
+    isCurrentlyPlaying: Boolean,
 ) {
     uiState.sections.forEach { section ->
         when (section.type) {
@@ -159,9 +173,12 @@ private fun LazyListScope.feedSections(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         items(section.songs, key = { it.mediaId }) { song ->
+                            val isCurrentTrack = song.mediaId == currentlyPlayingMediaId
                             SongCard(
                                 song = song,
                                 onClick = { onSongClick(section.songs, song) },
+                                isCurrentTrack = isCurrentTrack,
+                                isPlaying = isCurrentTrack && isCurrentlyPlaying,
                             )
                         }
                     }
@@ -176,6 +193,8 @@ private fun LazyListScope.feedSections(
                     QuickPicksGrid(
                         songs = section.songs,
                         onSongClick = { song -> onSongClick(section.songs, song) },
+                        currentlyPlayingMediaId = currentlyPlayingMediaId,
+                        isCurrentlyPlaying = isCurrentlyPlaying,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -185,9 +204,12 @@ private fun LazyListScope.feedSections(
                     SectionHeader(title = section.title)
                 }
                 items(section.songs, key = { it.mediaId }) { song ->
+                    val isCurrentTrack = song.mediaId == currentlyPlayingMediaId
                     SongRow(
                         song = song,
                         onClick = { onSongClick(uiState.allSongs, song) },
+                        isCurrentTrack = isCurrentTrack,
+                        isPlaying = isCurrentTrack && isCurrentlyPlaying,
                     )
                 }
             }
@@ -288,6 +310,8 @@ private fun QuickPicksGrid(
     songs: List<Song>,
     onSongClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
+    currentlyPlayingMediaId: String? = null,
+    isCurrentlyPlaying: Boolean = false,
 ) {
     val gridSongs = songs.take(4)
     Column(
@@ -302,9 +326,12 @@ private fun QuickPicksGrid(
                 for (colIndex in 0..1) {
                     val index = rowIndex * 2 + colIndex
                     if (index < gridSongs.size) {
+                        val isCurrentTrack = gridSongs[index].mediaId == currentlyPlayingMediaId
                         QuickPickCard(
                             song = gridSongs[index],
                             onClick = { onSongClick(gridSongs[index]) },
+                            isCurrentTrack = isCurrentTrack,
+                            isPlaying = isCurrentTrack && isCurrentlyPlaying,
                             modifier = Modifier.weight(1f),
                         )
                     } else {
@@ -321,6 +348,8 @@ private fun QuickPickCard(
     song: Song,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isCurrentTrack: Boolean = false,
+    isPlaying: Boolean = false,
 ) {
     Row(
         modifier = modifier
@@ -330,14 +359,20 @@ private fun QuickPickCard(
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = song.resolvedCoverUrl,
-            contentDescription = song.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(6.dp)),
-        )
+        NowPlayingOverlay(
+            isCurrentTrack = isCurrentTrack,
+            isPlaying = isPlaying,
+            shape = RoundedCornerShape(6.dp),
+        ) {
+            AsyncImage(
+                model = song.resolvedCoverUrl,
+                contentDescription = song.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+            )
+        }
         Spacer(modifier = Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -363,6 +398,8 @@ private fun SongCard(
     song: Song,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isCurrentTrack: Boolean = false,
+    isPlaying: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -370,14 +407,20 @@ private fun SongCard(
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
     ) {
-        AsyncImage(
-            model = song.resolvedCoverUrl,
-            contentDescription = song.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(140.dp)
-                .clip(RoundedCornerShape(12.dp)),
-        )
+        NowPlayingOverlay(
+            isCurrentTrack = isCurrentTrack,
+            isPlaying = isPlaying,
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            AsyncImage(
+                model = song.resolvedCoverUrl,
+                contentDescription = song.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(140.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = song.title,
@@ -401,6 +444,8 @@ private fun SongRow(
     song: Song,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isCurrentTrack: Boolean = false,
+    isPlaying: Boolean = false,
 ) {
     Row(
         modifier = modifier
@@ -411,14 +456,20 @@ private fun SongRow(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = song.resolvedCoverUrl,
-            contentDescription = song.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(8.dp)),
-        )
+        NowPlayingOverlay(
+            isCurrentTrack = isCurrentTrack,
+            isPlaying = isPlaying,
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            AsyncImage(
+                model = song.resolvedCoverUrl,
+                contentDescription = song.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+            )
+        }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -442,6 +493,12 @@ private fun SongRow(
 @Composable
 private fun ForYouScreenPreview() {
     AppTheme {
-        ForYouContent(uiState = PreviewForYouUiState, onSongClick = { _, _ -> }, onProfileClick = {})
+        ForYouContent(
+            uiState = PreviewForYouUiState,
+            onSongClick = { _, _ -> },
+            onProfileClick = {},
+            currentlyPlayingMediaId = "1",
+            isCurrentlyPlaying = true,
+        )
     }
 }
