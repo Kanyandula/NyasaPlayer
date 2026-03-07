@@ -1,15 +1,17 @@
 package com.example.nyasaplayer.player
 
-import com.example.nyasaplayer.models.Song
+import com.example.nyasaplayer.core.common.models.Song
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class PlaybackQueueManager @Inject constructor() {
 
     var queue: List<Song> = emptyList()
         private set
 
+    @Volatile
     var currentIndex: Int = -1
-        private set
 
     private var originalQueue: List<Song> = emptyList()
 
@@ -53,8 +55,6 @@ class PlaybackQueueManager @Inject constructor() {
             isShuffled = true
         }
     }
-
-    fun currentSong(): Song? = queue.getOrNull(currentIndex)
 
     fun skipNext(repeatMode: RepeatMode): Song? {
         if (currentIndex < queue.lastIndex) {

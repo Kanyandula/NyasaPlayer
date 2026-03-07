@@ -48,24 +48,26 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
-import com.example.nyasaplayer.models.Genre
-import com.example.nyasaplayer.models.Song
-import com.example.nyasaplayer.ui.components.NyasaErrorScreen
-import com.example.nyasaplayer.ui.components.SongOverflowSheet
-import com.example.nyasaplayer.ui.icons.MoreHorizIcon
-import com.example.nyasaplayer.ui.icons.SearchIcon
+import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
+import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
+import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
+import com.example.nyasaplayer.core.common.ui.theme.AppTheme
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
+import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
+import com.example.nyasaplayer.core.common.util.formatDuration
+import com.example.nyasaplayer.download.SongDownloadManager
+import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
 import com.example.nyasaplayer.ui.preview.PreviewGenres
-import com.example.nyasaplayer.ui.theme.AppTheme
-import com.example.nyasaplayer.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.ui.theme.NyasaSurface3
-import com.example.nyasaplayer.ui.theme.NyasaTextSecondary
-import com.example.nyasaplayer.ui.theme.NyasaTextTertiary
-import com.example.nyasaplayer.util.formatDuration
 
 @Composable
 fun SearchScreen(
     onSongClick: (List<Song>, Song) -> Unit,
     modifier: Modifier = Modifier,
+    downloadManager: SongDownloadManager? = null,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -100,6 +102,7 @@ fun SearchScreen(
         onSongClick = onSongClick,
         onGenreClick = viewModel::onGenreSelected,
         onGenreBack = viewModel::onGenreBack,
+        downloadManager = downloadManager,
         modifier = modifier,
     )
 }
@@ -111,6 +114,7 @@ private fun SearchContent(
     onSongClick: (List<Song>, Song) -> Unit,
     onGenreClick: (Genre) -> Unit,
     onGenreBack: () -> Unit,
+    downloadManager: SongDownloadManager?,
     modifier: Modifier = Modifier,
 ) {
     var selectedSong by remember { mutableStateOf<Song?>(null) }
@@ -161,8 +165,9 @@ private fun SearchContent(
     }
 
     selectedSong?.let { song ->
-        SongOverflowSheet(
+        SongOverflowWithDownload(
             song = song,
+            downloadManager = downloadManager,
             onDismiss = { selectedSong = null },
         )
     }
@@ -433,6 +438,7 @@ private fun SearchScreenPreview() {
             onSongClick = { _, _ -> },
             onGenreClick = { },
             onGenreBack = { },
+            downloadManager = null,
         )
     }
 }

@@ -1,7 +1,7 @@
 package com.example.nyasaplayer.ui.preview
 
-import com.example.nyasaplayer.models.Genre
-import com.example.nyasaplayer.models.Song
+import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.player.PlayerMode
 import com.example.nyasaplayer.player.PlayerUiState
 import com.example.nyasaplayer.screens.home.ForYouUiState

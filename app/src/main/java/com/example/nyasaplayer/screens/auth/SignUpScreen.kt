@@ -40,15 +40,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.nyasaplayer.R
-import com.example.nyasaplayer.ui.icons.EmailIcon
-import com.example.nyasaplayer.ui.icons.LockIcon
-import com.example.nyasaplayer.ui.icons.VisibilityIcon
-import com.example.nyasaplayer.ui.icons.VisibilityOffIcon
-import com.example.nyasaplayer.ui.theme.NyasaBackground
-import com.example.nyasaplayer.ui.theme.NyasaError
-import com.example.nyasaplayer.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.ui.theme.NyasaTextSecondary
-import com.example.nyasaplayer.ui.theme.NyasaTextTertiary
+import com.example.nyasaplayer.core.common.ui.icons.EmailIcon
+import com.example.nyasaplayer.core.common.ui.icons.LockIcon
+import com.example.nyasaplayer.core.common.ui.icons.VisibilityIcon
+import com.example.nyasaplayer.core.common.ui.icons.VisibilityOffIcon
+import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
+import com.example.nyasaplayer.core.common.ui.theme.NyasaError
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 
 @Composable
 fun SignUpScreen(

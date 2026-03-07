@@ -40,14 +40,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
+import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
+import com.example.nyasaplayer.core.common.ui.theme.AppTheme
+import com.example.nyasaplayer.core.common.ui.theme.NyasaError
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface4
 import com.example.nyasaplayer.player.PlayerUiState
-import com.example.nyasaplayer.ui.icons.PauseIcon
 import com.example.nyasaplayer.ui.preview.PreviewPlayerStateMini
-import com.example.nyasaplayer.ui.theme.AppTheme
-import com.example.nyasaplayer.ui.theme.NyasaError
-import com.example.nyasaplayer.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.ui.theme.NyasaSurface4
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
