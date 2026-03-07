@@ -79,4 +79,8 @@
     <string name="download_failed">Download failed</string>
     <string name="download_removed">Download removed</string>
     <string name="offline_cannot_download">Can\u0027t download while offline</string>
+    <string name="navigate_back">Navigate back</string>
+    <string name="remove_all_downloads_title">Remove all downloads?</string>
+    <string name="remove_all_downloads_message">This will delete all downloaded songs from your device. You can download them again later.</string>
+    <string name="cancel">Cancel</string>
 </resources>

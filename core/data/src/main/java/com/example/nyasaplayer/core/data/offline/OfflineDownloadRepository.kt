@@ -4,8 +4,12 @@ import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.local.dao.DownloadDao
 import com.example.nyasaplayer.core.data.local.entity.DownloadEntity
 import com.example.nyasaplayer.core.data.local.entity.DownloadStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -13,6 +17,20 @@ import javax.inject.Singleton
 class OfflineDownloadRepository @Inject constructor(
     private val downloadDao: DownloadDao,
 ) : DownloadRepository {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val filePathCache = ConcurrentHashMap<String, String>()
+
+    init {
+        scope.launch {
+            val completed = downloadDao.getAllCompletedOnce()
+            completed.forEach { entity ->
+                if (entity.filePath.isNotBlank()) {
+                    filePathCache[entity.mediaId] = entity.filePath
+                }
+            }
+        }
+    }
 
     override fun getCompletedDownloads(): Flow<List<DownloadEntity>> =
         downloadDao.getCompleted()
@@ -50,6 +68,7 @@ class OfflineDownloadRepository @Inject constructor(
             fileSize = fileSize,
             downloadedAt = System.currentTimeMillis(),
         )
+        filePathCache[mediaId] = filePath
     }
 
     override suspend fun markFailed(mediaId: String) {
@@ -57,16 +76,19 @@ class OfflineDownloadRepository @Inject constructor(
     }
 
     override suspend fun removeDownload(mediaId: String) {
+        filePathCache.remove(mediaId)
         downloadDao.delete(mediaId)
     }
 
     override suspend fun removeAllDownloads() {
+        filePathCache.clear()
         downloadDao.deleteAll()
     }
 
+    override suspend fun resetStaleDownloads() {
+        downloadDao.resetStaleDownloads()
+    }
+
     override fun getLocalFilePath(mediaId: String): String? =
-        runBlocking {
-            val download = downloadDao.getByMediaId(mediaId)
-            if (download?.status == DownloadStatus.Completed) download.filePath else null
-        }
+        filePathCache[mediaId]
 }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -22,6 +23,8 @@ import kotlin.coroutines.cancellation.CancellationException
 
 private const val BufferSize = 8192
 private const val PercentMultiplier = 100
+private const val ConnectTimeoutMs = 15_000
+private const val ReadTimeoutMs = 30_000
 
 @Singleton
 class SongDownloadManager @Inject constructor(
@@ -35,6 +38,10 @@ class SongDownloadManager @Inject constructor(
 
     private val _activeDownloads = MutableStateFlow<Set<String>>(emptySet())
     val activeDownloads: StateFlow<Set<String>> = _activeDownloads.asStateFlow()
+
+    init {
+        scope.launch { downloadRepository.resetStaleDownloads() }
+    }
 
     fun downloadSong(mediaId: String) {
         if (_activeDownloads.value.contains(mediaId)) return
@@ -55,21 +62,21 @@ class SongDownloadManager @Inject constructor(
                     return@launch
                 }
                 downloadRepository.addDownload(mediaId)
-                _activeDownloads.value = _activeDownloads.value + mediaId
+                _activeDownloads.update { it + mediaId }
                 performDownload(mediaId, audioUrl)
             } catch (e: CancellationException) {
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
                 downloadRepository.markFailed(mediaId)
             } finally {
-                _activeDownloads.value = _activeDownloads.value - mediaId
+                _activeDownloads.update { it - mediaId }
             }
         }
     }
 
     fun cancelDownload(mediaId: String) {
         scope.launch {
-            _activeDownloads.value = _activeDownloads.value - mediaId
+            _activeDownloads.update { it - mediaId }
             val file = File(downloadsDir, "$mediaId.audio")
             if (file.exists()) file.delete()
             downloadRepository.removeDownload(mediaId)
@@ -109,9 +116,13 @@ class SongDownloadManager @Inject constructor(
         val outputFile = File(downloadsDir, "$mediaId.audio")
         val connection = URL(audioUrl).openConnection() as HttpURLConnection
         try {
+            connection.connectTimeout = ConnectTimeoutMs
+            connection.readTimeout = ReadTimeoutMs
+            connection.instanceFollowRedirects = true
             connection.connect()
             val totalBytes = connection.contentLength.toLong()
             var downloadedBytes = 0L
+            var lastReportedProgress = -1
             connection.inputStream.use { input ->
                 FileOutputStream(outputFile).use { output ->
                     val buffer = ByteArray(BufferSize)
@@ -125,7 +136,10 @@ class SongDownloadManager @Inject constructor(
                         downloadedBytes += bytesRead
                         if (totalBytes > 0) {
                             val progress = (downloadedBytes * PercentMultiplier / totalBytes).toInt()
-                            downloadRepository.updateProgress(mediaId, progress)
+                            if (progress != lastReportedProgress) {
+                                lastReportedProgress = progress
+                                downloadRepository.updateProgress(mediaId, progress)
+                            }
                         }
                     }
                 }
