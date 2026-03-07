@@ -96,6 +96,7 @@ fun LibraryScreen(
             isCurrentlyPlaying = isCurrentlyPlaying,
             onSongClick = onSongClick,
             onShufflePlay = onShufflePlay,
+            onToggleLike = viewModel::toggleLikeSong,
             downloadManager = downloadManager,
             modifier = modifier,
         )
@@ -109,6 +110,7 @@ private fun LibraryContent(
     isCurrentlyPlaying: Boolean,
     onSongClick: (List<Song>, Song) -> Unit,
     onShufflePlay: (List<Song>) -> Unit,
+    onToggleLike: (String) -> Unit,
     downloadManager: SongDownloadManager?,
     modifier: Modifier = Modifier,
 ) {
@@ -158,6 +160,11 @@ private fun LibraryContent(
             song = song,
             downloadManager = downloadManager,
             onDismiss = { selectedSong = null },
+            isLiked = true,
+            onToggleLike = {
+                selectedSong = null
+                onToggleLike(song.mediaId)
+            },
         )
     }
 }
@@ -387,6 +394,7 @@ private fun LibraryScreenPreview() {
             isCurrentlyPlaying = true,
             onSongClick = { _, _ -> },
             onShufflePlay = { },
+            onToggleLike = { },
             downloadManager = null,
         )
     }

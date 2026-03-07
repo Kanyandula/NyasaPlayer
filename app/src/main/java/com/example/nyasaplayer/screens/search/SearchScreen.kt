@@ -62,6 +62,8 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.download.SongDownloadManager
 import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
 import com.example.nyasaplayer.ui.preview.PreviewGenres
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun SearchScreen(
@@ -102,6 +104,8 @@ fun SearchScreen(
         onSongClick = onSongClick,
         onGenreClick = viewModel::onGenreSelected,
         onGenreBack = viewModel::onGenreBack,
+        onToggleLike = viewModel::toggleLikeSong,
+        isLikedProvider = viewModel::isLiked,
         downloadManager = downloadManager,
         modifier = modifier,
     )
@@ -114,6 +118,8 @@ private fun SearchContent(
     onSongClick: (List<Song>, Song) -> Unit,
     onGenreClick: (Genre) -> Unit,
     onGenreBack: () -> Unit,
+    onToggleLike: (String) -> Unit,
+    isLikedProvider: (String) -> Flow<Boolean>,
     downloadManager: SongDownloadManager?,
     modifier: Modifier = Modifier,
 ) {
@@ -165,10 +171,14 @@ private fun SearchContent(
     }
 
     selectedSong?.let { song ->
+        val isLiked by remember(song.mediaId) { isLikedProvider(song.mediaId) }
+            .collectAsState(initial = false)
         SongOverflowWithDownload(
             song = song,
             downloadManager = downloadManager,
             onDismiss = { selectedSong = null },
+            isLiked = isLiked,
+            onToggleLike = { onToggleLike(song.mediaId) },
         )
     }
 }
@@ -438,6 +448,8 @@ private fun SearchScreenPreview() {
             onSongClick = { _, _ -> },
             onGenreClick = { },
             onGenreBack = { },
+            onToggleLike = { },
+            isLikedProvider = { flowOf(false) },
             downloadManager = null,
         )
     }

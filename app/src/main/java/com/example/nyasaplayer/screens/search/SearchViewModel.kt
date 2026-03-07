@@ -4,16 +4,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
+import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -34,6 +39,8 @@ data class SearchUiState(
 class SearchViewModel @Inject constructor(
     private val genreRepository: GenreRepository,
     private val songRepository: SongRepository,
+    private val userRepository: UserRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -117,6 +124,23 @@ class SearchViewModel @Inject constructor(
 
     fun onGenreBack() {
         _uiState.update { it.copy(selectedGenre = null, genreSongs = emptyList()) }
+    }
+
+    fun isLiked(mediaId: String): Flow<Boolean> {
+        val userId = authRepository.currentUser?.uid ?: return flowOf(false)
+        return userRepository.isLiked(userId, mediaId)
+    }
+
+    fun toggleLikeSong(mediaId: String) {
+        val userId = authRepository.currentUser?.uid ?: return
+        viewModelScope.launch(exceptionHandler) {
+            val liked = userRepository.isLiked(userId, mediaId).first()
+            if (liked) {
+                userRepository.unlikeSong(userId, mediaId)
+            } else {
+                userRepository.likeSong(userId, mediaId)
+            }
+        }
     }
 
     private fun filterSongs(songs: List<Song>, query: String): List<Song> {
