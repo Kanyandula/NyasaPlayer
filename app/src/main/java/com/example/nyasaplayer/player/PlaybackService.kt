@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -71,6 +72,7 @@ class PlaybackService : MediaSessionService() {
                 .add(SessionCommand(PlaybackCommands.CMD_SET_QUEUE, Bundle.EMPTY))
                 .add(SessionCommand(PlaybackCommands.CMD_SHUFFLE_PLAY, Bundle.EMPTY))
                 .add(SessionCommand(PlaybackCommands.CMD_RESTORE_STATE, Bundle.EMPTY))
+                .add(SessionCommand(PlaybackCommands.CMD_TOGGLE_SHUFFLE, Bundle.EMPTY))
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(commands)
@@ -87,6 +89,7 @@ class PlaybackService : MediaSessionService() {
                 PlaybackCommands.CMD_SET_QUEUE -> handleSetQueue(args)
                 PlaybackCommands.CMD_SHUFFLE_PLAY -> handleShufflePlay(args)
                 PlaybackCommands.CMD_RESTORE_STATE -> handleRestoreState(args)
+                PlaybackCommands.CMD_TOGGLE_SHUFFLE -> handleToggleShuffle()
                 else -> return Futures.immediateFuture(
                     SessionResult(SessionError.ERROR_NOT_SUPPORTED),
                 )
@@ -138,6 +141,13 @@ class PlaybackService : MediaSessionService() {
         exoPlayer.playWhenReady = false
     }
 
+    private fun handleToggleShuffle() {
+        queueManager.toggleShuffle()
+        val currentPosition = exoPlayer.currentPosition
+        applyQueueToPlayer()
+        exoPlayer.seekTo(queueManager.currentIndex, currentPosition)
+    }
+
     private fun applyQueueToPlayer() {
         val mediaItems = queueManager.queue.map { it.toMediaItem() }
         exoPlayer.setMediaItems(mediaItems, queueManager.currentIndex, 0L)
@@ -155,13 +165,8 @@ class PlaybackService : MediaSessionService() {
     // ── Player.Listener for auto-advance ──
 
     private val playerListener = object : Player.Listener {
-        override fun onMediaItemTransition(
-            mediaItem: androidx.media3.common.MediaItem?,
-            reason: Int,
-        ) {
-            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
-                queueManager.currentIndex = exoPlayer.currentMediaItemIndex
-            }
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            queueManager.currentIndex = exoPlayer.currentMediaItemIndex
         }
     }
 
@@ -212,7 +217,6 @@ class PlaybackService : MediaSessionService() {
         mediaSession
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        saveFinalState()
         val player = mediaSession?.player
         if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
             stopSelf()

@@ -79,6 +79,8 @@ fun MediaItem.toSong(): Song {
     )
 }
 
+// Note: Queue is serialized as JSON inside a Bundle. For very large queues (1000+ songs),
+// this could approach IPC transaction limits. Current practical limit is ~100-200 songs.
 fun List<Song>.toBundle(): Bundle {
     val jsonArray = JSONArray()
     forEach { song ->

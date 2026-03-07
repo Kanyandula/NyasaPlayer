@@ -14,6 +14,7 @@ import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
@@ -91,20 +92,13 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
             },
-            { it.run() },
+            MoreExecutors.directExecutor(),
         )
     }
 
     // ── MediaController.Listener ──
 
     private val controllerListener = object : Player.Listener {
-        override fun onMediaMetadataChanged(
-            mediaMetadata: androidx.media3.common.MediaMetadata,
-        ) {
-            val item = mediaController?.currentMediaItem ?: return
-            updateCurrentSong(item)
-        }
-
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             if (mediaItem == null) return
             updateCurrentSong(mediaItem)
@@ -136,10 +130,6 @@ class PlayerViewModel @Inject constructor(
                     isPlaying = controller.isPlaying,
                 )
             }
-        }
-
-        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-            _uiState.update { it.copy(isShuffled = shuffleModeEnabled) }
         }
 
         override fun onRepeatModeChanged(repeatMode: Int) {
@@ -215,6 +205,7 @@ class PlayerViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 playerMode = PlayerMode.Expanded,
+                currentSong = songs.first(),
                 isPlaying = true,
                 isShuffled = true,
             )
@@ -223,7 +214,11 @@ class PlayerViewModel @Inject constructor(
 
     fun toggleShuffle() {
         val controller = mediaController ?: return
-        controller.shuffleModeEnabled = !controller.shuffleModeEnabled
+        _uiState.update { it.copy(isShuffled = !it.isShuffled) }
+        controller.sendCustomCommand(
+            SessionCommand(PlaybackCommands.CMD_TOGGLE_SHUFFLE, Bundle.EMPTY),
+            Bundle.EMPTY,
+        )
     }
 
     fun skipNext() {

@@ -13,8 +13,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
 
-private const val PlaybackSaveIntervalMs = 30_000L
-
 data class RestoredPlayback(
     val queue: List<Song>,
     val index: Int,
@@ -30,7 +28,6 @@ class PlaybackStatePersistence @Inject constructor(
     private val songRepository: SongRepository,
 ) {
     private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var lastSaveTimeMs: Long = 0L
 
     private val userId: String? get() = authRepository.currentUser?.uid
 
@@ -54,21 +51,6 @@ class PlaybackStatePersistence @Inject constructor(
             } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
                 // Silent fail — persistence is best-effort
             }
-        }
-    }
-
-    fun saveIfThrottleElapsed(
-        scope: CoroutineScope,
-        currentSong: Song,
-        positionMs: Long,
-        queueSongIds: List<String>,
-        queueIndex: Int,
-        repeatMode: RepeatMode,
-    ) {
-        val now = System.currentTimeMillis()
-        if (now - lastSaveTimeMs >= PlaybackSaveIntervalMs) {
-            lastSaveTimeMs = now
-            save(scope, currentSong, positionMs, queueSongIds, queueIndex, repeatMode)
         }
     }
 
