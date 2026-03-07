@@ -12,6 +12,8 @@ fun SongOverflowWithDownload(
     song: Song,
     downloadManager: SongDownloadManager?,
     onDismiss: () -> Unit,
+    isLiked: Boolean = false,
+    onToggleLike: () -> Unit = {},
 ) {
     val downloadState = remember(song.mediaId) {
         resolveDownloadState(song.mediaId, downloadManager)
@@ -19,6 +21,8 @@ fun SongOverflowWithDownload(
     SongOverflowSheet(
         song = song,
         onDismiss = onDismiss,
+        isLiked = isLiked,
+        onToggleLike = onToggleLike,
         downloadState = downloadState,
         onDownloadClick = { s ->
             downloadManager?.downloadSong(s.mediaId)
