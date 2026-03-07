@@ -6,6 +6,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.download.SongDownloadManager
+import com.example.nyasaplayer.screens.downloads.DownloadsScreen
 import com.example.nyasaplayer.screens.home.ForYouScreen
 import com.example.nyasaplayer.screens.library.LibraryScreen
 import com.example.nyasaplayer.screens.profile.ProfileScreen
@@ -23,6 +25,7 @@ const val HomeRoute = "home"
 const val SearchRoute = "search"
 const val LibraryRoute = "library"
 const val ProfileRoute = "profile"
+const val DownloadsRoute = "downloads"
 
 @Composable
 fun NyasaPlayerNavHost(
@@ -32,6 +35,7 @@ fun NyasaPlayerNavHost(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
+    downloadManager: SongDownloadManager? = null,
 ) {
     NavHost(
         navController = navController,
@@ -45,19 +49,32 @@ fun NyasaPlayerNavHost(
             )
         }
         composable(SearchRoute) {
-            SearchScreen(onSongClick = onSongClick)
+            SearchScreen(
+                onSongClick = onSongClick,
+                downloadManager = downloadManager,
+            )
         }
         composable(LibraryRoute) {
             LibraryScreen(
                 onSongClick = onSongClick,
                 onShufflePlay = onShufflePlay,
                 currentlyPlayingMediaId = currentlyPlayingMediaId,
+                downloadManager = downloadManager,
             )
         }
         composable(ProfileRoute) {
             ProfileScreen(
                 onSignOut = onSignOut,
                 onLikedSongsClick = { navController.navigateToTab(LibraryRoute) },
+                onDownloadsClick = { navController.navigate(DownloadsRoute) },
+            )
+        }
+        composable(DownloadsRoute) {
+            DownloadsScreen(
+                onSongClick = onSongClick,
+                onShufflePlay = onShufflePlay,
+                onBack = { navController.popBackStack() },
+                currentlyPlayingMediaId = currentlyPlayingMediaId,
             )
         }
     }

@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +47,7 @@ import com.example.nyasaplayer.core.common.ui.icons.PlaylistRemoveIcon
 import com.example.nyasaplayer.core.common.ui.icons.ProfileIcon
 import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface4
@@ -57,6 +61,9 @@ fun SongOverflowSheet(
     song: Song,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    downloadState: SongDownloadState = SongDownloadState.NotDownloaded,
+    onDownloadClick: (Song) -> Unit = {},
+    onRemoveDownloadClick: (Song) -> Unit = {},
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -73,7 +80,12 @@ fun SongOverflowSheet(
                 color = NyasaSurface4,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
-            SheetMenuItems()
+            SheetMenuItems(
+                song = song,
+                downloadState = downloadState,
+                onDownloadClick = onDownloadClick,
+                onRemoveDownloadClick = onRemoveDownloadClick,
+            )
         }
     }
 }
@@ -186,14 +198,25 @@ private fun QuickActionButton(
 }
 
 @Composable
-private fun SheetMenuItems(modifier: Modifier = Modifier) {
+private fun SheetMenuItems(
+    song: Song,
+    downloadState: SongDownloadState,
+    onDownloadClick: (Song) -> Unit,
+    onRemoveDownloadClick: (Song) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier) {
         SheetMenuItem(icon = QueueMusicIcon, label = stringResource(R.string.add_to_queue))
         SheetMenuItem(
             icon = Icons.Default.FavoriteBorder,
             label = stringResource(R.string.save_to_library),
         )
-        SheetMenuItem(icon = DownloadIcon, label = stringResource(R.string.download))
+        DownloadMenuItem(
+            song = song,
+            downloadState = downloadState,
+            onDownloadClick = onDownloadClick,
+            onRemoveDownloadClick = onRemoveDownloadClick,
+        )
         SheetMenuItem(icon = PlaylistAddIcon, label = stringResource(R.string.save_to_playlist))
         SheetMenuItem(
             icon = PlaylistRemoveIcon,
@@ -205,15 +228,59 @@ private fun SheetMenuItems(modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun DownloadMenuItem(
+    song: Song,
+    downloadState: SongDownloadState,
+    onDownloadClick: (Song) -> Unit,
+    onRemoveDownloadClick: (Song) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (downloadState) {
+        SongDownloadState.NotDownloaded -> SheetMenuItem(
+            icon = DownloadIcon,
+            label = stringResource(R.string.download),
+            onClick = { onDownloadClick(song) },
+            modifier = modifier,
+        )
+        SongDownloadState.Downloading -> Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = NyasaPrimary,
+                strokeWidth = 2.dp,
+                strokeCap = StrokeCap.Round,
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = stringResource(R.string.download),
+                style = MaterialTheme.typography.bodyLarge,
+                color = NyasaTextSecondary,
+            )
+        }
+        SongDownloadState.Downloaded -> SheetMenuItem(
+            icon = Icons.Default.Delete,
+            label = stringResource(R.string.remove_download),
+            onClick = { onRemoveDownloadClick(song) },
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
 private fun SheetMenuItem(
     icon: ImageVector,
     label: String,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { }
+            .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -5,11 +5,13 @@ import com.example.nyasaplayer.core.data.FirebaseHomeFeedRepository
 import com.example.nyasaplayer.core.data.FirebaseUserRepository
 import com.example.nyasaplayer.core.data.api.ArtistRepository
 import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.HomeFeedRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.core.data.offline.OfflineArtistRepository
+import com.example.nyasaplayer.core.data.offline.OfflineDownloadRepository
 import com.example.nyasaplayer.core.data.offline.OfflineGenreRepository
 import com.example.nyasaplayer.core.data.offline.OfflineSongRepository
 import dagger.Binds
@@ -45,4 +47,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindHomeFeedRepository(impl: FirebaseHomeFeedRepository): HomeFeedRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDownloadRepository(impl: OfflineDownloadRepository): DownloadRepository
 }

@@ -11,6 +11,7 @@
     <string name="add_to_queue">Add to queue</string>
     <string name="save_to_library">Save to library</string>
     <string name="download">Download</string>
+    <string name="remove_download">Remove download</string>
     <string name="save_to_playlist">Save to playlist</string>
     <string name="remove_from_playlist">Remove from playlist</string>
     <string name="go_to_album">Go to album</string>

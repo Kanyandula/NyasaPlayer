@@ -1,4 +1,4 @@
-package com.example.nyasaplayer.screens.library
+package com.example.nyasaplayer.screens.downloads
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,10 +16,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,9 +31,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,237 +39,193 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
-import com.example.nyasaplayer.core.common.ui.components.SongDownloadState
-import com.example.nyasaplayer.core.common.ui.components.SongOverflowSheet
-import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
-import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
+import com.example.nyasaplayer.core.common.ui.icons.DownloadIcon
 import com.example.nyasaplayer.core.common.ui.icons.ShuffleIcon
-import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
-import com.example.nyasaplayer.download.SongDownloadManager
-import com.example.nyasaplayer.ui.preview.PreviewSongsWithDuration
+
+private const val BytesPerMb = 1_048_576.0
 
 @Composable
-fun LibraryScreen(
+fun DownloadsScreen(
     onSongClick: (List<Song>, Song) -> Unit,
     onShufflePlay: (List<Song>) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
-    downloadManager: SongDownloadManager? = null,
-    viewModel: LibraryViewModel = hiltViewModel(),
+    viewModel: DownloadsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     when {
         uiState.errorMessage != null -> NyasaErrorScreen(
-            title = if (uiState.isNetworkError) {
-                stringResource(R.string.error_no_connection_title)
-            } else {
-                stringResource(R.string.error_generic_title)
-            },
-            subtitle = if (uiState.isNetworkError) {
-                stringResource(R.string.error_no_connection_subtitle)
-            } else {
-                stringResource(R.string.error_generic_subtitle)
-            },
+            title = stringResource(R.string.error_generic_title),
+            subtitle = stringResource(R.string.error_generic_subtitle),
             onRetry = viewModel::retry,
-            isNetworkError = uiState.isNetworkError,
             buttonText = stringResource(R.string.try_again),
             modifier = modifier,
         )
-        else -> LibraryContent(
+        else -> DownloadsContent(
             songs = uiState.songs,
+            downloadCount = uiState.downloadCount,
+            totalSizeBytes = uiState.totalSizeBytes,
             currentlyPlayingMediaId = currentlyPlayingMediaId,
             onSongClick = onSongClick,
             onShufflePlay = onShufflePlay,
-            downloadManager = downloadManager,
+            onBack = onBack,
+            onRemoveDownload = viewModel::removeDownload,
+            onRemoveAll = viewModel::removeAllDownloads,
             modifier = modifier,
         )
     }
 }
 
 @Composable
-private fun LibraryContent(
+private fun DownloadsContent(
     songs: List<Song>,
+    downloadCount: Int,
+    totalSizeBytes: Long,
     currentlyPlayingMediaId: String?,
     onSongClick: (List<Song>, Song) -> Unit,
     onShufflePlay: (List<Song>) -> Unit,
-    downloadManager: SongDownloadManager?,
+    onBack: () -> Unit,
+    onRemoveDownload: (String) -> Unit,
+    onRemoveAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedSong by remember { mutableStateOf<Song?>(null) }
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding(),
     ) {
-        LibraryHeader(songCount = songs.size)
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        FilterChips()
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        ShufflePlayButton(
-            onClick = { onShufflePlay(songs) },
-            modifier = Modifier.padding(horizontal = 16.dp),
+        DownloadsHeader(
+            downloadCount = downloadCount,
+            totalSizeBytes = totalSizeBytes,
+            onBack = onBack,
+            onRemoveAll = onRemoveAll,
+            hasDownloads = songs.isNotEmpty(),
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        LazyColumn(
-            contentPadding = PaddingValues(bottom = 80.dp),
-            modifier = Modifier.weight(1f),
-        ) {
-            itemsIndexed(songs, key = { _, song -> song.mediaId }) { index, song ->
-                LibrarySongRow(
-                    song = song,
-                    trackNumber = index + 1,
-                    isPlaying = song.mediaId == currentlyPlayingMediaId,
-                    onClick = { onSongClick(songs, song) },
-                    onMoreClick = { selectedSong = song },
-                )
+        if (songs.isNotEmpty()) {
+            ShufflePlayButton(
+                onClick = { onShufflePlay(songs) },
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        if (songs.isEmpty()) {
+            EmptyDownloadsMessage(modifier = Modifier.weight(1f))
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(bottom = 80.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                itemsIndexed(songs, key = { _, song -> song.mediaId }) { index, song ->
+                    DownloadSongRow(
+                        song = song,
+                        trackNumber = index + 1,
+                        isPlaying = song.mediaId == currentlyPlayingMediaId,
+                        onClick = { onSongClick(songs, song) },
+                        onRemove = { onRemoveDownload(song.mediaId) },
+                    )
+                }
             }
         }
     }
-
-    selectedSong?.let { song ->
-        SongOverflowWithDownload(
-            song = song,
-            downloadManager = downloadManager,
-            onDismiss = { selectedSong = null },
-        )
-    }
 }
 
 @Composable
-private fun SongOverflowWithDownload(
-    song: Song,
-    downloadManager: SongDownloadManager?,
-    onDismiss: () -> Unit,
-) {
-    val downloadState = remember(song.mediaId) {
-        resolveDownloadState(song.mediaId, downloadManager)
-    }
-    SongOverflowSheet(
-        song = song,
-        onDismiss = onDismiss,
-        downloadState = downloadState,
-        onDownloadClick = { s ->
-            downloadManager?.downloadSong(s.mediaId)
-            onDismiss()
-        },
-        onRemoveDownloadClick = { s ->
-            downloadManager?.removeDownload(s.mediaId)
-            onDismiss()
-        },
-    )
-}
-
-private fun resolveDownloadState(
-    mediaId: String,
-    downloadManager: SongDownloadManager?,
-): SongDownloadState {
-    if (downloadManager == null) return SongDownloadState.NotDownloaded
-    val localUri = downloadManager.getLocalFileUri(mediaId)
-    return when {
-        localUri != null -> SongDownloadState.Downloaded
-        downloadManager.activeDownloads.value.contains(mediaId) -> SongDownloadState.Downloading
-        else -> SongDownloadState.NotDownloaded
-    }
-}
-
-@Composable
-private fun LibraryHeader(
-    songCount: Int,
+private fun DownloadsHeader(
+    downloadCount: Int,
+    totalSizeBytes: Long,
+    onBack: () -> Unit,
+    onRemoveAll: () -> Unit,
+    hasDownloads: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 16.dp),
+            .padding(start = 4.dp, end = 16.dp, top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.collapse),
+                tint = Color.White,
+            )
+        }
         Icon(
-            imageVector = HeartIcon,
+            imageVector = DownloadIcon,
             contentDescription = null,
             tint = NyasaPrimary,
             modifier = Modifier.size(28.dp),
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.liked_songs),
+                text = stringResource(R.string.downloads),
                 style = MaterialTheme.typography.headlineLarge,
                 color = Color.White,
             )
             Text(
-                text = stringResource(R.string.song_count, songCount),
+                text = formatStorageSummary(downloadCount, totalSizeBytes),
                 style = MaterialTheme.typography.bodySmall,
                 color = NyasaTextSecondary,
             )
         }
-    }
-}
-
-@Composable
-private fun FilterChips(modifier: Modifier = Modifier) {
-    LazyRow(
-        modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item {
-            FilterChip(
-                label = stringResource(R.string.sort),
-                selected = false,
-            )
-        }
-        item {
-            FilterChip(
-                label = stringResource(R.string.filter),
-                selected = false,
-            )
+        if (hasDownloads) {
+            IconButton(onClick = onRemoveAll) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.remove_all_downloads),
+                    tint = NyasaTextSecondary,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun FilterChip(
-    label: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val backgroundColor = if (selected) NyasaPrimary else NyasaSurface2
-    val textColor = if (selected) Color.White else NyasaTextSecondary
-
+private fun EmptyDownloadsMessage(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(backgroundColor)
-            .clickable { }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = textColor,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = DownloadIcon,
+                contentDescription = null,
+                tint = NyasaTextTertiary,
+                modifier = Modifier.size(64.dp),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.no_downloads_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.no_downloads_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = NyasaTextSecondary,
+            )
+        }
     }
 }
 
@@ -320,7 +274,6 @@ private fun ShufflePlayButton(
 
 private val SongRowThumbnailSize = 48.dp
 private val SongRowThumbnailRadius = 8.dp
-private val SongRowThumbnailSpacing = 12.dp
 
 @Composable
 private fun TrackNumberIndicator(trackNumber: Int, isPlaying: Boolean) {
@@ -346,12 +299,12 @@ private fun TrackNumberIndicator(trackNumber: Int, isPlaying: Boolean) {
 }
 
 @Composable
-private fun LibrarySongRow(
+private fun DownloadSongRow(
     song: Song,
     trackNumber: Int,
     isPlaying: Boolean,
     onClick: () -> Unit,
-    onMoreClick: () -> Unit,
+    onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val rowBackground = if (isPlaying) NyasaPrimary.copy(alpha = 0.15f) else Color.Transparent
@@ -375,7 +328,7 @@ private fun LibrarySongRow(
                 .size(SongRowThumbnailSize)
                 .clip(RoundedCornerShape(SongRowThumbnailRadius)),
         )
-        Spacer(modifier = Modifier.width(SongRowThumbnailSpacing))
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
@@ -399,10 +352,10 @@ private fun LibrarySongRow(
                 color = NyasaTextTertiary,
             )
         }
-        IconButton(onClick = onMoreClick) {
+        IconButton(onClick = onRemove) {
             Icon(
-                imageVector = MoreHorizIcon,
-                contentDescription = stringResource(R.string.more_options),
+                imageVector = Icons.Default.Delete,
+                contentDescription = stringResource(R.string.remove_download),
                 tint = NyasaTextSecondary,
                 modifier = Modifier.size(20.dp),
             )
@@ -410,17 +363,11 @@ private fun LibrarySongRow(
     }
 }
 
-@Suppress("UnusedPrivateMember")
-@Preview(showBackground = true, backgroundColor = 0xFF0D0D0D)
-@Composable
-private fun LibraryScreenPreview() {
-    AppTheme {
-        LibraryContent(
-            songs = PreviewSongsWithDuration,
-            currentlyPlayingMediaId = "1",
-            onSongClick = { _, _ -> },
-            onShufflePlay = { },
-            downloadManager = null,
-        )
+private fun formatStorageSummary(count: Int, sizeBytes: Long): String {
+    val sizeMb = sizeBytes / BytesPerMb
+    return if (sizeMb >= 1) {
+        "$count songs \u00B7 ${"%.1f".format(sizeMb)} MB"
+    } else {
+        "$count songs"
     }
 }

@@ -35,6 +35,7 @@ import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.ui.components.ErrorBanner
 import com.example.nyasaplayer.core.common.ui.icons.ChevronRightIcon
+import com.example.nyasaplayer.core.common.ui.icons.DownloadIcon
 import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.ProfileIcon
 import com.example.nyasaplayer.core.common.ui.icons.SettingsIcon
@@ -50,6 +51,7 @@ fun ProfileScreen(
     onSignOut: () -> Unit,
     onLikedSongsClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onDownloadsClick: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -85,6 +87,7 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(32.dp))
         ProfileMenuItems(
             onLikedSongsClick = onLikedSongsClick,
+            onDownloadsClick = onDownloadsClick,
             onSignOut = {
                 viewModel.signOut()
                 onSignOut()
@@ -96,6 +99,7 @@ fun ProfileScreen(
 @Composable
 private fun ProfileMenuItems(
     onLikedSongsClick: () -> Unit,
+    onDownloadsClick: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -105,6 +109,12 @@ private fun ProfileMenuItems(
             label = stringResource(R.string.liked_songs),
             iconTint = NyasaPrimary,
             onClick = onLikedSongsClick,
+        )
+        ProfileMenuItem(
+            icon = DownloadIcon,
+            label = stringResource(R.string.downloads),
+            iconTint = NyasaPrimary,
+            onClick = onDownloadsClick,
         )
         ProfileMenuItem(icon = VolumeIcon, label = stringResource(R.string.audio_quality))
         ProfileMenuItem(icon = SettingsIcon, label = stringResource(R.string.settings))

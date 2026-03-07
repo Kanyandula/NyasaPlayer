@@ -74,6 +74,7 @@ fun NyasaPlayerApp(
                     onShufflePlay = playerViewModel::shufflePlay,
                     onSignOut = onSignOut,
                     currentlyPlayingMediaId = playerState.currentSong?.mediaId,
+                    downloadManager = playerViewModel.downloadManager,
                 )
             }
         }
