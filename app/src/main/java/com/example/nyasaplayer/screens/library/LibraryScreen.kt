@@ -19,8 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -48,17 +45,16 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
 import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
-import com.example.nyasaplayer.core.common.ui.icons.ShuffleIcon
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.download.SongDownloadManager
-import com.example.nyasaplayer.screens.common.AnimatedEqualizer
+import com.example.nyasaplayer.screens.common.ShufflePlayButton
 import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
+import com.example.nyasaplayer.screens.common.TrackNumberIndicator
 import com.example.nyasaplayer.ui.preview.PreviewSongsWithDuration
 
 @Composable
@@ -248,70 +244,9 @@ private fun FilterChip(
     }
 }
 
-@Composable
-private fun ShufflePlayButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-        contentPadding = PaddingValues(),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(listOf(NyasaPrimaryDark, NyasaPrimary)),
-                    RoundedCornerShape(24.dp),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = ShuffleIcon,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
-                Text(
-                    text = stringResource(R.string.shuffle_play),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White,
-                )
-            }
-        }
-    }
-}
-
 private val SongRowThumbnailSize = 48.dp
 private val SongRowThumbnailRadius = 8.dp
 private val SongRowThumbnailSpacing = 12.dp
-
-@Composable
-private fun TrackNumberIndicator(trackNumber: Int, isCurrentTrack: Boolean, isAnimating: Boolean) {
-    Box(
-        modifier = Modifier.width(28.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (isCurrentTrack) {
-            AnimatedEqualizer(animate = isAnimating)
-        } else {
-            Text(
-                text = trackNumber.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = NyasaTextTertiary,
-            )
-        }
-    }
-}
 
 @Composable
 private fun LibrarySongRow(

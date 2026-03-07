@@ -134,7 +134,7 @@ private fun LazyListScope.recentlyPlayedSection(
 ) {
     if (recentlyPlayed.isEmpty()) return
     item(key = "recently_played_header") {
-        SectionHeader(title = "Recently Played")
+        SectionHeader(title = stringResource(R.string.recently_played))
     }
     item(key = "recently_played") {
         LazyRow(
