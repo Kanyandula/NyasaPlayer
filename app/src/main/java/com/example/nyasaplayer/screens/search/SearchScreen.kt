@@ -51,6 +51,7 @@ import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
+import com.example.nyasaplayer.core.common.ui.components.SongDownloadState
 import com.example.nyasaplayer.core.common.ui.components.SongOverflowSheet
 import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
@@ -60,12 +61,14 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
+import com.example.nyasaplayer.download.SongDownloadManager
 import com.example.nyasaplayer.ui.preview.PreviewGenres
 
 @Composable
 fun SearchScreen(
     onSongClick: (List<Song>, Song) -> Unit,
     modifier: Modifier = Modifier,
+    downloadManager: SongDownloadManager? = null,
     viewModel: SearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -100,6 +103,7 @@ fun SearchScreen(
         onSongClick = onSongClick,
         onGenreClick = viewModel::onGenreSelected,
         onGenreBack = viewModel::onGenreBack,
+        downloadManager = downloadManager,
         modifier = modifier,
     )
 }
@@ -111,6 +115,7 @@ private fun SearchContent(
     onSongClick: (List<Song>, Song) -> Unit,
     onGenreClick: (Genre) -> Unit,
     onGenreBack: () -> Unit,
+    downloadManager: SongDownloadManager?,
     modifier: Modifier = Modifier,
 ) {
     var selectedSong by remember { mutableStateOf<Song?>(null) }
@@ -161,10 +166,48 @@ private fun SearchContent(
     }
 
     selectedSong?.let { song ->
-        SongOverflowSheet(
+        SongOverflowWithDownload(
             song = song,
+            downloadManager = downloadManager,
             onDismiss = { selectedSong = null },
         )
+    }
+}
+
+@Composable
+private fun SongOverflowWithDownload(
+    song: Song,
+    downloadManager: SongDownloadManager?,
+    onDismiss: () -> Unit,
+) {
+    val downloadState = remember(song.mediaId) {
+        resolveDownloadState(song.mediaId, downloadManager)
+    }
+    SongOverflowSheet(
+        song = song,
+        onDismiss = onDismiss,
+        downloadState = downloadState,
+        onDownloadClick = { s ->
+            downloadManager?.downloadSong(s.mediaId)
+            onDismiss()
+        },
+        onRemoveDownloadClick = { s ->
+            downloadManager?.removeDownload(s.mediaId)
+            onDismiss()
+        },
+    )
+}
+
+private fun resolveDownloadState(
+    mediaId: String,
+    downloadManager: SongDownloadManager?,
+): SongDownloadState {
+    if (downloadManager == null) return SongDownloadState.NotDownloaded
+    val localUri = downloadManager.getLocalFileUri(mediaId)
+    return when {
+        localUri != null -> SongDownloadState.Downloaded
+        downloadManager.activeDownloads.value.contains(mediaId) -> SongDownloadState.Downloading
+        else -> SongDownloadState.NotDownloaded
     }
 }
 
@@ -433,6 +476,7 @@ private fun SearchScreenPreview() {
             onSongClick = { _, _ -> },
             onGenreClick = { },
             onGenreBack = { },
+            downloadManager = null,
         )
     }
 }

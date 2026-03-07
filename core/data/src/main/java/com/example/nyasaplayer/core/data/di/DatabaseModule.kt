@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.nyasaplayer.core.data.local.NyasaDatabase
 import com.example.nyasaplayer.core.data.local.dao.ArtistDao
+import com.example.nyasaplayer.core.data.local.dao.DownloadDao
 import com.example.nyasaplayer.core.data.local.dao.GenreDao
 import com.example.nyasaplayer.core.data.local.dao.SongDao
 import dagger.Module
@@ -35,4 +36,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideGenreDao(database: NyasaDatabase): GenreDao = database.genreDao()
+
+    @Provides
+    @Singleton
+    fun provideDownloadDao(database: NyasaDatabase): DownloadDao = database.downloadDao()
 }

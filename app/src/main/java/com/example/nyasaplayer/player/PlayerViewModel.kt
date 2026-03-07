@@ -13,6 +13,7 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
+import com.example.nyasaplayer.download.SongDownloadManager
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,6 +43,7 @@ class PlayerViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val persistence: PlaybackStatePersistence,
     private val networkMonitor: NetworkMonitor,
+    val downloadManager: SongDownloadManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -177,16 +179,19 @@ class PlayerViewModel @Inject constructor(
     // ── Playback Actions ──
 
     fun playSong(songs: List<Song>, song: Song) {
-        if (!isOnline) {
+        val isDownloaded = downloadManager.getLocalFileUri(song.mediaId) != null
+        if (!isOnline && !isDownloaded) {
             showOfflineError(song)
             return
         }
-        val startIndex = songs.indexOf(song).coerceAtLeast(0)
-        sendSetQueueCommand(songs, startIndex)
+        val resolvedSongs = songs.map { resolveSongUri(it) }
+        val resolvedSong = resolveSongUri(song)
+        val startIndex = resolvedSongs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
+        sendSetQueueCommand(resolvedSongs, startIndex)
         _uiState.update {
             it.copy(
                 playerMode = PlayerMode.Expanded,
-                currentSong = song,
+                currentSong = resolvedSong,
                 isPlaying = true,
                 isShuffled = false,
             )
@@ -195,17 +200,26 @@ class PlayerViewModel @Inject constructor(
         logRecentlyPlayedSafe(song.mediaId)
     }
 
+    private fun resolveSongUri(song: Song): Song {
+        val localUri = downloadManager.getLocalFileUri(song.mediaId) ?: return song
+        return song.copy(audioUrl = localUri, songUrl = localUri)
+    }
+
     fun shufflePlay(songs: List<Song>) {
         if (songs.isEmpty()) return
-        if (!isOnline) {
+        val resolvedSongs = songs.map { resolveSongUri(it) }
+        val hasPlayable = resolvedSongs.any {
+            isOnline || downloadManager.getLocalFileUri(it.mediaId) != null
+        }
+        if (!hasPlayable) {
             showOfflineError(songs.first())
             return
         }
-        sendShufflePlayCommand(songs)
+        sendShufflePlayCommand(resolvedSongs)
         _uiState.update {
             it.copy(
                 playerMode = PlayerMode.Expanded,
-                currentSong = songs.first(),
+                currentSong = resolvedSongs.first(),
                 isPlaying = true,
                 isShuffled = true,
             )
@@ -249,7 +263,10 @@ class PlayerViewModel @Inject constructor(
         if (controller.isPlaying) {
             controller.pause()
         } else {
-            if (!isOnline) {
+            val currentMediaId = _uiState.value.currentSong?.mediaId
+            val isDownloaded = currentMediaId != null &&
+                downloadManager.getLocalFileUri(currentMediaId) != null
+            if (!isOnline && !isDownloaded) {
                 _uiState.update {
                     it.copy(
                         error = PlayerError(
