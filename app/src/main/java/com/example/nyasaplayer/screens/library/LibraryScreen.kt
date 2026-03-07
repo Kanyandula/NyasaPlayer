@@ -96,7 +96,7 @@ fun LibraryScreen(
             isCurrentlyPlaying = isCurrentlyPlaying,
             onSongClick = onSongClick,
             onShufflePlay = onShufflePlay,
-            onToggleLike = viewModel::toggleLikeSong,
+            onToggleLike = viewModel::removeLikedSong,
             downloadManager = downloadManager,
             modifier = modifier,
         )

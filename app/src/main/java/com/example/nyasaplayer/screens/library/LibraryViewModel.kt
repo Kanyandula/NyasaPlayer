@@ -50,7 +50,7 @@ class LibraryViewModel @Inject constructor(
         loadLikedSongs()
     }
 
-    fun toggleLikeSong(mediaId: String) {
+    fun removeLikedSong(mediaId: String) {
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch(exceptionHandler) {
             userRepository.unlikeSong(userId, mediaId)
