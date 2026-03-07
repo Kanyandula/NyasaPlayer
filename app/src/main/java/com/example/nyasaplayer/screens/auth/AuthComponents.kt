@@ -24,12 +24,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nyasaplayer.ui.icons.MusicNoteIcon
-import com.example.nyasaplayer.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.ui.theme.NyasaSurface4
-import com.example.nyasaplayer.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface4
+import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 
 internal const val PasswordPlaceholder = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
 

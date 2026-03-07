@@ -23,10 +23,10 @@ echo "  Detekt passed."
 # --- Android Lint ---
 echo ""
 echo "[2/2] Running Android Lint..."
-if ! ./gradlew :app:lintDebug --no-daemon --quiet; then
+if ! ./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug --no-daemon --quiet; then
     echo ""
     echo "!! Lint found errors. Commit aborted."
-    echo "   Run './gradlew :app:lintDebug' to see the full report."
+    echo "   Run './gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug' to see the full report."
     echo "   HTML report: app/build/reports/lint-results-debug.html"
     echo "   See docs/PRODUCTIVITY_TIPS.md for help fixing common issues."
     exit 1

@@ -2,11 +2,10 @@ package com.example.nyasaplayer.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.GenreRepository
-import com.example.nyasaplayer.data.SongRepository
-import com.example.nyasaplayer.models.Genre
-import com.example.nyasaplayer.models.Song
-import com.example.nyasaplayer.util.NetworkMonitor
+import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.api.GenreRepository
+import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.util.isNetworkError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -35,7 +34,6 @@ data class SearchUiState(
 class SearchViewModel @Inject constructor(
     private val genreRepository: GenreRepository,
     private val songRepository: SongRepository,
-    private val networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -62,14 +60,6 @@ class SearchViewModel @Inject constructor(
 
     private fun loadData() {
         viewModelScope.launch(exceptionHandler) {
-            if (!networkMonitor.isOnline.value) {
-                _uiState.value = SearchUiState(
-                    isLoading = false,
-                    errorMessage = "No internet connection",
-                    isNetworkError = true,
-                )
-                return@launch
-            }
             combine(
                 genreRepository.getGenres(),
                 songRepository.getSongs(),

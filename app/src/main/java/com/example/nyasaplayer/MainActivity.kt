@@ -11,11 +11,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.media3.common.util.UnstableApi
-import com.example.nyasaplayer.data.AuthRepository
+import com.example.nyasaplayer.core.common.ui.theme.AppTheme
+import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.navigation.LoginRoute
 import com.example.nyasaplayer.navigation.MainAppRoute
 import com.example.nyasaplayer.navigation.RootNavHost
-import com.example.nyasaplayer.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 

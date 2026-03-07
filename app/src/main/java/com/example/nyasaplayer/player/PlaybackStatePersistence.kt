@@ -1,11 +1,10 @@
 package com.example.nyasaplayer.player
 
-import com.example.nyasaplayer.data.AuthRepository
-import com.example.nyasaplayer.data.SongRepository
-import com.example.nyasaplayer.data.UserRepository
-import com.example.nyasaplayer.models.PlaybackState
-import com.example.nyasaplayer.models.Song
-import com.google.firebase.Timestamp
+import com.example.nyasaplayer.core.common.models.PlaybackState
+import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.SongRepository
+import com.example.nyasaplayer.core.data.api.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,8 +12,6 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
-
-private const val PlaybackSaveIntervalMs = 30_000L
 
 data class RestoredPlayback(
     val queue: List<Song>,
@@ -31,7 +28,6 @@ class PlaybackStatePersistence @Inject constructor(
     private val songRepository: SongRepository,
 ) {
     private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var lastSaveTimeMs: Long = 0L
 
     private val userId: String? get() = authRepository.currentUser?.uid
 
@@ -55,21 +51,6 @@ class PlaybackStatePersistence @Inject constructor(
             } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
                 // Silent fail — persistence is best-effort
             }
-        }
-    }
-
-    fun saveIfThrottleElapsed(
-        scope: CoroutineScope,
-        currentSong: Song,
-        positionMs: Long,
-        queueSongIds: List<String>,
-        queueIndex: Int,
-        repeatMode: RepeatMode,
-    ) {
-        val now = System.currentTimeMillis()
-        if (now - lastSaveTimeMs >= PlaybackSaveIntervalMs) {
-            lastSaveTimeMs = now
-            save(scope, currentSong, positionMs, queueSongIds, queueIndex, repeatMode)
         }
     }
 
@@ -145,6 +126,6 @@ class PlaybackStatePersistence @Inject constructor(
         queueSongIds = queueSongIds,
         queueIndex = queueIndex,
         repeatMode = repeatMode.name,
-        savedAt = Timestamp.now(),
+        savedAt = System.currentTimeMillis(),
     )
 }

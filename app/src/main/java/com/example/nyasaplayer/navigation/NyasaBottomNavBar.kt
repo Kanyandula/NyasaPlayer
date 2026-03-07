@@ -28,14 +28,14 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.nyasaplayer.R
-import com.example.nyasaplayer.ui.icons.HomeIcon
-import com.example.nyasaplayer.ui.icons.LibraryIcon
-import com.example.nyasaplayer.ui.icons.ProfileIcon
-import com.example.nyasaplayer.ui.icons.SearchIcon
-import com.example.nyasaplayer.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.ui.theme.NyasaSurface4
-import com.example.nyasaplayer.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.icons.HomeIcon
+import com.example.nyasaplayer.core.common.ui.icons.LibraryIcon
+import com.example.nyasaplayer.core.common.ui.icons.ProfileIcon
+import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
+import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface4
+import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 
 private val NavBarShape = RoundedCornerShape(24.dp)
 

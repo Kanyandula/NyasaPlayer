@@ -2,11 +2,10 @@ package com.example.nyasaplayer.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.AuthRepository
-import com.example.nyasaplayer.data.AuthResult
-import com.example.nyasaplayer.data.UserRepository
-import com.example.nyasaplayer.models.UserProfile
-import com.google.firebase.Timestamp
+import com.example.nyasaplayer.core.common.models.UserProfile
+import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.AuthResult
+import com.example.nyasaplayer.core.data.api.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,7 +81,7 @@ class SignUpViewModel @Inject constructor(
                         displayName = user.displayName.orEmpty(),
                         email = user.email.orEmpty(),
                         photoUrl = user.photoUrl?.toString().orEmpty(),
-                        createdAt = Timestamp.now(),
+                        createdAt = System.currentTimeMillis(),
                         accountType = "email",
                     )
                     try {

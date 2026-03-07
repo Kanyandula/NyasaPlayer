@@ -55,6 +55,11 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
     lint {
         warningsAsErrors = false
         abortOnError = true
@@ -68,6 +73,9 @@ android {
 
 dependencies {
 
+    implementation(project(":core:common"))
+    implementation(project(":core:data"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -80,7 +88,6 @@ dependencies {
 
     // Firebase
     implementation(libs.firebase.auth.ktx)
-    implementation(libs.firebase.database)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.play.services.auth)
     implementation(libs.androidx.credentials)
@@ -93,14 +100,12 @@ dependencies {
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.core.ktx.v1120)
 
-
     // Coil
     implementation(libs.coil.compose)
 
-    //Kotlin Coroutines
+    // Kotlin Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.coroutines.playservices)
 
     // Lifecycle ViewModel and LiveData
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
@@ -114,12 +119,9 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
-
-
-
-
-
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.org.json)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

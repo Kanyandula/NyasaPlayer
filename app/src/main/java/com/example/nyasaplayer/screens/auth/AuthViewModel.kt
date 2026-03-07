@@ -2,11 +2,10 @@ package com.example.nyasaplayer.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.data.AuthRepository
-import com.example.nyasaplayer.data.AuthResult
-import com.example.nyasaplayer.data.UserRepository
-import com.example.nyasaplayer.models.UserProfile
-import com.google.firebase.Timestamp
+import com.example.nyasaplayer.core.common.models.UserProfile
+import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.AuthResult
+import com.example.nyasaplayer.core.data.api.UserRepository
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -129,7 +128,7 @@ class AuthViewModel @Inject constructor(
                 displayName = user.displayName.orEmpty(),
                 email = user.email.orEmpty(),
                 photoUrl = user.photoUrl?.toString().orEmpty(),
-                createdAt = Timestamp.now(),
+                createdAt = System.currentTimeMillis(),
                 accountType = if (
                     user.providerData.any { it.providerId == "google.com" }
                 ) {

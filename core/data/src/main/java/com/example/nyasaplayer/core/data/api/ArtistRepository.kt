@@ -1,0 +1,10 @@
+package com.example.nyasaplayer.core.data.api
+
+import com.example.nyasaplayer.core.common.models.Artist
+import kotlinx.coroutines.flow.Flow
+
+interface ArtistRepository {
+    // Used by future artist detail screen
+    fun getArtists(): Flow<List<Artist>>
+    suspend fun getArtistById(artistId: String): Artist?
+}

@@ -1,9 +1,6 @@
 <resources>
     <string name="app_name">NyasaPlayer</string>
     <string name="for_you">For You</string>
-    <string name="good_morning">Good Morning</string>
-    <string name="good_afternoon">Good Afternoon</string>
-    <string name="good_evening">Good Evening</string>
     <string name="greeting_subtitle">Welcome back 👋</string>
     <string name="see_all">See All</string>
     <string name="notifications">Notifications</string>
@@ -15,13 +12,10 @@
     <string name="collapse">Collapse player</string>
     <string name="previous_track">Previous track</string>
     <string name="next_track">Next track</string>
-    <string name="close">Close player</string>
-    <string name="share">Share</string>
     <string name="shuffle">Shuffle</string>
     <string name="repeat_off">Repeat off</string>
     <string name="repeat_all">Repeat all</string>
     <string name="repeat_one">Repeat one</string>
-    <string name="favorite">Favorite</string>
     <string name="volume">Volume</string>
     <string name="lyrics">Lyrics</string>
     <string name="queue">Queue</string>
@@ -51,16 +45,11 @@
     <string name="shuffle_play">Shuffle Play</string>
     <string name="sort">Sort</string>
     <string name="filter">Filter</string>
+    <!-- Also defined in core:common — keep in sync (non-transitive R classes) -->
+    <string name="close">Close player</string>
+    <string name="share">Share</string>
+    <string name="favorite">Favorite</string>
     <string name="more_options">More options</string>
-    <string name="play_next">Play next</string>
-    <string name="start_mix">Start mix</string>
-    <string name="add_to_queue">Add to queue</string>
-    <string name="save_to_library">Save to library</string>
-    <string name="download">Download</string>
-    <string name="save_to_playlist">Save to playlist</string>
-    <string name="remove_from_playlist">Remove from playlist</string>
-    <string name="go_to_album">Go to album</string>
-    <string name="go_to_artist">Go to artist</string>
     <string name="library">Library</string>
     <string name="profile">Profile</string>
     <string name="settings">Settings</string>
@@ -80,4 +69,18 @@
     <string name="error_playback_title">Playback Error</string>
     <string name="show_password">Show password</string>
     <string name="hide_password">Hide password</string>
+    <string name="downloads">Downloads</string>
+    <string name="no_downloads_title">No downloads yet</string>
+    <string name="no_downloads_subtitle">Download songs to listen offline</string>
+    <string name="remove_download">Remove download</string>
+    <string name="remove_all_downloads">Remove all downloads</string>
+    <string name="download_started">Download started</string>
+    <string name="download_complete">Download complete</string>
+    <string name="download_failed">Download failed</string>
+    <string name="download_removed">Download removed</string>
+    <string name="offline_cannot_download">Can\u0027t download while offline</string>
+    <string name="navigate_back">Navigate back</string>
+    <string name="remove_all_downloads_title">Remove all downloads?</string>
+    <string name="remove_all_downloads_message">This will delete all downloaded songs from your device. You can download them again later.</string>
+    <string name="cancel">Cancel</string>
 </resources>
