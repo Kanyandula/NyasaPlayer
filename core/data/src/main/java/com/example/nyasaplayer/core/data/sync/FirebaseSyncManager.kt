@@ -103,18 +103,23 @@ class FirebaseSyncManager @Inject constructor(
         awaitClose { registration.remove() }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun <T> collectWithRetry(flow: Flow<List<T>>, onEach: suspend (List<T>) -> Unit) {
-        flow.retryWhen { cause, attempt ->
-            if (isPermanentError(cause) || attempt >= MAX_RETRIES) {
-                Log.e(TAG, "Sync error, giving up after ${attempt + 1} attempts", cause)
-                false
-            } else {
-                val delayMs = calculateBackoff(attempt)
-                Log.e(TAG, "Sync error, retrying in ${delayMs}ms (attempt ${attempt + 1}/$MAX_RETRIES)", cause)
-                delay(delayMs)
-                true
-            }
-        }.collect { onEach(it) }
+        try {
+            flow.retryWhen { cause, attempt ->
+                if (isPermanentError(cause) || attempt >= MAX_RETRIES) {
+                    Log.e(TAG, "Sync error, giving up after ${attempt + 1} attempts", cause)
+                    false
+                } else {
+                    val delayMs = calculateBackoff(attempt)
+                    Log.e(TAG, "Sync error, retrying in ${delayMs}ms (attempt ${attempt + 1}/$MAX_RETRIES)", cause)
+                    delay(delayMs)
+                    true
+                }
+            }.collect { onEach(it) }
+        } catch (e: Exception) {
+            Log.e(TAG, "Sync permanently failed", e)
+        }
     }
 
     @VisibleForTesting
