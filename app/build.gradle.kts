@@ -75,6 +75,7 @@ dependencies {
 
     implementation(project(":core:common"))
     implementation(project(":core:data"))
+    implementation(project(":core:playback"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

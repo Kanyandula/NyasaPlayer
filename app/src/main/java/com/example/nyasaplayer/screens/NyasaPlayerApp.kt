@@ -25,9 +25,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.rememberNavController
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
+import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.navigation.NyasaBottomNavBar
 import com.example.nyasaplayer.navigation.NyasaPlayerNavHost
-import com.example.nyasaplayer.player.PlayerMode
 import com.example.nyasaplayer.player.PlayerViewModel
 import com.example.nyasaplayer.screens.player.GlobalPlayerLayer
 

@@ -16,8 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.nyasaplayer.player.PlayerMode
-import com.example.nyasaplayer.player.PlayerUiState
+import com.example.nyasaplayer.core.playback.PlayerMode
+import com.example.nyasaplayer.core.playback.PlayerUiState
 
 private const val AnimationDurationMs = 300
 private const val SpringDampingRatio = 0.8f

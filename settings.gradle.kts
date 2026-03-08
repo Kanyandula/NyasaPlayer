@@ -25,3 +25,4 @@ include(":app")
 // Foundation modules
 include(":core:common")
 include(":core:data")
+include(":core:playback")

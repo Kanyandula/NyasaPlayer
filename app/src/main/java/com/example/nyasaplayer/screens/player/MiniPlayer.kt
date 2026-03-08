@@ -46,7 +46,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaError
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface4
-import com.example.nyasaplayer.player.PlayerUiState
+import com.example.nyasaplayer.core.playback.PlayerUiState
 import com.example.nyasaplayer.ui.preview.PreviewPlayerStateMini
 
 @OptIn(ExperimentalMaterial3Api::class)

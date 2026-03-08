@@ -78,8 +78,8 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface1
 import com.example.nyasaplayer.core.common.util.formatDuration
-import com.example.nyasaplayer.player.PlayerUiState
-import com.example.nyasaplayer.player.RepeatMode
+import com.example.nyasaplayer.core.playback.PlayerUiState
+import com.example.nyasaplayer.core.playback.RepeatMode
 import com.example.nyasaplayer.ui.preview.PreviewPlayerStatePaused
 import com.example.nyasaplayer.ui.preview.PreviewPlayerStatePlaying
 import kotlinx.coroutines.launch
