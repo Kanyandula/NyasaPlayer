@@ -8,13 +8,16 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
+import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,23 +32,36 @@ private const val PersistIntervalMs = 30_000L
 
 @UnstableApi
 @AndroidEntryPoint
-class PlaybackService : MediaSessionService() {
+class PlaybackService : MediaLibraryService() {
 
     @Inject lateinit var queueManager: PlaybackQueueManager
 
     @Inject lateinit var persistence: PlaybackStatePersistence
 
+    @Inject lateinit var browseTree: MediaBrowseTree
+
     private lateinit var exoPlayer: ExoPlayer
-    private var mediaSession: MediaSession? = null
+    private var mediaSession: MediaLibrarySession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var lastSearchQuery: String? = null
+    private var lastSearchResults: List<MediaItem> = emptyList()
 
     override fun onCreate() {
         super.onCreate()
         exoPlayer = buildExoPlayer()
         exoPlayer.addListener(playerListener)
-        mediaSession = MediaSession.Builder(this, exoPlayer)
-            .setCallback(sessionCallback)
-            .build()
+        val builder = MediaLibrarySession.Builder(this, exoPlayer, libraryCallback)
+        packageManager.getLaunchIntentForPackage(packageName)?.let { launchIntent ->
+            builder.setSessionActivity(
+                android.app.PendingIntent.getActivity(
+                    this,
+                    0,
+                    launchIntent,
+                    android.app.PendingIntent.FLAG_IMMUTABLE,
+                ),
+            )
+        }
+        mediaSession = builder.build()
         addSession(mediaSession!!)
         startPersistenceLoop()
     }
@@ -61,9 +77,9 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    // ── MediaSession.Callback ──
+    // ── MediaLibrarySession.Callback ──
 
-    private val sessionCallback = object : MediaSession.Callback {
+    private val libraryCallback = object : MediaLibrarySession.Callback {
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
@@ -95,6 +111,87 @@ class PlaybackService : MediaSessionService() {
                 )
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+        }
+
+        // ── Browse tree callbacks ──
+
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<MediaItem>> =
+            Futures.immediateFuture(LibraryResult.ofItem(browseTree.rootItem, params))
+
+        override fun onGetChildren(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            page: Int,
+            pageSize: Int,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            val future = SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
+            serviceScope.launch {
+                val children = browseTree.getChildren(parentId)
+                val paged = children.drop(page * pageSize).take(pageSize)
+                future.set(LibraryResult.ofItemList(ImmutableList.copyOf(paged), params))
+            }
+            return future
+        }
+
+        override fun onGetItem(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            mediaId: String,
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            val future = SettableFuture.create<LibraryResult<MediaItem>>()
+            serviceScope.launch {
+                val item = browseTree.getItem(mediaId)
+                if (item != null) {
+                    future.set(LibraryResult.ofItem(item, null))
+                } else {
+                    future.set(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
+                }
+            }
+            return future
+        }
+
+        override fun onSearch(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<Void>> {
+            val future = SettableFuture.create<LibraryResult<Void>>()
+            serviceScope.launch {
+                val results = browseTree.search(query)
+                lastSearchQuery = query
+                lastSearchResults = results
+                session.notifySearchResultChanged(browser, query, results.size, params)
+                future.set(LibraryResult.ofVoid())
+            }
+            return future
+        }
+
+        override fun onGetSearchResult(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            page: Int,
+            pageSize: Int,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            val future = SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
+            serviceScope.launch {
+                val results = if (query == lastSearchQuery) {
+                    lastSearchResults
+                } else {
+                    browseTree.search(query)
+                }
+                val paged = results.drop(page * pageSize).take(pageSize)
+                future.set(LibraryResult.ofItemList(ImmutableList.copyOf(paged), params))
+            }
+            return future
         }
     }
 
@@ -213,7 +310,7 @@ class PlaybackService : MediaSessionService() {
 
     // ── Lifecycle ──
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
         mediaSession
 
     override fun onTaskRemoved(rootIntent: Intent?) {

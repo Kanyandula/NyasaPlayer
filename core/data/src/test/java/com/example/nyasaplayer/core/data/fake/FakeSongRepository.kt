@@ -22,4 +22,15 @@ class FakeSongRepository : SongRepository {
 
     override fun getSongsByGenre(genreId: String): Flow<List<Song>> =
         songs.map { list -> list.filter { genreId in it.genreIds } }
+
+    override suspend fun getSongsByPopularity(limit: Int): List<Song> =
+        songs.value.sortedByDescending { it.popularity }.take(limit)
+
+    override suspend fun searchSongs(query: String, limit: Int): List<Song> {
+        val lowerQuery = query.lowercase()
+        return songs.value.filter { song ->
+            song.title.lowercase().contains(lowerQuery) ||
+                song.artistName.lowercase().contains(lowerQuery)
+        }.sortedByDescending { it.popularity }.take(limit)
+    }
 }

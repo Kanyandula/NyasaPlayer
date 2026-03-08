@@ -16,4 +16,7 @@ class OfflineArtistRepository @Inject constructor(
 
     override suspend fun getArtistById(artistId: String): Artist? =
         artistDao.getById(artistId)?.toDomain()
+
+    override suspend fun getArtistsByPopularity(limit: Int): List<Artist> =
+        artistDao.getByPopularity(limit).map { it.toDomain() }
 }

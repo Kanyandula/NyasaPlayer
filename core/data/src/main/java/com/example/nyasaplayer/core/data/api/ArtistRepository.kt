@@ -7,4 +7,7 @@ interface ArtistRepository {
     // Used by future artist detail screen
     fun getArtists(): Flow<List<Artist>>
     suspend fun getArtistById(artistId: String): Artist?
+
+    // Used by AAOS browse tree
+    suspend fun getArtistsByPopularity(limit: Int): List<Artist>
 }

@@ -22,6 +22,20 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE genre_ids LIKE '%\"' || :genreId || '\"%'")
     fun getByGenreId(genreId: String): Flow<List<SongEntity>>
 
+    @Query("SELECT * FROM songs ORDER BY popularity DESC LIMIT :limit")
+    suspend fun getByPopularity(limit: Int): List<SongEntity>
+
+    @Query(
+        """
+        SELECT * FROM songs
+        WHERE title LIKE '%' || :query || '%'
+           OR artist_name LIKE '%' || :query || '%'
+        ORDER BY popularity DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun search(query: String, limit: Int): List<SongEntity>
+
     @Upsert
     suspend fun upsertAll(songs: List<SongEntity>)
 

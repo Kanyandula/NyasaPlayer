@@ -10,4 +10,7 @@ class FakeGenreRepository : GenreRepository {
     val genres = MutableStateFlow<List<Genre>>(emptyList())
 
     override fun getGenres(): Flow<List<Genre>> = genres
+
+    override suspend fun getGenresByPopularity(limit: Int): List<Genre> =
+        genres.value.sortedByDescending { it.popularity }.take(limit)
 }

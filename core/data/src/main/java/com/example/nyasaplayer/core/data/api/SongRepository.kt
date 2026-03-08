@@ -10,4 +10,8 @@ interface SongRepository {
     // Used by future artist/genre detail screens (tested in OfflineSongRepositoryTest)
     fun getSongsByArtist(artistId: String): Flow<List<Song>>
     fun getSongsByGenre(genreId: String): Flow<List<Song>>
+
+    // Used by AAOS browse tree
+    suspend fun getSongsByPopularity(limit: Int): List<Song>
+    suspend fun searchSongs(query: String, limit: Int): List<Song>
 }

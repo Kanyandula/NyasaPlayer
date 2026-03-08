@@ -13,6 +13,9 @@ interface GenreDao {
     @Query("SELECT * FROM genres")
     fun getAll(): Flow<List<GenreEntity>>
 
+    @Query("SELECT * FROM genres ORDER BY popularity DESC LIMIT :limit")
+    suspend fun getByPopularity(limit: Int): List<GenreEntity>
+
     @Upsert
     suspend fun upsertAll(genres: List<GenreEntity>)
 
