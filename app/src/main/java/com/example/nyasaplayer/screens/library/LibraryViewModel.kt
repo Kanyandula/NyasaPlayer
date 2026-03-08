@@ -50,6 +50,13 @@ class LibraryViewModel @Inject constructor(
         loadLikedSongs()
     }
 
+    fun removeLikedSong(mediaId: String) {
+        val userId = authRepository.currentUser?.uid ?: return
+        viewModelScope.launch(exceptionHandler) {
+            userRepository.unlikeSong(userId, mediaId)
+        }
+    }
+
     fun retry() {
         _uiState.value = LibraryUiState()
         loadLikedSongs()

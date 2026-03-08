@@ -10,6 +10,7 @@
     <string name="start_mix">Start mix</string>
     <string name="add_to_queue">Add to queue</string>
     <string name="save_to_library">Save to library</string>
+    <string name="remove_from_library">Remove from library</string>
     <string name="download">Download</string>
     <string name="remove_download">Remove download</string>
     <string name="save_to_playlist">Save to playlist</string>
