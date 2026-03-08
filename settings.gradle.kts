@@ -26,3 +26,6 @@ include(":app")
 include(":core:common")
 include(":core:data")
 include(":core:playback")
+
+// Automotive
+include(":automotive")

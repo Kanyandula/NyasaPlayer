@@ -13,22 +13,20 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
+import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.PlaybackCommands
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
-import com.example.nyasaplayer.core.playback.RepeatMode
 import com.example.nyasaplayer.core.playback.RestoredPlayback
 import com.example.nyasaplayer.core.playback.toBundle
 import com.example.nyasaplayer.core.playback.toSong
 import com.example.nyasaplayer.download.SongDownloadManager
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,11 +35,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
-import java.util.concurrent.ExecutionException
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-private const val PositionUpdateIntervalMs = 250L
+private const val MobilePositionPollIntervalMs = 250L
 
 @UnstableApi
 @HiltViewModel
@@ -71,93 +68,31 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private var mediaController: MediaController? = null
     private var likeObserverJob: Job? = null
 
     private val userId: String? get() = authRepository.currentUser?.uid
     private val isOnline: Boolean get() = networkMonitor.isOnline.value
 
-    init {
-        connectController()
-        observeNetworkState()
-    }
+    private val stateCollector = object : BasePlayerStateCollector(
+        mediaControllerFuture = controllerFuture,
+        collectorScope = viewModelScope,
+    ) {
+        override val positionPollIntervalMs: Long = MobilePositionPollIntervalMs
 
-    private fun connectController() {
-        controllerFuture.addListener(
-            {
-                try {
-                    val controller = controllerFuture.get()
-                    mediaController = controller
-                    controller.addListener(controllerListener)
-                    startPositionPolling()
-                    if (controller.isPlaying || controller.mediaItemCount > 0) {
-                        syncFromLivePlayer(controller)
-                    } else {
-                        restorePlaybackState()
-                    }
-                } catch (_: ExecutionException) {
-                    _uiState.update {
-                        it.copy(
-                            error = PlayerError(
-                                title = "Player Error",
-                                message = "Could not connect to playback service",
-                                isPlaybackError = false,
-                            ),
-                        )
-                    }
-                }
-            },
-            MoreExecutors.directExecutor(),
-        )
-    }
-
-    // ── MediaController.Listener ──
-
-    private val controllerListener = object : Player.Listener {
-        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            if (mediaItem == null) return
-            updateCurrentSong(mediaItem)
-        }
-
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            _uiState.update { it.copy(isPlaying = isPlaying) }
-        }
-
-        override fun onPlaybackStateChanged(playbackState: Int) {
-            val controller = mediaController ?: return
-            if (playbackState == Player.STATE_BUFFERING && !isOnline) {
-                controller.pause()
-                _uiState.update {
-                    it.copy(
-                        isBuffering = false,
-                        isPlaying = false,
-                        error = PlayerError(
-                            title = "Offline",
-                            message = "Connection lost. Download songs for offline playback.",
-                        ),
-                    )
-                }
-                return
-            }
-            _uiState.update {
-                it.copy(
-                    isBuffering = playbackState == Player.STATE_BUFFERING,
-                    isPlaying = controller.isPlaying,
-                )
+        override fun onControllerConnected(controller: MediaController) {
+            if (controller.isPlaying || controller.mediaItemCount > 0) {
+                syncFromLivePlayer(controller)
+            } else {
+                restorePlaybackState()
             }
         }
 
-        override fun onRepeatModeChanged(repeatMode: Int) {
-            val mode = repeatMode.toAppRepeatMode()
-            _uiState.update {
-                it.copy(
-                    repeatMode = mode,
-                    hasNext = hasNextTrack(mode),
-                )
-            }
+        override fun onCurrentSongChanged(mediaItem: MediaItem) {
+            val song = mediaItem.toSong()
+            observeCurrentSongLikeState(song.mediaId)
         }
 
-        override fun onPlayerError(error: PlaybackException) {
+        override fun onPlaybackError(error: PlaybackException) {
             val isNetwork = error.cause is IOException
             _uiState.update {
                 it.copy(
@@ -173,20 +108,58 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         }
+
+        override fun onControllerConnectionFailed() {
+            _uiState.update {
+                it.copy(
+                    error = PlayerError(
+                        title = "Player Error",
+                        message = "Could not connect to playback service",
+                        isPlaybackError = false,
+                    ),
+                )
+            }
+        }
     }
 
-    private fun updateCurrentSong(mediaItem: MediaItem) {
-        val song = mediaItem.toSong()
-        val controller = mediaController ?: return
-        _uiState.update {
-            it.copy(
-                currentSong = song,
-                durationMs = song.durationMs,
-                hasPrevious = controller.hasPreviousMediaItem(),
-                hasNext = hasNextTrack(it.repeatMode),
-            )
+    init {
+        stateCollector.connectController()
+        observePlaybackSnapshot()
+        observeNetworkState()
+    }
+
+    private fun observePlaybackSnapshot() {
+        stateCollector.playbackState.onEach { snapshot ->
+            _uiState.update {
+                it.copy(
+                    currentSong = snapshot.currentSong ?: it.currentSong,
+                    isPlaying = snapshot.isPlaying,
+                    currentPositionMs = snapshot.currentPositionMs,
+                    durationMs = snapshot.durationMs,
+                    isBuffering = snapshot.isBuffering,
+                    hasPrevious = snapshot.hasPrevious,
+                    hasNext = snapshot.hasNext,
+                    repeatMode = snapshot.repeatMode,
+                )
+            }
+            handleOfflineBuffering(snapshot.isBuffering)
+        }.launchIn(viewModelScope)
+    }
+
+    private fun handleOfflineBuffering(isBuffering: Boolean) {
+        if (isBuffering && !isOnline) {
+            stateCollector.controller?.pause()
+            _uiState.update {
+                it.copy(
+                    isBuffering = false,
+                    isPlaying = false,
+                    error = PlayerError(
+                        title = "Offline",
+                        message = "Connection lost. Download songs for offline playback.",
+                    ),
+                )
+            }
         }
-        observeCurrentSongLikeState(song.mediaId)
     }
 
     // ── Playback Actions ──
@@ -240,7 +213,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun toggleShuffle() {
-        val controller = mediaController ?: return
+        val controller = stateCollector.controller ?: return
         _uiState.update { it.copy(isShuffled = !it.isShuffled) }
         controller.sendCustomCommand(
             SessionCommand(PlaybackCommands.CMD_TOGGLE_SHUFFLE, Bundle.EMPTY),
@@ -249,21 +222,21 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun skipNext() {
-        val controller = mediaController ?: return
+        val controller = stateCollector.controller ?: return
         if (controller.hasNextMediaItem()) {
             controller.seekToNextMediaItem()
         }
     }
 
     fun skipPrevious() {
-        val controller = mediaController ?: return
+        val controller = stateCollector.controller ?: return
         if (controller.hasPreviousMediaItem()) {
             controller.seekToPreviousMediaItem()
         }
     }
 
     fun toggleRepeatMode() {
-        val controller = mediaController ?: return
+        val controller = stateCollector.controller ?: return
         controller.repeatMode = when (controller.repeatMode) {
             Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
             Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
@@ -272,7 +245,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun togglePlayPause() {
-        val controller = mediaController ?: return
+        val controller = stateCollector.controller ?: return
         if (controller.isPlaying) {
             controller.pause()
         } else {
@@ -295,7 +268,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun seekTo(positionMs: Long) {
-        mediaController?.seekTo(positionMs)
+        stateCollector.controller?.seekTo(positionMs)
         _uiState.update { it.copy(currentPositionMs = positionMs) }
     }
 
@@ -308,15 +281,15 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun dismiss() {
-        mediaController?.stop()
-        mediaController?.clearMediaItems()
+        stateCollector.controller?.stop()
+        stateCollector.controller?.clearMediaItems()
         _uiState.update { PlayerUiState() }
     }
 
     // ── Custom Commands ──
 
     private fun sendSetQueueCommand(songs: List<Song>, startIndex: Int) {
-        val controller = mediaController ?: return
+        val controller = stateCollector.controller ?: return
         val args = Bundle().apply {
             putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
             putInt(PlaybackCommands.KEY_START_INDEX, startIndex)
@@ -328,7 +301,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun sendShufflePlayCommand(songs: List<Song>) {
-        val controller = mediaController ?: return
+        val controller = stateCollector.controller ?: return
         val args = Bundle().apply {
             putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
         }
@@ -339,7 +312,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun sendRestoreCommand(restored: RestoredPlayback) {
-        val controller = mediaController ?: return
+        val controller = stateCollector.controller ?: return
         val args = Bundle().apply {
             putBundle(PlaybackCommands.KEY_SONGS, restored.queue.toBundle())
             putInt(PlaybackCommands.KEY_START_INDEX, restored.index)
@@ -447,21 +420,12 @@ class PlayerViewModel @Inject constructor(
     // ── Playback State Persistence ──
 
     private fun syncFromLivePlayer(controller: MediaController) {
-        val mediaItem = controller.currentMediaItem ?: return
-        val song = mediaItem.toSong()
-        _uiState.update {
-            it.copy(
-                playerMode = PlayerMode.Mini,
-                currentSong = song,
-                isPlaying = controller.isPlaying,
-                currentPositionMs = controller.currentPosition,
-                durationMs = controller.duration.coerceAtLeast(0L),
-                hasPrevious = controller.hasPreviousMediaItem(),
-                hasNext = hasNextTrack(controller.repeatMode.toAppRepeatMode()),
-                repeatMode = controller.repeatMode.toAppRepeatMode(),
-            )
+        stateCollector.syncSnapshotFromPlayer(controller)
+        _uiState.update { it.copy(playerMode = PlayerMode.Mini) }
+        val song = controller.currentMediaItem?.toSong()
+        if (song != null) {
+            observeCurrentSongLikeState(song.mediaId)
         }
-        observeCurrentSongLikeState(song.mediaId)
     }
 
     private fun restorePlaybackState() {
@@ -499,41 +463,8 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    // ── Position Polling ──
-
-    private fun startPositionPolling() {
-        viewModelScope.launch(exceptionHandler) {
-            while (true) {
-                delay(PositionUpdateIntervalMs)
-                val controller = mediaController ?: continue
-                if (controller.isPlaying || _uiState.value.playerMode != PlayerMode.Hidden) {
-                    _uiState.update {
-                        it.copy(
-                            currentPositionMs = controller.currentPosition,
-                            durationMs = controller.duration.coerceAtLeast(0L),
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    // ── Helpers ──
-
-    private fun hasNextTrack(repeatMode: RepeatMode): Boolean {
-        val controller = mediaController ?: return false
-        return controller.hasNextMediaItem() ||
-            repeatMode == RepeatMode.All
-    }
-
-    private fun Int.toAppRepeatMode(): RepeatMode = when (this) {
-        Player.REPEAT_MODE_ALL -> RepeatMode.All
-        Player.REPEAT_MODE_ONE -> RepeatMode.One
-        else -> RepeatMode.Off
-    }
-
     override fun onCleared() {
         super.onCleared()
-        MediaController.releaseFuture(controllerFuture)
+        stateCollector.releaseController()
     }
 }
