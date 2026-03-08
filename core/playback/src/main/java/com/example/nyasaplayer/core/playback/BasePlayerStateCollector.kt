@@ -66,6 +66,7 @@ abstract class BasePlayerStateCollector(
                     durationMs = song.durationMs,
                     hasPrevious = mc.hasPreviousMediaItem(),
                     hasNext = hasNextTrack(it.repeatMode),
+                    queueSize = mc.mediaItemCount,
                 )
             }
             onCurrentSongChanged(mediaItem)
@@ -113,11 +114,13 @@ abstract class BasePlayerStateCollector(
             while (true) {
                 delay(positionPollIntervalMs)
                 val mc = controller ?: continue
-                _playbackState.update {
-                    it.copy(
-                        currentPositionMs = mc.currentPosition,
-                        durationMs = mc.duration.coerceAtLeast(0L),
-                    )
+                if (mc.isPlaying || _playbackState.value.currentSong != null) {
+                    _playbackState.update {
+                        it.copy(
+                            currentPositionMs = mc.currentPosition,
+                            durationMs = mc.duration.coerceAtLeast(0L),
+                        )
+                    }
                 }
             }
         }
@@ -142,6 +145,7 @@ abstract class BasePlayerStateCollector(
                 hasPrevious = mc.hasPreviousMediaItem(),
                 hasNext = hasNextTrack(mc.repeatMode.toAppRepeatMode()),
                 repeatMode = mc.repeatMode.toAppRepeatMode(),
+                queueSize = mc.mediaItemCount,
             )
         }
     }

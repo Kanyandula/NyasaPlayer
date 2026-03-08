@@ -45,6 +45,11 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:playback"))
 
+    // Car platform APIs (compile-only — provided by the AAOS system at runtime)
+    compileOnly(
+        files("${android.sdkDirectory}/platforms/android-${android.compileSdk}/optional/android.car.jar"),
+    )
+
     // Car App
     implementation(libs.androidx.car.app)
     implementation(libs.androidx.car.app.automotive)

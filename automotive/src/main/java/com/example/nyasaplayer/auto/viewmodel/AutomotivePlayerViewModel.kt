@@ -13,11 +13,8 @@ import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.PlaybackCommands
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlayerError
-import com.example.nyasaplayer.core.playback.toBundle
-import com.example.nyasaplayer.core.playback.toSong
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,17 +35,6 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AutomotiveUiState())
     val uiState: StateFlow<AutomotiveUiState> = _uiState.asStateFlow()
-
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        _uiState.update {
-            it.copy(
-                error = PlayerError(
-                    title = "Playback Error",
-                    message = throwable.message ?: "An unexpected error occurred",
-                ),
-            )
-        }
-    }
 
     private val stateCollector = object : BasePlayerStateCollector(
         mediaControllerFuture = controllerFuture,
@@ -97,6 +83,7 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     init {
         stateCollector.connectController()
+        uxHandler.connect()
         observePlaybackSnapshot()
         observeUxRestrictions()
     }
@@ -163,6 +150,7 @@ class AutomotivePlayerViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         stateCollector.releaseController()
+        uxHandler.disconnect()
     }
 }
 
