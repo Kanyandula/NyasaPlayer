@@ -2,12 +2,15 @@ package com.example.nyasaplayer.core.data.sync
 
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.local.dao.AlbumDao
 import com.example.nyasaplayer.core.data.local.dao.ArtistDao
 import com.example.nyasaplayer.core.data.local.dao.GenreDao
 import com.example.nyasaplayer.core.data.local.dao.SongDao
+import com.example.nyasaplayer.core.data.local.entity.AlbumEntity
 import com.example.nyasaplayer.core.data.local.entity.ArtistEntity
 import com.example.nyasaplayer.core.data.local.entity.GenreEntity
 import com.example.nyasaplayer.core.data.local.entity.SongEntity
@@ -33,6 +36,7 @@ class FirebaseSyncManager @Inject constructor(
     private val songDao: SongDao,
     private val artistDao: ArtistDao,
     private val genreDao: GenreDao,
+    private val albumDao: AlbumDao,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var syncJob: Job? = null
@@ -44,6 +48,7 @@ class FirebaseSyncManager @Inject constructor(
             launch { collectWithRetry(songsFlow()) { songDao.sync(it) } }
             launch { collectWithRetry(artistsFlow()) { artistDao.sync(it) } }
             launch { collectWithRetry(genresFlow()) { genreDao.sync(it) } }
+            launch { collectWithRetry(albumsFlow()) { albumDao.sync(it) } }
         }
     }
 
@@ -97,6 +102,22 @@ class FirebaseSyncManager @Inject constructor(
                 val entities = snapshot?.documents
                     ?.mapNotNull { doc -> doc.toObject<Genre>()?.copy(id = doc.id) }
                     ?.map { GenreEntity.fromDomain(it) }
+                    .orEmpty()
+                trySend(entities)
+            }
+        awaitClose { registration.remove() }
+    }
+
+    private fun albumsFlow(): Flow<List<AlbumEntity>> = callbackFlow {
+        val registration = firestore.collection("albums")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val entities = snapshot?.documents
+                    ?.mapNotNull { doc -> doc.toObject<Album>()?.copy(id = doc.id) }
+                    ?.map { AlbumEntity.fromDomain(it) }
                     .orEmpty()
                 trySend(entities)
             }

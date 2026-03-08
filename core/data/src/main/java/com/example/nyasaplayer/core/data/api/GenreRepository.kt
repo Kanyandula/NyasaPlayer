@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface GenreRepository {
     fun getGenres(): Flow<List<Genre>>
+    suspend fun getGenreById(genreId: String): Genre?
 
     // Used by AAOS browse tree
     suspend fun getGenresByPopularity(limit: Int): List<Genre>

@@ -14,6 +14,9 @@ class OfflineGenreRepository @Inject constructor(
     override fun getGenres(): Flow<List<Genre>> =
         genreDao.getAll().map { entities -> entities.map { it.toDomain() } }
 
+    override suspend fun getGenreById(genreId: String): Genre? =
+        genreDao.getById(genreId)?.toDomain()
+
     override suspend fun getGenresByPopularity(limit: Int): List<Genre> =
         genreDao.getByPopularity(limit).map { it.toDomain() }
 }
