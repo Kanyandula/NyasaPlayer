@@ -32,4 +32,10 @@ class OfflineSongRepository @Inject constructor(
 
     override fun getSongsByGenre(genreId: String): Flow<List<Song>> =
         songDao.getByGenreId(genreId).map { entities -> entities.map { it.toDomain() } }
+
+    override suspend fun getSongsByPopularity(limit: Int): List<Song> =
+        songDao.getByPopularity(limit).map { it.toDomain() }
+
+    override suspend fun searchSongs(query: String, limit: Int): List<Song> =
+        songDao.search(query, limit).map { it.toDomain() }
 }

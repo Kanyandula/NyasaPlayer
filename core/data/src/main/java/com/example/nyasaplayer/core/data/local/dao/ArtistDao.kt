@@ -16,6 +16,9 @@ interface ArtistDao {
     @Query("SELECT * FROM artists WHERE id = :artistId")
     suspend fun getById(artistId: String): ArtistEntity?
 
+    @Query("SELECT * FROM artists ORDER BY popularity DESC LIMIT :limit")
+    suspend fun getByPopularity(limit: Int): List<ArtistEntity>
+
     @Upsert
     suspend fun upsertAll(artists: List<ArtistEntity>)
 

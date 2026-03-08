@@ -13,4 +13,7 @@ class FakeArtistRepository : ArtistRepository {
 
     override suspend fun getArtistById(artistId: String): Artist? =
         artists.value.find { it.id == artistId }
+
+    override suspend fun getArtistsByPopularity(limit: Int): List<Artist> =
+        artists.value.sortedByDescending { it.popularity }.take(limit)
 }

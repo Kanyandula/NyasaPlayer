@@ -23,6 +23,17 @@ class FakeSongDao : SongDao {
     override fun getByGenreId(genreId: String): Flow<List<SongEntity>> =
         songs.map { list -> list.filter { genreId in it.genreIds } }
 
+    override suspend fun getByPopularity(limit: Int): List<SongEntity> =
+        songs.value.sortedByDescending { it.popularity }.take(limit)
+
+    override suspend fun search(query: String, limit: Int): List<SongEntity> {
+        val lowerQuery = query.lowercase()
+        return songs.value.filter { entity ->
+            entity.title.lowercase().contains(lowerQuery) ||
+                entity.artistName.lowercase().contains(lowerQuery)
+        }.sortedByDescending { it.popularity }.take(limit)
+    }
+
     override suspend fun upsertAll(songs: List<SongEntity>) {
         val incoming = songs.associateBy { it.mediaId }
         val current = this.songs.value.associateBy { it.mediaId }
