@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomSheetDefaults
@@ -61,6 +62,8 @@ fun SongOverflowSheet(
     song: Song,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    isLiked: Boolean = false,
+    onToggleLike: () -> Unit = {},
     downloadState: SongDownloadState = SongDownloadState.NotDownloaded,
     onDownloadClick: (Song) -> Unit = {},
     onRemoveDownloadClick: (Song) -> Unit = {},
@@ -73,7 +76,7 @@ fun SongOverflowSheet(
         modifier = modifier,
     ) {
         Column(modifier = Modifier.padding(bottom = 24.dp)) {
-            SheetHeader(song = song, onDismiss = onDismiss)
+            SheetHeader(song = song, isLiked = isLiked, onToggleLike = onToggleLike, onDismiss = onDismiss)
             Spacer(modifier = Modifier.height(16.dp))
             QuickActionsRow()
             HorizontalDivider(
@@ -82,6 +85,8 @@ fun SongOverflowSheet(
             )
             SheetMenuItems(
                 song = song,
+                isLiked = isLiked,
+                onToggleLike = onToggleLike,
                 downloadState = downloadState,
                 onDownloadClick = onDownloadClick,
                 onRemoveDownloadClick = onRemoveDownloadClick,
@@ -93,6 +98,8 @@ fun SongOverflowSheet(
 @Composable
 private fun SheetHeader(
     song: Song,
+    isLiked: Boolean,
+    onToggleLike: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -125,11 +132,11 @@ private fun SheetHeader(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        IconButton(onClick = { }) {
+        IconButton(onClick = onToggleLike) {
             Icon(
-                imageVector = Icons.Default.FavoriteBorder,
+                imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = stringResource(R.string.favorite),
-                tint = NyasaTextSecondary,
+                tint = if (isLiked) NyasaPrimary else NyasaTextSecondary,
             )
         }
         IconButton(onClick = onDismiss) {
@@ -200,6 +207,8 @@ private fun QuickActionButton(
 @Composable
 private fun SheetMenuItems(
     song: Song,
+    isLiked: Boolean,
+    onToggleLike: () -> Unit,
     downloadState: SongDownloadState,
     onDownloadClick: (Song) -> Unit,
     onRemoveDownloadClick: (Song) -> Unit,
@@ -208,8 +217,13 @@ private fun SheetMenuItems(
     Column(modifier = modifier) {
         SheetMenuItem(icon = QueueMusicIcon, label = stringResource(R.string.add_to_queue))
         SheetMenuItem(
-            icon = Icons.Default.FavoriteBorder,
-            label = stringResource(R.string.save_to_library),
+            icon = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+            label = if (isLiked) {
+                stringResource(R.string.remove_from_library)
+            } else {
+                stringResource(R.string.save_to_library)
+            },
+            onClick = onToggleLike,
         )
         DownloadMenuItem(
             song = song,
