@@ -1,5 +1,8 @@
 package com.example.nyasaplayer.auto.viewmodel
 
+import android.car.Car
+import android.car.drivingstate.CarUxRestrictions
+import android.car.drivingstate.CarUxRestrictionsManager
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,10 +21,9 @@ data class UxRestrictionState(
 /**
  * Wraps the Car API's distraction rules as a reactive StateFlow.
  *
- * The `android.car.*` APIs are only available on AAOS system images. This class
- * uses reflection to connect to the Car service so the module compiles on
- * standard SDK builds. On non-automotive devices, restrictions remain at their
- * permissive defaults.
+ * Uses [CarUxRestrictionsManager] to observe driving restriction changes
+ * in real time. The [restrictions] flow updates whenever the vehicle
+ * transitions between parked and driving states.
  */
 @Singleton
 class CarUxRestrictionsHandler @Inject constructor(
@@ -30,48 +32,39 @@ class CarUxRestrictionsHandler @Inject constructor(
     private val _restrictions = MutableStateFlow(UxRestrictionState())
     val restrictions: StateFlow<UxRestrictionState> = _restrictions.asStateFlow()
 
-    @Suppress("TooGenericExceptionCaught")
+    private var car: Car? = null
+    private var restrictionsManager: CarUxRestrictionsManager? = null
+
+    private val listener =
+        CarUxRestrictionsManager.OnUxRestrictionsChangedListener { restrictions ->
+            _restrictions.value = restrictions.toState()
+        }
+
     fun connect() {
-        try {
-            val carClass = Class.forName("android.car.Car")
-            val createCar = carClass.getMethod("createCar", Context::class.java)
-            val car = createCar.invoke(null, context) ?: return
-
-            val managerObj = carClass.getMethod("getCarManager", String::class.java)
-                .invoke(car, "car_ux_restriction_service") ?: return
-
-            val restrictionsObj = managerObj.javaClass
-                .getMethod("getCurrentCarUxRestrictions")
-                .invoke(managerObj) ?: return
-
-            _restrictions.value = parseRestrictions(restrictionsObj)
-        } catch (_: Exception) {
-            // Not running on automotive — keep permissive defaults
+        if (car != null) return
+        car = Car.createCar(context)?.also { carInstance ->
+            val manager = carInstance.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE)
+                as? CarUxRestrictionsManager ?: return
+            restrictionsManager = manager
+            _restrictions.value = manager.currentCarUxRestrictions.toState()
+            manager.registerListener(listener)
         }
     }
 
     fun disconnect() {
-        // Listener cleanup handled by system when process ends
+        restrictionsManager?.unregisterListener()
+        restrictionsManager = null
+        car?.disconnect()
+        car = null
     }
+}
 
-    @Suppress("TooGenericExceptionCaught", "MagicNumber")
-    private fun parseRestrictions(restrictionsObj: Any): UxRestrictionState {
-        return try {
-            val flags = restrictionsObj.javaClass
-                .getMethod("getActiveRestrictions")
-                .invoke(restrictionsObj) as Int
-            val maxItems = restrictionsObj.javaClass
-                .getMethod("getMaxCumulativeContentItems")
-                .invoke(restrictionsObj) as Int
-
-            UxRestrictionState(
-                noTextEntry = flags and 0x1 != 0,
-                limitedContentItems = maxItems,
-                noVideo = flags and 0x8 != 0,
-                noFiltering = flags and 0x4 != 0,
-            )
-        } catch (_: Exception) {
-            UxRestrictionState()
-        }
-    }
+private fun CarUxRestrictions.toState(): UxRestrictionState {
+    val flags = activeRestrictions
+    return UxRestrictionState(
+        noTextEntry = flags and CarUxRestrictions.UX_RESTRICTIONS_NO_TEXT_MESSAGE != 0,
+        limitedContentItems = maxCumulativeContentItems,
+        noVideo = flags and CarUxRestrictions.UX_RESTRICTIONS_NO_VIDEO != 0,
+        noFiltering = flags and CarUxRestrictions.UX_RESTRICTIONS_NO_FILTERING != 0,
+    )
 }

@@ -10,6 +10,7 @@ local.properties
 
 # Firebase config (contributors add their own)
 app/google-services.json
+automotive/google-services.json
 
 # Signing
 *.jks
