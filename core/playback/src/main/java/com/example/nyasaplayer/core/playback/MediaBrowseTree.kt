@@ -66,32 +66,34 @@ class MediaBrowseTree @Inject constructor(
         ),
     )
 
-    @Suppress("ReturnCount")
-    suspend fun getChildren(parentId: String): List<MediaItem> = when {
-        parentId == ROOT_ID -> getRootChildren()
-        parentId == RECENTLY_PLAYED_ID -> getRecentlyPlayedItems()
-        parentId == GENRES_ID -> getGenreItems()
-        parentId == ARTISTS_ID -> getArtistItems()
-        parentId == ALL_SONGS_ID -> getAllSongItems()
-        parentId.startsWith(GENRE_PREFIX) -> getGenreSongItems(parentId.removePrefix(GENRE_PREFIX))
-        parentId.startsWith(ARTIST_PREFIX) -> getArtistSongItems(parentId.removePrefix(ARTIST_PREFIX))
-        else -> emptyList()
+    suspend fun getChildren(parentId: String): List<MediaItem> = when (parentId) {
+        ROOT_ID -> getRootChildren()
+        RECENTLY_PLAYED_ID -> getRecentlyPlayedItems()
+        GENRES_ID -> getGenreItems()
+        ARTISTS_ID -> getArtistItems()
+        ALL_SONGS_ID -> getAllSongItems()
+        else -> when {
+            parentId.startsWith(GENRE_PREFIX) -> getGenreSongItems(parentId.removePrefix(GENRE_PREFIX))
+            parentId.startsWith(ARTIST_PREFIX) -> getArtistSongItems(parentId.removePrefix(ARTIST_PREFIX))
+            else -> emptyList()
+        }
     }
 
-    suspend fun getItem(mediaId: String): MediaItem? = when {
-        mediaId == ROOT_ID -> rootItem
-        mediaId in listOf(RECENTLY_PLAYED_ID, GENRES_ID, ARTISTS_ID, ALL_SONGS_ID) ->
+    suspend fun getItem(mediaId: String): MediaItem? = when (mediaId) {
+        ROOT_ID -> rootItem
+        RECENTLY_PLAYED_ID, GENRES_ID, ARTISTS_ID, ALL_SONGS_ID ->
             getRootChildren().find { it.mediaId == mediaId }
-        mediaId.startsWith(GENRE_PREFIX) -> {
-            val genres = genreRepository.getGenresByPopularity(DEFAULT_BROWSE_LIMIT)
-            genres.find { it.id == mediaId.removePrefix(GENRE_PREFIX) }?.toBrowsableItem()
-        }
-        mediaId.startsWith(ARTIST_PREFIX) -> {
-            artistRepository.getArtistById(mediaId.removePrefix(ARTIST_PREFIX))?.toBrowsableItem()
-        }
-        else -> {
-            val songs = songRepository.getSongsByIds(listOf(mediaId))
-            songs.firstOrNull()?.toPlayableItem()
+        else -> when {
+            mediaId.startsWith(GENRE_PREFIX) -> {
+                genreRepository.getGenreById(mediaId.removePrefix(GENRE_PREFIX))?.toBrowsableItem()
+            }
+            mediaId.startsWith(ARTIST_PREFIX) -> {
+                artistRepository.getArtistById(mediaId.removePrefix(ARTIST_PREFIX))?.toBrowsableItem()
+            }
+            else -> {
+                val songs = songRepository.getSongsByIds(listOf(mediaId))
+                songs.firstOrNull()?.toPlayableItem()
+            }
         }
     }
 

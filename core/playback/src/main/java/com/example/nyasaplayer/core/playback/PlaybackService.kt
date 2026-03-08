@@ -1,7 +1,9 @@
 package com.example.nyasaplayer.core.playback
 
+import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -26,9 +28,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.CancellationException
 import javax.inject.Inject
 
 private const val PersistIntervalMs = 30_000L
+private const val TAG = "PlaybackService"
 
 @UnstableApi
 @AndroidEntryPoint
@@ -43,8 +47,6 @@ class PlaybackService : MediaLibraryService() {
     private lateinit var exoPlayer: ExoPlayer
     private var mediaSession: MediaLibrarySession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var lastSearchQuery: String? = null
-    private var lastSearchResults: List<MediaItem> = emptyList()
 
     override fun onCreate() {
         super.onCreate()
@@ -53,11 +55,11 @@ class PlaybackService : MediaLibraryService() {
         val builder = MediaLibrarySession.Builder(this, exoPlayer, libraryCallback)
         packageManager.getLaunchIntentForPackage(packageName)?.let { launchIntent ->
             builder.setSessionActivity(
-                android.app.PendingIntent.getActivity(
+                PendingIntent.getActivity(
                     this,
                     0,
                     launchIntent,
-                    android.app.PendingIntent.FLAG_IMMUTABLE,
+                    PendingIntent.FLAG_IMMUTABLE,
                 ),
             )
         }
@@ -122,6 +124,7 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<LibraryResult<MediaItem>> =
             Futures.immediateFuture(LibraryResult.ofItem(browseTree.rootItem, params))
 
+        @Suppress("TooGenericExceptionCaught")
         override fun onGetChildren(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
@@ -132,13 +135,21 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
             val future = SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
             serviceScope.launch {
-                val children = browseTree.getChildren(parentId)
-                val paged = children.drop(page * pageSize).take(pageSize)
-                future.set(LibraryResult.ofItemList(ImmutableList.copyOf(paged), params))
+                try {
+                    val children = browseTree.getChildren(parentId)
+                    val paged = children.drop(page * pageSize).take(pageSize)
+                    future.set(LibraryResult.ofItemList(ImmutableList.copyOf(paged), params))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "onGetChildren failed for $parentId", e)
+                    future.set(LibraryResult.ofError(SessionError.ERROR_UNKNOWN))
+                }
             }
             return future
         }
 
+        @Suppress("TooGenericExceptionCaught")
         override fun onGetItem(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
@@ -146,16 +157,24 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<LibraryResult<MediaItem>> {
             val future = SettableFuture.create<LibraryResult<MediaItem>>()
             serviceScope.launch {
-                val item = browseTree.getItem(mediaId)
-                if (item != null) {
-                    future.set(LibraryResult.ofItem(item, null))
-                } else {
-                    future.set(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
+                try {
+                    val item = browseTree.getItem(mediaId)
+                    if (item != null) {
+                        future.set(LibraryResult.ofItem(item, null))
+                    } else {
+                        future.set(LibraryResult.ofError(SessionError.ERROR_BAD_VALUE))
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "onGetItem failed for $mediaId", e)
+                    future.set(LibraryResult.ofError(SessionError.ERROR_UNKNOWN))
                 }
             }
             return future
         }
 
+        @Suppress("TooGenericExceptionCaught")
         override fun onSearch(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
@@ -164,15 +183,21 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<LibraryResult<Void>> {
             val future = SettableFuture.create<LibraryResult<Void>>()
             serviceScope.launch {
-                val results = browseTree.search(query)
-                lastSearchQuery = query
-                lastSearchResults = results
-                session.notifySearchResultChanged(browser, query, results.size, params)
-                future.set(LibraryResult.ofVoid())
+                try {
+                    val results = browseTree.search(query)
+                    session.notifySearchResultChanged(browser, query, results.size, params)
+                    future.set(LibraryResult.ofVoid())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "onSearch failed for query: $query", e)
+                    future.set(LibraryResult.ofError(SessionError.ERROR_UNKNOWN))
+                }
             }
             return future
         }
 
+        @Suppress("TooGenericExceptionCaught")
         override fun onGetSearchResult(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
@@ -183,13 +208,16 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
             val future = SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
             serviceScope.launch {
-                val results = if (query == lastSearchQuery) {
-                    lastSearchResults
-                } else {
-                    browseTree.search(query)
+                try {
+                    val results = browseTree.search(query)
+                    val paged = results.drop(page * pageSize).take(pageSize)
+                    future.set(LibraryResult.ofItemList(ImmutableList.copyOf(paged), params))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "onGetSearchResult failed for query: $query", e)
+                    future.set(LibraryResult.ofError(SessionError.ERROR_UNKNOWN))
                 }
-                val paged = results.drop(page * pageSize).take(pageSize)
-                future.set(LibraryResult.ofItemList(ImmutableList.copyOf(paged), params))
             }
             return future
         }
