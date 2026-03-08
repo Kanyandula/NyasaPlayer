@@ -1,4 +1,4 @@
-package com.example.nyasaplayer.player
+package com.example.nyasaplayer.core.playback
 
 import android.content.Intent
 import android.os.Bundle

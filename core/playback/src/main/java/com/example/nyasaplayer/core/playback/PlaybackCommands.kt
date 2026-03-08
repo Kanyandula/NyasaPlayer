@@ -1,4 +1,4 @@
-package com.example.nyasaplayer.player
+package com.example.nyasaplayer.core.playback
 
 object PlaybackCommands {
     const val CMD_SET_QUEUE = "nyasa.SET_QUEUE"

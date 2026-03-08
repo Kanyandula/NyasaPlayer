@@ -1,11 +1,11 @@
-package com.example.nyasaplayer.di
+package com.example.nyasaplayer.core.playback.di
 
 import android.content.ComponentName
 import android.content.Context
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.example.nyasaplayer.player.PlaybackService
+import com.example.nyasaplayer.core.playback.PlaybackService
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.Module
 import dagger.Provides
@@ -17,7 +17,7 @@ import javax.inject.Singleton
 @UnstableApi
 @Module
 @InstallIn(SingletonComponent::class)
-object PlayerModule {
+object PlaybackModule {
 
     @Provides
     @Singleton

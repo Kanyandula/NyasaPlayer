@@ -1,4 +1,4 @@
-package com.example.nyasaplayer.player
+package com.example.nyasaplayer.core.playback
 
 import com.example.nyasaplayer.core.common.models.Song
 import javax.inject.Inject

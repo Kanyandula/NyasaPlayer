@@ -21,6 +21,7 @@ detekt {
             "app/src/main/kotlin",
             "core/common/src/main/java",
             "core/data/src/main/java",
+            "core/playback/src/main/java",
         )
     )
 }
