@@ -30,6 +30,7 @@ media3Exoplayer = "1.5.1"
 androidxHiltNavigationCompose = "1.2.0"
 navigationCompose = "2.8.5"
 room = "2.6.1"
+carApp = "1.4.0"
 
 [libraries]
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
@@ -73,6 +74,8 @@ androidx-navigation-compose = { module = "androidx.navigation:navigation-compose
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-car-app = { module = "androidx.car.app:app", version.ref = "carApp" }
+androidx-car-app-automotive = { module = "androidx.car.app:app-automotive", version.ref = "carApp" }
 detekt-compose-rules = { module = "io.nlopez.compose.rules:detekt", version.ref = "composeRulesDetekt" }
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 
