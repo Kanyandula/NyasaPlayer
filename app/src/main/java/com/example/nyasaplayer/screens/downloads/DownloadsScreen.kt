@@ -46,12 +46,12 @@ import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
+import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
 import com.example.nyasaplayer.core.common.ui.icons.DownloadIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
-import com.example.nyasaplayer.screens.common.ShufflePlayButton
 import com.example.nyasaplayer.screens.common.TrackNumberIndicator
 
 private const val BytesPerMb = 1_048_576.0

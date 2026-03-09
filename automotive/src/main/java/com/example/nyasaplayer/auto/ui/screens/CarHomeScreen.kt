@@ -35,12 +35,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
 import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.util.greetingResource
 
 private val AlbumArtSize = 80.dp
 
@@ -60,6 +62,8 @@ fun CarHomeScreen(
     onSongClick: (Song) -> Unit,
     onQuickActionClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    currentlyPlayingMediaId: String? = null,
+    isPlaying: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -73,6 +77,8 @@ fun CarHomeScreen(
             recentlyPlayed = recentlyPlayed,
             onSongClick = onSongClick,
             onQuickActionClick = onQuickActionClick,
+            currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isPlaying = isPlaying,
             modifier = Modifier.weight(1f),
         )
     }
@@ -82,7 +88,7 @@ fun CarHomeScreen(
 private fun HomeHeader(modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(
-            text = "Good Evening",
+            text = greetingResource(),
             color = Color.White,
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
@@ -100,6 +106,8 @@ private fun HomeContent(
     recentlyPlayed: List<Song>,
     onSongClick: (Song) -> Unit,
     onQuickActionClick: (String) -> Unit,
+    currentlyPlayingMediaId: String?,
+    isPlaying: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -115,6 +123,8 @@ private fun HomeContent(
         RecentlyPlayedColumn(
             songs = recentlyPlayed,
             onSongClick = onSongClick,
+            currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isPlaying = isPlaying,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight(),
@@ -185,6 +195,8 @@ private fun QuickActionsColumn(
 private fun RecentlyPlayedColumn(
     songs: List<Song>,
     onSongClick: (Song) -> Unit,
+    currentlyPlayingMediaId: String?,
+    isPlaying: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -200,7 +212,12 @@ private fun RecentlyPlayedColumn(
             modifier = Modifier.weight(1f),
         ) {
             items(songs, key = { it.mediaId }) { song ->
-                RecentlyPlayedItem(song = song, onClick = { onSongClick(song) })
+                RecentlyPlayedItem(
+                    song = song,
+                    isCurrentTrack = song.mediaId == currentlyPlayingMediaId,
+                    isPlaying = isPlaying,
+                    onClick = { onSongClick(song) },
+                )
             }
         }
     }
@@ -235,6 +252,8 @@ private fun QuickActionCard(
 @Composable
 private fun RecentlyPlayedItem(
     song: Song,
+    isCurrentTrack: Boolean,
+    isPlaying: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -248,14 +267,20 @@ private fun RecentlyPlayedItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        AsyncImage(
-            model = song.resolvedCoverUrl,
-            contentDescription = song.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(AlbumArtSize)
-                .clip(RoundedCornerShape(12.dp)),
-        )
+        NowPlayingOverlay(
+            isCurrentTrack = isCurrentTrack,
+            isPlaying = isPlaying,
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            AsyncImage(
+                model = song.resolvedCoverUrl,
+                contentDescription = song.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(AlbumArtSize)
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,

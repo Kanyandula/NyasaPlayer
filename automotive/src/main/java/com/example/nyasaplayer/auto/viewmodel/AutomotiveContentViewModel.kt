@@ -58,6 +58,7 @@ class AutomotiveContentViewModel @Inject constructor(
         observeAlbums()
         loadRecentlyPlayed()
         loadPopularSongs()
+        observeLikedSongs()
     }
 
     private fun observeGenres() {
@@ -104,6 +105,28 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     @Suppress("TooGenericExceptionCaught")
+    private fun observeLikedSongs() {
+        val userId = authRepository.currentUser?.uid ?: return
+        userRepository.getLikedSongs(userId).onEach { likedEntries ->
+            try {
+                val songIds = likedEntries.map { it.mediaId }.distinct()
+                val songs = if (songIds.isNotEmpty()) {
+                    songRepository.getSongsByIds(songIds)
+                } else {
+                    emptyList()
+                }
+                _contentState.update { it.copy(likedSongs = songs) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading liked songs", e)
+            }
+        }.catch { e ->
+            Log.e(TAG, "Error observing liked songs", e)
+        }.launchIn(viewModelScope)
+    }
+
+    @Suppress("TooGenericExceptionCaught")
     private fun loadPopularSongs() {
         viewModelScope.launch(exceptionHandler) {
             try {
@@ -145,4 +168,5 @@ data class AutomotiveContentState(
     val artists: List<Artist> = emptyList(),
     val albums: List<Album> = emptyList(),
     val popularSongs: List<Song> = emptyList(),
+    val likedSongs: List<Song> = emptyList(),
 )

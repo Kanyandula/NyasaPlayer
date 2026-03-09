@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,7 +31,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipNextIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipPreviousIcon
@@ -46,6 +47,7 @@ private val PlayButtonSize = 80.dp
 private val ControlButtonSize = 76.dp
 private val LikeButtonSize = 76.dp
 
+@Suppress("LongParameterList")
 @Composable
 fun CarMiniPlayer(
     playback: PlaybackSnapshot,
@@ -54,6 +56,8 @@ fun CarMiniPlayer(
     onSkipPrevious: () -> Unit,
     onExpand: () -> Unit,
     modifier: Modifier = Modifier,
+    isLiked: Boolean = false,
+    onLikeClick: () -> Unit = {},
 ) {
     val song = playback.currentSong ?: return
 
@@ -81,6 +85,8 @@ fun CarMiniPlayer(
         ProgressSection(
             currentPositionMs = playback.currentPositionMs,
             durationMs = playback.durationMs,
+            isLiked = isLiked,
+            onLikeClick = onLikeClick,
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 24.dp),
@@ -182,6 +188,8 @@ private fun MiniPlayerControls(
 private fun ProgressSection(
     currentPositionMs: Long,
     durationMs: Long,
+    isLiked: Boolean,
+    onLikeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -210,14 +218,19 @@ private fun ProgressSection(
         Text(formatDuration(durationMs), color = NyasaTextSecondary, fontSize = 14.sp)
 
         IconButton(
-            onClick = { /* Like not implemented for automotive */ },
+            onClick = onLikeClick,
             modifier = Modifier
                 .padding(start = 12.dp)
                 .size(LikeButtonSize)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.1f)),
         ) {
-            Icon(HeartIcon, "Like", tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(
+                imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = if (isLiked) "Unlike" else "Like",
+                tint = if (isLiked) NyasaPrimary else NyasaTextSecondary,
+                modifier = Modifier.size(24.dp),
+            )
         }
     }
 }

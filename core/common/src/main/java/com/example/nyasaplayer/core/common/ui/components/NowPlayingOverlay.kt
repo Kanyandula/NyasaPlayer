@@ -1,4 +1,4 @@
-package com.example.nyasaplayer.screens.common
+package com.example.nyasaplayer.core.common.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

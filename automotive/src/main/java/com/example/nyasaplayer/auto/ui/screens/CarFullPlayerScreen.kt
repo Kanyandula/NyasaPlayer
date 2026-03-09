@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -35,7 +37,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatIcon
@@ -59,6 +60,7 @@ private val SecondaryButtonSize = 76.dp
 private val LikeButtonSize = 76.dp
 private val TopBarButtonSize = 76.dp
 
+@Suppress("LongParameterList")
 @Composable
 fun CarFullPlayerScreen(
     playback: PlaybackSnapshot,
@@ -70,6 +72,8 @@ fun CarFullPlayerScreen(
     onRepeatClick: () -> Unit,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    isLiked: Boolean = false,
+    onLikeClick: () -> Unit = {},
 ) {
     val song = playback.currentSong
 
@@ -117,6 +121,8 @@ fun CarFullPlayerScreen(
                 onShuffleClick = onShuffleClick,
                 onRepeatClick = onRepeatClick,
                 onSeek = onSeek,
+                isLiked = isLiked,
+                onLikeClick = onLikeClick,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
@@ -125,6 +131,7 @@ fun CarFullPlayerScreen(
     }
 }
 
+@Suppress("LongParameterList")
 @Composable
 private fun PlayerControlsPanel(
     playback: PlaybackSnapshot,
@@ -135,6 +142,8 @@ private fun PlayerControlsPanel(
     onShuffleClick: () -> Unit,
     onRepeatClick: () -> Unit,
     onSeek: (Long) -> Unit,
+    isLiked: Boolean,
+    onLikeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val song = playback.currentSong
@@ -164,7 +173,7 @@ private fun PlayerControlsPanel(
             onRepeatClick = onRepeatClick,
         )
         Spacer(modifier = Modifier.height(16.dp))
-        LikeButton()
+        LikeButton(isLiked = isLiked, onClick = onLikeClick)
     }
 }
 
@@ -332,17 +341,22 @@ private fun PlayPauseButton(
 }
 
 @Composable
-private fun LikeButton(modifier: Modifier = Modifier) {
+private fun LikeButton(
+    isLiked: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
     ) {
         CircleIconButton(
-            icon = HeartIcon,
-            contentDescription = "Like",
+            icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            contentDescription = if (isLiked) "Unlike" else "Like",
             size = LikeButtonSize,
             iconSize = 24.dp,
-            onClick = { /* Like not implemented for automotive */ },
+            tint = if (isLiked) NyasaPrimary else NyasaTextSecondary,
+            onClick = onClick,
         )
     }
 }

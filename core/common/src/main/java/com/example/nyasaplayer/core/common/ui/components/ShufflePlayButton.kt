@@ -1,4 +1,4 @@
-package com.example.nyasaplayer.screens.common
+package com.example.nyasaplayer.core.common.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -20,24 +20,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.ui.icons.ShuffleIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
+
+private val DefaultButtonHeight = 48.dp
 
 @Composable
 fun ShufflePlayButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    text: String = "Shuffle Play",
+    height: Dp = DefaultButtonHeight,
 ) {
     Button(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp),
-        shape = RoundedCornerShape(24.dp),
+            .height(height),
+        shape = RoundedCornerShape(height / 2),
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
         contentPadding = PaddingValues(),
     ) {
@@ -46,7 +49,7 @@ fun ShufflePlayButton(
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(listOf(NyasaPrimaryDark, NyasaPrimary)),
-                    RoundedCornerShape(24.dp),
+                    RoundedCornerShape(height / 2),
                 ),
             contentAlignment = Alignment.Center,
         ) {
@@ -61,7 +64,7 @@ fun ShufflePlayButton(
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    text = stringResource(R.string.shuffle_play),
+                    text = text,
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White,
                 )
