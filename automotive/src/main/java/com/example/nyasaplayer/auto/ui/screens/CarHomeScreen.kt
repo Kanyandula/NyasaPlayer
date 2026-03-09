@@ -1,4 +1,3 @@
-
 package com.example.nyasaplayer.auto.ui.screens
 
 import androidx.compose.foundation.background
@@ -34,27 +33,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarGradientBlue
+import com.example.nyasaplayer.auto.ui.theme.CarGradientIndigo
+import com.example.nyasaplayer.auto.ui.theme.CarGradientPink
+import com.example.nyasaplayer.auto.ui.theme.CarGradientRed
+import com.example.nyasaplayer.auto.ui.theme.CarGradientRedDark
+import com.example.nyasaplayer.auto.ui.theme.CarGradientRose
+import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
 import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.util.greetingResource
-
-private val AlbumArtSize = 80.dp
-
-// Quick action gradient colors
-private val MyMusicGradientStart = Color(0xFFA855F7)
-private val MyMusicGradientEnd = Color(0xFF7C3AED)
-private val RadioGradientStart = Color(0xFFEC4899)
-private val RadioGradientEnd = Color(0xFFBE123C)
-private val FavoritesGradientStart = Color(0xFFEF4444)
-private val FavoritesGradientEnd = Color(0xFFB91C1C)
-private val TrendingGradientStart = Color(0xFF3B82F6)
-private val TrendingGradientEnd = Color(0xFF4338CA)
 
 @Composable
 fun CarHomeScreen(
@@ -156,14 +152,14 @@ private fun QuickActionsColumn(
                 QuickActionCard(
                     icon = MusicNoteIcon,
                     label = "My Music",
-                    gradientColors = listOf(MyMusicGradientStart, MyMusicGradientEnd),
+                    gradientColors = listOf(NyasaPrimary, NyasaPrimaryDark),
                     onClick = { onQuickActionClick("my_music") },
                     modifier = Modifier.weight(1f),
                 )
                 QuickActionCard(
                     icon = RadioIcon,
                     label = "Radio",
-                    gradientColors = listOf(RadioGradientStart, RadioGradientEnd),
+                    gradientColors = listOf(CarGradientPink, CarGradientRose),
                     onClick = { onQuickActionClick("radio") },
                     modifier = Modifier.weight(1f),
                 )
@@ -175,14 +171,14 @@ private fun QuickActionsColumn(
                 QuickActionCard(
                     icon = HeartIcon,
                     label = "Favorites",
-                    gradientColors = listOf(FavoritesGradientStart, FavoritesGradientEnd),
+                    gradientColors = listOf(CarGradientRed, CarGradientRedDark),
                     onClick = { onQuickActionClick("favorites") },
                     modifier = Modifier.weight(1f),
                 )
                 QuickActionCard(
                     icon = Icons.Default.PlayArrow,
                     label = "Trending",
-                    gradientColors = listOf(TrendingGradientStart, TrendingGradientEnd),
+                    gradientColors = listOf(CarGradientBlue, CarGradientIndigo),
                     onClick = { onQuickActionClick("trending") },
                     modifier = Modifier.weight(1f),
                 )
@@ -277,7 +273,7 @@ private fun RecentlyPlayedItem(
                 contentDescription = song.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(AlbumArtSize)
+                    .size(CarListArtSize)
                     .clip(RoundedCornerShape(12.dp)),
             )
         }

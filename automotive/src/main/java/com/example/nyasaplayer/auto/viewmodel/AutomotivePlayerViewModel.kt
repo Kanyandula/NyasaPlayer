@@ -124,7 +124,8 @@ class AutomotivePlayerViewModel @Inject constructor(
     private fun observeNetworkState() {
         networkMonitor.isOnline.onEach { online ->
             _uiState.update { it.copy(isOffline = !online) }
-        }.launchIn(viewModelScope)
+        }.catch { /* Network state flow is internal — errors are non-fatal */ }
+            .launchIn(viewModelScope)
     }
 
     // ── Playback Controls ──
@@ -191,7 +192,6 @@ class AutomotivePlayerViewModel @Inject constructor(
         sendShufflePlayCommand(songs)
         stateCollector.updateSnapshot {
             it.copy(
-                currentSong = songs.first(),
                 isPlaying = true,
                 isShuffled = true,
             )

@@ -28,6 +28,9 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
+import com.example.nyasaplayer.core.common.models.Album
+import com.example.nyasaplayer.core.common.models.Artist
+import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import kotlinx.coroutines.launch
@@ -144,13 +147,13 @@ private fun BrowseShell(
     onTogglePlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
-    onSongClick: (com.example.nyasaplayer.core.common.models.Song) -> Unit,
+    onSongClick: (Song) -> Unit,
     onQuickActionClick: (String) -> Unit,
-    onAlbumClick: (com.example.nyasaplayer.core.common.models.Album) -> Unit,
-    onArtistClick: (com.example.nyasaplayer.core.common.models.Artist) -> Unit,
+    onAlbumClick: (Album) -> Unit,
+    onArtistClick: (Artist) -> Unit,
     onLikeClick: () -> Unit,
     onShuffleLikedSongs: () -> Unit,
-    onLikedSongClick: (com.example.nyasaplayer.core.common.models.Song) -> Unit,
+    onLikedSongClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId
@@ -195,6 +198,7 @@ private fun BrowseShell(
                     onLikedSongClick = onLikedSongClick,
                 )
 
+                // FullPlayer is handled as an overlay in AuthenticatedApp, not as a tab
                 CarScreen.FullPlayer -> Unit
             }
         }

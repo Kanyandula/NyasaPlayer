@@ -33,9 +33,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.BuildConfig
+import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.auto.viewmodel.CarAuthUiState
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
+import com.example.nyasaplayer.core.common.ui.theme.NyasaError
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
@@ -44,10 +46,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 
-private val SignInButtonHeight = 76.dp
 private val IconBackgroundSize = 120.dp
 private val IconSize = 56.dp
-private val ErrorColor = Color(0xFFEF4444)
 private const val TAG = "CarAuthScreen"
 
 @Suppress("LongMethod")
@@ -125,7 +125,7 @@ fun CarAuthScreen(
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
                     text = uiState.errorMessage,
-                    color = ErrorColor,
+                    color = NyasaError,
                     fontSize = 18.sp,
                     textAlign = TextAlign.Center,
                 )
@@ -174,7 +174,7 @@ private fun GoogleSignInButton(
         },
         modifier = modifier
             .fillMaxWidth()
-            .height(SignInButtonHeight),
+            .height(CarTouchTargetSize),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = NyasaSurface2),
     ) {

@@ -26,8 +26,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.nyasaplayer.auto.ui.theme.CarGradientOrange
 import com.example.nyasaplayer.core.common.ui.icons.RefreshIcon
 import com.example.nyasaplayer.core.common.ui.icons.WifiOffIcon
+import com.example.nyasaplayer.core.common.ui.theme.NyasaError
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
@@ -36,8 +38,6 @@ import com.example.nyasaplayer.core.playback.PlayerError
 
 private val IconCircleSize = 128.dp
 private val IconSize = 64.dp
-private val ErrorIconGradientStart = Color(0xFFF97316)
-private val ErrorIconGradientEnd = Color(0xFFEF4444)
 private const val BackdropAlpha = 0.8f
 private const val ModalWidthFraction = 0.5f
 
@@ -89,7 +89,7 @@ private fun ErrorIcon(modifier: Modifier = Modifier) {
         modifier = modifier
             .size(IconCircleSize)
             .clip(CircleShape)
-            .background(Brush.linearGradient(listOf(ErrorIconGradientStart, ErrorIconGradientEnd))),
+            .background(Brush.linearGradient(listOf(CarGradientOrange, NyasaError))),
         contentAlignment = Alignment.Center,
     ) {
         Icon(WifiOffIcon, null, tint = Color.White, modifier = Modifier.size(IconSize))

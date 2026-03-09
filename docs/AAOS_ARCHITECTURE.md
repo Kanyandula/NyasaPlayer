@@ -194,7 +194,7 @@ ROOT
 | PlayerViewModel   |        | AutoPlayerViewModel    |
 |                   |        |                        |
 | - Mini/Expanded   |        | - Always visible       |
-| - Like toggling   |        | - No like UI (driving) |
+| - Like toggling   |        | - Like toggling        |
 | - 250ms polling   |        | - 500ms polling        |
 | - Full gestures   |        | - Large touch targets  |
 +-------------------+        +------------------------+
