@@ -53,6 +53,7 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     private fun loadContent() {
+        _contentState.update { it.copy(isLoading = true, errorMessage = null) }
         observeGenres()
         observeArtists()
         observeAlbums()
@@ -63,25 +64,28 @@ class AutomotiveContentViewModel @Inject constructor(
 
     private fun observeGenres() {
         genreRepository.getGenres().onEach { genres ->
-            _contentState.update { it.copy(genres = genres) }
+            _contentState.update { it.copy(genres = genres, isLoading = false) }
         }.catch { e ->
             Log.e(TAG, "Error observing genres", e)
+            _contentState.update { it.copy(isLoading = false, errorMessage = "Failed to load content") }
         }.launchIn(viewModelScope)
     }
 
     private fun observeArtists() {
         artistRepository.getArtists().onEach { artists ->
-            _contentState.update { it.copy(artists = artists) }
+            _contentState.update { it.copy(artists = artists, isLoading = false) }
         }.catch { e ->
             Log.e(TAG, "Error observing artists", e)
+            _contentState.update { it.copy(isLoading = false, errorMessage = "Failed to load content") }
         }.launchIn(viewModelScope)
     }
 
     private fun observeAlbums() {
         albumRepository.getAlbums().onEach { albums ->
-            _contentState.update { it.copy(albums = albums) }
+            _contentState.update { it.copy(albums = albums, isLoading = false) }
         }.catch { e ->
             Log.e(TAG, "Error observing albums", e)
+            _contentState.update { it.copy(isLoading = false, errorMessage = "Failed to load content") }
         }.launchIn(viewModelScope)
     }
 
@@ -170,4 +174,6 @@ data class AutomotiveContentState(
     val albums: List<Album> = emptyList(),
     val popularSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
+    val isLoading: Boolean = true,
+    val errorMessage: String? = null,
 )

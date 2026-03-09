@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutionException
 
@@ -112,10 +113,9 @@ abstract class BasePlayerStateCollector(
 
     private fun startPositionPolling() {
         collectorScope.launch {
-            while (true) {
-                delay(positionPollIntervalMs)
-                val mc = controller ?: continue
-                if (mc.isPlaying) {
+            while (isActive) {
+                val mc = controller
+                if (mc != null && mc.isPlaying) {
                     _playbackState.update {
                         it.copy(
                             currentPositionMs = mc.currentPosition,
@@ -123,6 +123,7 @@ abstract class BasePlayerStateCollector(
                         )
                     }
                 }
+                delay(positionPollIntervalMs)
             }
         }
     }

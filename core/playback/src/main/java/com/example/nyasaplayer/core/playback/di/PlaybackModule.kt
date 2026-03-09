@@ -25,6 +25,7 @@ object PlaybackModule {
         SessionToken(context, ComponentName(context, PlaybackService::class.java))
 
     @Provides
+    @Singleton
     fun provideMediaControllerFuture(
         @ApplicationContext context: Context,
         sessionToken: SessionToken,
