@@ -1,5 +1,6 @@
 package com.example.nyasaplayer.auto.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nyasaplayer.core.common.models.Album
@@ -13,17 +14,21 @@ import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val RecentlyPlayedLimit = 12
 private const val PopularLimit = 8
+private const val TAG = "AutoContentVM"
 
 @HiltViewModel
 class AutomotiveContentViewModel @Inject constructor(
@@ -38,6 +43,10 @@ class AutomotiveContentViewModel @Inject constructor(
     private val _contentState = MutableStateFlow(AutomotiveContentState())
     val contentState: StateFlow<AutomotiveContentState> = _contentState.asStateFlow()
 
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e(TAG, "Uncaught error in content loading", throwable)
+    }
+
     init {
         loadContent()
     }
@@ -47,39 +56,63 @@ class AutomotiveContentViewModel @Inject constructor(
         observeArtists()
         observeAlbums()
         loadRecentlyPlayed()
+        loadPopularSongs()
     }
 
     private fun observeGenres() {
         genreRepository.getGenres().onEach { genres ->
             _contentState.update { it.copy(genres = genres) }
+        }.catch { e ->
+            Log.e(TAG, "Error observing genres", e)
         }.launchIn(viewModelScope)
     }
 
     private fun observeArtists() {
         artistRepository.getArtists().onEach { artists ->
             _contentState.update { it.copy(artists = artists) }
+        }.catch { e ->
+            Log.e(TAG, "Error observing artists", e)
         }.launchIn(viewModelScope)
     }
 
     private fun observeAlbums() {
         albumRepository.getAlbums().onEach { albums ->
             _contentState.update { it.copy(albums = albums) }
+        }.catch { e ->
+            Log.e(TAG, "Error observing albums", e)
         }.launchIn(viewModelScope)
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun loadRecentlyPlayed() {
         val userId = authRepository.currentUser?.uid ?: return
         userRepository.getRecentlyPlayed(userId, RecentlyPlayedLimit).onEach { entries ->
-            val songIds = entries.map { it.mediaId }
-            val songs = songRepository.getSongsByIds(songIds)
-            _contentState.update { it.copy(recentlyPlayed = songs) }
+            try {
+                val songIds = entries.map { it.mediaId }
+                val songMap = songRepository.getSongsByIds(songIds).associateBy { it.mediaId }
+                val ordered = songIds.mapNotNull { songMap[it] }
+                _contentState.update { it.copy(recentlyPlayed = ordered) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading recently played songs", e)
+            }
+        }.catch { e ->
+            Log.e(TAG, "Error observing recently played", e)
         }.launchIn(viewModelScope)
     }
 
-    fun loadPopularSongs() {
-        viewModelScope.launch {
-            val songs = songRepository.getSongsByPopularity(PopularLimit)
-            _contentState.update { it.copy(popularSongs = songs) }
+    @Suppress("TooGenericExceptionCaught")
+    private fun loadPopularSongs() {
+        viewModelScope.launch(exceptionHandler) {
+            try {
+                val songs = songRepository.getSongsByPopularity(PopularLimit)
+                _contentState.update { it.copy(popularSongs = songs) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading popular songs", e)
+            }
         }
     }
 }

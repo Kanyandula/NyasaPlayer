@@ -4,6 +4,7 @@ import android.car.Car
 import android.car.drivingstate.CarUxRestrictions
 import android.car.drivingstate.CarUxRestrictionsManager
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,14 +41,22 @@ class CarUxRestrictionsHandler @Inject constructor(
             _restrictions.value = restrictions.toState()
         }
 
+    @Suppress("TooGenericExceptionCaught")
     fun connect() {
         if (car != null) return
-        car = Car.createCar(context)?.also { carInstance ->
-            val manager = carInstance.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE)
-                as? CarUxRestrictionsManager ?: return
-            restrictionsManager = manager
-            _restrictions.value = manager.currentCarUxRestrictions.toState()
-            manager.registerListener(listener)
+        try {
+            car = Car.createCar(context)?.also { carInstance ->
+                val manager = carInstance.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE)
+                    as? CarUxRestrictionsManager ?: return
+                restrictionsManager = manager
+                _restrictions.value = manager.currentCarUxRestrictions.toState()
+                manager.registerListener(listener)
+            }
+        } catch (e: Exception) {
+            Log.e("CarUxRestrictions", "Failed to connect to Car service", e)
+            car?.disconnect()
+            car = null
+            restrictionsManager = null
         }
     }
 

@@ -16,6 +16,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +39,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -117,11 +123,20 @@ private fun NavigationTabs(
     }
 }
 
+private const val ClockUpdateIntervalMs = 60_000L
+
 @Composable
 private fun ClockDisplay(modifier: Modifier = Modifier) {
-    val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(ClockUpdateIntervalMs)
+            currentTime = System.currentTimeMillis()
+        }
+    }
+    val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
     Text(
-        text = timeFormat.format(Date()),
+        text = timeFormat.format(Date(currentTime)),
         color = NyasaTextSecondary,
         fontSize = 16.sp,
         modifier = modifier,

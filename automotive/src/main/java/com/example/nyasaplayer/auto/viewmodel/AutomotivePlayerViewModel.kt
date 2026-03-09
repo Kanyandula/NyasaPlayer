@@ -18,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -91,13 +92,15 @@ class AutomotivePlayerViewModel @Inject constructor(
     private fun observePlaybackSnapshot() {
         stateCollector.playbackState.onEach { snapshot ->
             _uiState.update { it.copy(playback = snapshot) }
-        }.launchIn(viewModelScope)
+        }.catch { /* Snapshot flow is internal — errors are non-fatal */ }
+            .launchIn(viewModelScope)
     }
 
     private fun observeUxRestrictions() {
         uxHandler.restrictions.onEach { restrictions ->
             _uiState.update { it.copy(restrictions = restrictions) }
-        }.launchIn(viewModelScope)
+        }.catch { /* Restrictions flow is internal — errors are non-fatal */ }
+            .launchIn(viewModelScope)
     }
 
     // ── Playback Controls ──
@@ -111,6 +114,8 @@ class AutomotivePlayerViewModel @Inject constructor(
         val controller = stateCollector.controller ?: return
         if (controller.hasNextMediaItem()) {
             controller.seekToNextMediaItem()
+        } else if (controller.repeatMode == Player.REPEAT_MODE_ALL && controller.mediaItemCount > 0) {
+            controller.seekTo(0, 0L)
         }
     }
 

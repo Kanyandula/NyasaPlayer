@@ -1,3 +1,4 @@
+// @Preview composables are invoked by Android Studio tooling, not directly — suppress false positives.
 @file:Suppress("UnusedPrivateMember")
 
 package com.example.nyasaplayer.auto.ui.preview
