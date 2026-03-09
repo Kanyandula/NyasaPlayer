@@ -49,7 +49,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 
 private val AccentBarWidth = 4.dp
 private val AccentBarHeight = 48.dp
-private val GenrePlayButtonSize = 48.dp
+private val GenrePlayButtonSize = 76.dp
 private const val FeaturedPlaylistsMax = 6
 private const val GradientOverlayStartY = 100f
 
@@ -266,7 +266,7 @@ private fun GenreItem(
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.1f)),
         ) {
-            Icon(Icons.Default.PlayArrow, "Play ${genre.name}", tint = Color.White, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.PlayArrow, "Play ${genre.name}", tint = Color.White, modifier = Modifier.size(32.dp))
         }
     }
 }

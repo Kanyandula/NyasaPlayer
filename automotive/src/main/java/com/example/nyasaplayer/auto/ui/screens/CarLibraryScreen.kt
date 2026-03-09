@@ -43,7 +43,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 
 private val ArtistAvatarSize = 80.dp
 private val AlbumArtSize = 64.dp
-private val AlbumPlayButtonSize = 48.dp
+private val AlbumPlayButtonSize = 76.dp
 private const val MaxArtists = 8
 private const val MaxAlbums = 6
 
@@ -204,7 +204,7 @@ private fun AlbumListItem(
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.1f)),
         ) {
-            Icon(Icons.Default.PlayArrow, "Play ${album.name}", tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.PlayArrow, "Play ${album.name}", tint = Color.White, modifier = Modifier.size(32.dp))
         }
     }
 }

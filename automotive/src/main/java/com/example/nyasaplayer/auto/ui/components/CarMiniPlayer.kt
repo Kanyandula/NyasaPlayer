@@ -43,8 +43,8 @@ import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 private val MiniPlayerHeight = 112.dp
 private val ArtSize = 80.dp
 private val PlayButtonSize = 80.dp
-private val ControlButtonSize = 56.dp
-private val LikeButtonSize = 56.dp
+private val ControlButtonSize = 76.dp
+private val LikeButtonSize = 76.dp
 
 @Composable
 fun CarMiniPlayer(

@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -26,8 +27,10 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
+import kotlinx.coroutines.launch
 
 @UnstableApi
+@Suppress("LongMethod")
 @Composable
 fun AutomotiveApp(
     modifier: Modifier = Modifier,
@@ -39,6 +42,7 @@ fun AutomotiveApp(
 
     var currentScreen by rememberSaveable { mutableStateOf(CarScreen.Home) }
     var showFullPlayer by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = modifier
@@ -66,6 +70,30 @@ fun AutomotiveApp(
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
                 onSkipPrevious = playerViewModel::skipPrevious,
+                onSongClick = { song ->
+                    playerViewModel.playSong(contentState.recentlyPlayed, song)
+                    showFullPlayer = true
+                },
+                onQuickActionClick = { /* Phase 7 — not critical for playback */ },
+                onGenreClick = { genre ->
+                    scope.launch {
+                        val songs = contentViewModel.getSongsByGenre(genre.id)
+                        if (songs.isNotEmpty()) {
+                            playerViewModel.playSong(songs, songs.first())
+                            showFullPlayer = true
+                        }
+                    }
+                },
+                onAlbumClick = { album ->
+                    scope.launch {
+                        val songs = contentViewModel.getSongsByAlbum(album.id)
+                        if (songs.isNotEmpty()) {
+                            playerViewModel.playSong(songs, songs.first())
+                            showFullPlayer = true
+                        }
+                    }
+                },
+                onArtistClick = { /* Phase 7 — artist detail screen */ },
             )
         }
 
@@ -83,6 +111,7 @@ fun AutomotiveApp(
     }
 }
 
+@Suppress("LongParameterList")
 @Composable
 private fun BrowseShell(
     currentScreen: CarScreen,
@@ -93,6 +122,11 @@ private fun BrowseShell(
     onTogglePlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
+    onSongClick: (com.example.nyasaplayer.core.common.models.Song) -> Unit,
+    onQuickActionClick: (String) -> Unit,
+    onGenreClick: (com.example.nyasaplayer.core.common.models.Genre) -> Unit,
+    onAlbumClick: (com.example.nyasaplayer.core.common.models.Album) -> Unit,
+    onArtistClick: (com.example.nyasaplayer.core.common.models.Artist) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -102,22 +136,22 @@ private fun BrowseShell(
             when (currentScreen) {
                 CarScreen.Home -> CarHomeScreen(
                     recentlyPlayed = contentState.recentlyPlayed,
-                    onSongClick = { /* TODO: play song */ },
-                    onQuickActionClick = { /* TODO: handle quick action */ },
+                    onSongClick = onSongClick,
+                    onQuickActionClick = onQuickActionClick,
                 )
 
                 CarScreen.Browse -> CarBrowseScreen(
                     genres = contentState.genres,
                     albums = contentState.albums,
-                    onGenreClick = { /* TODO: play genre */ },
-                    onAlbumClick = { /* TODO: play album */ },
+                    onGenreClick = onGenreClick,
+                    onAlbumClick = onAlbumClick,
                 )
 
                 CarScreen.Library -> CarLibraryScreen(
                     artists = contentState.artists,
                     albums = contentState.albums,
-                    onArtistClick = { /* TODO: show artist */ },
-                    onAlbumClick = { /* TODO: play album */ },
+                    onArtistClick = onArtistClick,
+                    onAlbumClick = onAlbumClick,
                 )
 
                 CarScreen.FullPlayer -> Unit

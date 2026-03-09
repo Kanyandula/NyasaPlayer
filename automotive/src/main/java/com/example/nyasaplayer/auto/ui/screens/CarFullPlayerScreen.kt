@@ -55,9 +55,9 @@ import com.example.nyasaplayer.core.playback.RepeatMode
 private val AlbumArtSize = 400.dp
 private val PlayButtonSize = 112.dp
 private val SkipButtonSize = 80.dp
-private val SecondaryButtonSize = 64.dp
-private val LikeButtonSize = 56.dp
-private val TopBarButtonSize = 56.dp
+private val SecondaryButtonSize = 76.dp
+private val LikeButtonSize = 76.dp
+private val TopBarButtonSize = 76.dp
 
 @Composable
 fun CarFullPlayerScreen(
