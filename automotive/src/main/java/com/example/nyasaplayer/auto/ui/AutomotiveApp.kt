@@ -18,10 +18,12 @@ import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
 import com.example.nyasaplayer.auto.ui.components.CarTopBar
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
+import com.example.nyasaplayer.auto.ui.screens.CarAuthScreen
 import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
+import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
@@ -30,9 +32,29 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import kotlinx.coroutines.launch
 
 @UnstableApi
-@Suppress("LongMethod")
 @Composable
 fun AutomotiveApp(
+    modifier: Modifier = Modifier,
+    authViewModel: AutomotiveAuthViewModel = hiltViewModel(),
+) {
+    val authState by authViewModel.uiState.collectAsState()
+
+    if (authState.isAuthenticated) {
+        AuthenticatedApp(modifier = modifier)
+    } else {
+        CarAuthScreen(
+            uiState = authState,
+            onGoogleToken = authViewModel::signInWithGoogleToken,
+            onGoogleError = authViewModel::onGoogleSignInError,
+            modifier = modifier,
+        )
+    }
+}
+
+@UnstableApi
+@Suppress("LongMethod")
+@Composable
+private fun AuthenticatedApp(
     modifier: Modifier = Modifier,
     playerViewModel: AutomotivePlayerViewModel = hiltViewModel(),
     contentViewModel: AutomotiveContentViewModel = hiltViewModel(),
@@ -74,7 +96,7 @@ fun AutomotiveApp(
                     playerViewModel.playSong(contentState.recentlyPlayed, song)
                     showFullPlayer = true
                 },
-                onQuickActionClick = { /* Phase 7 — not critical for playback */ },
+                onQuickActionClick = { /* Phase 8 — not critical for playback */ },
                 onGenreClick = { genre ->
                     scope.launch {
                         val songs = contentViewModel.getSongsByGenre(genre.id)
@@ -93,7 +115,7 @@ fun AutomotiveApp(
                         }
                     }
                 },
-                onArtistClick = { /* Phase 7 — artist detail screen */ },
+                onArtistClick = { /* Phase 8 — artist detail screen */ },
             )
         }
 

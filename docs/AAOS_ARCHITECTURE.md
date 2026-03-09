@@ -806,9 +806,15 @@ only matter for sync performance, not browse-time performance.
 - [x] `AutomotiveContentViewModel` — add `getSongsByGenre()`, `getSongsByAlbum()`
 - [x] `AutomotiveApp` — wire all TODO click lambdas to ViewModel play actions
 
-### Phase 7: Firebase Configuration
+### Phase 7: Firebase Configuration & AAOS Authentication
 
-- [ ] Configure Firestore security rules (catalog read-only, user data scoped)
+- [x] Configure Firestore security rules (`firestore.rules` — catalog read-only, user data scoped)
+- [x] Add `firebase.json` project configuration
+- [x] `CarAuthScreen` — Google Sign-In for AAOS (one-tap, no keyboard, CTS-compliant)
+- [x] `AutomotiveAuthViewModel` — handles Google credential flow + profile creation
+- [x] Auth gate in `AutomotiveApp` — show `CarAuthScreen` when unauthenticated
+- [x] Delay `FirebaseSyncManager.start()` until after authentication
+- [x] Add Credential Manager dependencies to `:automotive` build
 - [ ] Review Realtime Database rules for home feed access
 - [ ] Test cross-device playback state sync (phone -> AAOS)
 - [ ] Add Firestore composite indexes if catalog > 10K items
@@ -819,7 +825,6 @@ only matter for sync performance, not browse-time performance.
 - [ ] Test on DHU (Desktop Head Unit)
 - [ ] Validate all distraction rules (touch targets, list limits, text input)
 - [ ] Run CTS media tests
-- [ ] Google Play Console: upload automotive APK as separate track
 
 ---
 

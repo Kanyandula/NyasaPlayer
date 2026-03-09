@@ -89,7 +89,7 @@ class AutomotiveContentViewModel @Inject constructor(
         val userId = authRepository.currentUser?.uid ?: return
         userRepository.getRecentlyPlayed(userId, RecentlyPlayedLimit).onEach { entries ->
             try {
-                val songIds = entries.map { it.mediaId }
+                val songIds = entries.map { it.mediaId }.distinct()
                 val songMap = songRepository.getSongsByIds(songIds).associateBy { it.mediaId }
                 val ordered = songIds.mapNotNull { songMap[it] }
                 _contentState.update { it.copy(recentlyPlayed = ordered) }
