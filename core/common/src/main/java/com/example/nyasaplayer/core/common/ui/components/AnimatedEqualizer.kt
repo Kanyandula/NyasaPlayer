@@ -1,4 +1,4 @@
-package com.example.nyasaplayer.screens.common
+package com.example.nyasaplayer.core.common.ui.components
 
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -20,10 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 
 private const val BarCount = 3
@@ -102,14 +100,5 @@ fun AnimatedEqualizer(
                 )
             }
         }
-    }
-}
-
-@Suppress("UnusedPrivateMember")
-@Preview(showBackground = true, backgroundColor = 0xFF0D0D0D)
-@Composable
-private fun AnimatedEqualizerPreview() {
-    AppTheme {
-        AnimatedEqualizer()
     }
 }

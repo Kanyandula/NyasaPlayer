@@ -28,6 +28,7 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
+import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import kotlinx.coroutines.launch
 
@@ -81,6 +82,8 @@ private fun AuthenticatedApp(
                 onShuffleClick = playerViewModel::toggleShuffle,
                 onRepeatClick = playerViewModel::toggleRepeatMode,
                 onSeek = playerViewModel::seekTo,
+                isLiked = playerState.isCurrentSongLiked,
+                onLikeClick = playerViewModel::toggleLike,
             )
         } else {
             BrowseShell(
@@ -97,15 +100,6 @@ private fun AuthenticatedApp(
                     showFullPlayer = true
                 },
                 onQuickActionClick = { /* Phase 8 — not critical for playback */ },
-                onGenreClick = { genre ->
-                    scope.launch {
-                        val songs = contentViewModel.getSongsByGenre(genre.id)
-                        if (songs.isNotEmpty()) {
-                            playerViewModel.playSong(songs, songs.first())
-                            showFullPlayer = true
-                        }
-                    }
-                },
                 onAlbumClick = { album ->
                     scope.launch {
                         val songs = contentViewModel.getSongsByAlbum(album.id)
@@ -116,6 +110,12 @@ private fun AuthenticatedApp(
                     }
                 },
                 onArtistClick = { /* Phase 8 — artist detail screen */ },
+                onLikeClick = playerViewModel::toggleLike,
+                onShuffleLikedSongs = { playerViewModel.shufflePlay(contentState.likedSongs) },
+                onLikedSongClick = { song ->
+                    playerViewModel.playSong(contentState.likedSongs, song)
+                    showFullPlayer = true
+                },
             )
         }
 
@@ -146,34 +146,53 @@ private fun BrowseShell(
     onSkipPrevious: () -> Unit,
     onSongClick: (com.example.nyasaplayer.core.common.models.Song) -> Unit,
     onQuickActionClick: (String) -> Unit,
-    onGenreClick: (com.example.nyasaplayer.core.common.models.Genre) -> Unit,
     onAlbumClick: (com.example.nyasaplayer.core.common.models.Album) -> Unit,
     onArtistClick: (com.example.nyasaplayer.core.common.models.Artist) -> Unit,
+    onLikeClick: () -> Unit,
+    onShuffleLikedSongs: () -> Unit,
+    onLikedSongClick: (com.example.nyasaplayer.core.common.models.Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId
+    val isPlaying = playerState.playback.isPlaying
+    val maxItems = playerState.restrictions.limitedContentItems
+
     Column(modifier = modifier.fillMaxSize()) {
         CarTopBar(currentScreen = currentScreen, onSelectTab = onSelectTab)
+
+        OfflineBanner(isOffline = playerState.isOffline)
 
         Box(modifier = Modifier.weight(1f)) {
             when (currentScreen) {
                 CarScreen.Home -> CarHomeScreen(
-                    recentlyPlayed = contentState.recentlyPlayed,
+                    recentlyPlayed = contentState.recentlyPlayed.take(maxItems),
                     onSongClick = onSongClick,
                     onQuickActionClick = onQuickActionClick,
+                    currentlyPlayingMediaId = currentlyPlayingMediaId,
+                    isPlaying = isPlaying,
                 )
 
-                CarScreen.Browse -> CarBrowseScreen(
-                    genres = contentState.genres,
-                    albums = contentState.albums,
-                    onGenreClick = onGenreClick,
-                    onAlbumClick = onAlbumClick,
-                )
+                CarScreen.Browse -> {
+                    val currentAlbumId = playerState.playback.currentSong?.albumId
+                    CarBrowseScreen(
+                        albums = contentState.albums.take(maxItems),
+                        onAlbumClick = onAlbumClick,
+                        onSearchClick = { /* Phase 8 — search screen */ },
+                        currentlyPlayingAlbumId = currentAlbumId,
+                        isPlaying = isPlaying,
+                    )
+                }
 
                 CarScreen.Library -> CarLibraryScreen(
-                    artists = contentState.artists,
-                    albums = contentState.albums,
+                    artists = contentState.artists.take(maxItems),
+                    albums = contentState.albums.take(maxItems),
                     onArtistClick = onArtistClick,
                     onAlbumClick = onAlbumClick,
+                    likedSongs = contentState.likedSongs.take(maxItems),
+                    currentlyPlayingMediaId = currentlyPlayingMediaId,
+                    isPlaying = isPlaying,
+                    onShuffleLikedSongs = onShuffleLikedSongs,
+                    onLikedSongClick = onLikedSongClick,
                 )
 
                 CarScreen.FullPlayer -> Unit
@@ -187,6 +206,8 @@ private fun BrowseShell(
                 onSkipNext = onSkipNext,
                 onSkipPrevious = onSkipPrevious,
                 onExpand = onExpandPlayer,
+                isLiked = playerState.isCurrentSongLiked,
+                onLikeClick = onLikeClick,
             )
         }
     }

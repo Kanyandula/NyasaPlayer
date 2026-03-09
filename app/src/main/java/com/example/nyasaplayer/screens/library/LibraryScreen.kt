@@ -43,6 +43,7 @@ import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
+import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
 import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
@@ -52,7 +53,6 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.download.SongDownloadManager
-import com.example.nyasaplayer.screens.common.ShufflePlayButton
 import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
 import com.example.nyasaplayer.screens.common.TrackNumberIndicator
 import com.example.nyasaplayer.ui.preview.PreviewSongsWithDuration

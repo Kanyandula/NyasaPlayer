@@ -14,7 +14,6 @@ import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Artist
-import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
@@ -51,13 +50,6 @@ private val PreviewPlayback = PlaybackSnapshot(
     repeatMode = RepeatMode.Off,
 )
 
-private val PreviewGenres = listOf(
-    Genre(id = "electronic", name = "Electronic", songIds = List(1243) { "s$it" }),
-    Genre(id = "hiphop", name = "Hip Hop", songIds = List(987) { "s$it" }),
-    Genre(id = "jazz", name = "Jazz", songIds = List(654) { "s$it" }),
-    Genre(id = "rock", name = "Rock", songIds = List(2112) { "s$it" }),
-)
-
 private val PreviewAlbums = listOf(
     Album(id = "a1", name = "Electronic Vibes", artistName = "Various", songIds = List(50) { "s$it" }),
     Album(id = "a2", name = "Hip Hop Essentials", artistName = "Various", songIds = List(42) { "s$it" }),
@@ -88,6 +80,8 @@ private fun HomeScreenPreview() {
             recentlyPlayed = PreviewSongs,
             onSongClick = {},
             onQuickActionClick = {},
+            currentlyPlayingMediaId = "1",
+            isPlaying = true,
         )
     }
 }
@@ -111,6 +105,8 @@ private fun FullPlayerPreview() {
             onShuffleClick = {},
             onRepeatClick = {},
             onSeek = {},
+            isLiked = true,
+            onLikeClick = {},
         )
     }
 }
@@ -126,10 +122,9 @@ private fun FullPlayerPreview() {
 private fun BrowseScreenPreview() {
     AppTheme {
         CarBrowseScreen(
-            genres = PreviewGenres,
             albums = PreviewAlbums,
-            onGenreClick = {},
             onAlbumClick = {},
+            onSearchClick = {},
         )
     }
 }
@@ -149,6 +144,11 @@ private fun LibraryScreenPreview() {
             albums = PreviewAlbums,
             onArtistClick = {},
             onAlbumClick = {},
+            likedSongs = PreviewSongs,
+            currentlyPlayingMediaId = "1",
+            isPlaying = true,
+            onShuffleLikedSongs = {},
+            onLikedSongClick = {},
         )
     }
 }
@@ -168,6 +168,8 @@ private fun MiniPlayerPreview() {
             onSkipNext = {},
             onSkipPrevious = {},
             onExpand = {},
+            isLiked = true,
+            onLikeClick = {},
         )
     }
 }

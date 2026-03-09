@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.nyasaplayer.core.common.ui.components.AnimatedEqualizer
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 
 @Composable

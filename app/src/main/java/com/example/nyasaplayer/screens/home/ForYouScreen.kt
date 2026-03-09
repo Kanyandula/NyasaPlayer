@@ -42,6 +42,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
 import com.example.nyasaplayer.core.common.ui.icons.ChevronRightIcon
 import com.example.nyasaplayer.core.common.ui.icons.NotificationIcon
@@ -51,7 +52,6 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.util.greetingResource
-import com.example.nyasaplayer.screens.common.NowPlayingOverlay
 import com.example.nyasaplayer.ui.preview.PreviewForYouUiState
 
 @Composable
