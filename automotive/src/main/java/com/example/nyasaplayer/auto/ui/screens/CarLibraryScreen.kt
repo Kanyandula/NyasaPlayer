@@ -36,6 +36,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
+import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
+import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Song
@@ -46,13 +49,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 
-private val ArtistAvatarSize = 80.dp
 private val AlbumArtSize = 64.dp
-private val AlbumPlayButtonSize = 76.dp
-private val LikedSongArtSize = 80.dp
-private val ShuffleButtonHeight = 76.dp
-private const val MaxArtists = 8
-private const val MaxAlbums = 6
 
 @Suppress("LongParameterList")
 @Composable
@@ -79,13 +76,19 @@ fun CarLibraryScreen(
         item { LibraryHeader() }
 
         if (likedSongs.isNotEmpty()) {
+            item { LikedSongsHeader(count = likedSongs.size) }
             item {
-                LikedSongsSection(
-                    likedSongs = likedSongs,
-                    currentlyPlayingMediaId = currentlyPlayingMediaId,
+                ShufflePlayButton(
+                    onClick = onShuffleLikedSongs,
+                    height = CarTouchTargetSize,
+                )
+            }
+            items(likedSongs, key = { it.mediaId }) { song ->
+                LikedSongItem(
+                    song = song,
+                    isCurrentTrack = song.mediaId == currentlyPlayingMediaId,
                     isPlaying = isPlaying,
-                    onShufflePlay = onShuffleLikedSongs,
-                    onSongClick = onLikedSongClick,
+                    onClick = { onLikedSongClick(song) },
                 )
             }
         }
@@ -93,7 +96,7 @@ fun CarLibraryScreen(
         if (artists.isNotEmpty()) {
             item {
                 FavoriteArtistsSection(
-                    artists = artists.take(MaxArtists),
+                    artists = artists,
                     onArtistClick = onArtistClick,
                 )
             }
@@ -108,7 +111,7 @@ fun CarLibraryScreen(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            items(albums.take(MaxAlbums), key = { it.id }) { album ->
+            items(albums, key = { it.id }) { album ->
                 AlbumListItem(album = album, onClick = { onAlbumClick(album) })
             }
         }
@@ -124,49 +127,32 @@ private fun LibraryHeader(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun LikedSongsSection(
-    likedSongs: List<Song>,
-    currentlyPlayingMediaId: String?,
-    isPlaying: Boolean,
-    onShufflePlay: () -> Unit,
-    onSongClick: (Song) -> Unit,
+private fun LikedSongsHeader(
+    count: Int,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Favorite,
-                contentDescription = null,
-                tint = NyasaPrimary,
-                modifier = Modifier.size(24.dp),
-            )
-            Text(
-                text = "Liked Songs",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = "${likedSongs.size} songs",
-                color = NyasaTextSecondary,
-                fontSize = 16.sp,
-            )
-        }
-        ShufflePlayButton(
-            onClick = onShufflePlay,
-            height = ShuffleButtonHeight,
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Favorite,
+            contentDescription = null,
+            tint = NyasaPrimary,
+            modifier = Modifier.size(24.dp),
         )
-        likedSongs.forEach { song ->
-            LikedSongItem(
-                song = song,
-                isCurrentTrack = song.mediaId == currentlyPlayingMediaId,
-                isPlaying = isPlaying,
-                onClick = { onSongClick(song) },
-            )
-        }
+        Text(
+            text = "Liked Songs",
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = "$count songs",
+            color = NyasaTextSecondary,
+            fontSize = 16.sp,
+        )
     }
 }
 
@@ -181,7 +167,7 @@ private fun LikedSongItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(CarCardCornerRadius))
             .background(NyasaSurface2)
             .clickable(onClick = onClick)
             .padding(12.dp),
@@ -198,7 +184,7 @@ private fun LikedSongItem(
                 contentDescription = song.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(LikedSongArtSize)
+                    .size(CarListArtSize)
                     .clip(RoundedCornerShape(12.dp)),
             )
         }
@@ -252,7 +238,7 @@ private fun ArtistAvatar(
 ) {
     Column(
         modifier = modifier
-            .width(ArtistAvatarSize)
+            .width(CarListArtSize)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -261,7 +247,7 @@ private fun ArtistAvatar(
             contentDescription = artist.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(ArtistAvatarSize)
+                .size(CarListArtSize)
                 .clip(CircleShape),
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -286,7 +272,7 @@ private fun AlbumListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(CarCardCornerRadius))
             .background(NyasaSurface2)
             .clickable(onClick = onClick)
             .padding(16.dp),
@@ -324,7 +310,7 @@ private fun AlbumListItem(
         IconButton(
             onClick = onClick,
             modifier = Modifier
-                .size(AlbumPlayButtonSize)
+                .size(CarTouchTargetSize)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.1f)),
         ) {

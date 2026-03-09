@@ -31,6 +31,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
+import com.example.nyasaplayer.auto.ui.theme.CarMiniPlayerHeight
+import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipNextIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipPreviousIcon
@@ -41,11 +44,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 
-private val MiniPlayerHeight = 112.dp
-private val ArtSize = 80.dp
 private val PlayButtonSize = 80.dp
-private val ControlButtonSize = 76.dp
-private val LikeButtonSize = 76.dp
 
 @Suppress("LongParameterList")
 @Composable
@@ -64,7 +63,7 @@ fun CarMiniPlayer(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(MiniPlayerHeight)
+            .height(CarMiniPlayerHeight)
             .background(NyasaSurface2)
             .clickable(onClick = onExpand)
             .padding(horizontal = 24.dp),
@@ -111,7 +110,7 @@ private fun NowPlayingInfo(
             contentDescription = title,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(ArtSize)
+                .size(CarListArtSize)
                 .clip(RoundedCornerShape(12.dp)),
         )
         Column {
@@ -150,7 +149,7 @@ private fun MiniPlayerControls(
         IconButton(
             onClick = onSkipPrevious,
             modifier = Modifier
-                .size(ControlButtonSize)
+                .size(CarTouchTargetSize)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.1f)),
         ) {
@@ -175,7 +174,7 @@ private fun MiniPlayerControls(
         IconButton(
             onClick = onSkipNext,
             modifier = Modifier
-                .size(ControlButtonSize)
+                .size(CarTouchTargetSize)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.1f)),
         ) {
@@ -221,7 +220,7 @@ private fun ProgressSection(
             onClick = onLikeClick,
             modifier = Modifier
                 .padding(start = 12.dp)
-                .size(LikeButtonSize)
+                .size(CarTouchTargetSize)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.1f)),
         ) {

@@ -110,12 +110,13 @@ class AutomotiveContentViewModel @Inject constructor(
         userRepository.getLikedSongs(userId).onEach { likedEntries ->
             try {
                 val songIds = likedEntries.map { it.mediaId }.distinct()
-                val songs = if (songIds.isNotEmpty()) {
-                    songRepository.getSongsByIds(songIds)
+                val songMap = if (songIds.isNotEmpty()) {
+                    songRepository.getSongsByIds(songIds).associateBy { it.mediaId }
                 } else {
-                    emptyList()
+                    emptyMap()
                 }
-                _contentState.update { it.copy(likedSongs = songs) }
+                val ordered = songIds.mapNotNull { songMap[it] }
+                _contentState.update { it.copy(likedSongs = ordered) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatIcon
@@ -53,12 +54,9 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
-private val AlbumArtSize = 400.dp
+private val FullPlayerAlbumArtSize = 400.dp
 private val PlayButtonSize = 112.dp
 private val SkipButtonSize = 80.dp
-private val SecondaryButtonSize = 76.dp
-private val LikeButtonSize = 76.dp
-private val TopBarButtonSize = 76.dp
 
 @Suppress("LongParameterList")
 @Composable
@@ -107,7 +105,7 @@ fun CarFullPlayerScreen(
                 contentDescription = song?.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(AlbumArtSize)
+                    .size(FullPlayerAlbumArtSize)
                     .clip(RoundedCornerShape(24.dp)),
             )
 
@@ -191,7 +189,7 @@ private fun PlayerTopBar(
         CircleIconButton(
             icon = Icons.Default.KeyboardArrowDown,
             contentDescription = "Collapse",
-            size = TopBarButtonSize,
+            size = CarTouchTargetSize,
             onClick = onCollapseClick,
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -201,7 +199,7 @@ private fun PlayerTopBar(
         CircleIconButton(
             icon = MoreHorizIcon,
             contentDescription = "More",
-            size = TopBarButtonSize,
+            size = CarTouchTargetSize,
             onClick = { /* More options */ },
         )
     }
@@ -282,7 +280,7 @@ private fun MainControls(
         CircleIconButton(
             icon = ShuffleIcon,
             contentDescription = "Shuffle",
-            size = SecondaryButtonSize,
+            size = CarTouchTargetSize,
             tint = if (playback.isShuffled) NyasaPrimary else NyasaTextSecondary,
             onClick = onShuffleClick,
         )
@@ -311,7 +309,7 @@ private fun MainControls(
         CircleIconButton(
             icon = repeatIcon,
             contentDescription = "Repeat",
-            size = SecondaryButtonSize,
+            size = CarTouchTargetSize,
             tint = repeatTint,
             onClick = onRepeatClick,
         )
@@ -353,7 +351,7 @@ private fun LikeButton(
         CircleIconButton(
             icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
             contentDescription = if (isLiked) "Unlike" else "Like",
-            size = LikeButtonSize,
+            size = CarTouchTargetSize,
             iconSize = 24.dp,
             tint = if (isLiked) NyasaPrimary else NyasaTextSecondary,
             onClick = onClick,

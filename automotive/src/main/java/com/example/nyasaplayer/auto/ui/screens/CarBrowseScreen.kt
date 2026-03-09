@@ -46,6 +46,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
+import com.example.nyasaplayer.auto.ui.theme.CarGradientBlue
+import com.example.nyasaplayer.auto.ui.theme.CarGradientBlueCyan
+import com.example.nyasaplayer.auto.ui.theme.CarGradientGreen
+import com.example.nyasaplayer.auto.ui.theme.CarGradientGreenDark
+import com.example.nyasaplayer.auto.ui.theme.CarGradientIndigo
+import com.example.nyasaplayer.auto.ui.theme.CarGradientIndigoPurple
+import com.example.nyasaplayer.auto.ui.theme.CarGradientOrange
+import com.example.nyasaplayer.auto.ui.theme.CarGradientOrangeDark
+import com.example.nyasaplayer.auto.ui.theme.CarGradientPink
+import com.example.nyasaplayer.auto.ui.theme.CarGradientRose
+import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.icons.AlbumIcon
@@ -55,11 +67,11 @@ import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 
-private val SearchBarMinHeight = 76.dp
-private val CardCornerRadius = 16.dp
 private val CategoryIconSize = 56.dp
 private const val IconBgAlpha = 0.5f
 private val PlaylistCardSize = 140.dp
@@ -73,20 +85,6 @@ private const val ScrollbarTrackAlpha = 0.15f
 private const val ScrollbarThumbAlpha = 0.6f
 private const val ScrollbarAnimationDurationMs = 150
 
-// Browse All category gradient colors
-private val TrendingGradientStart = Color(0xFFEC4899)
-private val TrendingGradientEnd = Color(0xFFBE123C)
-private val NewReleasesGradientStart = Color(0xFF3B82F6)
-private val NewReleasesGradientEnd = Color(0xFF06B6D4)
-private val TopChartsGradientStart = Color(0xFF22C55E)
-private val TopChartsGradientEnd = Color(0xFF059669)
-private val PlaylistsGradientStart = Color(0xFFA855F7)
-private val PlaylistsGradientEnd = Color(0xFF7C3AED)
-private val GenresGradientStart = Color(0xFFF97316)
-private val GenresGradientEnd = Color(0xFFD97706)
-private val PodcastsGradientStart = Color(0xFF6366F1)
-private val PodcastsGradientEnd = Color(0xFF4338CA)
-
 private data class BrowseCategory(
     val name: String,
     val icon: ImageVector,
@@ -94,12 +92,12 @@ private data class BrowseCategory(
 )
 
 private val browseCategories = listOf(
-    BrowseCategory("Trending Now", MusicNoteIcon, listOf(TrendingGradientStart, TrendingGradientEnd)),
-    BrowseCategory("New Releases", AlbumIcon, listOf(NewReleasesGradientStart, NewReleasesGradientEnd)),
-    BrowseCategory("Top Charts", QueueMusicIcon, listOf(TopChartsGradientStart, TopChartsGradientEnd)),
-    BrowseCategory("Playlists", PlaylistAddIcon, listOf(PlaylistsGradientStart, PlaylistsGradientEnd)),
-    BrowseCategory("Genres", MusicNoteIcon, listOf(GenresGradientStart, GenresGradientEnd)),
-    BrowseCategory("Podcasts", RadioIcon, listOf(PodcastsGradientStart, PodcastsGradientEnd)),
+    BrowseCategory("Trending Now", MusicNoteIcon, listOf(CarGradientPink, CarGradientRose)),
+    BrowseCategory("New Releases", AlbumIcon, listOf(CarGradientBlue, CarGradientBlueCyan)),
+    BrowseCategory("Top Charts", QueueMusicIcon, listOf(CarGradientGreen, CarGradientGreenDark)),
+    BrowseCategory("Playlists", PlaylistAddIcon, listOf(NyasaPrimary, NyasaPrimaryDark)),
+    BrowseCategory("Genres", MusicNoteIcon, listOf(CarGradientOrange, CarGradientOrangeDark)),
+    BrowseCategory("Podcasts", RadioIcon, listOf(CarGradientIndigoPurple, CarGradientIndigo)),
 )
 
 @Composable
@@ -234,8 +232,8 @@ private fun BrowseSearchBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(SearchBarMinHeight)
-            .clip(RoundedCornerShape(CardCornerRadius))
+            .height(CarTouchTargetSize)
+            .clip(RoundedCornerShape(CarCardCornerRadius))
             .background(NyasaSurface2)
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp),
@@ -290,7 +288,7 @@ private fun CategoryCard(
     Box(
         modifier = modifier
             .aspectRatio(CategoryCardAspectRatio)
-            .clip(RoundedCornerShape(CardCornerRadius))
+            .clip(RoundedCornerShape(CarCardCornerRadius))
             .background(Brush.linearGradient(category.gradientColors))
             .clickable { /* Category click — Phase 8 */ },
     ) {
@@ -361,12 +359,12 @@ private fun FeaturedPlaylistCard(
         NowPlayingOverlay(
             isCurrentTrack = isCurrentAlbum,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(CardCornerRadius),
+            shape = RoundedCornerShape(CarCardCornerRadius),
         ) {
             Box(
                 modifier = Modifier
                     .size(PlaylistCardSize)
-                    .clip(RoundedCornerShape(CardCornerRadius)),
+                    .clip(RoundedCornerShape(CarCardCornerRadius)),
             ) {
                 AsyncImage(
                     model = album.imageUrl,
