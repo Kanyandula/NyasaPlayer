@@ -9,10 +9,12 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
+import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.PlaybackCommands
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlayerError
+import com.example.nyasaplayer.core.playback.toBundle
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -145,6 +147,55 @@ class AutomotivePlayerViewModel @Inject constructor(
         controller.sendCustomCommand(
             SessionCommand(PlaybackCommands.CMD_TOGGLE_SHUFFLE, Bundle.EMPTY),
             Bundle.EMPTY,
+        )
+    }
+
+    // ── Play Actions ──
+
+    fun playSong(songs: List<Song>, song: Song) {
+        val startIndex = songs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
+        sendSetQueueCommand(songs, startIndex)
+        stateCollector.updateSnapshot {
+            it.copy(
+                currentSong = song,
+                isPlaying = true,
+                isShuffled = false,
+            )
+        }
+    }
+
+    fun shufflePlay(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        sendShufflePlayCommand(songs)
+        stateCollector.updateSnapshot {
+            it.copy(
+                currentSong = songs.first(),
+                isPlaying = true,
+                isShuffled = true,
+            )
+        }
+    }
+
+    private fun sendSetQueueCommand(songs: List<Song>, startIndex: Int) {
+        val controller = stateCollector.controller ?: return
+        val args = Bundle().apply {
+            putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
+            putInt(PlaybackCommands.KEY_START_INDEX, startIndex)
+        }
+        controller.sendCustomCommand(
+            SessionCommand(PlaybackCommands.CMD_SET_QUEUE, Bundle.EMPTY),
+            args,
+        )
+    }
+
+    private fun sendShufflePlayCommand(songs: List<Song>) {
+        val controller = stateCollector.controller ?: return
+        val args = Bundle().apply {
+            putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
+        }
+        controller.sendCustomCommand(
+            SessionCommand(PlaybackCommands.CMD_SHUFFLE_PLAY, Bundle.EMPTY),
+            args,
         )
     }
 

@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -114,6 +115,27 @@ class AutomotiveContentViewModel @Inject constructor(
                 Log.e(TAG, "Error loading popular songs", e)
             }
         }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    suspend fun getSongsByGenre(genreId: String): List<Song> = try {
+        songRepository.getSongsByGenre(genreId).firstOrNull() ?: emptyList()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.e(TAG, "Error loading songs for genre $genreId", e)
+        emptyList()
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    suspend fun getSongsByAlbum(albumId: String): List<Song> = try {
+        val album = albumRepository.getAlbumById(albumId) ?: return emptyList()
+        songRepository.getSongsByIds(album.songIds)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.e(TAG, "Error loading songs for album $albumId", e)
+        emptyList()
     }
 }
 

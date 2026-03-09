@@ -799,14 +799,21 @@ only matter for sync performance, not browse-time performance.
 - [ ] `CarErrorOverlay` — modal with 3 error variants
 - [ ] `AutomotiveNavHost` — simplified navigation between screens
 
-### Phase 6: Firebase Configuration
+### Phase 6: Wire End-to-End Playback
+
+- [x] `AutomotiveApplication` — inject and start `FirebaseSyncManager`
+- [x] `AutomotivePlayerViewModel` — add `playSong()`, `shufflePlay()`, queue commands
+- [x] `AutomotiveContentViewModel` — add `getSongsByGenre()`, `getSongsByAlbum()`
+- [x] `AutomotiveApp` — wire all TODO click lambdas to ViewModel play actions
+
+### Phase 7: Firebase Configuration
 
 - [ ] Configure Firestore security rules (catalog read-only, user data scoped)
 - [ ] Review Realtime Database rules for home feed access
 - [ ] Test cross-device playback state sync (phone -> AAOS)
 - [ ] Add Firestore composite indexes if catalog > 10K items
 
-### Phase 7: Polish and CTS Compliance
+### Phase 8: Polish and CTS Compliance
 
 - [ ] Test on AAOS emulator (Automotive system image)
 - [ ] Test on DHU (Desktop Head Unit)
