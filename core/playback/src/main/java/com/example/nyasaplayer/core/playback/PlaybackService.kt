@@ -97,22 +97,28 @@ class PlaybackService : MediaLibraryService() {
                 .build()
         }
 
+        @Suppress("TooGenericExceptionCaught")
         override fun onCustomCommand(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
             customCommand: SessionCommand,
             args: Bundle,
         ): ListenableFuture<SessionResult> {
-            when (customCommand.customAction) {
-                PlaybackCommands.CMD_SET_QUEUE -> handleSetQueue(args)
-                PlaybackCommands.CMD_SHUFFLE_PLAY -> handleShufflePlay(args)
-                PlaybackCommands.CMD_RESTORE_STATE -> handleRestoreState(args)
-                PlaybackCommands.CMD_TOGGLE_SHUFFLE -> handleToggleShuffle()
-                else -> return Futures.immediateFuture(
-                    SessionResult(SessionError.ERROR_NOT_SUPPORTED),
-                )
+            return try {
+                when (customCommand.customAction) {
+                    PlaybackCommands.CMD_SET_QUEUE -> handleSetQueue(args)
+                    PlaybackCommands.CMD_SHUFFLE_PLAY -> handleShufflePlay(args)
+                    PlaybackCommands.CMD_RESTORE_STATE -> handleRestoreState(args)
+                    PlaybackCommands.CMD_TOGGLE_SHUFFLE -> handleToggleShuffle()
+                    else -> return Futures.immediateFuture(
+                        SessionResult(SessionError.ERROR_NOT_SUPPORTED),
+                    )
+                }
+                Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            } catch (e: Exception) {
+                Log.e(TAG, "onCustomCommand failed: ${customCommand.customAction}", e)
+                Futures.immediateFuture(SessionResult(SessionError.ERROR_UNKNOWN))
             }
-            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
 
         // ── Browse tree callbacks ──
@@ -293,6 +299,10 @@ class PlaybackService : MediaLibraryService() {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             queueManager.currentIndex = exoPlayer.currentMediaItemIndex
         }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (!isPlaying) saveState()
+        }
     }
 
     // ── Periodic persistence ──
@@ -307,7 +317,6 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private fun saveState() {
-        if (!exoPlayer.isPlaying) return
         val song = exoPlayer.currentMediaItem?.toSong() ?: return
         persistence.save(
             serviceScope,

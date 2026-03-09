@@ -22,6 +22,7 @@ abstract class BasePlayerStateCollector(
     private val _playbackState = MutableStateFlow(PlaybackSnapshot())
     val playbackState: StateFlow<PlaybackSnapshot> = _playbackState.asStateFlow()
 
+    @Volatile
     var controller: MediaController? = null
         private set
 
@@ -114,7 +115,7 @@ abstract class BasePlayerStateCollector(
             while (true) {
                 delay(positionPollIntervalMs)
                 val mc = controller ?: continue
-                if (mc.isPlaying || _playbackState.value.currentSong != null) {
+                if (mc.isPlaying) {
                     _playbackState.update {
                         it.copy(
                             currentPositionMs = mc.currentPosition,

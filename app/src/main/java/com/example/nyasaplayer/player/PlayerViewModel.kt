@@ -225,6 +225,8 @@ class PlayerViewModel @Inject constructor(
         val controller = stateCollector.controller ?: return
         if (controller.hasNextMediaItem()) {
             controller.seekToNextMediaItem()
+        } else if (controller.repeatMode == Player.REPEAT_MODE_ALL && controller.mediaItemCount > 0) {
+            controller.seekTo(0, 0L)
         }
     }
 

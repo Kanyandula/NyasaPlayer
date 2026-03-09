@@ -48,6 +48,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
+import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
@@ -248,8 +249,8 @@ private fun ProgressSlider(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(formatTime(playback.currentPositionMs), color = NyasaTextSecondary, fontSize = 18.sp)
-            Text(formatTime(playback.durationMs), color = NyasaTextSecondary, fontSize = 18.sp)
+            Text(formatDuration(playback.currentPositionMs), color = NyasaTextSecondary, fontSize = 18.sp)
+            Text(formatDuration(playback.durationMs), color = NyasaTextSecondary, fontSize = 18.sp)
         }
     }
 }
@@ -372,11 +373,4 @@ private fun buildArtistAlbumText(artist: String?, album: String?): String = buil
     if (!album.isNullOrBlank()) {
         append(" \u2022 $album")
     }
-}
-
-private fun formatTime(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
 }

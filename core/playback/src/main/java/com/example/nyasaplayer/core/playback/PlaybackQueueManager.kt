@@ -56,31 +56,5 @@ class PlaybackQueueManager @Inject constructor() {
         }
     }
 
-    fun skipNext(repeatMode: RepeatMode): Song? {
-        if (currentIndex < queue.lastIndex) {
-            currentIndex++
-        } else if (repeatMode == RepeatMode.All && queue.size > 1) {
-            currentIndex = 0
-        } else {
-            return null
-        }
-        return queue[currentIndex]
-    }
-
-    fun skipPrevious(): Song? {
-        if (currentIndex > 0) {
-            currentIndex--
-            return queue[currentIndex]
-        }
-        return null
-    }
-
-    val hasPrevious: Boolean get() = currentIndex > 0
-
-    fun hasNext(repeatMode: RepeatMode): Boolean {
-        return currentIndex < queue.lastIndex ||
-            (repeatMode == RepeatMode.All && queue.size > 1)
-    }
-
     fun queueSongIds(): List<String> = queue.map { it.mediaId }
 }

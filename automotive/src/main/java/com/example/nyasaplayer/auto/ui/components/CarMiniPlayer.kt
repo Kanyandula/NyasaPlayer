@@ -37,6 +37,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 
 private val MiniPlayerHeight = 112.dp
@@ -188,7 +189,7 @@ private fun ProgressSection(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.End,
     ) {
-        Text(formatTime(currentPositionMs), color = NyasaTextSecondary, fontSize = 14.sp)
+        Text(formatDuration(currentPositionMs), color = NyasaTextSecondary, fontSize = 14.sp)
 
         val progress = if (durationMs > 0) {
             (currentPositionMs.toFloat() / durationMs).coerceIn(0f, 1f)
@@ -206,7 +207,7 @@ private fun ProgressSection(
             trackColor = Color.White.copy(alpha = 0.2f),
         )
 
-        Text(formatTime(durationMs), color = NyasaTextSecondary, fontSize = 14.sp)
+        Text(formatDuration(durationMs), color = NyasaTextSecondary, fontSize = 14.sp)
 
         IconButton(
             onClick = { /* Like not implemented for automotive */ },
@@ -219,11 +220,4 @@ private fun ProgressSection(
             Icon(HeartIcon, "Like", tint = Color.White, modifier = Modifier.size(24.dp))
         }
     }
-}
-
-private fun formatTime(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
 }
