@@ -3,6 +3,7 @@ package com.example.nyasaplayer.auto.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
@@ -44,8 +47,10 @@ import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
+import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 
@@ -242,13 +247,15 @@ private fun ArtistAvatar(
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        AsyncImage(
+        SubcomposeAsyncImage(
             model = artist.imageUrl,
             contentDescription = artist.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(CarListArtSize)
                 .clip(CircleShape),
+            loading = { ArtistPlaceholder() },
+            error = { ArtistPlaceholder() },
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -259,6 +266,23 @@ private fun ArtistAvatar(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun ArtistPlaceholder(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Brush.linearGradient(listOf(NyasaPrimary, NyasaPrimaryDark))),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = MusicNoteIcon,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(32.dp),
         )
     }
 }
