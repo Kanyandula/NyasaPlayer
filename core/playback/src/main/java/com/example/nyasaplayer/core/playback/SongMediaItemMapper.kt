@@ -2,11 +2,15 @@ package com.example.nyasaplayer.core.playback
 
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.example.nyasaplayer.core.common.models.Song
 import org.json.JSONArray
 import org.json.JSONObject
+
+private const val MaxRecommendedQueueSize = 200
+private const val MapperTag = "SongMediaItemMapper"
 
 private const val KeyMediaId = "mediaId"
 private const val KeyTitle = "title"
@@ -36,7 +40,7 @@ fun Song.toMediaItem(): MediaItem {
         putString(KeyAlbumId, albumId)
         putString(KeyAlbumName, albumName)
         putLong(KeyDurationMs, durationMs)
-        putString(KeyGenreIds, genreIds.joinToString(","))
+        putString(KeyGenreIds, JSONArray(genreIds).toString())
         putString(KeyCoverUrl, coverUrl)
         putString(KeyAudioUrl, audioUrl)
         putInt(KeyPopularity, popularity)
@@ -70,8 +74,14 @@ fun MediaItem.toSong(): Song {
         albumId = extras.getString(KeyAlbumId, ""),
         albumName = extras.getString(KeyAlbumName, ""),
         durationMs = extras.getLong(KeyDurationMs),
-        genreIds = extras.getString(KeyGenreIds, "")
-            .split(",").filter { it.isNotBlank() },
+        genreIds = extras.getString(KeyGenreIds, "").let { raw ->
+            if (raw.startsWith("[")) {
+                val arr = JSONArray(raw)
+                (0 until arr.length()).map { arr.getString(it) }
+            } else {
+                raw.split(",").filter { it.isNotBlank() }
+            }
+        },
         coverUrl = extras.getString(KeyCoverUrl, ""),
         audioUrl = extras.getString(KeyAudioUrl, ""),
         popularity = extras.getInt(KeyPopularity),
@@ -79,9 +89,10 @@ fun MediaItem.toSong(): Song {
     )
 }
 
-// Note: Queue is serialized as JSON inside a Bundle. For very large queues (1000+ songs),
-// this could approach IPC transaction limits. Current practical limit is ~100-200 songs.
 fun List<Song>.toBundle(): Bundle {
+    if (size > MaxRecommendedQueueSize) {
+        Log.w(MapperTag, "Queue size ($size) exceeds recommended max ($MaxRecommendedQueueSize) for IPC")
+    }
     val jsonArray = JSONArray()
     forEach { song ->
         jsonArray.put(

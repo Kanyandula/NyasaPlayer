@@ -54,7 +54,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 
-private val AlbumArtSize = 64.dp
+private val AlbumItemArtSize = 64.dp
 
 @Suppress("LongParameterList")
 @Composable
@@ -307,7 +307,7 @@ private fun AlbumListItem(
             contentDescription = album.name,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(AlbumArtSize)
+                .size(AlbumItemArtSize)
                 .clip(RoundedCornerShape(12.dp)),
         )
         Column(

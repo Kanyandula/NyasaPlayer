@@ -7,8 +7,9 @@ import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
@@ -27,7 +28,9 @@ class PlaybackStatePersistence @Inject constructor(
     private val authRepository: AuthRepository,
     private val songRepository: SongRepository,
 ) {
-    private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private companion object {
+        const val SAVE_FINAL_TIMEOUT_MS = 2000L
+    }
 
     private val userId: String? get() = authRepository.currentUser?.uid
 
@@ -54,6 +57,7 @@ class PlaybackStatePersistence @Inject constructor(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     fun saveFinal(
         currentSong: Song?,
         positionMs: Long,
@@ -63,16 +67,16 @@ class PlaybackStatePersistence @Inject constructor(
     ) {
         val uid = userId ?: return
         val song = currentSong ?: return
-        saveScope.launch {
-            try {
-                userRepository.savePlaybackState(
-                    uid,
-                    buildState(song, positionMs, queueSongIds, queueIndex, repeatMode),
-                )
-            } catch (e: CancellationException) {
-                throw e
-            } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
-                // Silent fail — final save is best-effort
+        runBlocking(Dispatchers.IO) {
+            withTimeoutOrNull(SAVE_FINAL_TIMEOUT_MS) {
+                try {
+                    userRepository.savePlaybackState(
+                        uid,
+                        buildState(song, positionMs, queueSongIds, queueIndex, repeatMode),
+                    )
+                } catch (_: Exception) {
+                    // Silent fail — final save is best-effort
+                }
             }
         }
     }
