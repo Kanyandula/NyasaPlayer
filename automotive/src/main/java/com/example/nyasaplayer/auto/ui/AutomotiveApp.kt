@@ -102,7 +102,12 @@ private fun AuthenticatedApp(
                     playerViewModel.playSong(contentState.recentlyPlayed, song)
                     showFullPlayer = true
                 },
-                onQuickActionClick = { /* Phase 8 — not critical for playback */ },
+                onQuickActionClick = { action ->
+                    when (action) {
+                        "my_music", "favorites" -> currentScreen = CarScreen.Library
+                        "trending", "radio" -> currentScreen = CarScreen.Browse
+                    }
+                },
                 onAlbumClick = { album ->
                     scope.launch {
                         val songs = contentViewModel.getSongsByAlbum(album.id)
@@ -112,7 +117,27 @@ private fun AuthenticatedApp(
                         }
                     }
                 },
-                onArtistClick = { /* Phase 8 — artist detail screen */ },
+                onArtistClick = { artist ->
+                    scope.launch {
+                        val songs = contentViewModel.getSongsByArtist(artist.id)
+                        if (songs.isNotEmpty()) {
+                            playerViewModel.playSong(songs, songs.first())
+                            showFullPlayer = true
+                        }
+                    }
+                },
+                onCategoryClick = { categoryName ->
+                    scope.launch {
+                        val genre = contentState.genres.firstOrNull {
+                            it.name.equals(categoryName, ignoreCase = true)
+                        } ?: return@launch
+                        val songs = contentViewModel.getSongsByGenre(genre.id)
+                        if (songs.isNotEmpty()) {
+                            playerViewModel.shufflePlay(songs)
+                            showFullPlayer = true
+                        }
+                    }
+                },
                 onLikeClick = playerViewModel::toggleLike,
                 onShuffleLikedSongs = { playerViewModel.shufflePlay(contentState.likedSongs) },
                 onLikedSongClick = { song ->
@@ -153,6 +178,7 @@ private fun BrowseShell(
     onArtistClick: (Artist) -> Unit,
     onLikeClick: () -> Unit,
     onShuffleLikedSongs: () -> Unit,
+    onCategoryClick: (String) -> Unit,
     onLikedSongClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -180,9 +206,10 @@ private fun BrowseShell(
                     CarBrowseScreen(
                         albums = contentState.albums.take(maxItems),
                         onAlbumClick = onAlbumClick,
-                        onSearchClick = { /* Phase 8 — search screen */ },
+                        onSearchClick = { onSelectTab(CarScreen.Browse) },
                         currentlyPlayingAlbumId = currentAlbumId,
                         isPlaying = isPlaying,
+                        onCategoryClick = onCategoryClick,
                     )
                 }
 
