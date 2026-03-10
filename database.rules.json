@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "homeFeed": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}

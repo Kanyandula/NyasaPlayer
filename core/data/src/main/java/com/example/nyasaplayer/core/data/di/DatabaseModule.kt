@@ -2,6 +2,7 @@ package com.example.nyasaplayer.core.data.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.nyasaplayer.core.data.local.MIGRATION_3_4
 import com.example.nyasaplayer.core.data.local.NyasaDatabase
 import com.example.nyasaplayer.core.data.local.dao.AlbumDao
 import com.example.nyasaplayer.core.data.local.dao.ArtistDao
@@ -23,7 +24,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NyasaDatabase =
         Room.databaseBuilder(context, NyasaDatabase::class.java, "nyasa_player.db")
-            .fallbackToDestructiveMigration()
+            .addMigrations(MIGRATION_3_4)
             .build()
 
     @Provides

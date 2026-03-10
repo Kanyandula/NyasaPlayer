@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
+import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.ui.icons.HomeIcon
 import com.example.nyasaplayer.core.common.ui.icons.LibraryIcon
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
@@ -44,7 +45,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val TopBarHeight = 64.dp
+private val TopBarHeight = 76.dp
 private val TabCornerRadius = 24.dp
 private val LogoSize = 40.dp
 
@@ -161,8 +162,9 @@ private fun CarTab(
                     Modifier.border(1.dp, Color.White.copy(alpha = 0.1f), shape)
                 },
             )
+            .height(CarTouchTargetSize)
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(

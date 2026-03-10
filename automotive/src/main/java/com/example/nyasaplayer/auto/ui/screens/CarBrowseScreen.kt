@@ -108,6 +108,7 @@ fun CarBrowseScreen(
     modifier: Modifier = Modifier,
     currentlyPlayingAlbumId: String? = null,
     isPlaying: Boolean = false,
+    onCategoryClick: (String) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
 
@@ -125,7 +126,7 @@ fun CarBrowseScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item { BrowseSearchBar(onClick = onSearchClick) }
-            item { BrowseAllGrid() }
+            item { BrowseAllGrid(onCategoryClick = onCategoryClick) }
             item {
                 FeaturedPlaylistsSection(
                     albums = albums,
@@ -255,7 +256,10 @@ private fun BrowseSearchBar(
 }
 
 @Composable
-private fun BrowseAllGrid(modifier: Modifier = Modifier) {
+private fun BrowseAllGrid(
+    onCategoryClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "Browse All",
@@ -272,6 +276,7 @@ private fun BrowseAllGrid(modifier: Modifier = Modifier) {
                 rowItems.forEach { category ->
                     CategoryCard(
                         category = category,
+                        onClick = { onCategoryClick(category.name) },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -283,6 +288,7 @@ private fun BrowseAllGrid(modifier: Modifier = Modifier) {
 @Composable
 private fun CategoryCard(
     category: BrowseCategory,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -290,7 +296,7 @@ private fun CategoryCard(
             .aspectRatio(CategoryCardAspectRatio)
             .clip(RoundedCornerShape(CarCardCornerRadius))
             .background(Brush.linearGradient(category.gradientColors))
-            .clickable { /* Category click — Phase 8 */ },
+            .clickable(onClick = onClick),
     ) {
         Icon(
             imageVector = category.icon,

@@ -760,44 +760,44 @@ only matter for sync performance, not browse-time performance.
 
 ### Phase 1: Extract `:core:playback` (No Behavior Change)
 
-- [ ] Create `:core:playback` module with build.gradle.kts
-- [ ] Move player files from `app/player/` to `core/playback/`
-- [ ] Update `:app` to depend on `:core:playback`
-- [ ] Verify all existing tests pass, mobile app unchanged
-- [ ] Extract `BasePlayerStateCollector` from `PlayerViewModel`
+- [x] Create `:core:playback` module with build.gradle.kts
+- [x] Move player files from `app/player/` to `core/playback/`
+- [x] Update `:app` to depend on `:core:playback`
+- [x] Verify all existing tests pass, mobile app unchanged
+- [x] Extract `BasePlayerStateCollector` from `PlayerViewModel`
 
 ### Phase 2: Upgrade to `MediaLibraryService`
 
-- [ ] Change `PlaybackService` base class to `MediaLibraryService`
-- [ ] Implement `MediaBrowseTreeBuilder` with catalog queries from repositories
-- [ ] Add `onGetLibraryRoot`, `onGetChildren`, `onGetItem`, `onSearch` callbacks
-- [ ] Extend Room DAOs with `getByPopularity()` queries
-- [ ] Mobile continues using `MediaController` unchanged
+- [x] Change `PlaybackService` base class to `MediaLibraryService`
+- [x] Implement `MediaBrowseTreeBuilder` with catalog queries from repositories
+- [x] Add `onGetLibraryRoot`, `onGetChildren`, `onGetItem`, `onSearch` callbacks
+- [x] Extend Room DAOs with `getByPopularity()` queries
+- [x] Mobile continues using `MediaController` unchanged
 
 ### Phase 3: Room Schema Updates
 
-- [ ] Add `AlbumEntity`, `AlbumDao` to Room database
-- [ ] Bump database version 3 -> 4 with migration
-- [ ] Update `FirebaseSyncManager` to sync `albums` collection
-- [ ] Add `AlbumRepository` interface + `OfflineAlbumRepository` implementation
-- [ ] Update `RepositoryModule` bindings
+- [x] Add `AlbumEntity`, `AlbumDao` to Room database
+- [x] Bump database version 3 -> 4 with migration
+- [x] Update `FirebaseSyncManager` to sync `albums` collection
+- [x] Add `AlbumRepository` interface + `OfflineAlbumRepository` implementation
+- [x] Update `RepositoryModule` bindings
 
 ### Phase 4: Create `:automotive` Module
 
-- [ ] Scaffold module: `build.gradle.kts`, `AndroidManifest.xml`
-- [ ] Create `AutomotiveActivity` (single entry point, no auth)
-- [ ] Create `AutoPlayerModule` (Hilt DI for car)
-- [ ] Implement `AutomotivePlayerViewModel` extending shared state collector
-- [ ] Implement `CarUxRestrictionsHandler`
+- [x] Scaffold module: `build.gradle.kts`, `AndroidManifest.xml`
+- [x] Create `AutomotiveActivity` (single entry point, no auth)
+- [x] Create `AutoPlayerModule` (Hilt DI for car)
+- [x] Implement `AutomotivePlayerViewModel` extending shared state collector
+- [x] Implement `CarUxRestrictionsHandler`
 
 ### Phase 5: Implement AAOS Screens (from Figma)
 
-- [ ] `CarHomeScreen` — 2-column: quick actions + recently played + mini player
-- [ ] `CarNowPlayingScreen` — horizontal: album art + controls
-- [ ] `CarBrowseScreen` — 2-column: playlists + genres + mini player
-- [ ] `CarMiniPlayer` — 112px persistent bar
-- [ ] `CarErrorOverlay` — modal with 3 error variants
-- [ ] `AutomotiveNavHost` — simplified navigation between screens
+- [x] `CarHomeScreen` — 2-column: quick actions + recently played + mini player
+- [x] `CarNowPlayingScreen` — horizontal: album art + controls
+- [x] `CarBrowseScreen` — 2-column: playlists + genres + mini player
+- [x] `CarMiniPlayer` — 112px persistent bar
+- [x] `CarErrorOverlay` — modal with 3 error variants
+- [x] `AutomotiveNavHost` — simplified navigation between screens
 
 ### Phase 6: Wire End-to-End Playback
 
@@ -815,12 +815,18 @@ only matter for sync performance, not browse-time performance.
 - [x] Auth gate in `AutomotiveApp` — show `CarAuthScreen` when unauthenticated
 - [x] Delay `FirebaseSyncManager.start()` until after authentication
 - [x] Add Credential Manager dependencies to `:automotive` build
-- [ ] Review Realtime Database rules for home feed access
+- [x] Review Realtime Database rules for home feed access
 - [ ] Test cross-device playback state sync (phone -> AAOS)
 - [ ] Add Firestore composite indexes if catalog > 10K items
 
 ### Phase 8: Polish and CTS Compliance
 
+- [x] Fix CarTopBar tab touch targets to meet 76dp CTS minimum
+- [x] Wire Quick Action clicks (My Music/Favorites → Library, Trending/Radio → Browse)
+- [x] Wire Category Card clicks (play genre songs via shuffle)
+- [x] Wire Artist clicks (play artist songs)
+- [x] Wire Search bar click (navigate to Browse)
+- [x] Add Realtime Database rules (`database.rules.json`)
 - [ ] Test on AAOS emulator (Automotive system image)
 - [ ] Test on DHU (Desktop Head Unit)
 - [ ] Validate all distraction rules (touch targets, list limits, text input)

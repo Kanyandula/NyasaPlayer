@@ -156,6 +156,16 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     @Suppress("TooGenericExceptionCaught")
+    suspend fun getSongsByArtist(artistId: String): List<Song> = try {
+        songRepository.getSongsByArtist(artistId).firstOrNull() ?: emptyList()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.e(TAG, "Error loading songs for artist $artistId", e)
+        emptyList()
+    }
+
+    @Suppress("TooGenericExceptionCaught")
     suspend fun getSongsByAlbum(albumId: String): List<Song> = try {
         val album = albumRepository.getAlbumById(albumId) ?: return emptyList()
         songRepository.getSongsByIds(album.songIds)
