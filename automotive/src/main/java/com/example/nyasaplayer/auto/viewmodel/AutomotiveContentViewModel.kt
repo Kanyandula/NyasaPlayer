@@ -15,6 +15,8 @@ import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +31,8 @@ import kotlin.coroutines.cancellation.CancellationException
 
 private const val RecentlyPlayedLimit = 12
 private const val PopularLimit = 8
+private const val SearchLimit = 50
+private const val SearchDebounceMs = 300L
 private const val TAG = "AutoContentVM"
 
 @HiltViewModel
@@ -44,12 +48,28 @@ class AutomotiveContentViewModel @Inject constructor(
     private val _contentState = MutableStateFlow(AutomotiveContentState())
     val contentState: StateFlow<AutomotiveContentState> = _contentState.asStateFlow()
 
+    private var searchJob: Job? = null
+    private var recentlyPlayedJob: Job? = null
+    private var likedSongsJob: Job? = null
+    private var currentUserId: String? = null
+
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         Log.e(TAG, "Uncaught error in content loading", throwable)
     }
 
     init {
         loadContent()
+    }
+
+    fun reloadUserContent() {
+        val newUserId = authRepository.currentUser?.uid
+        if (newUserId == currentUserId) return
+        currentUserId = newUserId
+        recentlyPlayedJob?.cancel()
+        likedSongsJob?.cancel()
+        _contentState.update { it.copy(recentlyPlayed = emptyList(), likedSongs = emptyList()) }
+        loadRecentlyPlayed()
+        observeLikedSongs()
     }
 
     private fun loadContent() {
@@ -92,7 +112,8 @@ class AutomotiveContentViewModel @Inject constructor(
     @Suppress("TooGenericExceptionCaught")
     private fun loadRecentlyPlayed() {
         val userId = authRepository.currentUser?.uid ?: return
-        userRepository.getRecentlyPlayed(userId, RecentlyPlayedLimit).onEach { entries ->
+        currentUserId = userId
+        recentlyPlayedJob = userRepository.getRecentlyPlayed(userId, RecentlyPlayedLimit).onEach { entries ->
             try {
                 val songIds = entries.map { it.mediaId }.distinct()
                 val songMap = songRepository.getSongsByIds(songIds).associateBy { it.mediaId }
@@ -111,7 +132,7 @@ class AutomotiveContentViewModel @Inject constructor(
     @Suppress("TooGenericExceptionCaught")
     private fun observeLikedSongs() {
         val userId = authRepository.currentUser?.uid ?: return
-        userRepository.getLikedSongs(userId).onEach { likedEntries ->
+        likedSongsJob = userRepository.getLikedSongs(userId).onEach { likedEntries ->
             try {
                 val songIds = likedEntries.map { it.mediaId }.distinct()
                 val songMap = if (songIds.isNotEmpty()) {
@@ -143,6 +164,33 @@ class AutomotiveContentViewModel @Inject constructor(
                 Log.e(TAG, "Error loading popular songs", e)
             }
         }
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _contentState.update { it.copy(searchQuery = query) }
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            _contentState.update { it.copy(searchResults = emptyList()) }
+            return
+        }
+        searchJob = viewModelScope.launch(exceptionHandler) {
+            delay(SearchDebounceMs)
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                val results = songRepository.searchSongs(query, SearchLimit)
+                _contentState.update { it.copy(searchResults = results) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Error searching songs", e)
+                _contentState.update { it.copy(searchResults = emptyList()) }
+            }
+        }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel()
+        _contentState.update { it.copy(searchQuery = "", searchResults = emptyList()) }
     }
 
     @Suppress("TooGenericExceptionCaught")
@@ -184,6 +232,8 @@ data class AutomotiveContentState(
     val albums: List<Album> = emptyList(),
     val popularSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
+    val searchQuery: String = "",
+    val searchResults: List<Song> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )

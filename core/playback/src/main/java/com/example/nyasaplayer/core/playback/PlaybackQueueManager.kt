@@ -13,6 +13,7 @@ class PlaybackQueueManager @Inject constructor() {
         private set
 
     var currentIndex: Int = -1
+        set(value) = synchronized(lock) { field = value }
 
     private var originalQueue: List<Song> = emptyList()
 

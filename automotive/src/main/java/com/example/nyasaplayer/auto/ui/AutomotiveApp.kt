@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,7 +45,11 @@ fun AutomotiveApp(
     val authState by authViewModel.uiState.collectAsState()
 
     if (authState.isAuthenticated) {
-        AuthenticatedApp(modifier = modifier)
+        AuthenticatedApp(
+            onSignOut = authViewModel::signOut,
+            userDisplayName = authViewModel.currentUserDisplayName,
+            modifier = modifier,
+        )
     } else {
         CarAuthScreen(
             uiState = authState,
@@ -59,12 +64,18 @@ fun AutomotiveApp(
 @Suppress("LongMethod")
 @Composable
 private fun AuthenticatedApp(
+    onSignOut: () -> Unit,
+    userDisplayName: String,
     modifier: Modifier = Modifier,
     playerViewModel: AutomotivePlayerViewModel = hiltViewModel(),
     contentViewModel: AutomotiveContentViewModel = hiltViewModel(),
 ) {
     val playerState by playerViewModel.uiState.collectAsState()
     val contentState by contentViewModel.contentState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        contentViewModel.reloadUserContent()
+    }
 
     var currentScreen by rememberSaveable { mutableStateOf(CarScreen.Home) }
     var showFullPlayer by rememberSaveable { mutableStateOf(false) }
@@ -93,6 +104,8 @@ private fun AuthenticatedApp(
                 currentScreen = currentScreen,
                 playerState = playerState,
                 contentState = contentState,
+                onSignOut = onSignOut,
+                userDisplayName = userDisplayName,
                 onSelectTab = { currentScreen = it },
                 onExpandPlayer = { showFullPlayer = true },
                 onTogglePlayPause = playerViewModel::togglePlayPause,
@@ -144,6 +157,12 @@ private fun AuthenticatedApp(
                     playerViewModel.playSong(contentState.likedSongs, song)
                     showFullPlayer = true
                 },
+                onSearchQueryChange = contentViewModel::onSearchQueryChange,
+                onClearSearch = contentViewModel::clearSearch,
+                onSearchResultClick = { song ->
+                    playerViewModel.playSong(contentState.searchResults, song)
+                    showFullPlayer = true
+                },
             )
         }
 
@@ -161,12 +180,14 @@ private fun AuthenticatedApp(
     }
 }
 
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 @Composable
 private fun BrowseShell(
     currentScreen: CarScreen,
     playerState: AutomotiveUiState,
     contentState: AutomotiveContentState,
+    onSignOut: () -> Unit,
+    userDisplayName: String,
     onSelectTab: (CarScreen) -> Unit,
     onExpandPlayer: () -> Unit,
     onTogglePlayPause: () -> Unit,
@@ -180,6 +201,9 @@ private fun BrowseShell(
     onShuffleLikedSongs: () -> Unit,
     onCategoryClick: (String) -> Unit,
     onLikedSongClick: (Song) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onClearSearch: () -> Unit,
+    onSearchResultClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId
@@ -206,10 +230,17 @@ private fun BrowseShell(
                     CarBrowseScreen(
                         albums = contentState.albums.take(maxItems),
                         onAlbumClick = onAlbumClick,
-                        onSearchClick = { onSelectTab(CarScreen.Browse) },
                         currentlyPlayingAlbumId = currentAlbumId,
+                        currentlyPlayingMediaId = currentlyPlayingMediaId,
                         isPlaying = isPlaying,
                         onCategoryClick = onCategoryClick,
+                        searchQuery = contentState.searchQuery,
+                        searchResults = contentState.searchResults.take(maxItems),
+                        onSearchQueryChange = onSearchQueryChange,
+                        onClearSearch = onClearSearch,
+                        onSearchResultClick = onSearchResultClick,
+                        isSearchDisabled = playerState.restrictions.noTextEntry ||
+                            playerState.restrictions.noFiltering,
                     )
                 }
 
@@ -223,10 +254,9 @@ private fun BrowseShell(
                     isPlaying = isPlaying,
                     onShuffleLikedSongs = onShuffleLikedSongs,
                     onLikedSongClick = onLikedSongClick,
+                    onSignOut = onSignOut,
+                    userDisplayName = userDisplayName,
                 )
-
-                // FullPlayer is handled as an overlay in AuthenticatedApp, not as a tab
-                CarScreen.FullPlayer -> Unit
             }
         }
 

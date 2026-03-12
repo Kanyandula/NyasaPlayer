@@ -124,7 +124,6 @@ private fun BrowseScreenPreview() {
         CarBrowseScreen(
             albums = PreviewAlbums,
             onAlbumClick = {},
-            onSearchClick = {},
         )
     }
 }
@@ -149,6 +148,8 @@ private fun LibraryScreenPreview() {
             isPlaying = true,
             onShuffleLikedSongs = {},
             onLikedSongClick = {},
+            onSignOut = {},
+            userDisplayName = "John Doe",
         )
     }
 }

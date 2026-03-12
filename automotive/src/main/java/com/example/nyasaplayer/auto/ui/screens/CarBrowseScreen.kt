@@ -24,6 +24,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,8 +42,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,8 +62,10 @@ import com.example.nyasaplayer.auto.ui.theme.CarGradientOrange
 import com.example.nyasaplayer.auto.ui.theme.CarGradientOrangeDark
 import com.example.nyasaplayer.auto.ui.theme.CarGradientPink
 import com.example.nyasaplayer.auto.ui.theme.CarGradientRose
+import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Album
+import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.icons.AlbumIcon
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
@@ -100,17 +107,25 @@ private val browseCategories = listOf(
     BrowseCategory("Podcasts", RadioIcon, listOf(CarGradientIndigoPurple, CarGradientIndigo)),
 )
 
+@Suppress("LongParameterList")
 @Composable
 fun CarBrowseScreen(
     albums: List<Album>,
     onAlbumClick: (Album) -> Unit,
-    onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingAlbumId: String? = null,
+    currentlyPlayingMediaId: String? = null,
     isPlaying: Boolean = false,
     onCategoryClick: (String) -> Unit = {},
+    searchQuery: String = "",
+    searchResults: List<Song> = emptyList(),
+    onSearchQueryChange: (String) -> Unit = {},
+    onClearSearch: () -> Unit = {},
+    onSearchResultClick: (Song) -> Unit = {},
+    isSearchDisabled: Boolean = false,
 ) {
     val listState = rememberLazyListState()
+    val isSearching = searchQuery.isNotEmpty()
 
     Box(
         modifier = modifier
@@ -125,15 +140,38 @@ fun CarBrowseScreen(
             contentPadding = PaddingValues(vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            item { BrowseSearchBar(onClick = onSearchClick) }
-            item { BrowseAllGrid(onCategoryClick = onCategoryClick) }
             item {
-                FeaturedPlaylistsSection(
-                    albums = albums,
-                    onAlbumClick = onAlbumClick,
-                    currentlyPlayingAlbumId = currentlyPlayingAlbumId,
-                    isPlaying = isPlaying,
+                CarSearchBar(
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange,
+                    onClear = onClearSearch,
+                    isDisabled = isSearchDisabled,
                 )
+            }
+
+            if (isSearching) {
+                if (searchResults.isEmpty()) {
+                    item { SearchEmptyState(query = searchQuery) }
+                } else {
+                    items(searchResults, key = { it.mediaId }) { song ->
+                        SearchResultItem(
+                            song = song,
+                            isCurrentTrack = song.mediaId == currentlyPlayingMediaId,
+                            isPlaying = isPlaying,
+                            onClick = { onSearchResultClick(song) },
+                        )
+                    }
+                }
+            } else {
+                item { BrowseAllGrid(onCategoryClick = onCategoryClick) }
+                item {
+                    FeaturedPlaylistsSection(
+                        albums = albums,
+                        onAlbumClick = onAlbumClick,
+                        currentlyPlayingAlbumId = currentlyPlayingAlbumId,
+                        isPlaying = isPlaying,
+                    )
+                }
             }
         }
 
@@ -226,9 +264,12 @@ private data class ScrollbarInfo(
 )
 
 @Composable
-private fun BrowseSearchBar(
-    onClick: () -> Unit,
+private fun CarSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier,
+    isDisabled: Boolean = false,
 ) {
     Row(
         modifier = modifier
@@ -236,21 +277,119 @@ private fun BrowseSearchBar(
             .height(CarTouchTargetSize)
             .clip(RoundedCornerShape(CarCardCornerRadius))
             .background(NyasaSurface2)
-            .clickable(onClick = onClick)
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
             imageVector = SearchIcon,
-            contentDescription = "Search",
+            contentDescription = null,
             tint = NyasaTextSecondary,
             modifier = Modifier.size(24.dp),
         )
+        Box(modifier = Modifier.weight(1f)) {
+            if (query.isEmpty()) {
+                Text(
+                    text = if (isDisabled) "Search unavailable while driving" else "Search songs, artists...",
+                    color = NyasaTextSecondary,
+                    fontSize = 18.sp,
+                )
+            }
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
+                singleLine = true,
+                cursorBrush = SolidColor(Color.White),
+                enabled = !isDisabled,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (query.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .size(CarTouchTargetSize)
+                    .clickable(onClick = onClear),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Clear search",
+                    tint = NyasaTextSecondary,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResultItem(
+    song: Song,
+    isCurrentTrack: Boolean,
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(CarCardCornerRadius))
+            .background(NyasaSurface2)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        NowPlayingOverlay(
+            isCurrentTrack = isCurrentTrack,
+            isPlaying = isPlaying,
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            AsyncImage(
+                model = song.resolvedCoverUrl,
+                contentDescription = song.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(CarListArtSize)
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = song.title,
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = song.resolvedArtistName,
+                color = NyasaTextSecondary,
+                fontSize = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchEmptyState(
+    query: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 48.dp),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
-            text = "Search songs, artists, albums...",
+            text = "No results for \"$query\"",
             color = NyasaTextSecondary,
-            fontSize = 18.sp,
+            fontSize = 20.sp,
         )
     }
 }

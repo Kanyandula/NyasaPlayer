@@ -20,12 +20,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,8 +60,11 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 
 private val AlbumItemArtSize = 64.dp
+private val SignOutRed = Color(0xFFEF5350)
+private const val BackdropAlpha = 0.8f
+private const val ModalWidthFraction = 0.5f
 
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 @Composable
 fun CarLibraryScreen(
     artists: List<Artist>,
@@ -69,65 +77,237 @@ fun CarLibraryScreen(
     isPlaying: Boolean = false,
     onShuffleLikedSongs: () -> Unit = {},
     onLikedSongClick: (Song) -> Unit = {},
+    onSignOut: () -> Unit = {},
+    userDisplayName: String = "",
 ) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(NyasaBackground)
-            .padding(horizontal = 24.dp),
-        contentPadding = PaddingValues(vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+    var showSignOutConfirmation by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(NyasaBackground)
+                .padding(horizontal = 24.dp),
+            contentPadding = PaddingValues(vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            item {
+                LibraryHeader(
+                    userDisplayName = userDisplayName,
+                    onSignOutClick = { showSignOutConfirmation = true },
+                )
+            }
+
+            if (likedSongs.isNotEmpty()) {
+                item { LikedSongsHeader(count = likedSongs.size) }
+                item {
+                    ShufflePlayButton(
+                        onClick = onShuffleLikedSongs,
+                        height = CarTouchTargetSize,
+                    )
+                }
+                items(likedSongs, key = { it.mediaId }) { song ->
+                    LikedSongItem(
+                        song = song,
+                        isCurrentTrack = song.mediaId == currentlyPlayingMediaId,
+                        isPlaying = isPlaying,
+                        onClick = { onLikedSongClick(song) },
+                    )
+                }
+            }
+
+            if (artists.isNotEmpty()) {
+                item {
+                    FavoriteArtistsSection(
+                        artists = artists,
+                        onArtistClick = onArtistClick,
+                    )
+                }
+            }
+
+            if (albums.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Recent Albums",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                items(albums, key = { it.id }) { album ->
+                    AlbumListItem(album = album, onClick = { onAlbumClick(album) })
+                }
+            }
+        }
+
+        if (showSignOutConfirmation) {
+            SignOutConfirmationOverlay(
+                onConfirm = onSignOut,
+                onDismiss = { showSignOutConfirmation = false },
+            )
+        }
+    }
+}
+
+@Composable
+private fun LibraryHeader(
+    userDisplayName: String,
+    onSignOutClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        item { LibraryHeader() }
-
-        if (likedSongs.isNotEmpty()) {
-            item { LikedSongsHeader(count = likedSongs.size) }
-            item {
-                ShufflePlayButton(
-                    onClick = onShuffleLikedSongs,
-                    height = CarTouchTargetSize,
-                )
-            }
-            items(likedSongs, key = { it.mediaId }) { song ->
-                LikedSongItem(
-                    song = song,
-                    isCurrentTrack = song.mediaId == currentlyPlayingMediaId,
-                    isPlaying = isPlaying,
-                    onClick = { onLikedSongClick(song) },
-                )
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Your Library", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = if (userDisplayName.isNotEmpty()) {
+                    "Signed in as $userDisplayName"
+                } else {
+                    "All your music in one place"
+                },
+                color = NyasaTextSecondary,
+                fontSize = 18.sp,
+            )
         }
-
-        if (artists.isNotEmpty()) {
-            item {
-                FavoriteArtistsSection(
-                    artists = artists,
-                    onArtistClick = onArtistClick,
+        Spacer(modifier = Modifier.width(16.dp))
+        Box(
+            modifier = Modifier
+                .height(CarTouchTargetSize)
+                .clip(RoundedCornerShape(16.dp))
+                .background(SignOutRed.copy(alpha = 0.15f))
+                .clickable(onClick = onSignOutClick)
+                .padding(horizontal = 20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = "Sign Out",
+                    tint = SignOutRed,
+                    modifier = Modifier.size(24.dp),
                 )
-            }
-        }
-
-        if (albums.isNotEmpty()) {
-            item {
                 Text(
-                    text = "Recent Albums",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    text = "Sign Out",
+                    color = SignOutRed,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
                 )
-            }
-            items(albums, key = { it.id }) { album ->
-                AlbumListItem(album = album, onClick = { onAlbumClick(album) })
             }
         }
     }
 }
 
 @Composable
-private fun LibraryHeader(modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Text("Your Library", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-        Text("All your music in one place", color = NyasaTextSecondary, fontSize = 18.sp)
+private fun SignOutConfirmationOverlay(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = BackdropAlpha))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        SignOutModalCard(onConfirm = onConfirm, onDismiss = onDismiss)
+    }
+}
+
+@Composable
+private fun SignOutModalCard(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth(ModalWidthFraction)
+            .clip(RoundedCornerShape(24.dp))
+            .background(NyasaSurface2)
+            .clickable(enabled = false, onClick = {})
+            .padding(48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Sign Out?",
+            color = Color.White,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "You will need to sign in again to access your music library.",
+            color = NyasaTextSecondary,
+            fontSize = 20.sp,
+            textAlign = TextAlign.Center,
+            lineHeight = 28.sp,
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        SignOutActions(onConfirm = onConfirm, onDismiss = onDismiss)
+    }
+}
+
+@Composable
+private fun SignOutActions(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White.copy(alpha = 0.1f))
+                .clickable(onClick = onDismiss)
+                .padding(vertical = 20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "Cancel",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(SignOutRed)
+                .clickable(onClick = onConfirm)
+                .padding(vertical = 20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp),
+                )
+                Text(
+                    text = "Sign Out",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
     }
 }
 
