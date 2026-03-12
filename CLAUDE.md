@@ -33,14 +33,16 @@ Unit tests live in `core/data/src/test/`. Run with `./gradlew test`.
 ### Module structure
 
 ```
-:core:common  ←──  :core:data  ←──  :app
-(models,          (repos, Room,    (screens, player,
- theme, utils)     Firebase, sync)  navigation, DI roots)
+                                      +-- :app (mobile)
+:core:common <-- :core:data <-- :core:playback --+
+                                      +-- :automotive (AAOS)
 ```
 
 - **`:core:common`** (`com.example.nyasaplayer.core.common`) — domain models, theme, UI components, utilities
 - **`:core:data`** (`com.example.nyasaplayer.core.data`) — repository interfaces & implementations, Room DB, Firebase sync, DTOs, DI modules
-- **`:app`** — screens, ViewModels, player subsystem, navigation, `AppModule`/`PlayerModule`
+- **`:core:playback`** (`com.example.nyasaplayer.core.playback`) — `PlaybackService` (MediaLibraryService), `PlaybackQueueManager`, `PlaybackStatePersistence`, `BasePlayerStateCollector`, `MediaBrowseTree`, shared playback state models
+- **`:app`** — screens, ViewModels, navigation, `AppModule`/`PlayerModule`
+- **`:automotive`** (`com.example.nyasaplayer.auto`) — AAOS Activity, car-optimized Compose UI, automotive ViewModels, `CarUxRestrictionsHandler`, DI
 
 ```
 Firestore / Realtime DB / Firebase Auth
@@ -62,14 +64,25 @@ Two nested `NavHost` layers:
 - **RootNavHost** (`navigation/RootNavigation.kt`): auth flow — Splash → Login/SignUp → MainApp
 - **NyasaPlayerNavHost** (`navigation/NyasaPlayerNavigation.kt`): bottom tabs — Home, Search, Library, Profile
 
-### Player subsystem (`player/`)
+### Player subsystem (`:core:playback` + `:app`)
 
-- `PlayerManager` — wraps Media3 ExoPlayer, converts `Song` → `MediaItem`
+Shared in `:core:playback`:
+- `PlaybackService` — `MediaLibraryService` (single playback owner for mobile + AAOS), foreground service
 - `PlaybackQueueManager` — queue state, shuffle (keeps current song at index 0), repeat modes (Off/All/One)
-- `PlaybackService` — foreground service for background playback
-- `PlaybackStatePersistence` — disk-based save/restore of queue, position, repeat mode
-- `PlayerViewModel` — exposes `PlayerUiState` StateFlow, bridges UI actions to PlayerManager
+- `PlaybackStatePersistence` — Firestore-backed save/restore of queue, position, repeat mode
+- `BasePlayerStateCollector` — shared `MediaController` event listener + position polling base class
+- `MediaBrowseTree` — browse tree for AAOS system media center + assistant search
+- `SongMediaItemMapper` — `Song` ↔ `MediaItem` conversion
+- `PlaybackCommands` — custom `SessionCommand` constants for IPC
+
+Mobile-specific in `:app`:
+- `PlayerViewModel` — extends `BasePlayerStateCollector` (250ms polling), exposes `PlayerUiState`
 - `GlobalPlayerLayer` — hosts MiniPlayer + ExpandedPlayer overlay above bottom nav
+
+AAOS-specific in `:automotive`:
+- `AutomotivePlayerViewModel` — extends `BasePlayerStateCollector` (500ms polling), distraction-aware
+- `AutomotiveContentViewModel` — catalog browsing, search, liked songs, recently played
+- `CarUxRestrictionsHandler` — observes driving restrictions as `StateFlow`
 
 ### Data layer
 
@@ -81,6 +94,7 @@ Offline-first for catalog data (songs, artists, genres): `FirebaseSyncManager` s
 | `OfflineSongRepository` | Room (`SongDao`) | synced from Firestore `songs` |
 | `OfflineGenreRepository` | Room (`GenreDao`) | synced from Firestore `genres` |
 | `OfflineArtistRepository` | Room (`ArtistDao`) | synced from Firestore `artists` |
+| `OfflineAlbumRepository` | Room (`AlbumDao`) | synced from Firestore `albums` |
 | `UserRepository` | Firestore | `users/{uid}/likedSongs`, `users/{uid}/recentlyPlayed`, `users/{uid}/profile` |
 | `HomeFeedRepository` | Realtime Database | home feed sections |
 
@@ -92,6 +106,8 @@ Room entities live in `core/data/.../local/entity/`, DAOs in `core/data/.../loca
 - `DatabaseModule` (`:core:data` `di/`) — provides Room `NyasaDatabase` and DAOs
 - `RepositoryModule` (`:core:data` `di/`) — binds `Offline*Repository` implementations to repository interfaces
 - `PlayerModule` (`:app` `di/`) — provides ExoPlayer instance
+- `PlaybackModule` (`:core:playback` `di/`) — provides `MediaController` future, `PlaybackStatePersistence`
+- `AutoAppModule` (`:automotive` `di/`) — provides Firebase, ApplicationContext, and `SessionToken` for AAOS
 
 ## Code Style & Static Analysis
 

@@ -190,6 +190,13 @@ class AutomotivePlayerViewModel @Inject constructor(
     fun shufflePlay(songs: List<Song>) {
         if (songs.isEmpty()) return
         sendShufflePlayCommand(songs)
+        stateCollector.updateSnapshot {
+            it.copy(
+                currentSong = songs.first(),
+                isPlaying = true,
+                isShuffled = true,
+            )
+        }
     }
 
     private fun sendSetQueueCommand(songs: List<Song>, startIndex: Int) {

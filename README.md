@@ -28,7 +28,12 @@ https://preview--nyasa-harmony-suite.lovable.app/screens
 
 ## Project Structure
 
-Multi-module Gradle project: `:core:common` <- `:core:data` <- `:app`
+Multi-module Gradle project:
+
+```
+:core:common  ←  :core:data  ←  :core:playback  →  :app (mobile)
+                                                  →  :automotive (AAOS)
+```
 
 ```
 :core:common  (com.example.nyasaplayer.core.common)
@@ -48,6 +53,13 @@ Multi-module Gradle project: `:core:common` <- `:core:data` <- `:app`
 ├── Firebase*Repository.kt          # Firebase implementations
 └── di/                             # DatabaseModule, RepositoryModule
 
+:core:playback  (com.example.nyasaplayer.core.playback)
+├── PlaybackQueueManager.kt         # Queue state, shuffle, repeat modes
+├── PlaybackStatePersistence.kt     # Disk-based save/restore of queue and position
+├── BasePlayerStateCollector.kt     # Shared MediaController event/polling base class
+├── PlayerError.kt                  # Error model for playback/network errors
+└── di/PlaybackModule.kt            # Provides shared playback dependencies
+
 :app  (com.example.nyasaplayer)
 ├── MainActivity.kt
 ├── di/                             # AppModule (Firebase providers), PlayerModule
@@ -60,9 +72,22 @@ Multi-module Gradle project: `:core:common` <- `:core:data` <- `:app`
 │   ├── library/                    # LibraryScreen, LibraryViewModel
 │   ├── profile/                    # ProfileScreen, ProfileViewModel
 │   └── player/                     # MiniPlayer, ExpandedPlayer, PlayerViewModel
-├── player/                         # PlayerManager, PlaybackQueueManager, PlaybackService, etc.
+├── player/                         # PlayerManager, PlaybackService, MediaLibraryService
 ├── util/ErrorMessages.kt           # Firebase error classification
 └── ui/preview/PreviewData.kt       # Preview/mock data
+
+:automotive  (com.example.nyasaplayer.auto)
+├── AutomotiveActivity.kt           # Single-activity entry point for AAOS
+├── ui/
+│   ├── AutomotiveApp.kt           # Root composable with auth gate
+│   ├── navigation/CarScreen.kt    # Tab enum (Home, Browse, Library)
+│   ├── screens/                    # CarHomeScreen, CarBrowseScreen, CarLibraryScreen, etc.
+│   ├── components/                 # CarMiniPlayer, CarTopBar, CarErrorOverlay
+│   ├── theme/                      # Automotive-specific colors/gradients
+│   └── preview/                    # Compose preview data
+├── viewmodel/                      # AutomotivePlayerViewModel, AutomotiveContentViewModel, etc.
+├── service/                        # AAOS MediaLibraryService wrapper
+└── di/AutoAppModule.kt             # Automotive-specific DI
 ```
 
 ## Implemented Features
@@ -127,6 +152,18 @@ Multi-module Gradle project: `:core:common` <- `:core:data` <- `:app`
 - **Progress tracking**: Room `DownloadEntity` tracks status (Pending/Downloading/Completed/Failed)
 - **Stale download recovery**: Pending/Downloading states reset to Failed on app restart
 
+### Android Automotive OS (AAOS)
+- **Dedicated automotive module**: Separate `:automotive` module with car-optimized UI
+- **MediaLibraryService**: Single playback owner shared between mobile and AAOS clients
+- **CTS-compliant touch targets**: All interactive elements meet 76dp minimum
+- **Driving restrictions**: `CarUxRestrictionsHandler` observes UX restriction changes in real time; disables text input and limits content items while driving
+- **Car-optimized screens**: CarHomeScreen (recently played, quick actions), CarBrowseScreen (albums, genres, in-app search), CarLibraryScreen (artists, albums, liked songs)
+- **In-app search**: `BasicTextField` with 300ms debounce, queries Room DB, disabled while driving per CTS
+- **Mini player & full player**: Car-sized controls with large artwork, shuffle/repeat, like, seek
+- **Sign out**: Confirmation overlay in Library tab with account name display
+- **Error handling**: Modal error overlay with retry/dismiss, offline banner
+- **Google Sign-In**: Credential Manager API adapted for head unit
+
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)
 - Surface hierarchy: Surface1-5 with increasing lightness
@@ -189,7 +226,7 @@ Multi-module Gradle project: `:core:common` <- `:core:data` <- `:app`
 
 1. Clone the repository
 2. Open in Android Studio
-3. Add your `google-services.json` to `app/`
+3. Add your `google-services.json` to `app/` (and `automotive/` for AAOS builds)
 4. Add your Google Web Client ID to `local.properties`:
    ```properties
    GOOGLE_WEB_CLIENT_ID=your-web-client-id.apps.googleusercontent.com

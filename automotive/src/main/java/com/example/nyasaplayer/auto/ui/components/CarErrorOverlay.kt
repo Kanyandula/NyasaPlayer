@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.theme.CarGradientOrange
 import com.example.nyasaplayer.core.common.ui.icons.RefreshIcon
+import com.example.nyasaplayer.core.common.ui.icons.WarningIcon
 import com.example.nyasaplayer.core.common.ui.icons.WifiOffIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaError
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
@@ -75,7 +76,7 @@ private fun ErrorModalCard(
             .padding(48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        ErrorIcon()
+        ErrorIcon(isPlaybackError = error.isPlaybackError)
         Spacer(modifier = Modifier.height(32.dp))
         ErrorText(title = error.title, message = error.message)
         Spacer(modifier = Modifier.height(32.dp))
@@ -84,7 +85,11 @@ private fun ErrorModalCard(
 }
 
 @Composable
-private fun ErrorIcon(modifier: Modifier = Modifier) {
+private fun ErrorIcon(
+    isPlaybackError: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val icon = if (isPlaybackError) WarningIcon else WifiOffIcon
     Box(
         modifier = modifier
             .size(IconCircleSize)
@@ -92,7 +97,7 @@ private fun ErrorIcon(modifier: Modifier = Modifier) {
             .background(Brush.linearGradient(listOf(CarGradientOrange, NyasaError))),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(WifiOffIcon, null, tint = Color.White, modifier = Modifier.size(IconSize))
+        Icon(icon, null, tint = Color.White, modifier = Modifier.size(IconSize))
     }
 }
 

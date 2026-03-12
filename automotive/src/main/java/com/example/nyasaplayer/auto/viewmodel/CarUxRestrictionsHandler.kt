@@ -35,6 +35,7 @@ class CarUxRestrictionsHandler @Inject constructor(
 
     private var car: Car? = null
     private var restrictionsManager: CarUxRestrictionsManager? = null
+    private var listener: CarUxRestrictionsManager.OnUxRestrictionsChangedListener? = null
 
     @Suppress("TooGenericExceptionCaught")
     fun connect() {
@@ -45,11 +46,11 @@ class CarUxRestrictionsHandler @Inject constructor(
                     as? CarUxRestrictionsManager ?: return
                 restrictionsManager = manager
                 _restrictions.value = manager.currentCarUxRestrictions.toState()
-                manager.registerListener(
-                    CarUxRestrictionsManager.OnUxRestrictionsChangedListener { restrictions ->
-                        _restrictions.value = restrictions.toState()
-                    },
-                )
+                val uxListener = CarUxRestrictionsManager.OnUxRestrictionsChangedListener { restrictions ->
+                    _restrictions.value = restrictions.toState()
+                }
+                listener = uxListener
+                manager.registerListener(uxListener)
             }
         } catch (e: Exception) {
             Log.e("CarUxRestrictions", "Failed to connect to Car service", e)
@@ -61,6 +62,7 @@ class CarUxRestrictionsHandler @Inject constructor(
 
     fun disconnect() {
         restrictionsManager?.unregisterListener()
+        listener = null
         restrictionsManager = null
         car?.disconnect()
         car = null

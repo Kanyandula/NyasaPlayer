@@ -63,6 +63,14 @@ class AutomotiveAuthViewModel @Inject constructor(
         }
     }
 
+    val currentUserDisplayName: String
+        get() = authRepository.currentUser?.displayName.orEmpty()
+
+    fun signOut() {
+        authRepository.signOut()
+        _uiState.update { it.copy(isAuthenticated = false) }
+    }
+
     fun onGoogleSignInError(message: String) {
         _uiState.update { it.copy(errorMessage = message) }
     }

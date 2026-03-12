@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
-import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatOneIcon
@@ -196,12 +195,7 @@ private fun PlayerTopBar(
             Text("PLAYING FROM PLAYLIST", color = NyasaTextTertiary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             Text(albumName, color = Color.White, fontSize = 18.sp)
         }
-        CircleIconButton(
-            icon = MoreHorizIcon,
-            contentDescription = "More",
-            size = CarTouchTargetSize,
-            onClick = { /* More options */ },
-        )
+        Spacer(modifier = Modifier.size(CarTouchTargetSize))
     }
 }
 

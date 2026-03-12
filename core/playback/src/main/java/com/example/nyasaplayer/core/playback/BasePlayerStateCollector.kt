@@ -45,6 +45,8 @@ abstract class BasePlayerStateCollector(
                     onControllerConnected(mc)
                 } catch (_: ExecutionException) {
                     onControllerConnectionFailed()
+                } catch (_: java.util.concurrent.CancellationException) {
+                    onControllerConnectionFailed()
                 }
             },
             MoreExecutors.directExecutor(),
