@@ -8,7 +8,7 @@ import androidx.navigation.compose.composable
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.download.SongDownloadManager
 import com.example.nyasaplayer.screens.downloads.DownloadsScreen
-import com.example.nyasaplayer.screens.home.ForYouScreen
+import com.example.nyasaplayer.screens.home.HomeScreen
 import com.example.nyasaplayer.screens.library.LibraryScreen
 import com.example.nyasaplayer.screens.profile.ProfileScreen
 import com.example.nyasaplayer.screens.search.SearchScreen
@@ -44,7 +44,7 @@ fun NyasaPlayerNavHost(
         modifier = modifier,
     ) {
         composable(HomeRoute) {
-            ForYouScreen(
+            HomeScreen(
                 onSongClick = onSongClick,
                 onProfileClick = { navController.navigateToTab(ProfileRoute) },
                 currentlyPlayingMediaId = currentlyPlayingMediaId,
