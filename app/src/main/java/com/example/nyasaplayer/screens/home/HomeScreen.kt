@@ -52,16 +52,16 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.util.greetingResource
-import com.example.nyasaplayer.ui.preview.PreviewForYouUiState
+import com.example.nyasaplayer.ui.preview.PreviewHomeUiState
 
 @Composable
-fun ForYouScreen(
+fun HomeScreen(
     onSongClick: (List<Song>, Song) -> Unit,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
     isCurrentlyPlaying: Boolean = false,
-    viewModel: ForYouViewModel = hiltViewModel(),
+    viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -88,7 +88,7 @@ fun ForYouScreen(
         ) {
             CircularProgressIndicator(modifier = Modifier.size(48.dp))
         }
-        else -> ForYouContent(
+        else -> HomeContent(
             uiState = uiState,
             onSongClick = onSongClick,
             onProfileClick = onProfileClick,
@@ -100,8 +100,8 @@ fun ForYouScreen(
 }
 
 @Composable
-private fun ForYouContent(
-    uiState: ForYouUiState,
+private fun HomeContent(
+    uiState: HomeUiState,
     onSongClick: (List<Song>, Song) -> Unit,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -115,7 +115,7 @@ private fun ForYouContent(
         contentPadding = PaddingValues(bottom = 80.dp),
     ) {
         item {
-            ForYouHeader(
+            HomeHeader(
                 photoUrl = uiState.photoUrl,
                 onProfileClick = onProfileClick,
                 modifier = Modifier.statusBarsPadding(),
@@ -156,7 +156,7 @@ private fun LazyListScope.recentlyPlayedSection(
 }
 
 private fun LazyListScope.feedSections(
-    uiState: ForYouUiState,
+    uiState: HomeUiState,
     onSongClick: (List<Song>, Song) -> Unit,
     currentlyPlayingMediaId: String?,
     isCurrentlyPlaying: Boolean,
@@ -218,7 +218,7 @@ private fun LazyListScope.feedSections(
 }
 
 @Composable
-private fun ForYouHeader(
+private fun HomeHeader(
     photoUrl: String,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -491,10 +491,10 @@ private fun SongRow(
 @Suppress("UnusedPrivateMember")
 @Preview(showBackground = true)
 @Composable
-private fun ForYouScreenPreview() {
+private fun HomeScreenPreview() {
     AppTheme {
-        ForYouContent(
-            uiState = PreviewForYouUiState,
+        HomeContent(
+            uiState = PreviewHomeUiState,
             onSongClick = { _, _ -> },
             onProfileClick = {},
             currentlyPlayingMediaId = "1",

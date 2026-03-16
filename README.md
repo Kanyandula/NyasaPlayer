@@ -67,7 +67,7 @@ Multi-module Gradle project:
 ├── screens/
 │   ├── NyasaPlayerApp.kt          # Main app shell with bottom nav
 │   ├── auth/                       # LoginScreen, SignUpScreen, AuthViewModel, SignUpViewModel
-│   ├── home/                       # ForYouScreen, ForYouViewModel
+│   ├── home/                       # HomeScreen, HomeViewModel
 │   ├── search/                     # SearchScreen, SearchViewModel
 │   ├── library/                    # LibraryScreen, LibraryViewModel
 │   ├── profile/                    # ProfileScreen, ProfileViewModel
@@ -102,7 +102,7 @@ Multi-module Gradle project:
 - **AuthRepository**: `signInWithEmail()`, `signUpWithEmail()`, `signInWithCredential()`, `sendPasswordResetEmail()`, `signOut()`, `authStateFlow()`, `isAuthenticated`
 - **Navigation**: Proper `popUpTo(inclusive = true)` prevents back-navigating to splash/login after auth
 
-### Home Screen (ForYouScreen)
+### Home Screen (HomeScreen)
 - Header with profile avatar placeholder, greeting ("Welcome back"), notification bell icon
 - Dynamic sections loaded from Firebase Realtime Database
 - Three layout types: `horizontal_scroll` (LazyRow cards), `grid` (2x2 Quick Picks), `list` (song rows)
@@ -213,7 +213,7 @@ Multi-module Gradle project:
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Notifications (push) | Not started | Bell icon stub in `ForYouScreen.kt` |
+| Notifications (push) | Not started | Bell icon stub in `HomeScreen.kt` |
 | Hardcoded strings | Minor | `SearchScreen.kt` has "No songs in this genre" and "No results found" not in `strings.xml` |
 
 ### Architectural Debt

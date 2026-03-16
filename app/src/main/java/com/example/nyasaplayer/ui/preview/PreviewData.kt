@@ -4,7 +4,7 @@ import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
-import com.example.nyasaplayer.screens.home.ForYouUiState
+import com.example.nyasaplayer.screens.home.HomeUiState
 import com.example.nyasaplayer.screens.home.ResolvedSection
 
 val PreviewSong = Song(
@@ -88,7 +88,7 @@ val PreviewPlayerStatePaused = PreviewPlayerStatePlaying.copy(isPlaying = false)
 
 val PreviewPlayerStateMini = PreviewPlayerStatePlaying.copy(playerMode = PlayerMode.Mini)
 
-val PreviewForYouUiState = ForYouUiState(
+val PreviewHomeUiState = HomeUiState(
     isLoading = false,
     sections = listOf(
         ResolvedSection(

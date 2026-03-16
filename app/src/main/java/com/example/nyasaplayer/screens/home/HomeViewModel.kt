@@ -29,7 +29,7 @@ data class ResolvedSection(
     val songs: List<Song> = emptyList(),
 )
 
-data class ForYouUiState(
+data class HomeUiState(
     val isLoading: Boolean = true,
     val sections: List<ResolvedSection> = emptyList(),
     val allSongs: List<Song> = emptyList(),
@@ -40,15 +40,15 @@ data class ForYouUiState(
 )
 
 @HiltViewModel
-class ForYouViewModel @Inject constructor(
+class HomeViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val homeFeedRepository: HomeFeedRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ForYouUiState())
-    val uiState: StateFlow<ForYouUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         _uiState.update {
@@ -65,7 +65,7 @@ class ForYouViewModel @Inject constructor(
     }
 
     fun retry() {
-        _uiState.value = ForYouUiState()
+        _uiState.value = HomeUiState()
         loadFeed()
     }
 
@@ -85,7 +85,7 @@ class ForYouViewModel @Inject constructor(
                 buildUiState(songs, homeFeed, recentEntries)
             }.catch { e ->
                 val isNetwork = (e as? Exception)?.isNetworkError() == true
-                _uiState.value = ForYouUiState(
+                _uiState.value = HomeUiState(
                     isLoading = false,
                     errorMessage = e.message ?: "Unknown error",
                     isNetworkError = isNetwork,
@@ -100,8 +100,8 @@ class ForYouViewModel @Inject constructor(
         songs: List<Song>,
         homeFeed: HomeFeed?,
         recentEntries: List<RecentlyPlayedEntry>,
-    ): ForYouUiState {
-        if (songs.isEmpty()) return ForYouUiState(isLoading = true)
+    ): HomeUiState {
+        if (songs.isEmpty()) return HomeUiState(isLoading = true)
 
         val songMap = songs.associateBy { it.mediaId }
         val sections = if (homeFeed != null && homeFeed.sections.isNotEmpty()) {
@@ -127,7 +127,7 @@ class ForYouViewModel @Inject constructor(
             .mapNotNull { songMap[it.mediaId] }
             .distinctBy { it.mediaId }
 
-        return ForYouUiState(
+        return HomeUiState(
             isLoading = false,
             sections = sections,
             allSongs = songs,
