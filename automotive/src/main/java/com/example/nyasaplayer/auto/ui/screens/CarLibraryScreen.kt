@@ -47,8 +47,8 @@ import coil.compose.SubcomposeAsyncImage
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
+import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
-import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
@@ -67,9 +67,9 @@ private const val ModalWidthFraction = 0.5f
 @Suppress("LongParameterList", "LongMethod")
 @Composable
 fun CarLibraryScreen(
-    artists: List<Artist>,
+    favoriteArtists: List<FavoriteArtist>,
     albums: List<Album>,
-    onArtistClick: (Artist) -> Unit,
+    onArtistClick: (FavoriteArtist) -> Unit,
     onAlbumClick: (Album) -> Unit,
     modifier: Modifier = Modifier,
     likedSongs: List<Song> = emptyList(),
@@ -116,10 +116,10 @@ fun CarLibraryScreen(
                 }
             }
 
-            if (artists.isNotEmpty()) {
+            if (favoriteArtists.isNotEmpty()) {
                 item {
                     FavoriteArtistsSection(
-                        artists = artists,
+                        favoriteArtists = favoriteArtists,
                         onArtistClick = onArtistClick,
                     )
                 }
@@ -342,7 +342,7 @@ private fun LikedSongsHeader(
 }
 
 @Composable
-private fun LikedSongItem(
+internal fun LikedSongItem(
     song: Song,
     isCurrentTrack: Boolean,
     isPlaying: Boolean,
@@ -395,8 +395,8 @@ private fun LikedSongItem(
 
 @Composable
 private fun FavoriteArtistsSection(
-    artists: List<Artist>,
-    onArtistClick: (Artist) -> Unit,
+    favoriteArtists: List<FavoriteArtist>,
+    onArtistClick: (FavoriteArtist) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -408,8 +408,11 @@ private fun FavoriteArtistsSection(
             modifier = Modifier.padding(bottom = 16.dp),
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            items(artists, key = { it.id }) { artist ->
-                ArtistAvatar(artist = artist, onClick = { onArtistClick(artist) })
+            items(favoriteArtists, key = { it.artistId }) { favoriteArtist ->
+                ArtistAvatar(
+                    favoriteArtist = favoriteArtist,
+                    onClick = { onArtistClick(favoriteArtist) },
+                )
             }
         }
     }
@@ -417,7 +420,7 @@ private fun FavoriteArtistsSection(
 
 @Composable
 private fun ArtistAvatar(
-    artist: Artist,
+    favoriteArtist: FavoriteArtist,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -428,8 +431,8 @@ private fun ArtistAvatar(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         SubcomposeAsyncImage(
-            model = artist.imageUrl,
-            contentDescription = artist.name,
+            model = favoriteArtist.coverUrl,
+            contentDescription = favoriteArtist.artistName,
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(CarListArtSize)
@@ -439,7 +442,7 @@ private fun ArtistAvatar(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = artist.name,
+            text = favoriteArtist.artistName,
             color = Color.White,
             fontSize = 14.sp,
             maxLines = 1,

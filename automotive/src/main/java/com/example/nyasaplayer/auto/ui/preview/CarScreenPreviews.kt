@@ -8,12 +8,13 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
+import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
+import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
-import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
@@ -57,11 +58,11 @@ private val PreviewAlbums = listOf(
     Album(id = "a4", name = "Pop Hits", artistName = "Various", songIds = List(65) { "s$it" }),
 )
 
-private val PreviewArtists = listOf(
-    Artist(id = "ar1", name = "The Weeknd"),
-    Artist(id = "ar2", name = "Dua Lipa"),
-    Artist(id = "ar3", name = "Bruno Mars"),
-    Artist(id = "ar4", name = "Adele"),
+private val PreviewFavoriteArtists = listOf(
+    FavoriteArtist(artistId = "ar1", artistName = "The Weeknd", coverUrl = "", likedCount = 5),
+    FavoriteArtist(artistId = "ar2", artistName = "Dua Lipa", coverUrl = "", likedCount = 3),
+    FavoriteArtist(artistId = "ar3", artistName = "Bruno Mars", coverUrl = "", likedCount = 2),
+    FavoriteArtist(artistId = "ar4", artistName = "Adele", coverUrl = "", likedCount = 1),
 )
 
 // ── Preview Composables ──
@@ -139,7 +140,7 @@ private fun BrowseScreenPreview() {
 private fun LibraryScreenPreview() {
     AppTheme {
         CarLibraryScreen(
-            artists = PreviewArtists,
+            favoriteArtists = PreviewFavoriteArtists,
             albums = PreviewAlbums,
             onArtistClick = {},
             onAlbumClick = {},
@@ -150,6 +151,28 @@ private fun LibraryScreenPreview() {
             onLikedSongClick = {},
             onSignOut = {},
             userDisplayName = "John Doe",
+        )
+    }
+}
+
+@Preview(
+    name = "Artist Liked Songs",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun ArtistLikedSongsPreview() {
+    AppTheme {
+        CarArtistLikedSongsScreen(
+            artistName = "The Weeknd",
+            likedSongs = PreviewSongs,
+            onBackClick = {},
+            onSongClick = {},
+            onShufflePlay = {},
+            currentlyPlayingMediaId = "1",
+            isPlaying = true,
         )
     }
 }
