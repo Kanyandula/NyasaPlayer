@@ -4,11 +4,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nyasaplayer.core.common.models.Album
-import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.data.api.AlbumRepository
-import com.example.nyasaplayer.core.data.api.ArtistRepository
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
@@ -39,7 +37,6 @@ private const val TAG = "AutoContentVM"
 class AutomotiveContentViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val genreRepository: GenreRepository,
-    private val artistRepository: ArtistRepository,
     private val albumRepository: AlbumRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
@@ -67,7 +64,9 @@ class AutomotiveContentViewModel @Inject constructor(
         currentUserId = newUserId
         recentlyPlayedJob?.cancel()
         likedSongsJob?.cancel()
-        _contentState.update { it.copy(recentlyPlayed = emptyList(), likedSongs = emptyList()) }
+        _contentState.update {
+            it.copy(recentlyPlayed = emptyList(), likedSongs = emptyList(), favoriteArtists = emptyList())
+        }
         loadRecentlyPlayed()
         observeLikedSongs()
     }
@@ -75,7 +74,6 @@ class AutomotiveContentViewModel @Inject constructor(
     private fun loadContent() {
         _contentState.update { it.copy(isLoading = true, errorMessage = null) }
         observeGenres()
-        observeArtists()
         observeAlbums()
         loadRecentlyPlayed()
         loadPopularSongs()
@@ -87,15 +85,6 @@ class AutomotiveContentViewModel @Inject constructor(
             _contentState.update { it.copy(genres = genres, isLoading = false) }
         }.catch { e ->
             Log.e(TAG, "Error observing genres", e)
-            _contentState.update { it.copy(isLoading = false, errorMessage = "Failed to load content") }
-        }.launchIn(viewModelScope)
-    }
-
-    private fun observeArtists() {
-        artistRepository.getArtists().onEach { artists ->
-            _contentState.update { it.copy(artists = artists, isLoading = false) }
-        }.catch { e ->
-            Log.e(TAG, "Error observing artists", e)
             _contentState.update { it.copy(isLoading = false, errorMessage = "Failed to load content") }
         }.launchIn(viewModelScope)
     }
@@ -141,7 +130,9 @@ class AutomotiveContentViewModel @Inject constructor(
                     emptyMap()
                 }
                 val ordered = songIds.mapNotNull { songMap[it] }
-                _contentState.update { it.copy(likedSongs = ordered) }
+                _contentState.update {
+                    it.copy(likedSongs = ordered, favoriteArtists = deriveFavoriteArtists(ordered))
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -151,6 +142,20 @@ class AutomotiveContentViewModel @Inject constructor(
             Log.e(TAG, "Error observing liked songs", e)
         }.launchIn(viewModelScope)
     }
+
+    private fun deriveFavoriteArtists(likedSongs: List<Song>): List<FavoriteArtist> =
+        likedSongs
+            .filter { it.artistId.isNotBlank() }
+            .groupBy { it.artistId }
+            .map { (artistId, songs) ->
+                FavoriteArtist(
+                    artistId = artistId,
+                    artistName = songs.first().resolvedArtistName,
+                    coverUrl = songs.first().resolvedCoverUrl,
+                    likedCount = songs.size,
+                )
+            }
+            .sortedByDescending { it.likedCount }
 
     @Suppress("TooGenericExceptionCaught")
     private fun loadPopularSongs() {
@@ -204,16 +209,6 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     @Suppress("TooGenericExceptionCaught")
-    suspend fun getSongsByArtist(artistId: String): List<Song> = try {
-        songRepository.getSongsByArtist(artistId).firstOrNull() ?: emptyList()
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Log.e(TAG, "Error loading songs for artist $artistId", e)
-        emptyList()
-    }
-
-    @Suppress("TooGenericExceptionCaught")
     suspend fun getSongsByAlbum(albumId: String): List<Song> = try {
         val album = albumRepository.getAlbumById(albumId) ?: return emptyList()
         songRepository.getSongsByIds(album.songIds)
@@ -225,10 +220,17 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 }
 
+data class FavoriteArtist(
+    val artistId: String,
+    val artistName: String,
+    val coverUrl: String,
+    val likedCount: Int,
+) : java.io.Serializable
+
 data class AutomotiveContentState(
     val recentlyPlayed: List<Song> = emptyList(),
     val genres: List<Genre> = emptyList(),
-    val artists: List<Artist> = emptyList(),
+    val favoriteArtists: List<FavoriteArtist> = emptyList(),
     val albums: List<Album> = emptyList(),
     val popularSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),

@@ -9,6 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -19,6 +20,7 @@ import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
 import com.example.nyasaplayer.auto.ui.components.CarTopBar
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
+import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarAuthScreen
 import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
@@ -29,8 +31,8 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
+import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
-import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
@@ -79,6 +81,7 @@ private fun AuthenticatedApp(
 
     var currentScreen by rememberSaveable { mutableStateOf(CarScreen.Home) }
     var showFullPlayer by rememberSaveable { mutableStateOf(false) }
+    var selectedArtist by rememberSaveable { mutableStateOf<FavoriteArtist?>(null) }
     val scope = rememberCoroutineScope()
 
     Box(
@@ -106,7 +109,10 @@ private fun AuthenticatedApp(
                 contentState = contentState,
                 onSignOut = onSignOut,
                 userDisplayName = userDisplayName,
-                onSelectTab = { currentScreen = it },
+                onSelectTab = {
+                    selectedArtist = null
+                    currentScreen = it
+                },
                 onExpandPlayer = { showFullPlayer = true },
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
@@ -130,14 +136,16 @@ private fun AuthenticatedApp(
                         }
                     }
                 },
-                onArtistClick = { artist ->
-                    scope.launch {
-                        val songs = contentViewModel.getSongsByArtist(artist.id)
-                        if (songs.isNotEmpty()) {
-                            playerViewModel.playSong(songs, songs.first())
-                            showFullPlayer = true
-                        }
-                    }
+                onArtistClick = { favoriteArtist -> selectedArtist = favoriteArtist },
+                selectedArtist = selectedArtist,
+                onBackFromArtist = { selectedArtist = null },
+                onArtistSongClick = { songs, song ->
+                    playerViewModel.playSong(songs, song)
+                    showFullPlayer = true
+                },
+                onShuffleArtistSongs = { songs ->
+                    playerViewModel.shufflePlay(songs)
+                    showFullPlayer = true
                 },
                 onCategoryClick = { categoryName ->
                     scope.launch {
@@ -196,7 +204,11 @@ private fun BrowseShell(
     onSongClick: (Song) -> Unit,
     onQuickActionClick: (String) -> Unit,
     onAlbumClick: (Album) -> Unit,
-    onArtistClick: (Artist) -> Unit,
+    onArtistClick: (FavoriteArtist) -> Unit,
+    selectedArtist: FavoriteArtist?,
+    onBackFromArtist: () -> Unit,
+    onArtistSongClick: (List<Song>, Song) -> Unit,
+    onShuffleArtistSongs: (List<Song>) -> Unit,
     onLikeClick: () -> Unit,
     onShuffleLikedSongs: () -> Unit,
     onCategoryClick: (String) -> Unit,
@@ -244,19 +256,40 @@ private fun BrowseShell(
                     )
                 }
 
-                CarScreen.Library -> CarLibraryScreen(
-                    artists = contentState.artists.take(maxItems),
-                    albums = contentState.albums.take(maxItems),
-                    onArtistClick = onArtistClick,
-                    onAlbumClick = onAlbumClick,
-                    likedSongs = contentState.likedSongs.take(maxItems),
-                    currentlyPlayingMediaId = currentlyPlayingMediaId,
-                    isPlaying = isPlaying,
-                    onShuffleLikedSongs = onShuffleLikedSongs,
-                    onLikedSongClick = onLikedSongClick,
-                    onSignOut = onSignOut,
-                    userDisplayName = userDisplayName,
-                )
+                CarScreen.Library -> if (selectedArtist != null) {
+                    val artistLikedSongs = remember(
+                        contentState.likedSongs,
+                        selectedArtist.artistId,
+                        maxItems,
+                    ) {
+                        contentState.likedSongs
+                            .filter { it.artistId == selectedArtist.artistId }
+                            .take(maxItems)
+                    }
+                    CarArtistLikedSongsScreen(
+                        artistName = selectedArtist.artistName,
+                        likedSongs = artistLikedSongs,
+                        onBackClick = onBackFromArtist,
+                        onSongClick = { song -> onArtistSongClick(artistLikedSongs, song) },
+                        onShufflePlay = { onShuffleArtistSongs(artistLikedSongs) },
+                        currentlyPlayingMediaId = currentlyPlayingMediaId,
+                        isPlaying = isPlaying,
+                    )
+                } else {
+                    CarLibraryScreen(
+                        favoriteArtists = contentState.favoriteArtists.take(maxItems),
+                        albums = contentState.albums.take(maxItems),
+                        onArtistClick = onArtistClick,
+                        onAlbumClick = onAlbumClick,
+                        likedSongs = contentState.likedSongs.take(maxItems),
+                        currentlyPlayingMediaId = currentlyPlayingMediaId,
+                        isPlaying = isPlaying,
+                        onShuffleLikedSongs = onShuffleLikedSongs,
+                        onLikedSongClick = onLikedSongClick,
+                        onSignOut = onSignOut,
+                        userDisplayName = userDisplayName,
+                    )
+                }
             }
         }
 
