@@ -67,6 +67,9 @@ fun SongOverflowSheet(
     downloadState: SongDownloadState = SongDownloadState.NotDownloaded,
     onDownloadClick: (Song) -> Unit = {},
     onRemoveDownloadClick: (Song) -> Unit = {},
+    onSaveToPlaylist: () -> Unit = {},
+    showRemoveFromPlaylist: Boolean = false,
+    onRemoveFromPlaylist: () -> Unit = {},
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -90,6 +93,9 @@ fun SongOverflowSheet(
                 downloadState = downloadState,
                 onDownloadClick = onDownloadClick,
                 onRemoveDownloadClick = onRemoveDownloadClick,
+                onSaveToPlaylist = onSaveToPlaylist,
+                showRemoveFromPlaylist = showRemoveFromPlaylist,
+                onRemoveFromPlaylist = onRemoveFromPlaylist,
             )
         }
     }
@@ -212,6 +218,9 @@ private fun SheetMenuItems(
     downloadState: SongDownloadState,
     onDownloadClick: (Song) -> Unit,
     onRemoveDownloadClick: (Song) -> Unit,
+    onSaveToPlaylist: () -> Unit,
+    showRemoveFromPlaylist: Boolean,
+    onRemoveFromPlaylist: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -231,11 +240,18 @@ private fun SheetMenuItems(
             onDownloadClick = onDownloadClick,
             onRemoveDownloadClick = onRemoveDownloadClick,
         )
-        SheetMenuItem(icon = PlaylistAddIcon, label = stringResource(R.string.save_to_playlist))
         SheetMenuItem(
-            icon = PlaylistRemoveIcon,
-            label = stringResource(R.string.remove_from_playlist),
+            icon = PlaylistAddIcon,
+            label = stringResource(R.string.save_to_playlist),
+            onClick = onSaveToPlaylist,
         )
+        if (showRemoveFromPlaylist) {
+            SheetMenuItem(
+                icon = PlaylistRemoveIcon,
+                label = stringResource(R.string.remove_from_playlist),
+                onClick = onRemoveFromPlaylist,
+            )
+        }
         SheetMenuItem(icon = AlbumIcon, label = stringResource(R.string.go_to_album))
         SheetMenuItem(icon = ProfileIcon, label = stringResource(R.string.go_to_artist))
     }
