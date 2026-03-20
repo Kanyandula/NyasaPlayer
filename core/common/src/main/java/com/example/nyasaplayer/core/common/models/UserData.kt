@@ -19,6 +19,14 @@ data class RecentlyPlayedEntry(
     val playedAt: Long? = null,
 )
 
+data class Playlist(
+    val id: String = "",
+    val name: String = "",
+    val songIds: List<String> = emptyList(),
+    val createdAt: Long? = null,
+    val updatedAt: Long? = null,
+)
+
 data class PlaybackState(
     val currentSongId: String = "",
     val positionMs: Long = 0L,

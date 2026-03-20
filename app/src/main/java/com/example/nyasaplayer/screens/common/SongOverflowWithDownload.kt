@@ -14,6 +14,9 @@ fun SongOverflowWithDownload(
     onDismiss: () -> Unit,
     isLiked: Boolean = false,
     onToggleLike: () -> Unit = {},
+    onSaveToPlaylist: () -> Unit = {},
+    showRemoveFromPlaylist: Boolean = false,
+    onRemoveFromPlaylist: () -> Unit = {},
 ) {
     val downloadState = remember(song.mediaId) {
         resolveDownloadState(song.mediaId, downloadManager)
@@ -31,6 +34,15 @@ fun SongOverflowWithDownload(
         onRemoveDownloadClick = { s ->
             downloadManager?.removeDownload(s.mediaId)
             onDismiss()
+        },
+        onSaveToPlaylist = {
+            onDismiss()
+            onSaveToPlaylist()
+        },
+        showRemoveFromPlaylist = showRemoveFromPlaylist,
+        onRemoveFromPlaylist = {
+            onDismiss()
+            onRemoveFromPlaylist()
         },
     )
 }
