@@ -28,8 +28,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,8 +53,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.common.ui.components.CreatePlaylistDialog
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
+import com.example.nyasaplayer.core.common.ui.components.PlaylistPickerSheet
 import com.example.nyasaplayer.core.common.ui.icons.MoreHorizIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
@@ -61,6 +68,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.download.SongDownloadManager
 import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
+import com.example.nyasaplayer.screens.playlist.PlaylistViewModel
 import com.example.nyasaplayer.ui.preview.PreviewGenres
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -71,8 +79,17 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
     downloadManager: SongDownloadManager? = null,
     viewModel: SearchViewModel = hiltViewModel(),
+    playlistViewModel: PlaylistViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val playlists by playlistViewModel.playlists.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        playlistViewModel.snackbarMessage.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     if (uiState.errorMessage != null && uiState.allSongs.isEmpty()) {
         NyasaErrorScreen(
@@ -98,19 +115,31 @@ fun SearchScreen(
         BackHandler { viewModel.onGenreBack() }
     }
 
-    SearchContent(
-        uiState = uiState,
-        onQueryChange = viewModel::onQueryChange,
-        onSongClick = onSongClick,
-        onGenreClick = viewModel::onGenreSelected,
-        onGenreBack = viewModel::onGenreBack,
-        onToggleLike = viewModel::toggleLikeSong,
-        isLikedProvider = viewModel::isLiked,
-        downloadManager = downloadManager,
-        modifier = modifier,
-    )
+    Box(modifier = modifier) {
+        SearchContent(
+            uiState = uiState,
+            onQueryChange = viewModel::onQueryChange,
+            onSongClick = onSongClick,
+            onGenreClick = viewModel::onGenreSelected,
+            onGenreBack = viewModel::onGenreBack,
+            onToggleLike = viewModel::toggleLikeSong,
+            isLikedProvider = viewModel::isLiked,
+            downloadManager = downloadManager,
+            playlists = playlists,
+            onAddToPlaylist = playlistViewModel::addSongToPlaylist,
+            onCreatePlaylistAndAdd = playlistViewModel::createPlaylistAndAddSong,
+            onRemoveFromPlaylist = playlistViewModel::removeSongFromPlaylist,
+        )
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) { data ->
+            Snackbar(snackbarData = data)
+        }
+    }
 }
 
+@Suppress("LongMethod")
 @Composable
 private fun SearchContent(
     uiState: SearchUiState,
@@ -121,9 +150,17 @@ private fun SearchContent(
     onToggleLike: (String) -> Unit,
     isLikedProvider: (String) -> Flow<Boolean>,
     downloadManager: SongDownloadManager?,
+    playlists: List<Playlist>,
+    onAddToPlaylist: (String, String) -> Unit,
+    onCreatePlaylistAndAdd: (String, String) -> Unit,
+    onRemoveFromPlaylist: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selectedSong by remember { mutableStateOf<Song?>(null) }
+    var playlistPickerSong by remember { mutableStateOf<Song?>(null) }
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var createDialogSongId by remember { mutableStateOf("") }
+    var removalPickerSong by remember { mutableStateOf<Song?>(null) }
 
     Column(
         modifier = modifier
@@ -137,24 +174,20 @@ private fun SearchContent(
             color = Color.White,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 12.dp),
         )
-
         SearchBar(
             query = uiState.query,
             onQueryChange = onQueryChange,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
-
         Spacer(modifier = Modifier.height(16.dp))
-
-        if (uiState.query.isNotBlank()) {
-            SearchResults(
+        when {
+            uiState.query.isNotBlank() -> SearchResults(
                 results = uiState.searchResults,
                 onSongClick = { song -> onSongClick(uiState.searchResults, song) },
                 onMoreClick = { song -> selectedSong = song },
                 modifier = Modifier.weight(1f),
             )
-        } else if (uiState.selectedGenre != null) {
-            GenreSongsSection(
+            uiState.selectedGenre != null -> GenreSongsSection(
                 genre = uiState.selectedGenre!!,
                 songs = uiState.genreSongs,
                 onSongClick = { song -> onSongClick(uiState.genreSongs, song) },
@@ -162,23 +195,107 @@ private fun SearchContent(
                 onBack = onGenreBack,
                 modifier = Modifier.weight(1f),
             )
-        } else {
-            BrowseSection(
-                genres = uiState.genres,
-                onGenreClick = onGenreClick,
-            )
+            else -> BrowseSection(genres = uiState.genres, onGenreClick = onGenreClick)
         }
     }
 
+    SearchOverflowDialogs(
+        selectedSong = selectedSong,
+        playlistPickerSong = playlistPickerSong,
+        showCreateDialog = showCreateDialog,
+        downloadManager = downloadManager,
+        playlists = playlists,
+        isLikedProvider = isLikedProvider,
+        onToggleLike = onToggleLike,
+        onDismissOverflow = { selectedSong = null },
+        onOpenPlaylistPicker = { song ->
+            selectedSong = null
+            playlistPickerSong = song
+        },
+        onDismissPlaylistPicker = { playlistPickerSong = null },
+        onAddToPlaylist = { playlistId, mediaId ->
+            playlistPickerSong = null
+            onAddToPlaylist(playlistId, mediaId)
+        },
+        onOpenCreateDialog = { songId ->
+            playlistPickerSong = null
+            createDialogSongId = songId
+            showCreateDialog = true
+        },
+        onDismissCreateDialog = { showCreateDialog = false },
+        onCreatePlaylistAndAdd = { name ->
+            showCreateDialog = false
+            onCreatePlaylistAndAdd(name, createDialogSongId)
+        },
+        onOpenRemovalPicker = { song ->
+            selectedSong = null
+            removalPickerSong = song
+        },
+    )
+
+    removalPickerSong?.let { song ->
+        val containingPlaylists = playlists.filter { song.mediaId in it.songIds }
+        PlaylistPickerSheet(
+            playlists = containingPlaylists,
+            onSelectPlaylist = { playlist ->
+                removalPickerSong = null
+                onRemoveFromPlaylist(playlist.id, song.mediaId)
+            },
+            onDismiss = { removalPickerSong = null },
+            title = stringResource(R.string.remove_from_playlist),
+            showCreateNew = false,
+        )
+    }
+}
+
+@Composable
+private fun SearchOverflowDialogs(
+    selectedSong: Song?,
+    playlistPickerSong: Song?,
+    showCreateDialog: Boolean,
+    downloadManager: SongDownloadManager?,
+    playlists: List<Playlist>,
+    isLikedProvider: (String) -> Flow<Boolean>,
+    onToggleLike: (String) -> Unit,
+    onDismissOverflow: () -> Unit,
+    onOpenPlaylistPicker: (Song) -> Unit,
+    onDismissPlaylistPicker: () -> Unit,
+    onAddToPlaylist: (String, String) -> Unit,
+    onOpenCreateDialog: (String) -> Unit,
+    onDismissCreateDialog: () -> Unit,
+    onCreatePlaylistAndAdd: (String) -> Unit,
+    onOpenRemovalPicker: (Song) -> Unit,
+    @Suppress("UnusedParameter") modifier: Modifier = Modifier,
+) {
     selectedSong?.let { song ->
         val isLiked by remember(song.mediaId) { isLikedProvider(song.mediaId) }
             .collectAsState(initial = false)
+        val isInAnyPlaylist = playlists.any { song.mediaId in it.songIds }
         SongOverflowWithDownload(
             song = song,
             downloadManager = downloadManager,
-            onDismiss = { selectedSong = null },
+            onDismiss = onDismissOverflow,
             isLiked = isLiked,
             onToggleLike = { onToggleLike(song.mediaId) },
+            onSaveToPlaylist = { onOpenPlaylistPicker(song) },
+            showRemoveFromPlaylist = isInAnyPlaylist,
+            onRemoveFromPlaylist = { onOpenRemovalPicker(song) },
+        )
+    }
+
+    playlistPickerSong?.let { song ->
+        PlaylistPickerSheet(
+            playlists = playlists,
+            onSelectPlaylist = { playlist -> onAddToPlaylist(playlist.id, song.mediaId) },
+            onCreateNew = { onOpenCreateDialog(song.mediaId) },
+            onDismiss = onDismissPlaylistPicker,
+        )
+    }
+
+    if (showCreateDialog) {
+        CreatePlaylistDialog(
+            onConfirm = onCreatePlaylistAndAdd,
+            onDismiss = onDismissCreateDialog,
         )
     }
 }
@@ -451,6 +568,10 @@ private fun SearchScreenPreview() {
             onToggleLike = { },
             isLikedProvider = { flowOf(false) },
             downloadManager = null,
+            playlists = emptyList(),
+            onAddToPlaylist = { _, _ -> },
+            onCreatePlaylistAndAdd = { _, _ -> },
+            onRemoveFromPlaylist = { _, _ -> },
         )
     }
 }

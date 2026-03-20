@@ -189,7 +189,7 @@ Multi-module Gradle project:
 | Album detail screen | Not started | No route or screen |
 | "See All" section expansion | Stub | Home headers have chevrons but no navigation callback |
 | Queue management UI | Not started | Queue managed internally but no user-facing screen to view/reorder |
-| Playlist creation / management | Not started | No route, screen, or data model |
+| Playlist creation / management | Implemented | `PlaylistDetailScreen`, `PlaylistViewModel`, `FirebasePlaylistRepository`; create, add/remove songs, album art grid covers |
 | User profile editing | Not started | No edit screen or update flow |
 | Onboarding / genre selection | Not started | No onboarding flow after sign-up |
 

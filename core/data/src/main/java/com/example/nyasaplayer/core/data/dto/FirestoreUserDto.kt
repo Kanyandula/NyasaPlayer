@@ -2,6 +2,7 @@ package com.example.nyasaplayer.core.data.dto
 
 import com.example.nyasaplayer.core.common.models.LikedSong
 import com.example.nyasaplayer.core.common.models.PlaybackState
+import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.RecentlyPlayedEntry
 import com.example.nyasaplayer.core.common.models.UserProfile
 import com.google.firebase.Timestamp
@@ -53,6 +54,21 @@ data class FirestoreRecentlyPlayedDto(
     fun toDomain() = RecentlyPlayedEntry(
         mediaId = mediaId,
         playedAt = playedAt?.toDate()?.time,
+    )
+}
+
+data class FirestorePlaylistDto(
+    val name: String = "",
+    val songIds: List<String> = emptyList(),
+    val createdAt: Timestamp? = null,
+    val updatedAt: Timestamp? = null,
+) {
+    fun toDomain(id: String) = Playlist(
+        id = id,
+        name = name,
+        songIds = songIds,
+        createdAt = createdAt?.toDate()?.time,
+        updatedAt = updatedAt?.toDate()?.time,
     )
 }
 
