@@ -134,7 +134,7 @@ Requires `app/google-services.json`. Firebase console must have:
 ## Known Gaps
 
 - Unit tests live in `:core:data` (`core/data/src/test/`) covering entities, converters, offline repos, and sync backoff
-- README "Not Yet Implemented" section tracks planned features (playlists, downloads, queue management, artist/album detail screens, etc.)
+- README "Not Yet Implemented" section tracks planned features (queue management, artist/album detail screens, etc.)
 
 ### Error handling that IS in place
 

@@ -2,6 +2,7 @@ package com.example.nyasaplayer.core.data.di
 
 import com.example.nyasaplayer.core.data.FirebaseAuthRepository
 import com.example.nyasaplayer.core.data.FirebaseHomeFeedRepository
+import com.example.nyasaplayer.core.data.FirebasePlaylistRepository
 import com.example.nyasaplayer.core.data.FirebaseUserRepository
 import com.example.nyasaplayer.core.data.api.AlbumRepository
 import com.example.nyasaplayer.core.data.api.ArtistRepository
@@ -9,6 +10,7 @@ import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.HomeFeedRepository
+import com.example.nyasaplayer.core.data.api.PlaylistRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.core.data.offline.OfflineAlbumRepository
@@ -57,4 +59,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAlbumRepository(impl: OfflineAlbumRepository): AlbumRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPlaylistRepository(impl: FirebasePlaylistRepository): PlaylistRepository
 }
