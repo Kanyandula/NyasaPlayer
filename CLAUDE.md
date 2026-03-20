@@ -97,6 +97,7 @@ Offline-first for catalog data (songs, artists, genres): `FirebaseSyncManager` s
 | `OfflineAlbumRepository` | Room (`AlbumDao`) | synced from Firestore `albums` |
 | `UserRepository` | Firestore | `users/{uid}/likedSongs`, `users/{uid}/recentlyPlayed`, `users/{uid}/profile` |
 | `HomeFeedRepository` | Realtime Database | home feed sections |
+| `PlaylistRepository` | Firestore | `users/{uid}/playlists` |
 
 Room entities live in `core/data/.../local/entity/`, DAOs in `core/data/.../local/dao/`, and the database class in `core/data/.../local/NyasaDatabase.kt`. `FirebaseSyncManager` (`core/data/.../sync/`) handles one-shot Firestore → Room sync on startup.
 

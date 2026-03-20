@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,7 +57,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.dialog
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -324,17 +324,17 @@ private fun ExpandedPlayerSongInfo(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = state.currentSong?.title.orEmpty(),
+                modifier = Modifier.basicMarquee(),
                 style = MaterialTheme.typography.titleLarge,
                 color = Color.White,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = state.currentSong?.resolvedArtistName.orEmpty(),
+                modifier = Modifier.basicMarquee(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
         Spacer(modifier = Modifier.width(12.dp))

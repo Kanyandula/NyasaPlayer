@@ -1,6 +1,5 @@
 package com.example.nyasaplayer.screens.player
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -159,7 +158,6 @@ private fun MiniPlayerPausedPreview() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MiniPlayerSongInfo(
     state: PlayerUiState,
