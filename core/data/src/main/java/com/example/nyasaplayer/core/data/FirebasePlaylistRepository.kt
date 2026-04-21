@@ -40,6 +40,18 @@ class FirebasePlaylistRepository @Inject constructor(
         awaitClose { registration.remove() }
     }
 
+    override fun getPlaylistById(userId: String, playlistId: String): Flow<Playlist?> = callbackFlow {
+        val registration = playlistsCollection(userId).document(playlistId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.toObject<FirestorePlaylistDto>()?.toDomain(playlistId))
+            }
+        awaitClose { registration.remove() }
+    }
+
     override suspend fun createPlaylist(userId: String, name: String): String {
         val now = Timestamp.now()
         val dto = FirestorePlaylistDto(

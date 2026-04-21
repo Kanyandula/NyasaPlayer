@@ -48,15 +48,14 @@ class PlaylistDetailViewModel @Inject constructor(
     private fun loadPlaylistDetail() {
         val userId = authRepository.currentUser?.uid ?: return
         viewModelScope.launch(exceptionHandler) {
-            playlistRepository.getPlaylists(userId)
+            playlistRepository.getPlaylistById(userId, playlistId)
                 .catch { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         errorMessage = e.message ?: "Failed to load playlist",
                     )
                 }
-                .collect { playlists ->
-                    val playlist = playlists.find { it.id == playlistId }
+                .collect { playlist ->
                     if (playlist == null) {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,

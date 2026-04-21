@@ -29,9 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,17 +40,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
-import com.example.nyasaplayer.core.common.ui.components.CreatePlaylistDialog
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
-import com.example.nyasaplayer.core.common.ui.components.PlaylistPickerSheet
 import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
 import com.example.nyasaplayer.core.common.ui.icons.PlaylistAddIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.download.SongDownloadManager
-import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
+import com.example.nyasaplayer.screens.common.SongOverflowDialogs
 import com.example.nyasaplayer.screens.common.SongRow
+import com.example.nyasaplayer.screens.common.rememberOverflowDialogState
 import kotlinx.coroutines.flow.merge
 
 @Composable
@@ -133,10 +130,7 @@ private fun PlaylistDetailContent(
     onCreatePlaylistAndAdd: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedSong by remember { mutableStateOf<Song?>(null) }
-    var playlistPickerSong by remember { mutableStateOf<Song?>(null) }
-    var showCreateDialog by remember { mutableStateOf(false) }
-    var createDialogSongId by remember { mutableStateOf("") }
+    val overflowState = rememberOverflowDialogState()
 
     Column(
         modifier = modifier
@@ -168,7 +162,7 @@ private fun PlaylistDetailContent(
                         isCurrentTrack = isCurrentTrack,
                         isAnimating = isCurrentTrack && isCurrentlyPlaying,
                         onClick = { onSongClick(songs, song) },
-                        onMoreClick = { selectedSong = song },
+                        onMoreClick = { overflowState.openOverflow(song) },
                     )
                 }
             }
@@ -177,48 +171,14 @@ private fun PlaylistDetailContent(
         }
     }
 
-    selectedSong?.let { song ->
-        SongOverflowWithDownload(
-            song = song,
-            downloadManager = downloadManager,
-            onDismiss = { selectedSong = null },
-            onSaveToPlaylist = {
-                selectedSong = null
-                playlistPickerSong = song
-            },
-            showRemoveFromPlaylist = true,
-            onRemoveFromPlaylist = {
-                selectedSong = null
-                onRemoveSong(song.mediaId)
-            },
-        )
-    }
-
-    playlistPickerSong?.let { song ->
-        PlaylistPickerSheet(
-            playlists = playlists,
-            onSelectPlaylist = { playlist ->
-                playlistPickerSong = null
-                onAddToPlaylist(playlist.id, song.mediaId)
-            },
-            onCreateNew = {
-                playlistPickerSong = null
-                createDialogSongId = song.mediaId
-                showCreateDialog = true
-            },
-            onDismiss = { playlistPickerSong = null },
-        )
-    }
-
-    if (showCreateDialog) {
-        CreatePlaylistDialog(
-            onConfirm = { name ->
-                showCreateDialog = false
-                onCreatePlaylistAndAdd(name, createDialogSongId)
-            },
-            onDismiss = { showCreateDialog = false },
-        )
-    }
+    SongOverflowDialogs(
+        state = overflowState,
+        downloadManager = downloadManager,
+        playlists = playlists,
+        onAddToPlaylist = onAddToPlaylist,
+        onCreatePlaylistAndAdd = onCreatePlaylistAndAdd,
+        onDirectRemove = onRemoveSong,
+    )
 }
 
 @Composable

@@ -31,9 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,9 +46,7 @@ import coil.compose.AsyncImage
 import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
-import com.example.nyasaplayer.core.common.ui.components.CreatePlaylistDialog
 import com.example.nyasaplayer.core.common.ui.components.NyasaErrorScreen
-import com.example.nyasaplayer.core.common.ui.components.PlaylistPickerSheet
 import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
 import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.PlaylistAddIcon
@@ -59,9 +55,11 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.download.SongDownloadManager
-import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
+import com.example.nyasaplayer.screens.common.SongOverflowDialogs
 import com.example.nyasaplayer.screens.common.SongRow
+import com.example.nyasaplayer.screens.common.rememberOverflowDialogState
 import com.example.nyasaplayer.screens.playlist.PlaylistViewModel
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun LibraryScreen(
@@ -146,11 +144,7 @@ private fun LibraryContent(
     onRemoveFromPlaylist: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedSong by remember { mutableStateOf<Song?>(null) }
-    var playlistPickerSong by remember { mutableStateOf<Song?>(null) }
-    var showCreateDialog by remember { mutableStateOf(false) }
-    var createDialogSongId by remember { mutableStateOf("") }
-    var removalPickerSong by remember { mutableStateOf<Song?>(null) }
+    val overflowState = rememberOverflowDialogState()
 
     Column(
         modifier = modifier
@@ -187,110 +181,22 @@ private fun LibraryContent(
                     isCurrentTrack = isCurrentTrack,
                     isAnimating = isCurrentTrack && isCurrentlyPlaying,
                     onClick = { onSongClick(songs, song) },
-                    onMoreClick = { selectedSong = song },
+                    onMoreClick = { overflowState.openOverflow(song) },
                 )
             }
         }
     }
 
-    LibraryOverflowDialogs(
-        selectedSong = selectedSong,
-        playlistPickerSong = playlistPickerSong,
-        showCreateDialog = showCreateDialog,
+    SongOverflowDialogs(
+        state = overflowState,
         downloadManager = downloadManager,
         playlists = playlists,
-        onDismissOverflow = { selectedSong = null },
-        onToggleLike = { mediaId ->
-            selectedSong = null
-            onToggleLike(mediaId)
-        },
-        onOpenPlaylistPicker = { song ->
-            selectedSong = null
-            playlistPickerSong = song
-        },
-        onDismissPlaylistPicker = { playlistPickerSong = null },
-        onAddToPlaylist = { playlistId, mediaId ->
-            playlistPickerSong = null
-            onAddToPlaylist(playlistId, mediaId)
-        },
-        onOpenCreateDialog = { songId ->
-            playlistPickerSong = null
-            createDialogSongId = songId
-            showCreateDialog = true
-        },
-        onDismissCreateDialog = { showCreateDialog = false },
-        onCreatePlaylistAndAdd = { name ->
-            showCreateDialog = false
-            onCreatePlaylistAndAdd(name, createDialogSongId)
-        },
-        onOpenRemovalPicker = { song ->
-            selectedSong = null
-            removalPickerSong = song
-        },
+        onAddToPlaylist = onAddToPlaylist,
+        onCreatePlaylistAndAdd = onCreatePlaylistAndAdd,
+        isLikedFlow = { flowOf(true) },
+        onToggleLike = onToggleLike,
+        onRemoveFromPlaylist = onRemoveFromPlaylist,
     )
-
-    removalPickerSong?.let { song ->
-        val containingPlaylists = playlists.filter { song.mediaId in it.songIds }
-        PlaylistPickerSheet(
-            playlists = containingPlaylists,
-            onSelectPlaylist = { playlist ->
-                removalPickerSong = null
-                onRemoveFromPlaylist(playlist.id, song.mediaId)
-            },
-            onDismiss = { removalPickerSong = null },
-            title = stringResource(R.string.remove_from_playlist),
-            showCreateNew = false,
-        )
-    }
-}
-
-@Composable
-private fun LibraryOverflowDialogs(
-    selectedSong: Song?,
-    playlistPickerSong: Song?,
-    showCreateDialog: Boolean,
-    downloadManager: SongDownloadManager?,
-    playlists: List<Playlist>,
-    onDismissOverflow: () -> Unit,
-    onToggleLike: (String) -> Unit,
-    onOpenPlaylistPicker: (Song) -> Unit,
-    onDismissPlaylistPicker: () -> Unit,
-    onAddToPlaylist: (String, String) -> Unit,
-    onOpenCreateDialog: (String) -> Unit,
-    onDismissCreateDialog: () -> Unit,
-    onCreatePlaylistAndAdd: (String) -> Unit,
-    onOpenRemovalPicker: (Song) -> Unit,
-    @Suppress("UnusedParameter") modifier: Modifier = Modifier,
-) {
-    selectedSong?.let { song ->
-        val isInAnyPlaylist = playlists.any { song.mediaId in it.songIds }
-        SongOverflowWithDownload(
-            song = song,
-            downloadManager = downloadManager,
-            onDismiss = onDismissOverflow,
-            isLiked = true,
-            onToggleLike = { onToggleLike(song.mediaId) },
-            onSaveToPlaylist = { onOpenPlaylistPicker(song) },
-            showRemoveFromPlaylist = isInAnyPlaylist,
-            onRemoveFromPlaylist = { onOpenRemovalPicker(song) },
-        )
-    }
-
-    playlistPickerSong?.let { song ->
-        PlaylistPickerSheet(
-            playlists = playlists,
-            onSelectPlaylist = { playlist -> onAddToPlaylist(playlist.id, song.mediaId) },
-            onCreateNew = { onOpenCreateDialog(song.mediaId) },
-            onDismiss = onDismissPlaylistPicker,
-        )
-    }
-
-    if (showCreateDialog) {
-        CreatePlaylistDialog(
-            onConfirm = onCreatePlaylistAndAdd,
-            onDismiss = onDismissCreateDialog,
-        )
-    }
 }
 
 @Composable
