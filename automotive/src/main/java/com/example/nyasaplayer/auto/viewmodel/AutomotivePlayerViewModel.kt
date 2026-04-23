@@ -222,6 +222,45 @@ class AutomotivePlayerViewModel @Inject constructor(
         )
     }
 
+    // ── Queue Management ──
+
+    fun skipToQueueItem(index: Int) {
+        val controller = stateCollector.controller ?: return
+        if (index in 0 until controller.mediaItemCount) {
+            controller.seekTo(index, 0L)
+            controller.play()
+        }
+    }
+
+    fun removeFromQueue(index: Int) {
+        val controller = stateCollector.controller ?: return
+        if (index in 0 until controller.mediaItemCount && index != controller.currentMediaItemIndex) {
+            controller.removeMediaItem(index)
+        }
+    }
+
+    fun moveQueueItem(from: Int, to: Int) {
+        val controller = stateCollector.controller ?: return
+        val count = controller.mediaItemCount
+        if (from in 0 until count && to in 0 until count && from != to) {
+            controller.moveMediaItem(from, to)
+        }
+    }
+
+    fun clearQueue() {
+        val controller = stateCollector.controller ?: return
+        val currentIndex = controller.currentMediaItemIndex
+        val count = controller.mediaItemCount
+        if (count <= 1) return
+        if (currentIndex > 0) {
+            controller.removeMediaItems(0, currentIndex)
+        }
+        val remaining = controller.mediaItemCount
+        if (remaining > 1) {
+            controller.removeMediaItems(1, remaining)
+        }
+    }
+
     // ── Like / Unlike ──
 
     @Suppress("TooGenericExceptionCaught")
