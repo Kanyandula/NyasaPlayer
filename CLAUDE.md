@@ -42,7 +42,7 @@ Unit tests live in `core/data/src/test/`. Run with `./gradlew test`.
 - **`:core:data`** (`com.example.nyasaplayer.core.data`) — repository interfaces & implementations, Room DB, Firebase sync, DTOs, DI modules
 - **`:core:playback`** (`com.example.nyasaplayer.core.playback`) — `PlaybackService` (MediaLibraryService), `PlaybackQueueManager`, `PlaybackStatePersistence`, `BasePlayerStateCollector`, `MediaBrowseTree`, shared playback state models
 - **`:app`** — screens, ViewModels, navigation, `AppModule`/`PlayerModule`
-- **`:automotive`** (`com.example.nyasaplayer.auto`) — AAOS Activity, car-optimized Compose UI, automotive ViewModels, `CarUxRestrictionsHandler`, DI
+- **`:automotive`** (`com.example.nyasaplayer.auto`) — AAOS **parked-only custom flows** (Auth + Settings + Sign-Out). All playback/browse/search UI is rendered by the OEM media template against `:core:playback`'s `MediaLibraryService`; the `:automotive` module does not ship custom Home/Browse/Library/NowPlaying/Queue screens (decision recorded 2026-04-23 in `docs/AAOS_UI_REDESIGN_PLAN.md`).
 
 ```
 Firestore / Realtime DB / Firebase Auth
@@ -79,10 +79,13 @@ Mobile-specific in `:app`:
 - `PlayerViewModel` — extends `BasePlayerStateCollector` (250ms polling), exposes `PlayerUiState`
 - `GlobalPlayerLayer` — hosts MiniPlayer + ExpandedPlayer overlay above bottom nav
 
-AAOS-specific in `:automotive`:
-- `AutomotivePlayerViewModel` — extends `BasePlayerStateCollector` (500ms polling), distraction-aware
-- `AutomotiveContentViewModel` — catalog browsing, search, liked songs, recently played
-- `CarUxRestrictionsHandler` — observes driving restrictions as `StateFlow`
+AAOS rendering:
+- The OEM media template is the UI for all playback, browse, queue, and search on
+  AAOS — driven directly by `PlaybackService`'s `MediaLibrarySession` callbacks
+  (`onGetLibraryRoot` / `onGetChildren` / `onGetItem` / `onSearch` / `onGetSearchResult`)
+  and by `MediaBrowseTree`. No car-side `MediaController` ViewModel is needed.
+- `:automotive` ships only Auth (`CarAuthScreen` + `AutomotiveAuthViewModel`) and
+  parked-only Settings screens (Account / Audio Quality / About) + a sign-out dialog.
 
 ### Data layer
 

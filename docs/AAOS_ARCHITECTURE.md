@@ -1,7 +1,7 @@
 # NyasaPlayer — Android Automotive OS (AAOS) Architecture
 
-> Reference document for building the AAOS variant of NyasaPlayer.
-> Covers architecture, Figma design specs, Firebase compatibility, and implementation roadmap.
+> Reference for the AAOS variant of NyasaPlayer. Updated 2026-04-23 to reflect
+> **Option B (Template Path)** — see §6 for the decision and trade-off.
 
 ---
 
@@ -9,849 +9,330 @@
 
 1. [Overview](#overview)
 2. [Module Boundaries](#module-boundaries)
-3. [MediaSession Ownership](#mediasession-ownership)
+3. [MediaLibrarySession — the AAOS surface](#medialibrarysession--the-aaos-surface)
 4. [State Synchronization](#state-synchronization)
-5. [Automotive Abstraction Layers](#automotive-abstraction-layers)
-6. [Driver Distraction Compliance](#driver-distraction-compliance)
-7. [AAOS Figma Design Specs](#aaos-figma-design-specs)
-8. [Firebase Backend Compatibility](#firebase-backend-compatibility)
-9. [Required Backend Changes](#required-backend-changes)
-10. [Tradeoff Analysis](#tradeoff-analysis)
-11. [Implementation Roadmap](#implementation-roadmap)
+5. [Custom Flows (`:automotive`)](#custom-flows-automotive)
+6. [Decision: Option B — Template Path](#decision-option-b--template-path)
+7. [Firebase Backend Compatibility](#firebase-backend-compatibility)
+8. [Implementation Roadmap](#implementation-roadmap)
 
 ---
 
 ## Overview
 
-NyasaPlayer AAOS shares the domain and data layers with the mobile app but has a completely
-different UI layer optimized for in-car use. The key architectural principle is that
-`PlaybackService` (MediaSession owner) is the shared boundary — both mobile and automotive
-are different `MediaController` clients talking to the same service.
+NyasaPlayer AAOS shares the domain, data, and playback layers with the mobile app. On
+AAOS the **OEM media template** is the UI for Home, Browse, Library, Now Playing, Queue,
+and Search — driven directly by our `MediaLibraryService`. The `:automotive` module
+ships only the parked-only custom flows Google permits for media apps: Auth, Settings,
+and a Sign-Out confirmation dialog.
 
-**Target Display:** 1280x720 landscape (16:9), automotive head unit
-**Min SDK:** 28 (AAOS minimum)
-**Figma Source:** `figma.com/make/HCqiewiK6cfBLpuZ7g1XPV/NyasaPlayer-UI-Design-System`
+**Target display:** 1280×720 landscape (16:9), automotive head unit.
+**Min SDK:** 28 (AAOS minimum).
+**`<uses name="media" />`:** required for Play Store AAOS submission.
 
 ---
 
 ## Module Boundaries
 
-### Current vs Proposed
-
 ```
-CURRENT:
-:core:common  <--  :core:data  <--  :app
-
-PROPOSED:
-                                      +-- :app (mobile)
-:core:common <-- :core:data <-- :core:playback --+
-                                      +-- :automotive
+:core:common  <--  :core:data  <--  :core:playback  -+-- :app (mobile)
+                                                     +-- :automotive (AAOS: Auth + Settings)
 ```
-
-### New Modules
 
 | Module | Package | Responsibility |
 |---|---|---|
-| `:core:playback` | `core.playback` | Player engine, MediaSession, queue management, state persistence — extracted from `app/.../player/` |
-| `:automotive` | `com.example.nyasaplayer.auto` | AAOS Activity, car-optimized Compose UI, automotive DI, Car API integration |
+| `:core:common` | `core.common` | Domain models, theme, shared UI primitives, NetworkMonitor |
+| `:core:data` | `core.data` | Repositories, Room, Firebase sync, preferences DataStore |
+| `:core:playback` | `core.playback` | `PlaybackService` (`MediaLibraryService`), `MediaBrowseTree`, `PlaybackQueueManager`, `PlaybackStatePersistence`, `SongMediaItemMapper`, `PlaybackCommands` |
+| `:app` | `com.example.nyasaplayer` | Mobile-only screens, ViewModels, navigation, `MediaController` client |
+| `:automotive` | `com.example.nyasaplayer.auto` | AAOS parked-only Activities (Auth, Settings); **no playback/browse UI** |
 
-### What Moves Where
-
-**`app/player/` --> `:core:playback`** (extract entirely):
-- `PlaybackService.kt` — the `MediaSessionService` (single playback owner for both targets)
-- `PlaybackQueueManager.kt` — queue state holder
-- `PlaybackStatePersistence.kt` — save/restore logic
-- `PlaybackCommands.kt` — custom session commands
-- `SongMediaItemMapper.kt` — Song <-> MediaItem conversion
-- `PlayerUiState.kt` — shared UI state contract
-
-**Stays in `:app`** (mobile-specific):
-- `PlayerViewModel.kt` — mobile UI bindings (position polling, expanded/mini mode, like toggling)
-- `GlobalPlayerLayer.kt`, `MiniPlayer.kt`, `ExpandedPlayer.kt` — mobile Compose UI
-- All screen ViewModels, navigation, auth flow
-
-**New in `:automotive`**:
-- `AutomotivePlayerViewModel` — car-optimized state (no expanded/mini modes, distraction-aware)
-- `AutomotiveActivity` — single `ComponentActivity` for car display
-- `AutomotiveNavigation` — simplified nav (no bottom tabs, no auth on head unit)
-- Car-specific Compose screens (see [Figma Design Specs](#aaos-figma-design-specs))
-
-### Dependency Graph
-
-```
-:core:common (models, theme, utils, NetworkMonitor)
-     ^
-     |
-:core:data (repositories, Room, Firebase, sync)
-     ^
-     |
-:core:playback (PlaybackService, QueueManager, StatePersistence, MediaSession)
-     ^                    ^
-     |                    |
-:app (mobile)        :automotive (AAOS)
-```
-
-### settings.gradle.kts Additions
-
-```kotlin
-include(":core:playback")
-include(":automotive")
-```
-
-### :automotive build.gradle.kts
+### `:automotive` build.gradle (key)
 
 ```kotlin
 android {
     namespace = "com.example.nyasaplayer.auto"
-    defaultConfig {
-        applicationId = "com.example.nyasaplayer"
-        minSdk = 28  // AAOS minimum
-    }
+    defaultConfig { applicationId = "com.example.nyasaplayer"; minSdk = 28 }
     buildFeatures { compose = true }
 }
 
 dependencies {
-    implementation(project(":core:playback"))
-    implementation(project(":core:data"))
-    implementation(project(":core:common"))
-    implementation("androidx.car.app:app:1.4.0")
-    implementation("androidx.car.app:app-automotive:1.4.0")
+    implementation(project(":core:playback"))  // PlaybackService merges from here
+    implementation(project(":core:data"))       // AuthRepository + AudioQualityPreference
+    implementation(project(":core:common"))     // Theme + NyasaIcons
+    // No androidx.car.app — we're a MediaLibraryService app, not a Car App Library app.
 }
 ```
 
 ---
 
-## MediaSession Ownership
+## MediaLibrarySession — the AAOS surface
 
-### Single Owner in `:core:playback`
+Under Option B the AAOS-facing API surface is the `MediaLibrarySession.Callback`
+installed on `PlaybackService`. The OEM template calls these methods; what we return
+is what the user sees.
 
-```
-+------------------------------------------+
-|            :core:playback                |
-|                                          |
-|  PlaybackService (MediaLibraryService)   |
-|  +----------+  +----------------+        |
-|  | ExoPlayer|  | MediaSession   |        |
-|  +----+-----+  +-------+--------+        |
-|       |                |                 |
-|  +----+----------------+--------+        |
-|  | PlaybackQueueManager         |        |
-|  | PlaybackStatePersistence     |        |
-|  +------------------------------+        |
-|                                          |
-|  SessionToken + MediaController.Builder  |
-+------------------------------------------+
-         ^                        ^
-    :app (mobile)           :automotive
-    MediaController         MediaController
-```
-
-### Key Change: MediaLibraryService
-
-The current `PlaybackService` extends `MediaSessionService`. For AAOS, upgrade to
-`MediaLibraryService` — a superset that adds browse tree support for the AAOS media center:
-
-| | `MediaSessionService` (current) | `MediaLibraryService` (proposed) |
-|---|---|---|
-| Playback control | Yes | Yes |
-| Browse tree for AAOS | No | Yes |
-| Google Assistant | Basic | Full ("play X on NyasaPlayer") |
-| Mobile impact | N/A | None (browse tree optional for mobile clients) |
-
-### Browse Tree Structure
+### Browse tree
 
 ```
-ROOT
- +-- "Recently Played"   (user-specific, from Firestore)
- +-- "Genres"             (from Room GenreDao)
- |    +-- "Electronic"    (songs filtered by genre)
- |    +-- "Hip Hop"
+ROOT (grid)
+ +-- "Recently Played"   (LIST  — user-specific, from Firestore)
+ +-- "Liked Songs"        (LIST  — user-specific, from Firestore)   ← added in Option-B migration
+ +-- "Genres"             (GRID  — from Room GenreDao)
+ |    +-- "Electronic"
  |    +-- ...
- +-- "Artists"            (from Room ArtistDao)
- |    +-- "Jimi Hendrix"  (songs filtered by artist)
+ +-- "Artists"            (GRID  — from Room ArtistDao)
+ |    +-- "Jimi Hendrix"
  |    +-- ...
- +-- "All Songs"          (from Room SongDao, sorted by popularity)
+ +-- "All Songs"          (LIST  — from Room SongDao, sorted by popularity)
 ```
 
-**Browse tree depth: Root -> Category -> Items = 3 taps to play** (within AAOS 6-tap limit).
+Style hints come from
+`androidx.media.utils.MediaConstants.EXTRA_BROWSABLE_STYLE_HINT_CATEGORY_{GRID,LIST}_ITEM`
+in the child `MediaItem` extras. Depth = Root → Category → Song (3 taps) — within the
+AAOS 6-tap limit.
+
+### Callbacks implemented in `PlaybackService`
+
+| Callback | Purpose |
+|---|---|
+| `onGetLibraryRoot` | Returns `MediaBrowseTree.rootItem` |
+| `onGetChildren(parentId, page, pageSize)` | Paginated children from the tree |
+| `onGetItem(mediaId)` | Single-item lookup |
+| `onSearch(query)` | Indexes results, notifies template |
+| `onGetSearchResult(query, page, pageSize)` | Paginated search results |
+| `onCustomCommand` | Handles `CMD_SET_QUEUE`, `CMD_SHUFFLE_PLAY`, `CMD_RESTORE_STATE`, `CMD_TOGGLE_SHUFFLE`, `CMD_TOGGLE_LIKE` |
+
+### MediaMetadata contract
+
+Every song `MediaItem` sets on its `MediaMetadata`:
+
+- `title`, `artist`, `albumTitle`, `artworkUri`, `durationMs`
+- Extras bundle with internal re-hydration fields (audio URL, cover URL, IDs,
+  popularity, explicit flag) — OEM template does not consume these.
+
+### SessionCommands
+
+| Command | Role in template |
+|---|---|
+| `CMD_TOGGLE_LIKE` | Powers the heart button on Now Playing |
+| `CMD_TOGGLE_SHUFFLE` | Shuffle toggle |
+| `CMD_SET_QUEUE` / `CMD_SHUFFLE_PLAY` / `CMD_RESTORE_STATE` | Queue population + cross-device resume |
 
 ---
 
 ## State Synchronization
 
-### Architecture
-
 ```
-                PlaybackService
-                (MediaLibrarySession)
-                      |
-        +-------------+----------------+
-        v                              v
-   MediaController                MediaController
-   (mobile process)               (automotive process)
-        v                              v
-+-------------------+        +------------------------+
-| PlayerViewModel   |        | AutoPlayerViewModel    |
-|                   |        |                        |
-| - Mini/Expanded   |        | - Always visible       |
-| - Like toggling   |        | - Like toggling        |
-| - 250ms polling   |        | - 500ms polling        |
-| - Full gestures   |        | - Large touch targets  |
-+-------------------+        +------------------------+
+                  PlaybackService (MediaLibrarySession)
+                            |
+                +-----------+------------+
+                v                        v
+         MediaController             OEM Media Template
+         (mobile: :app)              (AAOS — first-party OS UI)
+                v
+      PlayerViewModel (:app)
+      - Mini / Expanded mode
+      - Like toggling (optimistic + rollback)
+      - 250 ms polling
 ```
 
-### Shared State Collector (`:core:playback`)
+Under Option B the car side does **not** run a `MediaController`-backed ViewModel. The
+OEM template is the controller. Our only AAOS ViewModels are `AutomotiveAuthViewModel`
+(Sign-In flow) and `CarSettingsViewModel` (Account + Audio Quality prefs).
 
-Both ViewModels extend a shared base that handles MediaController event listening:
+### BasePlayerStateCollector
 
-```kotlin
-// :core:playback
-abstract class BasePlayerStateCollector(
-    private val mediaControllerFuture: ListenableFuture<MediaController>,
-) {
-    protected val _playbackState = MutableStateFlow(PlaybackSnapshot())
-    val playbackState: StateFlow<PlaybackSnapshot> = _playbackState.asStateFlow()
-
-    protected abstract val positionPollIntervalMs: Long  // 250ms mobile, 500ms auto
-}
-
-data class PlaybackSnapshot(
-    val currentSong: Song? = null,
-    val isPlaying: Boolean = false,
-    val currentPositionMs: Long = 0L,
-    val durationMs: Long = 0L,
-    val isBuffering: Boolean = false,
-    val hasPrevious: Boolean = false,
-    val hasNext: Boolean = false,
-    val repeatMode: RepeatMode = RepeatMode.Off,
-    val isShuffled: Boolean = false,
-    val queueSize: Int = 0,
-)
-```
-
-### Why Two Separate ViewModels
-
-| Concern | Mobile | Automotive |
-|---|---|---|
-| Player modes | Hidden/Mini/Expanded | Always visible (no modes) |
-| Like toggling | Yes (optimistic + rollback) | No (distraction risk) |
-| Position polling | 250ms (smooth scrubbing) | 500ms (progress bar only) |
-| Error display | Snackbar + banner + red progress | Modal overlay + retry |
-| Gestures | Swipe expand/collapse | None (touch targets only) |
+Still present in `:core:playback` — used by `PlayerViewModel` on mobile. No subclass in
+`:automotive`. If we ever need in-car playback state outside the template (e.g., to
+gate something in Settings), we can re-introduce a 500 ms collector at that time.
 
 ---
 
-## Automotive Abstraction Layers
+## Custom Flows (`:automotive`)
 
-### Layer Diagram
+Three flows ship as Compose. Everything else is template-rendered.
 
-```
-+--------------------------------------------------+
-|                 :automotive                       |
-|                                                  |
-|  Automotive UI Layer                             |
-|    AutomotiveActivity                            |
-|    AutomotiveNavHost                             |
-|    CarHomeScreen / CarNowPlayingScreen           |
-|    CarBrowseScreen / CarErrorOverlay             |
-|                  |                               |
-|  Automotive Abstraction Layer                    |
-|    AutomotivePlayerViewModel                     |
-|    CarUxRestrictionsHandler                      |
-|                  |                               |
-|  Automotive DI (AutoPlayerModule)                |
-|    Provides: SessionToken, MediaController       |
-|    Provides: CarUxRestrictionsManager            |
-+--------------------------------------------------+
-         |                |               |
-    :core:playback   :core:data     :core:common
-```
+### Auth
 
-### CarUxRestrictionsHandler
+- `CarAuthScreen.kt` — Google Sign-In via Credential Manager; CTS-compliant (no keyboard).
+- `AutomotiveAuthViewModel.kt` — credential flow + profile creation via `AuthRepository`.
+- Entry point: invoked when the MediaLibrarySession returns
+  `SessionError.ERROR_PERMISSION_DENIED`, or from Settings → Account → "Sign in again".
 
-Wraps the Car API's distraction rules as a reactive StateFlow:
+### Settings
 
-```kotlin
-@Singleton
-class CarUxRestrictionsHandler @Inject constructor(
-    private val carUxRestrictionsManager: CarUxRestrictionsManager,
-) {
-    private val _restrictions = MutableStateFlow(UxRestrictionState())
-    val restrictions: StateFlow<UxRestrictionState> = _restrictions.asStateFlow()
-}
+- `CarSettingsScreen.kt` — vertical list root: **Account**, **Audio Quality**, **About**.
+- `CarAccountScreen.kt` — avatar + name + email + Sign Out.
+- `CarAudioQualityScreen.kt` — radio list: Low / Normal / High / Very High. Persisted
+  via `AudioQualityPreference` DataStore in `:core:data`.
+- `CarAboutScreen.kt` — static version / build / Terms / Privacy / Licences.
+- `CarSettingsViewModel.kt` — Hilt VM, exposes current audio-quality pref, delegates
+  sign-out to `AuthRepository`.
 
-data class UxRestrictionState(
-    val noTextEntry: Boolean = false,
-    val limitedContent: Int = Int.MAX_VALUE,
-    val noVideo: Boolean = false,
-    val noFiltering: Boolean = false,
-)
+Manifest entry:
+
+```xml
+<activity
+    android:name=".ui.SettingsActivity"
+    android:exported="true"
+    android:distractionOptimized="false"
+    android:theme="@style/Theme.NyasaPlayer">
+    <intent-filter>
+        <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+</activity>
 ```
 
-### AutomotiveActivity
+### Sign-Out confirmation
 
-Single entry point — no auth flow on head unit (assumes phone-paired account):
+- `SignOutConfirmationDialog.kt` — modal, two 76 dp buttons (Cancel + Sign Out).
+- Sign Out button uses the purple **accent gradient** (not red) — sign-out is not
+  destructive in the "delete your account" sense.
 
-```kotlin
-@AndroidEntryPoint
-class AutomotiveActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            NyasaTheme {
-                AutomotiveApp()  // No auth — uses synced Firebase account
-            }
-        }
-    }
-}
-```
+### Distraction compliance for our custom screens
 
----
+The OEM template handles distraction rules for all template-rendered surfaces. Our
+three custom flows need to meet the bar independently:
 
-## Driver Distraction Compliance
-
-### Google AAOS Requirements (CTS-enforced)
-
-| Rule | Our Implementation |
+| Rule | Our implementation |
 |---|---|
-| Max 6 taps to reach content | Browse tree: Root -> Category -> Song = 3 taps |
-| No scrolling lists > N items | Enforce `CarUxRestrictions.maxCumulativeContentItems` (typically 12) |
-| No text input while driving | Observe `UX_RESTRICTIONS_NO_TEXT_ENTRY`, disable keyboard, show voice prompt |
-| Min touch target 76dp | All car Compose components: `Modifier.sizeIn(minWidth = 76.dp, minHeight = 76.dp)` |
-| No animations > 2 seconds | No spring/tween animations in automotive UI |
-| Glanceable content | Max 2 lines of text per list item, high contrast |
-
-### Restriction Flow
-
-```
-CarUxRestrictionsManager (system)
-    --> CarUxRestrictionsHandler (observes, emits StateFlow)
-        --> AutomotivePlayerViewModel (combines with playback state)
-            --> Compose UI (conditionally renders based on restrictions)
-```
+| 76 dp min touch target | Enforced via `Modifier.sizeIn(minWidth = 76.dp, minHeight = 76.dp)` on every tappable element |
+| 24 sp min body text | `AutomotiveDimens` / typography scale (16/18/20/24/30/36 sp) |
+| Parked-only | `android:distractionOptimized="false"` on `SettingsActivity`; the system hides it while driving |
+| No keyboard | Auth uses Credential Manager; Settings never prompts for typed input |
+| Back affordance | Every Settings sub-screen has a 76 dp circular back button |
 
 ---
 
-## AAOS Figma Design Specs
+## Decision: Option B — Template Path
 
-**Source:** `figma.com/make/HCqiewiK6cfBLpuZ7g1XPV` — `src/app/components/aaos/`
+**Date:** 2026-04-23
 
-### Design Tokens (Shared with Mobile)
+**Context:** Prior to this decision the `:automotive` module contained ~4,500 LOC of
+custom Compose (Home, Browse, Library, Full Player, Queue, Mini Player, Artist detail,
+error overlays, tab navigation). A review against Google's AAOS media-app rules
+concluded that none of these screens could ship on the Play Store AAOS track for a
+`<uses name="media" />` app — the OEM template is mandatory for playback and browse.
 
-| Token | Value | CSS Variable |
-|---|---|---|
-| Background | `#0D0D0D` | `--background` |
-| Surface | `#1A1A1A` | `--surface` |
-| Surface Variant | `#242424` | `--surface-variant` |
-| Surface Bright | `#2D2D2D` | `--surface-bright` |
-| Primary Start | `#A855F7` | `--primary-start` |
-| Primary End | `#7C3AED` | `--primary-end` |
-| Text Primary | `rgba(255,255,255,1)` | `--text-primary` |
-| Text Secondary | `rgba(255,255,255,0.7)` | `--text-secondary` |
-| Text Tertiary | `rgba(255,255,255,0.4)` | `--text-tertiary` |
-| Error | `#EF4444` | `--error` |
-| Warning | `#F59E0B` | `--warning` |
+**Options considered:**
 
-**Spacing:** 8px grid system
-**Border radius:** `16px` (cards/panels), `9999px` (circular buttons)
-**Typography scale:** 12/14/16/18/20/24/32/48px
-
-### Screen 1: AAOS Home Screen
-
-**File:** `AAOSHomeScreen.tsx`
-**Layout:** Full-height flex column, 2-column grid content + persistent mini player
-
-```
-+-----------------------------------------------------------+
-|  "Good Evening"                                           |
-|  "Ready for your drive?"                                  |
-|                                                           |
-|  +--- Quick Access ---+  +--- Recently Played ----------+|
-|  | [My Music] [Radio] |  | [80x80 art] Title            ||
-|  |                     |  |             Artist            ||
-|  | [Favorites][Trend.] |  | [80x80 art] Title            ||
-|  |                     |  |             Artist            ||
-|  +---------------------+  | [80x80 art] Title            ||
-|                            |             Artist            ||
-|                            | [80x80 art] Title            ||
-|                            +------------------------------+|
-|                                                           |
-|  [Mini Player Bar - 112px height]                         |
-+-----------------------------------------------------------+
-```
-
-**Quick Actions:** 4 gradient square buttons, 48px icons
-- My Music: `from-purple-500 to-purple-700`
-- Radio: `from-pink-500 to-rose-700`
-- Favorites: `from-red-500 to-red-700`
-- Trending: `from-blue-500 to-indigo-700`
-
-**Recently Played:** Vertical list, each item: 80x80px album art + title (xl) + artist (base), play overlay on hover
-
-**Compose mapping:**
-- Quick Actions -> 4 large `Card` composables with `Brush.linearGradient`
-- Recently Played -> `LazyColumn` with `76.dp` min-height items
-- Grid -> `Row` with two equal-weight `Column`s
-
-### Screen 2: AAOS Full Player
-
-**File:** `AAOSFullPlayer.tsx`
-**Layout:** Horizontal — 400x400px album art (left) + controls (right)
-
-```
-+-----------------------------------------------------------+
-| [v]        PLAYING FROM PLAYLIST        [...]             |
-|                Road Trip Mix                               |
-|                                                           |
-|  +----------------+   Purple Haze                         |
-|  |                |   Jimi Hendrix - Are You Experienced  |
-|  |   400x400px    |                                       |
-|  |   Album Art    |   [====gradient====--------] 2:34/5:42|
-|  |   rounded-3xl  |                                       |
-|  |                |   (shuf) (<) [  PLAY  ] (>) (rpt)     |
-|  +----------------+            112px btn                   |
-|                                                           |
-|                        [heart]                            |
-+-----------------------------------------------------------+
-```
-
-**Control button sizes (Compose dp mapping):**
-- Shuffle: `64.dp` circle, `28px` icon
-- Skip Back/Forward: `80.dp` circle, `36px` icon
-- Play/Pause: `112.dp` circle, gradient `#A855F7 -> #7C3AED`, `48px` icon
-- Repeat: `64.dp` circle, `28px` icon
-- Like: `56.dp` circle (secondary action)
-- Collapse/More: `56.dp` circle (top bar)
-
-**Progress bar:** Full-width seekable slider, purple gradient fill, `h-3` track, `w-6 h-6` thumb
-**Track info:** Title `4xl` (36sp), Artist `2xl` (24sp)
-
-### Screen 3: AAOS Browse Screen
-
-**File:** `AAOSBrowseScreen.tsx`
-**Layout:** 2-column — playlist grid (left) + genre list (right) + persistent mini player
-
-```
-+-----------------------------------------------------------+
-|  "Browse Music"                                           |
-|  "Explore playlists and genres"                           |
-|                                                           |
-|  +-- Featured Playlists --+  +-- Browse by Genre --------+|
-|  | [img][img]              |  | [|] Electronic  1,243 [>]||
-|  | [img][img]              |  | [|] Hip Hop       987 [>]||
-|  | [img][img]              |  | [|] Jazz           654 [>]||
-|  +-------------------------+  | [|] Rock         2,112 [>]||
-|                               | [|] Pop          1,876 [>]||
-|                               | [|] Classical      432 [>]||
-|                               +---------------------------+|
-|                                                           |
-|  [Mini Player Bar - 112px height]                         |
-+-----------------------------------------------------------+
-```
-
-**Playlist cards:** Square aspect ratio, image + gradient overlay + text overlay (bottom)
-**Genre items:** Full-width rows, `p-6`, purple accent bar (`w-2 h-12`), genre name (xl), count, play button (48px circle)
-
-### Screen 4: AAOS Error States
-
-**File:** `AAOSErrorStates.tsx`
-**Three variants:**
-
-| Error | Icon | Gradient | Actions |
+| Option | Play Store AAOS? | Custom UI? | Verdict |
 |---|---|---|---|
-| No Internet | `WifiOff` | `from-orange-500 to-red-500` | Dismiss + Retry |
-| Server Error (503) | `ServerCrash` | `from-red-500 to-rose-700` | Dismiss + Retry |
-| Connection Lost | `AlertTriangle` | `from-yellow-500 to-orange-500` | Auto-reconnect spinner |
+| A. Drop `<uses name="media" />`, ship custom UI | ❌ | ✅ full | No real distribution path — AAOS head units don't sideload |
+| **B. Keep `media`, custom Auth + Settings only** | ✅ | ✅ minimal | Chosen. Production-viable. |
+| C. Hybrid — keep custom, bet on per-OEM review | ⚠️ per-OEM | ✅ full | Worst of both; brittle |
 
-**Modal layout:**
-- Backdrop: `black/80` + blur
-- Card: `max-w-2xl`, `bg-[#1A1A1A]`, `rounded-3xl`, `p-12`, `border-white/10`
-- Icon: `128px` gradient circle
-- Title: `3xl` (30sp), Description: `xl` (20sp)
-- Buttons: `py-5`, `xl` text, full-width row
-- Retry button: purple gradient with `RefreshCw` icon
-- Reconnecting: animated spinning `RefreshCw` icon
+**Choice:** B. Distribution via Play Store is the real constraint. The
+`:core:playback` layer already does most of the work; the delta is metadata + a Liked
+Songs category + a like `SessionCommand`. We lose custom screen personality on the
+playback surfaces in exchange for a shippable, OEM-consistent experience.
 
-### Screen 5: AAOS Mini Player
-
-**File:** `AAOSMiniPlayer.tsx`
-**Persistent bar, 112px height, docked at bottom of Home and Browse screens**
-
-```
-+-----------------------------------------------------------+
-| [80x80 art] Title      | (<) [PLAY 80px] (>) | prog [<3] |
-|             Artist      |                      |           |
-+-----------------------------------------------------------+
-```
-
-**Three sections:**
-1. **Left — Now Playing:** 80x80px album art (rounded-xl) + title (xl) + artist (base), truncated
-2. **Center — Controls:** Skip Back (56px), Play/Pause (80px gradient), Skip Forward (56px)
-3. **Right — Progress + Like:** Progress bar (gradient fill) with timestamps + Like button (56px)
-
-**Surface:** `#1A1A1A`, top border `white/10`
+**Reversibility:** Mostly reversible. The Stitch designs are preserved as reference
+(`docs/stitch-screens/`). If AAOS policy ever permits custom media UI (or we pivot to
+a non-media automotive category), we can re-introduce custom screens without data
+loss.
 
 ---
 
 ## Firebase Backend Compatibility
 
-### Assessment: SAME FIREBASE PROJECT — FULLY COMPATIBLE
+Same Firebase project serves both `:app` and `:automotive`. The AAOS template reads
+from our existing repositories via the MediaBrowser callbacks — no schema changes
+required for Option B beyond what `:core:data` already provides.
 
-The existing Firebase setup can serve both mobile and AAOS with minor extensions.
+### Playback state sync
 
-### Current Data Architecture
+`PlaybackStatePersistence` (`:core:playback`) periodically saves queue, position, and
+repeat mode to `users/{uid}/playbackState/current`. The mobile app writes; the
+MediaLibrarySession reads on session creation. Cross-device resume (phone → car) works
+automatically because both targets connect to the same session against the same UID.
 
-```
-Firestore
- +-- songs (collection)        --> synced to Room SongEntity
- +-- genres (collection)       --> synced to Room GenreEntity
- +-- artists (collection)      --> synced to Room ArtistEntity
- +-- albums (collection)       --> NOT synced yet (no Room entity)
- +-- users/{uid}/
-      +-- profile              --> read directly from Firestore
-      +-- likedSongs/{mediaId} --> read directly from Firestore
-      +-- recentlyPlayed/      --> read directly from Firestore
-      +-- playbackState/current --> save/restore for cross-device resume
+### Authentication on AAOS
 
-Realtime Database
- +-- homeFeed/default          --> home feed sections
-```
+Phone-paired sign-in is preferred (pair once on phone, AAOS inherits) but not yet
+implemented. Today AAOS ships Credential Manager Google Sign-In directly
+(`CarAuthScreen`); until phone pairing lands, the user signs in once per device.
 
-### What Works Out of the Box
+### Firestore security
 
-| Capability | Status | Details |
-|---|---|---|
-| Catalog sync (songs, genres, artists) | READY | `FirebaseSyncManager` syncs to Room on startup; AAOS reads from Room |
-| User authentication | READY | Same Firebase Auth project; one UID across phone + AAOS |
-| User-scoped data | READY | All user data under `users/{uid}/`; AAOS reads same data |
-| Playback state sync | READY | `playbackState/current` enables cross-device resume |
-| Offline-first browsing | READY | Room DB is source of truth; works without network |
-| Like/unlike songs | READY | Firestore `likedSongs` sub-collection, user-scoped |
-| Recently played | READY | Firestore `recentlyPlayed` sub-collection, user-scoped |
-
-### What Needs Changes
-
-| Issue | Severity | Details |
-|---|---|---|
-| No Album entity in Room | HIGH | `Song` has `albumId`/`albumName` but no `albums` table; can't browse by album |
-| Missing DAO queries for browse tree | HIGH | No `getByPopularity()`, `getByGenre()` on ArtistDao; no `getByPopularity()` on GenreDao/SongDao |
-| Genre query uses LIKE search | MEDIUM | `SongDao.getByGenreId()` does `LIKE '%genreId%'` (full table scan); needs optimization for large catalogs |
-| No Firestore security rules in repo | MEDIUM | Must configure rules to allow AAOS access to catalog collections |
-| Download data is device-local | LOW | `DownloadEntity` not in Firestore; AAOS can't see phone downloads |
-| Queue size IPC limit | LOW | `SongMediaItemMapper` warns ~100-200 songs max per Bundle transaction |
-
-### Authentication Strategy for AAOS
-
-**Phone-paired approach (recommended):**
-1. User authenticates on phone (existing Email/Password or Google Sign-In)
-2. AAOS app checks `AuthRepository.isAuthenticated` on launch
-3. If authenticated: show home screen, read user data from same `users/{uid}/`
-4. If not authenticated: show "Pair your phone" screen with instructions
-5. No keyboard auth on head unit (violates distraction rules)
-
-**Technical detail:** Both apps share the same `google-services.json` Firebase project.
-Firebase Auth persists login state per-device, so AAOS needs its own sign-in event.
-Options: QR code pairing, Google Sign-In via vehicle's Google account, or
-companion phone deep link.
-
----
-
-## Required Backend Changes
-
-### Phase 1: Room DAO Extensions (No Firebase Changes)
-
-Add queries needed for the AAOS browse tree:
-
-```kotlin
-// SongDao — add:
-@Query("SELECT * FROM songs ORDER BY popularity DESC LIMIT :limit")
-fun getByPopularity(limit: Int): Flow<List<SongEntity>>
-
-@Query("SELECT * FROM songs WHERE album_id = :albumId")
-fun getByAlbumId(albumId: String): Flow<List<SongEntity>>
-
-// ArtistDao — add:
-@Query("SELECT * FROM artists ORDER BY popularity DESC LIMIT :limit")
-fun getByPopularity(limit: Int): Flow<List<ArtistEntity>>
-
-// GenreDao — add:
-@Query("SELECT * FROM genres ORDER BY popularity DESC LIMIT :limit")
-fun getByPopularity(limit: Int): Flow<List<GenreEntity>>
-```
-
-### Phase 2: Album Entity + Sync
-
-```kotlin
-// New: AlbumEntity
-@Entity(tableName = "albums")
-data class AlbumEntity(
-    @PrimaryKey val id: String,
-    @ColumnInfo(name = "name") val name: String,
-    @ColumnInfo(name = "artist_id") val artistId: String,
-    @ColumnInfo(name = "artist_name") val artistName: String,
-    @ColumnInfo(name = "cover_url") val coverUrl: String,
-    @ColumnInfo(name = "year") val year: Int,
-    @ColumnInfo(name = "song_count") val songCount: Int,
-)
-
-// New: AlbumDao
-@Dao
-interface AlbumDao {
-    @Query("SELECT * FROM albums")
-    fun getAll(): Flow<List<AlbumEntity>>
-
-    @Query("SELECT * FROM albums WHERE artist_id = :artistId")
-    fun getByArtistId(artistId: String): Flow<List<AlbumEntity>>
-
-    @Query("SELECT * FROM albums WHERE id = :albumId")
-    suspend fun getById(albumId: String): AlbumEntity?
-
-    @Upsert
-    suspend fun upsertAll(albums: List<AlbumEntity>)
-
-    @Query("DELETE FROM albums WHERE id NOT IN (:ids)")
-    suspend fun deleteNotIn(ids: List<String>)
-
-    @Transaction
-    suspend fun sync(albums: List<AlbumEntity>) {
-        upsertAll(albums)
-        deleteNotIn(albums.map { it.id })
-    }
-}
-```
-
-Update `FirebaseSyncManager` to sync `albums` collection alongside songs/genres/artists.
-Bump Room database version from 3 to 4 with migration.
-
-### Phase 3: Firestore Security Rules (Firebase Console)
-
-```javascript
-// Recommended Firestore security rules
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Catalog — read-only for authenticated users
-    match /songs/{songId} {
-      allow read: if request.auth != null;
-      allow write: if false; // admin SDK only
-    }
-    match /genres/{genreId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-    match /artists/{artistId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-    match /albums/{albumId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-
-    // User data — scoped to authenticated user
-    match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-    match /users/{uid}/{subcollection}/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-  }
-}
-```
-
-### Phase 4: Firestore Indexes (Only If Catalog > 10K Songs)
-
-Create composite indexes via Firebase Console or `firestore.indexes.json`:
-
-```json
-{
-  "indexes": [
-    {
-      "collectionGroup": "songs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "artistId", "order": "ASCENDING" },
-        { "fieldPath": "popularity", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "songs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "albumId", "order": "ASCENDING" },
-        { "fieldPath": "popularity", "order": "DESCENDING" }
-      ]
-    }
-  ]
-}
-```
-
-These are only needed at scale. Room handles queries locally, so Firestore indexes
-only matter for sync performance, not browse-time performance.
-
-### No Backend Changes Needed For
-
-- Playback state sync (already stored at `users/{uid}/playbackState/current`)
-- Like/unlike (already user-scoped)
-- Recently played (already user-scoped)
-- Home feed (Realtime Database, read-only)
-- Catalog sync (one-shot Firestore -> Room, already works)
-
----
-
-## Tradeoff Analysis
-
-### Decision 1: Separate `:automotive` Module vs Build Flavors in `:app`
-
-| | Separate Module (chosen) | Build Flavor |
-|---|---|---|
-| Code isolation | Full — different source sets | Partial — `if (isAuto)` branches |
-| Build independence | Each builds alone | Coupled builds |
-| APK size | Minimal — only auto deps in auto APK | Mobile ships car deps |
-| Team scalability | Different teams can own each | Single team owns both |
-
-**Choice: Separate module.** The UI layers are fundamentally different paradigms.
-
-### Decision 2: MediaLibraryService vs MediaSessionService + Separate CarAppService
-
-| | `MediaLibraryService` (chosen) | Dual Services |
-|---|---|---|
-| Single source of truth | Yes | Risk of state divergence |
-| AAOS media center integration | Automatic | Manual |
-| Google Assistant | Full | Limited |
-| Complexity | +browse tree callbacks | +IPC between services |
-
-**Choice: MediaLibraryService.** Superset API, better AAOS integration.
-
-### Decision 3: Shared ViewModel vs Separate ViewModels
-
-| | Shared ViewModel | Separate + Shared Collector (chosen) |
-|---|---|---|
-| Code reuse | Maximum | Moderate |
-| Platform-specific behavior | `when(platform)` branches | Clean separation |
-| Testing | One complex test suite | Two focused test suites |
-
-**Choice: Separate ViewModels.** UI contracts are too different to share cleanly.
-
-### Decision 4: Auth on Head Unit vs Phone-Paired
-
-| | Auth on Head Unit | Phone-Paired (chosen) |
-|---|---|---|
-| UX | Typing password on car = terrible | Seamless |
-| Distraction compliance | Very difficult | Not applicable |
-| Implementation | Full auth flow for car | Check `isAuthenticated`, show pairing prompt |
-
-**Choice: Phone-paired.** Distraction rules effectively prohibit on-screen auth.
-
-### Decision 5: Same Firebase Project vs Separate
-
-| | Same Project (chosen) | Separate Project |
-|---|---|---|
-| Data sharing | Automatic (same UID) | Requires sync service |
-| Configuration | One `google-services.json` | Two configurations |
-| Cost | Single billing | Double billing |
-| Isolation | Shared quotas | Independent scaling |
-
-**Choice: Same project.** User data is already UID-scoped; no reason to duplicate.
+Existing rules (catalog read-only for authenticated users; user data scoped to `uid`)
+are sufficient. See `firestore.rules`.
 
 ---
 
 ## Implementation Roadmap
 
-### Phase 1: Extract `:core:playback` (No Behavior Change)
+The Option-B migration is a single PR on `ek/aaos-ui-redesign` with four phased
+commits. Detailed plan at `/Users/admin/.claude/plans/let-s-go-with-b-piped-waffle.md`.
 
-- [x] Create `:core:playback` module with build.gradle.kts
-- [x] Move player files from `app/player/` to `core/playback/`
-- [x] Update `:app` to depend on `:core:playback`
-- [x] Verify all existing tests pass, mobile app unchanged
-- [x] Extract `BasePlayerStateCollector` from `PlayerViewModel`
+### Commit 1 — Docs & decision record ✅
 
-### Phase 2: Upgrade to `MediaLibraryService`
+- Rewrite `docs/AAOS_UI_REDESIGN_PLAN.md`, `docs/AAOS_ARCHITECTURE.md` (this file),
+  `CLAUDE.md`, `README.md`, add `docs/stitch-screens/README.md`.
 
-- [x] Change `PlaybackService` base class to `MediaLibraryService`
-- [x] Implement `MediaBrowseTreeBuilder` with catalog queries from repositories
-- [x] Add `onGetLibraryRoot`, `onGetChildren`, `onGetItem`, `onSearch` callbacks
-- [x] Extend Room DAOs with `getByPopularity()` queries
-- [x] Mobile continues using `MediaController` unchanged
+### Commit 2 — `:core:playback` template gap closure
 
-### Phase 3: Room Schema Updates
+- `MediaBrowseTree`: add `EXTRA_BROWSABLE_STYLE_HINT_*` extras; add Liked Songs root child.
+- `SongMediaItemMapper`: set `albumTitle` + `durationMs` on `MediaMetadata` top-level.
+- `PlaybackCommands`: add `CMD_TOGGLE_LIKE`.
+- `PlaybackService`: register `CMD_TOGGLE_LIKE` + handler; map `PlaybackException` to
+  `SessionError.ERROR_{PERMISSION_DENIED, IO, NOT_SUPPORTED}`.
+- Extend `MediaBrowseTreeTest`.
 
-- [x] Add `AlbumEntity`, `AlbumDao` to Room database
-- [x] Bump database version 3 -> 4 with migration
-- [x] Update `FirebaseSyncManager` to sync `albums` collection
-- [x] Add `AlbumRepository` interface + `OfflineAlbumRepository` implementation
-- [x] Update `RepositoryModule` bindings
+### Commit 3 — `:automotive` prune
 
-### Phase 4: Create `:automotive` Module
+- Delete 11 screen/component/nav files + 3 ViewModels (AutomotivePlayerViewModel,
+  AutomotiveContentViewModel, CarUxRestrictionsHandler).
+- Collapse `AutomotiveApp.kt` to Auth + Settings nav host.
+- Simplify `AutoAppModule`.
+- Clean up `automotive/build.gradle.kts` — drop unused deps after pruning.
 
-- [x] Scaffold module: `build.gradle.kts`, `AndroidManifest.xml`
-- [x] Create `AutomotiveActivity` (single entry point, no auth)
-- [x] Create `AutoPlayerModule` (Hilt DI for car)
-- [x] Implement `AutomotivePlayerViewModel` extending shared state collector
-- [x] Implement `CarUxRestrictionsHandler`
+### Commit 4 — Manifest + Settings cluster
 
-### Phase 5: Implement AAOS Screens (from Figma)
+- Update `AndroidManifest.xml`: remove LAUNCHER from `AutomotiveActivity`, add
+  `SettingsActivity` with `APPLICATION_PREFERENCES` intent.
+- Build the 4 Settings screens + SignOutConfirmationDialog + CarSettingsViewModel +
+  `AudioQualityPreference` DataStore in `:core:data`.
+- Wire navigation in `AutomotiveApp.kt`.
+- Verify end-to-end on AAOS emulator.
 
-- [x] `CarHomeScreen` — 2-column: quick actions + recently played + mini player
-- [x] `CarNowPlayingScreen` — horizontal: album art + controls
-- [x] `CarBrowseScreen` — 2-column: playlists + genres + mini player
-- [x] `CarMiniPlayer` — 112px persistent bar
-- [x] `CarErrorOverlay` — modal with 3 error variants
-- [x] `AutomotiveNavHost` — simplified navigation between screens
+### Verification
 
-### Phase 6: Wire End-to-End Playback
+Running on Android 13 / API 33 / Automotive-with-Play emulator:
 
-- [x] `AutomotiveApplication` — inject and start `FirebaseSyncManager`
-- [x] `AutomotivePlayerViewModel` — add `playSong()`, `shufflePlay()`, queue commands
-- [x] `AutomotiveContentViewModel` — add `getSongsByGenre()`, `getSongsByAlbum()`
-- [x] `AutomotiveApp` — wire all TODO click lambdas to ViewModel play actions
-
-### Phase 7: Firebase Configuration & AAOS Authentication
-
-- [x] Configure Firestore security rules (`firestore.rules` — catalog read-only, user data scoped)
-- [x] Add `firebase.json` project configuration
-- [x] `CarAuthScreen` — Google Sign-In for AAOS (one-tap, no keyboard, CTS-compliant)
-- [x] `AutomotiveAuthViewModel` — handles Google credential flow + profile creation
-- [x] Auth gate in `AutomotiveApp` — show `CarAuthScreen` when unauthenticated
-- [x] Delay `FirebaseSyncManager.start()` until after authentication
-- [x] Add Credential Manager dependencies to `:automotive` build
-- [x] Review Realtime Database rules for home feed access
-- [ ] Test cross-device playback state sync (phone -> AAOS)
-- [ ] Add Firestore composite indexes if catalog > 10K items
-
-### Phase 8: Polish and CTS Compliance
-
-- [x] Fix CarTopBar tab touch targets to meet 76dp CTS minimum
-- [x] Wire Quick Action clicks (My Music/Favorites → Library, Trending/Radio → Browse)
-- [x] Wire Category Card clicks (play genre songs via shuffle)
-- [x] Wire Artist clicks (play artist songs)
-- [x] Wire Search bar click (navigate to Browse)
-- [x] Add Realtime Database rules (`database.rules.json`)
-- [ ] Test on AAOS emulator (Automotive system image)
-- [ ] Test on DHU (Desktop Head Unit)
-- [ ] Validate all distraction rules (touch targets, list limits, text input)
-- [ ] Run CTS media tests
+1. Launcher opens the **OEM media template**, not our activity.
+2. Browse tree shows grid for Genres/Artists, list for Recently Played / Liked Songs /
+   All Songs.
+3. Now Playing's Like button persists via `CMD_TOGGLE_LIKE`.
+4. Settings gear in the template opens our `SettingsActivity` (parked-only).
+5. Settings → Account → Sign Out confirms + returns to Auth.
+6. Voice intent (`adb shell am start -a android.intent.action.MEDIA_PLAY_FROM_SEARCH ...`)
+   resolves via `onSearch`.
 
 ---
 
-## Key File References
+## Key file references
 
-| Component | Current Path |
+| Component | Path |
 |---|---|
-| PlaybackService | `app/src/main/java/.../player/PlaybackService.kt` |
-| PlayerViewModel | `app/src/main/java/.../player/PlayerViewModel.kt` |
-| PlaybackQueueManager | `app/src/main/java/.../player/PlaybackQueueManager.kt` |
-| PlaybackStatePersistence | `app/src/main/java/.../player/PlaybackStatePersistence.kt` |
-| PlaybackCommands | `app/src/main/java/.../player/PlaybackCommands.kt` |
-| SongMediaItemMapper | `app/src/main/java/.../player/SongMediaItemMapper.kt` |
-| PlayerUiState | `app/src/main/java/.../player/PlayerUiState.kt` |
+| PlaybackService | `core/playback/src/main/java/.../PlaybackService.kt` |
+| MediaBrowseTree | `core/playback/src/main/java/.../MediaBrowseTree.kt` |
+| SongMediaItemMapper | `core/playback/src/main/java/.../SongMediaItemMapper.kt` |
+| PlaybackCommands | `core/playback/src/main/java/.../PlaybackCommands.kt` |
+| PlaybackQueueManager | `core/playback/src/main/java/.../PlaybackQueueManager.kt` |
+| PlaybackStatePersistence | `core/playback/src/main/java/.../PlaybackStatePersistence.kt` |
+| BasePlayerStateCollector | `core/playback/src/main/java/.../BasePlayerStateCollector.kt` |
+| CarAuthScreen | `automotive/src/main/java/.../auto/ui/screens/CarAuthScreen.kt` |
+| AutomotiveAuthViewModel | `automotive/src/main/java/.../auto/viewmodel/AutomotiveAuthViewModel.kt` |
+| AutomotiveActivity | `automotive/src/main/java/.../auto/ui/AutomotiveActivity.kt` |
+| AutomotiveApp | `automotive/src/main/java/.../auto/ui/AutomotiveApp.kt` |
+| AndroidManifest | `automotive/src/main/AndroidManifest.xml` |
+| automotive_app_desc | `automotive/src/main/res/xml/automotive_app_desc.xml` |
 | FirebaseSyncManager | `core/data/src/main/java/.../sync/FirebaseSyncManager.kt` |
-| FirebaseUserRepository | `core/data/src/main/java/.../FirebaseUserRepository.kt` |
-| NyasaDatabase | `core/data/src/main/java/.../local/NyasaDatabase.kt` |
-| SongDao | `core/data/src/main/java/.../local/dao/SongDao.kt` |
-| ArtistDao | `core/data/src/main/java/.../local/dao/ArtistDao.kt` |
-| GenreDao | `core/data/src/main/java/.../local/dao/GenreDao.kt` |
-| RepositoryModule | `core/data/src/main/java/.../di/RepositoryModule.kt` |
-| AndroidManifest | `app/src/main/AndroidManifest.xml` |
+| AuthRepository | `core/data/src/main/java/.../api/AuthRepository.kt` |
+| UserRepository | `core/data/src/main/java/.../api/UserRepository.kt` |
 
-**Figma Design Source:** `figma.com/make/HCqiewiK6cfBLpuZ7g1XPV` — `src/app/components/aaos/`
+**Stitch design reference (archived)**: `docs/stitch-screens/` (19 PNGs). See
+`docs/stitch-screens/README.md`.
