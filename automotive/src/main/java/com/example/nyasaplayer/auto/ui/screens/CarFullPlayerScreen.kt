@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
+import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatOneIcon
 import com.example.nyasaplayer.core.common.ui.icons.ShuffleIcon
@@ -71,6 +72,7 @@ fun CarFullPlayerScreen(
     modifier: Modifier = Modifier,
     isLiked: Boolean = false,
     onLikeClick: () -> Unit = {},
+    onQueueClick: () -> Unit = {},
 ) {
     val song = playback.currentSong
 
@@ -120,6 +122,7 @@ fun CarFullPlayerScreen(
                 onSeek = onSeek,
                 isLiked = isLiked,
                 onLikeClick = onLikeClick,
+                onQueueClick = onQueueClick,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
@@ -141,6 +144,7 @@ private fun PlayerControlsPanel(
     onSeek: (Long) -> Unit,
     isLiked: Boolean,
     onLikeClick: () -> Unit,
+    onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val song = playback.currentSong
@@ -152,6 +156,7 @@ private fun PlayerControlsPanel(
         PlayerTopBar(
             albumName = song?.albumName?.ifBlank { "Now Playing" } ?: "Now Playing",
             onCollapseClick = onCollapseClick,
+            onQueueClick = onQueueClick,
         )
         Spacer(modifier = Modifier.height(32.dp))
         TrackInfo(
@@ -178,6 +183,7 @@ private fun PlayerControlsPanel(
 private fun PlayerTopBar(
     albumName: String,
     onCollapseClick: () -> Unit,
+    onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -195,7 +201,12 @@ private fun PlayerTopBar(
             Text("PLAYING FROM PLAYLIST", color = NyasaTextTertiary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             Text(albumName, color = Color.White, fontSize = 18.sp)
         }
-        Spacer(modifier = Modifier.size(CarTouchTargetSize))
+        CircleIconButton(
+            icon = QueueMusicIcon,
+            contentDescription = "Queue",
+            size = CarTouchTargetSize,
+            onClick = onQueueClick,
+        )
     }
 }
 

@@ -3,7 +3,9 @@ package com.example.nyasaplayer.core.playback
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
+import com.example.nyasaplayer.core.common.models.Song
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.CoroutineScope
@@ -71,9 +73,22 @@ abstract class BasePlayerStateCollector(
                     hasPrevious = mc.hasPreviousMediaItem(),
                     hasNext = hasNextTrack(it.repeatMode),
                     queueSize = mc.mediaItemCount,
+                    currentQueueIndex = mc.currentMediaItemIndex,
                 )
             }
             onCurrentSongChanged(mediaItem)
+        }
+
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+            val mc = controller ?: return
+            val queue = readQueue(mc)
+            _playbackState.update {
+                it.copy(
+                    queue = queue,
+                    queueSize = mc.mediaItemCount,
+                    currentQueueIndex = mc.currentMediaItemIndex,
+                )
+            }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -140,6 +155,7 @@ abstract class BasePlayerStateCollector(
     fun syncSnapshotFromPlayer(mc: MediaController) {
         val mediaItem = mc.currentMediaItem ?: return
         val song = mediaItem.toSong()
+        val queue = readQueue(mc)
         _playbackState.update {
             it.copy(
                 currentSong = song,
@@ -150,9 +166,14 @@ abstract class BasePlayerStateCollector(
                 hasNext = hasNextTrack(mc.repeatMode.toAppRepeatMode()),
                 repeatMode = mc.repeatMode.toAppRepeatMode(),
                 queueSize = mc.mediaItemCount,
+                queue = queue,
+                currentQueueIndex = mc.currentMediaItemIndex,
             )
         }
     }
+
+    private fun readQueue(mc: MediaController): List<Song> =
+        (0 until mc.mediaItemCount).map { mc.getMediaItemAt(it).toSong() }
 
     fun updateSnapshot(transform: (PlaybackSnapshot) -> PlaybackSnapshot) {
         _playbackState.update(transform)
