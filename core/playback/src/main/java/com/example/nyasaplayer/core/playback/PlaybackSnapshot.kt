@@ -13,4 +13,6 @@ data class PlaybackSnapshot(
     val repeatMode: RepeatMode = RepeatMode.Off,
     val isShuffled: Boolean = false,
     val queueSize: Int = 0,
+    val queue: List<Song> = emptyList(),
+    val currentQueueIndex: Int = -1,
 )

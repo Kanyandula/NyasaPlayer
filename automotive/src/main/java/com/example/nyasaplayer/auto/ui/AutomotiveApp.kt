@@ -26,6 +26,7 @@ import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
+import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
@@ -81,6 +82,7 @@ private fun AuthenticatedApp(
 
     var currentScreen by rememberSaveable { mutableStateOf(CarScreen.Home) }
     var showFullPlayer by rememberSaveable { mutableStateOf(false) }
+    var showQueue by rememberSaveable { mutableStateOf(false) }
     var selectedArtist by rememberSaveable { mutableStateOf<FavoriteArtist?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -101,6 +103,7 @@ private fun AuthenticatedApp(
                 onSeek = playerViewModel::seekTo,
                 isLiked = playerState.isCurrentSongLiked,
                 onLikeClick = playerViewModel::toggleLike,
+                onQueueClick = { showQueue = true },
             )
         } else {
             BrowseShell(
@@ -171,6 +174,19 @@ private fun AuthenticatedApp(
                     playerViewModel.playSong(contentState.searchResults, song)
                     showFullPlayer = true
                 },
+            )
+        }
+
+        if (showQueue) {
+            CarQueueScreen(
+                queue = playerState.playback.queue,
+                currentIndex = playerState.playback.currentQueueIndex,
+                isPlaying = playerState.playback.isPlaying,
+                isDriving = playerState.restrictions.isDistractionOptimized,
+                onCloseClick = { showQueue = false },
+                onSkipTo = playerViewModel::skipToQueueItem,
+                onRemove = playerViewModel::removeFromQueue,
+                onClearQueue = playerViewModel::clearQueue,
             )
         }
 
@@ -251,8 +267,7 @@ private fun BrowseShell(
                         onSearchQueryChange = onSearchQueryChange,
                         onClearSearch = onClearSearch,
                         onSearchResultClick = onSearchResultClick,
-                        isSearchDisabled = playerState.restrictions.noTextEntry ||
-                            playerState.restrictions.noFiltering,
+                        isSearchDisabled = playerState.restrictions.isDistractionOptimized,
                     )
                 }
 
