@@ -239,25 +239,17 @@ class AutomotivePlayerViewModel @Inject constructor(
         }
     }
 
-    fun moveQueueItem(from: Int, to: Int) {
-        val controller = stateCollector.controller ?: return
-        val count = controller.mediaItemCount
-        if (from in 0 until count && to in 0 until count && from != to) {
-            controller.moveMediaItem(from, to)
-        }
-    }
-
     fun clearQueue() {
         val controller = stateCollector.controller ?: return
         val currentIndex = controller.currentMediaItemIndex
         val count = controller.mediaItemCount
         if (count <= 1) return
+        // Remove tail first so currentIndex stays valid, then head.
+        if (currentIndex < count - 1) {
+            controller.removeMediaItems(currentIndex + 1, count)
+        }
         if (currentIndex > 0) {
             controller.removeMediaItems(0, currentIndex)
-        }
-        val remaining = controller.mediaItemCount
-        if (remaining > 1) {
-            controller.removeMediaItems(1, remaining)
         }
     }
 

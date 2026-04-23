@@ -48,23 +48,24 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.icons.MoreVertIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
+import com.example.nyasaplayer.core.common.ui.theme.NyasaError
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
 import com.example.nyasaplayer.core.common.util.formatDuration
+import com.example.nyasaplayer.core.common.util.formatDurationLong
 
 private const val DisabledOpacity = 0.4f
 private const val HelperChipFillOpacity = 0.12f
 private const val HelperChipBorderOpacity = 0.3f
-private const val CurrentTrackBorderWidth = 2
 private const val DestructiveFillOpacity = 0.15f
+private val CurrentTrackBorderWidth = 2.dp
 private val QueueRowHeight = 96.dp
 private val QueueRowCornerRadius = 16.dp
 private val ClearButtonCornerRadius = 16.dp
 private val HelperChipHeight = 56.dp
 private val HelperChipCornerRadius = 24.dp
-private val DestructiveRed = Color(0xFFEF5350)
 
 @Suppress("LongParameterList")
 @Composable
@@ -109,14 +110,15 @@ fun CarQueueScreen(
 
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .weight(1f)
                 .padding(horizontal = 24.dp),
             contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             itemsIndexed(
                 items = queue,
-                key = { index, song -> "$index:${song.mediaId}" },
+                key = { _, song -> song.mediaId },
             ) { index, song ->
                 QueueRow(
                     song = song,
@@ -193,14 +195,8 @@ private fun ClearQueuePill(
         modifier = modifier
             .height(CarTouchTargetSize)
             .clip(RoundedCornerShape(ClearButtonCornerRadius))
-            .background(DestructiveRed.copy(alpha = DestructiveFillOpacity * alpha))
-            .then(
-                if (enabled) {
-                    Modifier.clickable(onClick = onClick)
-                } else {
-                    Modifier
-                },
-            )
+            .background(NyasaError.copy(alpha = DestructiveFillOpacity * alpha))
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -211,12 +207,12 @@ private fun ClearQueuePill(
             Icon(
                 imageVector = Icons.Filled.Delete,
                 contentDescription = null,
-                tint = DestructiveRed.copy(alpha = alpha),
+                tint = NyasaError.copy(alpha = alpha),
                 modifier = Modifier.size(24.dp),
             )
             Text(
                 text = if (isDriving) "Locked" else "Clear Queue",
-                color = DestructiveRed.copy(alpha = alpha),
+                color = NyasaError.copy(alpha = alpha),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
             )
@@ -264,19 +260,19 @@ private fun QueueRow(
     modifier: Modifier = Modifier,
 ) {
     var showRemoveConfirm by remember { mutableStateOf(false) }
+    val rowShape = remember { RoundedCornerShape(QueueRowCornerRadius) }
+    val currentTrackBrush = remember {
+        Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark))
+    }
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(QueueRowHeight)
-            .clip(RoundedCornerShape(QueueRowCornerRadius))
+            .clip(rowShape)
             .then(
                 if (isCurrentTrack) {
-                    Modifier.border(
-                        CurrentTrackBorderWidth.dp,
-                        Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark)),
-                        RoundedCornerShape(QueueRowCornerRadius),
-                    )
+                    Modifier.border(CurrentTrackBorderWidth, currentTrackBrush, rowShape)
                 } else {
                     Modifier
                 },
@@ -418,7 +414,7 @@ private fun DialogButton(
             .height(CarTouchTargetSize)
             .width(180.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(if (destructive) DestructiveRed else Color.White.copy(alpha = 0.1f))
+            .background(if (destructive) NyasaError else Color.White.copy(alpha = 0.1f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -435,11 +431,4 @@ private fun formatUpcomingLine(count: Int, durationMs: Long): String {
     if (count <= 0) return "End of queue"
     val noun = if (count == 1) "song" else "songs"
     return "$count $noun · ${formatDurationLong(durationMs)} remaining"
-}
-
-private fun formatDurationLong(durationMs: Long): String {
-    val totalSeconds = durationMs / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    return if (hours > 0) "${hours}hr ${minutes}min" else "${minutes}min"
 }
