@@ -17,7 +17,13 @@ data class UxRestrictionState(
     val limitedContentItems: Int = Int.MAX_VALUE,
     val noVideo: Boolean = false,
     val noFiltering: Boolean = false,
-)
+) {
+    /**
+     * True when the car is in motion and distraction-optimised UX rules apply.
+     * Maps to the same flags the AAOS platform uses to gate text entry + filtering.
+     */
+    val isDistractionOptimized: Boolean get() = noFiltering || noTextEntry
+}
 
 /**
  * Wraps the Car API's distraction rules as a reactive StateFlow.

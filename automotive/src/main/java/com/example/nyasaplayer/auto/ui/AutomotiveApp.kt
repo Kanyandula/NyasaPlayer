@@ -182,7 +182,7 @@ private fun AuthenticatedApp(
                 queue = playerState.playback.queue,
                 currentIndex = playerState.playback.currentQueueIndex,
                 isPlaying = playerState.playback.isPlaying,
-                isDriving = playerState.restrictions.noFiltering || playerState.restrictions.noTextEntry,
+                isDriving = playerState.restrictions.isDistractionOptimized,
                 onCloseClick = { showQueue = false },
                 onSkipTo = playerViewModel::skipToQueueItem,
                 onRemove = playerViewModel::removeFromQueue,
@@ -267,8 +267,7 @@ private fun BrowseShell(
                         onSearchQueryChange = onSearchQueryChange,
                         onClearSearch = onClearSearch,
                         onSearchResultClick = onSearchResultClick,
-                        isSearchDisabled = playerState.restrictions.noTextEntry ||
-                            playerState.restrictions.noFiltering,
+                        isSearchDisabled = playerState.restrictions.isDistractionOptimized,
                     )
                 }
 
