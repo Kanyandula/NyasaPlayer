@@ -1,3 +1,5 @@
+@file:androidx.media3.common.util.UnstableApi
+
 package com.example.nyasaplayer.core.playback
 
 import android.net.Uri
@@ -54,7 +56,12 @@ fun Song.toMediaItem(): MediaItem {
                 .setTitle(title)
                 .setSubtitle(subtitle)
                 .setArtist(resolvedArtistName)
+                .setAlbumTitle(albumName.takeIf { it.isNotBlank() })
                 .setArtworkUri(Uri.parse(resolvedCoverUrl))
+                .setDurationMs(durationMs.takeIf { it > 0L })
+                .setIsBrowsable(false)
+                .setIsPlayable(true)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                 .setExtras(extras)
                 .build(),
         )

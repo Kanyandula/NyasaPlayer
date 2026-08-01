@@ -53,12 +53,13 @@ class MediaBrowseTreeTest {
     }
 
     @Test
-    fun getRootChildren_returnsFourCategories() {
+    fun getRootChildren_returnsFiveCategories() {
         val children = browseTree.getRootChildren()
-        assertEquals(4, children.size)
+        assertEquals(5, children.size)
         assertEquals(
             listOf(
                 MediaBrowseTree.RECENTLY_PLAYED_ID,
+                MediaBrowseTree.LIKED_SONGS_ID,
                 MediaBrowseTree.GENRES_ID,
                 MediaBrowseTree.ARTISTS_ID,
                 MediaBrowseTree.ALL_SONGS_ID,
@@ -66,6 +67,9 @@ class MediaBrowseTreeTest {
             children.map { it.mediaId },
         )
     }
+
+    // Content-style hints are verified on the AAOS emulator — Bundle ops no-op under
+    // isReturnDefaultValues = true.
 
     @Test
     fun getChildren_root_returnsSameAsGetRootChildren() = runTest {
@@ -160,6 +164,44 @@ class MediaBrowseTreeTest {
     fun getChildren_recentlyPlayed_noAuth_returnsEmpty() = runTest {
         val children = browseTree.getChildren(MediaBrowseTree.RECENTLY_PLAYED_ID)
         assertTrue(children.isEmpty())
+    }
+
+    // ── Liked Songs ──
+
+    @Test
+    fun getChildren_likedSongs_noAuth_returnsEmpty() = runTest {
+        val children = browseTree.getChildren(MediaBrowseTree.LIKED_SONGS_ID)
+        assertTrue(children.isEmpty())
+    }
+
+    @Test
+    fun getItem_likedSongsCategoryId_returnsBrowsableItem() = runTest {
+        val item = browseTree.getItem(MediaBrowseTree.LIKED_SONGS_ID)
+        assertNotNull(item)
+        assertEquals(MediaBrowseTree.LIKED_SONGS_ID, item!!.mediaId)
+        assertTrue(item.mediaMetadata.isBrowsable == true)
+    }
+
+    // ── Song metadata enrichment (for OEM template rendering) ──
+
+    @Test
+    fun playableSong_setsAlbumTitleAndDurationOnMetadata() = runTest {
+        songRepo.songs.value = listOf(
+            Song(
+                mediaId = "m1",
+                title = "Track",
+                artistName = "Artist",
+                albumName = "Album X",
+                durationMs = 240_000L,
+                coverUrl = "https://cover",
+                audioUrl = "https://audio",
+            ),
+        )
+        val children = browseTree.getChildren(MediaBrowseTree.ALL_SONGS_ID)
+        assertEquals(1, children.size)
+        val meta = children[0].mediaMetadata
+        assertEquals("Album X", meta.albumTitle?.toString())
+        assertEquals(240_000L, meta.durationMs)
     }
 
     // ── getItem ──

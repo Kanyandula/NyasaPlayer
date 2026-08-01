@@ -1,9 +1,14 @@
+@file:androidx.media3.common.util.UnstableApi
+
 package com.example.nyasaplayer.core.playback
 
 import android.net.Uri
+import android.os.Bundle
 import androidx.core.net.toUri
+import androidx.core.os.bundleOf
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.session.MediaConstants
 import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
@@ -27,6 +32,7 @@ class MediaBrowseTree @Inject constructor(
     companion object {
         const val ROOT_ID = "ROOT"
         const val RECENTLY_PLAYED_ID = "RECENTLY_PLAYED"
+        const val LIKED_SONGS_ID = "LIKED_SONGS"
         const val GENRES_ID = "GENRES"
         const val ARTISTS_ID = "ARTISTS"
         const val ALL_SONGS_ID = "ALL_SONGS"
@@ -41,34 +47,48 @@ class MediaBrowseTree @Inject constructor(
         mediaId = ROOT_ID,
         title = "NyasaPlayer",
         subtitle = null,
+        extras = GRID_BROWSABLE_HINT,
     )
 
-    fun getRootChildren(): List<MediaItem> = listOf(
+    private val rootChildren: List<MediaItem> = listOf(
         buildBrowsableItem(
             mediaId = RECENTLY_PLAYED_ID,
             title = "Recently Played",
             subtitle = null,
+            extras = LIST_PLAYABLE_HINT,
+        ),
+        buildBrowsableItem(
+            mediaId = LIKED_SONGS_ID,
+            title = "Liked Songs",
+            subtitle = null,
+            extras = LIST_PLAYABLE_HINT,
         ),
         buildBrowsableItem(
             mediaId = GENRES_ID,
             title = "Genres",
             subtitle = null,
+            extras = GRID_BROWSABLE_HINT,
         ),
         buildBrowsableItem(
             mediaId = ARTISTS_ID,
             title = "Artists",
             subtitle = null,
+            extras = GRID_BROWSABLE_HINT,
         ),
         buildBrowsableItem(
             mediaId = ALL_SONGS_ID,
             title = "All Songs",
             subtitle = null,
+            extras = LIST_PLAYABLE_HINT,
         ),
     )
+
+    fun getRootChildren(): List<MediaItem> = rootChildren
 
     suspend fun getChildren(parentId: String): List<MediaItem> = when (parentId) {
         ROOT_ID -> getRootChildren()
         RECENTLY_PLAYED_ID -> getRecentlyPlayedItems()
+        LIKED_SONGS_ID -> getLikedSongItems()
         GENRES_ID -> getGenreItems()
         ARTISTS_ID -> getArtistItems()
         ALL_SONGS_ID -> getAllSongItems()
@@ -81,7 +101,7 @@ class MediaBrowseTree @Inject constructor(
 
     suspend fun getItem(mediaId: String): MediaItem? = when (mediaId) {
         ROOT_ID -> rootItem
-        RECENTLY_PLAYED_ID, GENRES_ID, ARTISTS_ID, ALL_SONGS_ID ->
+        RECENTLY_PLAYED_ID, LIKED_SONGS_ID, GENRES_ID, ARTISTS_ID, ALL_SONGS_ID ->
             getRootChildren().find { it.mediaId == mediaId }
         else -> when {
             mediaId.startsWith(GENRE_PREFIX) -> {
@@ -102,14 +122,18 @@ class MediaBrowseTree @Inject constructor(
 
     // ── Private helpers ──
 
+    // getSongsByIds returns songs in request order, so the source ordering is preserved.
     private suspend fun getRecentlyPlayedItems(): List<MediaItem> {
         val uid = authRepository.currentUser?.uid ?: return emptyList()
         val entries = userRepository.getRecentlyPlayed(uid, RECENTLY_PLAYED_LIMIT)
             .firstOrNull() ?: return emptyList()
-        val mediaIds = entries.map { it.mediaId }
-        val songs = songRepository.getSongsByIds(mediaIds)
-        val songMap = songs.associateBy { it.mediaId }
-        return mediaIds.mapNotNull { songMap[it]?.toPlayableItem() }
+        return songRepository.getSongsByIds(entries.map { it.mediaId }).map { it.toPlayableItem() }
+    }
+
+    private suspend fun getLikedSongItems(): List<MediaItem> {
+        val uid = authRepository.currentUser?.uid ?: return emptyList()
+        val liked = userRepository.getLikedSongs(uid).firstOrNull() ?: return emptyList()
+        return songRepository.getSongsByIds(liked.map { it.mediaId }).map { it.toPlayableItem() }
     }
 
     private suspend fun getGenreItems(): List<MediaItem> {
@@ -138,6 +162,17 @@ class MediaBrowseTree @Inject constructor(
     }
 }
 
+// Content-style hints the AAOS media template reads to pick grid vs list rendering.
+// Shared instances: MediaMetadata keeps the reference, and the session layer copies
+// the bundle before touching it.
+private val GRID_BROWSABLE_HINT = bundleOf(
+    MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE to MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
+)
+
+private val LIST_PLAYABLE_HINT = bundleOf(
+    MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE to MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_LIST_ITEM,
+)
+
 // ── MediaItem builders ──
 
 private fun buildBrowsableItem(
@@ -145,6 +180,7 @@ private fun buildBrowsableItem(
     title: String,
     subtitle: String?,
     artworkUri: Uri? = null,
+    extras: Bundle? = null,
 ): MediaItem = MediaItem.Builder()
     .setMediaId(mediaId)
     .setMediaMetadata(
@@ -155,6 +191,7 @@ private fun buildBrowsableItem(
             .setIsBrowsable(true)
             .setIsPlayable(false)
             .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+            .setExtras(extras)
             .build(),
     )
     .build()
@@ -167,7 +204,9 @@ private fun Song.toPlayableItem(): MediaItem = MediaItem.Builder()
             .setTitle(title)
             .setSubtitle(resolvedArtistName)
             .setArtist(resolvedArtistName)
+            .setAlbumTitle(albumName.takeIf { it.isNotBlank() })
             .setArtworkUri(resolvedCoverUrl.toUri())
+            .setDurationMs(durationMs.takeIf { it > 0L })
             .setIsBrowsable(false)
             .setIsPlayable(true)
             .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
@@ -179,6 +218,7 @@ private fun Genre.toBrowsableItem(): MediaItem = buildBrowsableItem(
     mediaId = "${MediaBrowseTree.GENRE_PREFIX}$id",
     title = name,
     subtitle = "${songIds.size} songs",
+    extras = LIST_PLAYABLE_HINT,
 )
 
 private fun Artist.toBrowsableItem(): MediaItem = buildBrowsableItem(
@@ -186,4 +226,5 @@ private fun Artist.toBrowsableItem(): MediaItem = buildBrowsableItem(
     title = name,
     subtitle = null,
     artworkUri = imageUrl.takeIf { it.isNotBlank() }?.toUri(),
+    extras = LIST_PLAYABLE_HINT,
 )
