@@ -18,6 +18,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -59,6 +60,8 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var userRepository: UserRepository
 
     @Inject lateinit var authRepository: AuthRepository
+
+    @Inject lateinit var songRepository: SongRepository
 
     private lateinit var exoPlayer: ExoPlayer
     private var mediaSession: MediaLibrarySession? = null
@@ -110,7 +113,10 @@ class PlaybackService : MediaLibraryService() {
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
         ): MediaSession.ConnectionResult {
-            val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+            // Must start from the library defaults: the session-only set omits the
+            // COMMAND_CODE_LIBRARY_* commands, and without GET_LIBRARY_ROOT the browse
+            // tree is rejected for every controller.
+            val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
                 .add(SessionCommand(PlaybackCommands.CMD_SET_QUEUE, Bundle.EMPTY))
                 .add(SessionCommand(PlaybackCommands.CMD_SHUFFLE_PLAY, Bundle.EMPTY))
                 .add(SessionCommand(PlaybackCommands.CMD_RESTORE_STATE, Bundle.EMPTY))
@@ -146,6 +152,33 @@ class PlaybackService : MediaLibraryService() {
                 Log.e(TAG, "onCustomCommand failed: ${customCommand.customAction}", e)
                 Futures.immediateFuture(SessionResult(e.toSessionErrorCode()))
             }
+        }
+
+        /**
+         * The template plays browse items via `playFromMediaId`, which reaches here as items
+         * carrying only a media id. The default implementation rejects those, so resolve each id
+         * to a fully populated item (uri + extras) before handing it to the player.
+         */
+        @Suppress("TooGenericExceptionCaught")
+        override fun onAddMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>,
+        ): ListenableFuture<MutableList<MediaItem>> {
+            val future = SettableFuture.create<MutableList<MediaItem>>()
+            serviceScope.launch {
+                try {
+                    val ids = mediaItems.map { it.mediaId }.filter { it.isNotBlank() }
+                    val resolved = songRepository.getSongsByIds(ids).map { it.toMediaItem() }
+                    future.set(resolved.toMutableList())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "onAddMediaItems failed", e)
+                    future.setException(e)
+                }
+            }
+            return future
         }
 
         // ── Browse tree callbacks ──

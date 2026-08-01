@@ -7,6 +7,9 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaLibraryService"/>
+                <!-- AAOS enumerates media sources by the legacy action; Media3's
+                     MediaSessionService.onBind already serves it. -->
+                <action android:name="android.media.browse.MediaBrowserService"/>
             </intent-filter>
         </service>
     </application>
