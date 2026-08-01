@@ -11,6 +11,11 @@
                      MediaSessionService.onBind already serves it. -->
                 <action android:name="android.media.browse.MediaBrowserService"/>
             </intent-filter>
+            <!-- Opt-in the car media app checks before listing this as a media source;
+                 without it the service is skipped as a "non media template app". -->
+            <meta-data
+                android:name="androidx.car.app.launchable"
+                android:value="true" />
         </service>
     </application>
 </manifest>
