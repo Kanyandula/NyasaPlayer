@@ -1,8 +1,14 @@
 # NyasaPlayer AAOS — Custom-Flow Plan
 
-> Scope of what we actually build ourselves for AAOS. Everything else is rendered
-> by the OEM media template against `:core:playback`'s `MediaLibraryService`.
+> Scope of what we build ourselves for AAOS, and what the OEM media template renders
+> against `:core:playback`'s `MediaLibraryService`.
 > Pair with `docs/AAOS_ARCHITECTURE.md`.
+
+> **Status (2026-08-01): this plan is aspirational, not descriptive.** The Option-B
+> migration below was decided but never completed. What is actually on
+> `ek/aaos-option-b` today is *both* surfaces: the template path works end to end,
+> **and** the pre-decision custom Compose screens are still shipping. The planned
+> Settings cluster (§4.2) does not exist. Read §1.1 before trusting anything below it.
 
 ---
 
@@ -19,9 +25,28 @@ we ship on AAOS is the trio of parked-only flows that Google explicitly permits:
 3. **Sign-Out confirmation** — modal dialog invoked from Account.
 
 All prior Phase 1–5 custom-screen work (Home, Browse, Library, Queue, Full Player,
-Album / Playlist / Artist detail, Downloads, Mini Player, etc.) is **archived as design
-reference**. See `docs/stitch-screens/README.md` and the Archived Inventory appendix
-below.
+Album / Playlist / Artist detail, Downloads, Mini Player, etc.) was to be **archived as
+design reference**. See `docs/stitch-screens/README.md` and the Archived Inventory
+appendix below.
+
+### 1.1 What actually shipped
+
+The deletion half of Option B never happened. The custom screens predate the decision
+(`Phase 5: Implement AAOS Screens from Figma`, 2026-03-09, through `CarQueueScreen`,
+2026-04-23) and are still wired into `AutomotiveActivity` → `AutomotiveApp`. Meanwhile
+the template path was finished on `ek/aaos-option-b` (browse tree, search, like button,
+`onAddMediaItems`, emulator-verified). Both surfaces are live:
+
+| Surface | Entry point | State |
+| --- | --- | --- |
+| OEM media template | `PlaybackService` (`MediaLibraryService`) + `MediaBrowseTree` | Working, emulator-verified |
+| Custom launcher app | `AutomotiveActivity` → `AutomotiveApp` | Working, 7 screens (§4.1) |
+| Settings cluster (§4.2) | — | **Not built** |
+
+This is a real Play Store risk, not just doc drift: §2's first bullet is the reason
+Option B was chosen, and the custom activities it warns about are still in the module.
+Resolving it is a decision, not a cleanup — either delete the custom screens or drop
+the media-template compliance goal.
 
 ## 2. Why this path
 
@@ -61,15 +86,30 @@ on primary CTAs only (Sign Out button).
 
 Shape: 16 dp corner radius for cards/rows; 24 dp for modals; circle for icon buttons.
 
-## 4. Screen inventory (what we actually build)
+## 4. Screen inventory
 
-### 4.1 Auth — already exists
+### 4.1 Shipping today — `automotive/…/auto/ui/screens/`
 
-| # | Screen | Compose file | Source of truth |
+Seven screens, all live. Only Home / Browse / Library are `CarScreen` enum nav
+destinations; the rest are conditional branches in `AutomotiveApp`.
+
+| # | Screen | Compose file | How it's reached |
 | --- | --- | --- | --- |
-| A.1 | Welcome / Sign-In | `CarAuthScreen.kt` | Stitch `01-welcome-screen.png` |
+| A.1 | Welcome / Sign-In | `CarAuthScreen.kt` | Gate shown until signed in |
+| C.1 | Home | `CarHomeScreen.kt` | `CarScreen.Home` tab |
+| C.2 | Browse | `CarBrowseScreen.kt` | `CarScreen.Browse` tab |
+| C.3 | Library | `CarLibraryScreen.kt` | `CarScreen.Library` tab |
+| C.4 | Artist liked songs | `CarArtistLikedSongsScreen.kt` | Drill-down from Library |
+| C.5 | Full player | `CarFullPlayerScreen.kt` | Overlay |
+| C.6 | Queue | `CarQueueScreen.kt` | Overlay |
 
-### 4.2 Settings cluster — new (Commit 4 of the Option-B migration)
+Supporting: `CarTopBar`, `CarMiniPlayer`, `CarErrorOverlay` (`ui/components/`);
+`AutomotiveAuthViewModel`, `AutomotiveContentViewModel`, `AutomotivePlayerViewModel`;
+`CarUxRestrictionsHandler` for parked-vs-driving gating.
+
+C.1–C.6 are exactly the screens Option B intended to delete. See §1.1.
+
+### 4.2 Settings cluster — planned, **not built**
 
 | # | Screen | Compose file | Notes |
 | --- | --- | --- | --- |
@@ -79,9 +119,11 @@ Shape: 16 dp corner radius for cards/rows; 24 dp for modals; circle for icon but
 | S.4 | About | `CarAboutScreen.kt` | Version (`BuildConfig`), build date, Terms / Privacy / Licences rows (static text). |
 | S.5 | Sign-Out confirmation | `SignOutConfirmationDialog.kt` | Modal, two 76 dp buttons. Sign Out uses **accent gradient** (not red — sign-out is not destructive). Stitch `19-sign-out-confirmation.png`. |
 
-### 4.3 What we do **not** build
+### 4.3 What the template renders
 
-Everything rendered by the OEM template:
+Under Option B these were the surfaces we would *not* build. They are all working
+template-side today — but §4.1 also still ships custom screens for the same content,
+so "do not build" now reads as "already built twice":
 
 - Home — from `MediaBrowseTree` root children.
 - Browse — from `onGetChildren` for each category.
@@ -99,11 +141,18 @@ metadata / extras / errors, **not** a new custom Compose screen.
 
 1. ✅ Decide Option B (2026-04-23).
 2. 🚧 Execute `/Users/admin/.claude/plans/let-s-go-with-b-piped-waffle.md` — four phased
-   commits on `ek/aaos-ui-redesign`.
-3. 🔲 Verify on AAOS emulator: launcher opens template; Settings gear opens
-   `SettingsActivity`; Sign-Out returns to Auth.
-4. 🔲 File any follow-up work (Downloads prefs, Crossfade, advanced Settings) as
-   separate tickets — out of scope for this migration.
+   commits on `ek/aaos-ui-redesign`. **Partial**: the template-path work landed on
+   `ek/aaos-option-b` (Liked Songs node, `CMD_TOGGLE_LIKE`, browse-tree connect/play
+   fixes). The custom-screen removal and the Settings cluster did not.
+3. ✅ Template verified on AAOS emulator: app appears in the media source picker,
+   browse tree renders with template tabs, playback works, like button reflects
+   per-track state. Discovery required `androidx.car.app.launchable` meta-data on the
+   service plus the legacy `MediaBrowserService` action — see CLAUDE.md "AAOS rendering".
+4. 🔲 **Decide the surface question in §1.1** — delete C.1–C.6 or abandon template
+   compliance. Blocks everything below.
+5. 🔲 Settings cluster (§4.2) + `SettingsActivity` / Sign-Out flow.
+6. 🔲 File follow-up work (Downloads prefs, Crossfade, advanced Settings) as separate
+   tickets — out of scope for this migration.
 
 ## 6. Open questions
 
