@@ -10,12 +10,16 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.CommandButton
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
+import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.SongRepository
+import com.example.nyasaplayer.core.data.api.UserRepository
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -23,11 +27,19 @@ import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.IOException
 import java.util.concurrent.CancellationException
 import javax.inject.Inject
 
@@ -36,6 +48,7 @@ private const val TAG = "PlaybackService"
 
 @UnstableApi
 @AndroidEntryPoint
+@Suppress("TooManyFunctions") // Service combines lifecycle, session callbacks, and command handlers.
 class PlaybackService : MediaLibraryService() {
 
     @Inject lateinit var queueManager: PlaybackQueueManager
@@ -44,15 +57,28 @@ class PlaybackService : MediaLibraryService() {
 
     @Inject lateinit var browseTree: MediaBrowseTree
 
+    @Inject lateinit var userRepository: UserRepository
+
+    @Inject lateinit var authRepository: AuthRepository
+
+    @Inject lateinit var songRepository: SongRepository
+
     private lateinit var exoPlayer: ExoPlayer
     private var mediaSession: MediaLibrarySession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    /** Media id of the current item, driving the like button's filled/unfilled state. */
+    private val currentMediaId = MutableStateFlow<String?>(null)
+
+    /** Latest observed like state for [currentMediaId]; read when toggling so no extra fetch is needed. */
+    private var isCurrentSongLiked = false
 
     override fun onCreate() {
         super.onCreate()
         exoPlayer = buildExoPlayer()
         exoPlayer.addListener(playerListener)
         val builder = MediaLibrarySession.Builder(this, exoPlayer, libraryCallback)
+            .setCustomLayout(listOf(likeButton(isLiked = false)))
         packageManager.getLaunchIntentForPackage(packageName)?.let { launchIntent ->
             builder.setSessionActivity(
                 PendingIntent.getActivity(
@@ -66,6 +92,7 @@ class PlaybackService : MediaLibraryService() {
         mediaSession = builder.build()
         addSession(mediaSession!!)
         startPersistenceLoop()
+        observeCurrentSongLikeState()
     }
 
     private fun buildExoPlayer(): ExoPlayer {
@@ -86,11 +113,15 @@ class PlaybackService : MediaLibraryService() {
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
         ): MediaSession.ConnectionResult {
-            val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+            // Must start from the library defaults: the session-only set omits the
+            // COMMAND_CODE_LIBRARY_* commands, and without GET_LIBRARY_ROOT the browse
+            // tree is rejected for every controller.
+            val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
                 .add(SessionCommand(PlaybackCommands.CMD_SET_QUEUE, Bundle.EMPTY))
                 .add(SessionCommand(PlaybackCommands.CMD_SHUFFLE_PLAY, Bundle.EMPTY))
                 .add(SessionCommand(PlaybackCommands.CMD_RESTORE_STATE, Bundle.EMPTY))
                 .add(SessionCommand(PlaybackCommands.CMD_TOGGLE_SHUFFLE, Bundle.EMPTY))
+                .add(SessionCommand(PlaybackCommands.CMD_TOGGLE_LIKE, Bundle.EMPTY))
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(commands)
@@ -110,6 +141,8 @@ class PlaybackService : MediaLibraryService() {
                     PlaybackCommands.CMD_SHUFFLE_PLAY -> handleShufflePlay(args)
                     PlaybackCommands.CMD_RESTORE_STATE -> handleRestoreState(args)
                     PlaybackCommands.CMD_TOGGLE_SHUFFLE -> handleToggleShuffle()
+                    // Only async handler: completes its own future off the dispatch path.
+                    PlaybackCommands.CMD_TOGGLE_LIKE -> return handleToggleLikeAsync()
                     else -> return Futures.immediateFuture(
                         SessionResult(SessionError.ERROR_NOT_SUPPORTED),
                     )
@@ -117,8 +150,35 @@ class PlaybackService : MediaLibraryService() {
                 Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             } catch (e: Exception) {
                 Log.e(TAG, "onCustomCommand failed: ${customCommand.customAction}", e)
-                Futures.immediateFuture(SessionResult(SessionError.ERROR_UNKNOWN))
+                Futures.immediateFuture(SessionResult(e.toSessionErrorCode()))
             }
+        }
+
+        /**
+         * The template plays browse items via `playFromMediaId`, which reaches here as items
+         * carrying only a media id. The default implementation rejects those, so resolve each id
+         * to a fully populated item (uri + extras) before handing it to the player.
+         */
+        @Suppress("TooGenericExceptionCaught")
+        override fun onAddMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>,
+        ): ListenableFuture<MutableList<MediaItem>> {
+            val future = SettableFuture.create<MutableList<MediaItem>>()
+            serviceScope.launch {
+                try {
+                    val ids = mediaItems.map { it.mediaId }.filter { it.isNotBlank() }
+                    val resolved = songRepository.getSongsByIds(ids).map { it.toMediaItem() }
+                    future.set(resolved.toMutableList())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "onAddMediaItems failed", e)
+                    future.setException(e)
+                }
+            }
+            return future
         }
 
         // ── Browse tree callbacks ──
@@ -149,7 +209,7 @@ class PlaybackService : MediaLibraryService() {
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "onGetChildren failed for $parentId", e)
-                    future.set(LibraryResult.ofError(SessionError.ERROR_UNKNOWN))
+                    future.set(LibraryResult.ofError(e.toSessionErrorCode()))
                 }
             }
             return future
@@ -174,7 +234,7 @@ class PlaybackService : MediaLibraryService() {
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "onGetItem failed for $mediaId", e)
-                    future.set(LibraryResult.ofError(SessionError.ERROR_UNKNOWN))
+                    future.set(LibraryResult.ofError(e.toSessionErrorCode()))
                 }
             }
             return future
@@ -197,7 +257,7 @@ class PlaybackService : MediaLibraryService() {
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "onSearch failed for query: $query", e)
-                    future.set(LibraryResult.ofError(SessionError.ERROR_UNKNOWN))
+                    future.set(LibraryResult.ofError(e.toSessionErrorCode()))
                 }
             }
             return future
@@ -222,7 +282,7 @@ class PlaybackService : MediaLibraryService() {
                     throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "onGetSearchResult failed for query: $query", e)
-                    future.set(LibraryResult.ofError(SessionError.ERROR_UNKNOWN))
+                    future.set(LibraryResult.ofError(e.toSessionErrorCode()))
                 }
             }
             return future
@@ -279,6 +339,70 @@ class PlaybackService : MediaLibraryService() {
         exoPlayer.seekTo(queueManager.currentIndex, currentPosition)
     }
 
+    // ── Like button ──
+
+    /**
+     * The template's like affordance. Media3 resolves [CommandButton.ICON_HEART_FILLED] to a bundled
+     * drawable, which the legacy `PlaybackStateCompat` custom action the AAOS template reads needs.
+     */
+    private fun likeButton(isLiked: Boolean): CommandButton = CommandButton.Builder(
+        if (isLiked) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED,
+    )
+        .setSessionCommand(SessionCommand(PlaybackCommands.CMD_TOGGLE_LIKE, Bundle.EMPTY))
+        .setDisplayName(if (isLiked) "Unlike" else "Like")
+        .build()
+
+    /**
+     * Pushes a fresh custom layout whenever the current song or its like state changes, so the
+     * button also reflects likes made on the phone.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeCurrentSongLikeState() {
+        serviceScope.launch {
+            currentMediaId
+                .flatMapLatest { likedFlow(it) }
+                .distinctUntilChanged()
+                .collect { isLiked ->
+                    isCurrentSongLiked = isLiked
+                    mediaSession?.setCustomLayout(listOf(likeButton(isLiked)))
+                }
+        }
+    }
+
+    private fun likedFlow(mediaId: String?): Flow<Boolean> {
+        val uid = authRepository.currentUser?.uid
+        if (uid.isNullOrBlank() || mediaId.isNullOrBlank()) return flowOf(false)
+        return userRepository.isLiked(uid, mediaId).catch { e ->
+            Log.e(TAG, "isLiked failed for $mediaId", e)
+            emit(false)
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun handleToggleLikeAsync(): ListenableFuture<SessionResult> {
+        val mediaId = exoPlayer.currentMediaItem?.mediaId
+        val uid = authRepository.currentUser?.uid
+        if (uid.isNullOrBlank() || mediaId.isNullOrBlank()) {
+            return Futures.immediateFuture(SessionResult(SessionError.ERROR_INVALID_STATE))
+        }
+        // Writes are idempotent, so the observed state is enough to pick a direction; the isLiked
+        // flow then pushes the updated button.
+        val liked = isCurrentSongLiked
+        val future = SettableFuture.create<SessionResult>()
+        serviceScope.launch {
+            try {
+                if (liked) userRepository.unlikeSong(uid, mediaId) else userRepository.likeSong(uid, mediaId)
+                future.set(SessionResult(SessionResult.RESULT_SUCCESS))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "CMD_TOGGLE_LIKE failed", e)
+                future.set(SessionResult(e.toSessionErrorCode()))
+            }
+        }
+        return future
+    }
+
     private fun applyQueueToPlayer() {
         val mediaItems = queueManager.queue.map { it.toMediaItem() }
         exoPlayer.setMediaItems(mediaItems, queueManager.currentIndex, 0L)
@@ -298,6 +422,7 @@ class PlaybackService : MediaLibraryService() {
     private val playerListener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             queueManager.currentIndex = exoPlayer.currentMediaItemIndex
+            currentMediaId.value = mediaItem?.mediaId
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -366,4 +491,10 @@ class PlaybackService : MediaLibraryService() {
         exoPlayer.release()
         super.onDestroy()
     }
+}
+
+@UnstableApi
+private fun Throwable.toSessionErrorCode(): Int = when (this) {
+    is IOException -> SessionError.ERROR_IO
+    else -> SessionError.ERROR_UNKNOWN
 }

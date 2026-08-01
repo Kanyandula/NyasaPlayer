@@ -33,3 +33,7 @@ CLAUDE.md
 .externalNativeBuild
 .cxx
 /captures
+
+# Graphify (generated knowledge graph — regenerate with `graphify update .`)
+graphify-out/
+.graphify_*

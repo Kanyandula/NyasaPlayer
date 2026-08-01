@@ -77,16 +77,16 @@ Multi-module Gradle project:
 └── ui/preview/PreviewData.kt       # Preview/mock data
 
 :automotive  (com.example.nyasaplayer.auto)
-├── AutomotiveActivity.kt           # Single-activity entry point for AAOS
+# AAOS parked-only custom flows. All playback / browse / search UI is rendered
+# by the OEM media template against :core:playback's MediaLibraryService.
+├── AutomotiveActivity.kt           # Parked-only entry point (Auth + Settings)
 ├── ui/
-│   ├── AutomotiveApp.kt           # Root composable with auth gate
-│   ├── navigation/CarScreen.kt    # Tab enum (Home, Browse, Library)
-│   ├── screens/                    # CarHomeScreen, CarBrowseScreen, CarLibraryScreen, etc.
-│   ├── components/                 # CarMiniPlayer, CarTopBar, CarErrorOverlay
-│   ├── theme/                      # Automotive-specific colors/gradients
-│   └── preview/                    # Compose preview data
-├── viewmodel/                      # AutomotivePlayerViewModel, AutomotiveContentViewModel, etc.
-├── service/                        # AAOS MediaLibraryService wrapper
+│   ├── AutomotiveApp.kt            # Nav root: auth gate → Settings cluster
+│   ├── screens/                    # CarAuthScreen, CarSettingsScreen, CarAccountScreen,
+│   │                               #   CarAudioQualityScreen, CarAboutScreen
+│   ├── dialog/                     # SignOutConfirmationDialog
+│   └── theme/                      # AutomotiveColors, AutomotiveDimens
+├── viewmodel/                      # AutomotiveAuthViewModel, CarSettingsViewModel
 └── di/AutoAppModule.kt             # Automotive-specific DI
 ```
 
@@ -153,16 +153,18 @@ Multi-module Gradle project:
 - **Stale download recovery**: Pending/Downloading states reset to Failed on app restart
 
 ### Android Automotive OS (AAOS)
-- **Dedicated automotive module**: Separate `:automotive` module with car-optimized UI
-- **MediaLibraryService**: Single playback owner shared between mobile and AAOS clients
-- **CTS-compliant touch targets**: All interactive elements meet 76dp minimum
-- **Driving restrictions**: `CarUxRestrictionsHandler` observes UX restriction changes in real time; disables text input and limits content items while driving
-- **Car-optimized screens**: CarHomeScreen (recently played, quick actions), CarBrowseScreen (albums, genres, in-app search), CarLibraryScreen (artists, albums, liked songs)
-- **In-app search**: `BasicTextField` with 300ms debounce, queries Room DB, disabled while driving per CTS
-- **Mini player & full player**: Car-sized controls with large artwork, shuffle/repeat, like, seek
-- **Sign out**: Confirmation overlay in Library tab with account name display
-- **Error handling**: Modal error overlay with retry/dismiss, offline banner
-- **Google Sign-In**: Credential Manager API adapted for head unit
+- **Template path (Option B)**: Declared `<uses name="media" />` — the OEM media template
+  renders Home, Browse, Library, Now Playing, Queue, and Search directly from our
+  `MediaLibraryService` + `MediaBrowseTree`. No custom playback or browse UI is shipped.
+- **MediaLibraryService** (`:core:playback`): Root → [Recently Played, Genres, Artists,
+  All Songs, Liked Songs] browse tree with style hints; search via `onSearch` /
+  `onGetSearchResult`; queue drives `Player.setMediaItems` so the template's Queue
+  screen works for free.
+- **Custom parked-only flows** (`:automotive`): Auth (Google Sign-In via Credential
+  Manager), Settings (Account + Audio Quality + About), and a sign-out confirmation
+  dialog. Settings surfaces via `android.intent.action.APPLICATION_PREFERENCES`.
+- **Distraction compliance**: 76dp min touch targets + 24sp min type on all custom
+  screens; Settings is `distractionOptimized="false"` (parked only).
 
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)

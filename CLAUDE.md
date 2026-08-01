@@ -42,7 +42,7 @@ Unit tests live in `core/data/src/test/`. Run with `./gradlew test`.
 - **`:core:data`** (`com.example.nyasaplayer.core.data`) — repository interfaces & implementations, Room DB, Firebase sync, DTOs, DI modules
 - **`:core:playback`** (`com.example.nyasaplayer.core.playback`) — `PlaybackService` (MediaLibraryService), `PlaybackQueueManager`, `PlaybackStatePersistence`, `BasePlayerStateCollector`, `MediaBrowseTree`, shared playback state models
 - **`:app`** — screens, ViewModels, navigation, `AppModule`/`PlayerModule`
-- **`:automotive`** (`com.example.nyasaplayer.auto`) — AAOS Activity, car-optimized Compose UI, automotive ViewModels, `CarUxRestrictionsHandler`, DI
+- **`:automotive`** (`com.example.nyasaplayer.auto`) — AAOS. Ships **both** a launcher app with 7 custom Compose screens (`ui/screens/`) and, via `:core:playback`'s `PlaybackService`, the media source the OEM template browses. See "AAOS rendering" below.
 
 ```
 Firestore / Realtime DB / Firebase Auth
@@ -79,10 +79,27 @@ Mobile-specific in `:app`:
 - `PlayerViewModel` — extends `BasePlayerStateCollector` (250ms polling), exposes `PlayerUiState`
 - `GlobalPlayerLayer` — hosts MiniPlayer + ExpandedPlayer overlay above bottom nav
 
-AAOS-specific in `:automotive`:
-- `AutomotivePlayerViewModel` — extends `BasePlayerStateCollector` (500ms polling), distraction-aware
-- `AutomotiveContentViewModel` — catalog browsing, search, liked songs, recently played
-- `CarUxRestrictionsHandler` — observes driving restrictions as `StateFlow`
+AAOS rendering — two surfaces, both live:
+- **OEM media template** — browse/search/playback driven by `PlaybackService`'s
+  `MediaLibrarySession` callbacks (`onGetLibraryRoot` / `onGetChildren` / `onGetItem` /
+  `onSearch` / `onGetSearchResult` / `onAddMediaItems`) and `MediaBrowseTree`.
+  Discovery needs both service actions (`MediaLibraryService` + legacy
+  `MediaBrowserService`) and `<meta-data android:name="androidx.car.app.launchable"
+  android:value="true"/>` **on the service** — that last one is the opt-in the car
+  media app checks; without it the service is skipped as a "non media template app".
+  The `com.android.automotive` application descriptor does not affect this
+  (verified on emulator: the GAS car media app never reads it).
+- **Custom launcher app** — `AutomotiveActivity` → `AutomotiveApp` hosts 7 screens in
+  `auto/ui/screens/`:
+  - `CarAuthScreen` — gate shown until signed in
+  - `CarHomeScreen` / `CarBrowseScreen` / `CarLibraryScreen` — the three `CarScreen` enum tabs
+  - `CarArtistLikedSongsScreen` — drill-down from Library
+  - `CarFullPlayerScreen`, `CarQueueScreen` — conditional overlays, not nav destinations
+- Car-side ViewModels: `AutomotiveAuthViewModel`, `AutomotiveContentViewModel`, and
+  `AutomotivePlayerViewModel` (wraps `BasePlayerStateCollector`). `CarUxRestrictionsHandler`
+  (`@Singleton`) drives parked-vs-driving gating.
+- `docs/AAOS_UI_REDESIGN_PLAN.md` records a 2026-04-23 "template only, no custom screens"
+  decision that the code no longer follows.
 
 ### Data layer
 
