@@ -24,6 +24,21 @@
 - **Commit messages:** no AI attribution, no `Co-Authored-By` trailers. Subject ≤72 chars.
 - **Existing 7 car screens must keep compiling and running** throughout.
 
+## Deliberately Deferred
+
+Raised in review and consciously left out of A1. Not oversights — record them, do not
+silently implement them.
+
+- **`collectAsStateWithLifecycle`.** `AutomotiveApp.kt:48` and its siblings use
+  `collectAsState()`. Migrating is good practice, but `androidx.lifecycle-runtime-compose`
+  is **not in `gradle/libs.versions.toml`**, so this means adding a dependency and changing
+  collection behaviour (collection stops in the background) across a file that seven screens
+  render through. That is a behavioural change needing its own verification pass, not a
+  drive-by edit inside a foundation slice. Raise it as a follow-up.
+- **Finished components.** See Task 11 — the primitives are deliberately minimal.
+- **The Favourites screen itself.** Task 5 adds the destination and routes it to Library's
+  content. The real screen is a later slice.
+
 ## Already Done — Do Not Redo
 
 Definition-of-done item 2 from the spec ("px→dp policy written into `docs/aaos-DESIGN.md`") **is already complete**, delivered in commit `333cc0c`. `docs/aaos-DESIGN.md` now opens with a "Units" section giving the conversion rule and the 112dp mini-player correction. Do not re-add it.
@@ -717,15 +732,41 @@ data class CarUiLocation(
 }
 ```
 
-- [ ] **Step 3: Build to verify it compiles**
+- [ ] **Step 3: Add the required `when` branch — this is mandatory, not conditional**
+
+`AutomotiveApp.kt:247` has `when (currentScreen)` over `CarScreen`. Since Kotlin 1.7 a
+non-exhaustive `when` **statement** over an enum is a compile error, not a warning, and this
+project is on Kotlin 2.0.21. Adding the enum constant **will break the build** until this
+branch exists.
+
+In that `when`, after the `CarScreen.Library ->` branch, add:
+
+```kotlin
+                CarScreen.Favourites -> CarLibraryScreen(
+                    likedSongs = contentState.likedSongs.take(maxItems),
+                    favoriteArtists = contentState.favoriteArtists,
+                    onSongClick = onLikedSongClick,
+                    onArtistClick = onArtistClick,
+                    onShuffleClick = onShuffleLikedSongs,
+                    currentlyPlayingMediaId = currentlyPlayingMediaId,
+                    isPlaying = isPlaying,
+                )
+```
+
+Match the argument list to whatever the existing `CarScreen.Library ->` branch passes — copy
+it verbatim and change nothing else. Favourites routes to the same content as Library for
+now; the real Favourites screen is a later slice.
+
+- [ ] **Step 4: Build to verify it compiles**
 
 ```bash
 ./gradlew :automotive:assembleDebug
 ```
 
-Expected: BUILD SUCCESSFUL. Adding an enum constant is source-compatible; nothing exhaustively matches on `CarScreen` yet. If a `when` now fails for non-exhaustiveness, add a `CarScreen.Favourites ->` branch routing to the same content as `Library` for now — the Favourites screen itself is a later slice.
+Expected: BUILD SUCCESSFUL. If it fails with "'when' expression must be exhaustive", the
+branch above is missing or misplaced.
 
-- [ ] **Step 4: Run Detekt**
+- [ ] **Step 5: Run Detekt**
 
 ```bash
 ./gradlew detekt
@@ -733,10 +774,11 @@ Expected: BUILD SUCCESSFUL. Adding an enum constant is source-compatible; nothin
 
 Expected: BUILD SUCCESSFUL.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add automotive/src/main/java/com/example/nyasaplayer/auto/ui/navigation/
+git add automotive/src/main/java/com/example/nyasaplayer/auto/ui/navigation/ \
+        automotive/src/main/java/com/example/nyasaplayer/auto/ui/AutomotiveApp.kt
 git commit -m "feat: add Favourites destination and CarUiLocation model"
 ```
 
@@ -1423,6 +1465,13 @@ git commit -m "feat: enforce driving restrictions with entry refusal and evictio
 - Consumes: `NyasaGold`, `NyasaOnGold` (Task 2); car tokens (Task 7); `carTouchTarget()` (Task 8)
 - Produces: `CarChip`, `CarPillButton`, `CarSectionHeader`, `CarTrackRow`, `CarEmptyState` — consumed by the screen slices that follow A1
 
+**These are minimal primitives, not finished components.** They establish the token usage,
+the touch-target discipline and the call signatures. Deliberately absent, and belonging to
+the screen slices that consume them: real artwork loading in `CarTrackRow` (it draws a
+placeholder box), text overflow and ellipsis handling, per-row like and overflow
+affordances, and the decorative orb in `CarEmptyState`. Do not add them here — a screen
+slice will know what shape they need to take.
+
 Every composable here takes `modifier: Modifier = Modifier` as its first optional parameter. Detekt's `ModifierMissing` rule fails the build otherwise.
 
 - [ ] **Step 1: Create the controls**
@@ -1742,9 +1791,20 @@ git commit -m "feat: add car chip, pill button, track row and empty state"
 ### Task 12: Re-theme the existing components
 
 **Files:**
-- Modify: `automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarTopBar.kt`
-- Modify: `automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarMiniPlayer.kt`
-- Modify: `automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarErrorOverlay.kt`
+- Modify: `automotive/.../ui/components/CarTopBar.kt`
+- Modify: `automotive/.../ui/components/CarMiniPlayer.kt`
+- Modify: `automotive/.../ui/components/CarErrorOverlay.kt`
+- Modify: `automotive/.../ui/screens/CarHomeScreen.kt`
+- Modify: `automotive/.../ui/screens/CarBrowseScreen.kt`
+- Modify: `automotive/.../ui/screens/CarLibraryScreen.kt`
+- Modify: `automotive/.../ui/screens/CarAuthScreen.kt`
+- Modify: `automotive/.../ui/screens/CarFullPlayerScreen.kt`
+- Modify: `automotive/.../ui/screens/CarQueueScreen.kt`
+- Modify: `automotive/.../ui/screens/CarArtistLikedSongsScreen.kt`
+
+**Ten files, not three.** All seven screens use `NyasaPrimary`, `NyasaSurface2` or
+`NyasaTextSecondary` today — verified by grep. Definition-of-done item 11 requires them
+re-themed, and Step 6's check fails otherwise.
 
 **Interfaces:**
 - Consumes: `NyasaGold`, `NyasaOnGold` (Task 2); `CarChrome`, `CarGlass`, `CarTextSecondary`, `CarSystemBarHeight` (Task 7); `carTouchTarget()` (Task 8)
@@ -1781,7 +1841,26 @@ In `CarMiniPlayer.kt`:
 1. `NyasaSurface2` becomes `CarGlass`, `NyasaTextSecondary` becomes `CarTextSecondary`.
 2. The play button fill becomes solid `NyasaGold`; its icon tint becomes `NyasaOnGold`.
 3. Leave `CarMiniPlayerHeight`, `CarListArtSize` and `CarTouchTargetSize` as they are — they are already correct.
-4. **Merge the artwork and the title block into a single clickable.** They are currently two separate targets. Wrap both in one `Row` carrying the click and `.carTouchTarget()`:
+4. **Add the missing queue control.** The design's mini-player ends with a queue button; the
+   current signature has play/prev/next/like and `onExpand` but no queue. Add a parameter
+   with a default so no existing call site breaks:
+
+```kotlin
+    onQueueClick: () -> Unit = {},
+```
+
+   Render it as the last control in the transport row, using the existing
+   `com.example.nyasaplayer.core.common.ui.icons` queue icon if one exists — otherwise reuse
+   the icon `CarFullPlayerScreen` already passes to its own queue action — wrapped in
+   `.carTouchTarget()`. Then wire it at the call site in `AutomotiveApp.kt:312`:
+
+```kotlin
+                onQueueClick = { showQueue = true },
+```
+
+   `showQueue` already exists and already drives `CarQueueScreen`; the queue was simply
+   unreachable from the mini-player.
+5. **Merge the artwork and the title block into a single clickable.** They are currently two separate targets. Wrap both in one `Row` carrying the click and `.carTouchTarget()`:
 
 ```kotlin
 Row(
@@ -1798,7 +1877,29 @@ Row(
 
 Use whatever the existing expand callback is named in this file rather than inventing `onExpandClick`. In the HTML prototype these were 64x64 and 230x43 — two sub-minimum targets. Merged, they are one large one, and tapping anywhere on the "now playing" block opens the player.
 
-- [ ] **Step 4: Build**
+- [ ] **Step 4: Re-theme the seven screens**
+
+Apply the same three substitutions to every file in
+`automotive/src/main/java/com/example/nyasaplayer/auto/ui/screens/`:
+
+| Old | New |
+|---|---|
+| `NyasaSurface2` | `CarGlass` |
+| `NyasaTextSecondary` | `CarTextSecondary` |
+| `Brush.*Gradient(listOf(NyasaPrimary, NyasaPrimaryDark))` as a fill | solid `NyasaGold` |
+| `Color.White` **on** a former-purple fill | `NyasaOnGold` |
+
+List the files to work through:
+
+```bash
+grep -rl 'NyasaPrimary\|NyasaSurface2\|NyasaTextSecondary' \
+  automotive/src/main/java/com/example/nyasaplayer/auto/ui/screens/
+```
+
+This is mechanical. Do not restructure layout, rename parameters, or change behaviour — the
+screens keep working exactly as they do now, in gold instead of purple.
+
+- [ ] **Step 5: Build**
 
 ```bash
 ./gradlew :automotive:assembleDebug
@@ -1806,15 +1907,16 @@ Use whatever the existing expand callback is named in this file rather than inve
 
 Expected: BUILD SUCCESSFUL. Unused-import errors are the likely failure; remove what the compiler names.
 
-- [ ] **Step 5: Verify no purple remains in the car module**
+- [ ] **Step 6: Verify no mobile tokens remain in the car module**
 
 ```bash
 grep -rn 'NyasaPrimary\|NyasaSurface2\|NyasaTextSecondary' automotive/src/main/java/ || echo "clean"
 ```
 
-Expected: `clean`. If any remain, they are in the seven screens rather than these three components — re-theme those the same way, following the substitutions above.
+Expected: `clean`. Anything still listed is a file Step 1-4 missed — go back and re-theme it.
+Do not narrow the grep to make it pass.
 
-- [ ] **Step 6: Install and confirm the screens still work**
+- [ ] **Step 7: Install and confirm the screens still work**
 
 ```bash
 adb install -r automotive/build/outputs/apk/debug/automotive-debug.apk
@@ -1822,7 +1924,7 @@ adb install -r automotive/build/outputs/apk/debug/automotive-debug.apk
 
 Open each of the seven existing screens: Home, Browse, Library, Auth, FullPlayer, Queue, ArtistLikedSongs. Each must render with gold accents and no purple, and remain navigable.
 
-- [ ] **Step 7: Run Detekt and the tests**
+- [ ] **Step 8: Run Detekt and the tests**
 
 ```bash
 ./gradlew detekt
@@ -1831,7 +1933,7 @@ Open each of the seven existing screens: Home, Browse, Library, Auth, FullPlayer
 
 Expected: BUILD SUCCESSFUL; 22 tests pass.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add automotive/src/main/java/com/example/nyasaplayer/auto/
@@ -1958,10 +2060,12 @@ This step is the whole point of the task. Do not skip it — a flavor that compi
 ```bash
 ./gradlew :automotive:testOemDebugUnitTest :automotive:testPlaystoreDebugUnitTest
 ./gradlew detekt
-./gradlew :automotive:lintOemDebug
+./gradlew :automotive:lintOemDebug :automotive:lintPlaystoreDebug
 ```
 
-Expected: 22 tests pass in each flavor; Detekt and Lint BUILD SUCCESSFUL.
+Expected: 22 tests pass in each flavor; Detekt and Lint BUILD SUCCESSFUL for **both**
+flavors. Linting only `oem` would leave the Play-facing variant unchecked, which is the one
+variant whose manifest correctness actually matters for submission.
 
 - [ ] **Step 7: Commit**
 
@@ -1986,7 +2090,8 @@ Run after Task 13. Every item maps to the spec's definition of done.
 ./gradlew :automotive:assembleOemDebug :automotive:assemblePlaystoreDebug
 ./gradlew :core:common:testDebugUnitTest :automotive:testOemDebugUnitTest
 ./gradlew detekt
-./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug :automotive:lintOemDebug
+./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug \
+  :automotive:lintOemDebug :automotive:lintPlaystoreDebug
 ```
 
 Expected: all BUILD SUCCESSFUL. 3 tests in `:core:common`, 22 in `:automotive`.
