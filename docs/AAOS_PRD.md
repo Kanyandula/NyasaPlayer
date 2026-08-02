@@ -9,7 +9,7 @@
 | **Date** | 2026-08-02 |
 | **Repository** | `~/AndroidStudioProjects/NyasaPlayer`, module `:automotive` |
 | **Notion** | https://app.notion.com/p/3b0728b1385d81a3b210f41de12117c5 |
-| **Supersedes** | `docs/AAOS_UI_REDESIGN_PLAN.md` §1 (see §3.1) |
+| **Supersedes** | `docs/AAOS_UI_REDESIGN_PLAN.md` §1 (see §3.3) |
 
 ---
 
@@ -300,7 +300,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 | Q1 | Can the emulator be put into a driving state, and how? | A1 Task 1 | End-to-end verification of all restriction work |
 | Q2 | How does text entry work on a head unit — on-screen keyboard when parked, voice-only when driving? The 20 screens do not solve this; the prototype only draws a disabled field. | Needs its own design cycle | **A6** |
 | Q3 | Is 15px acceptable for secondary text at arm's length, or should the floor rise? | Device testing | Type scale across all phases |
-| Q4 | Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted? | Product owner | Documentation coherence |
+| ~~Q4~~ | ~~Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted?~~ **Resolved 2026-08-02: bannered, not deleted.** §1.1 and §2 are load-bearing history — the two-surface inventory and the Play policy reasoning a future submission must still satisfy. | — | Closed |
 | Q5 | Does Downloads belong in the custom launcher, given it is content browse rather than settings? | Product owner | A8 scope |
 
 ---
@@ -316,7 +316,7 @@ The programme is complete when:
    real driving-state transition — or Q1 is answered negatively and recorded.
 5. `oem` and `playstore` variants both build, test and lint green.
 6. Detekt reports zero issues.
-7. `docs/AAOS_UI_REDESIGN_PLAN.md` no longer contradicts the shipped architecture.
+7. ~~`docs/AAOS_UI_REDESIGN_PLAN.md` no longer contradicts the shipped architecture.~~ **Done** — superseded banner added 2026-08-02.
 8. Mobile and car share one brand (Project B complete).
 
 ---
@@ -352,7 +352,7 @@ and cascade automatically; 4 hardcode the hex and need hand edits.
 | `docs/superpowers/specs/2026-08-02-aaos-foundation-restrictions-design.md` | A1 spec |
 | `docs/superpowers/plans/2026-08-02-aaos-foundation-restrictions.md` | A1 implementation plan |
 | `docs/AAOS_ARCHITECTURE.md` | Module and playback architecture |
-| `docs/AAOS_UI_REDESIGN_PLAN.md` | **Superseded** by §3.1 |
+| `docs/AAOS_UI_REDESIGN_PLAN.md` | **Superseded** by §3.3 — bannered, retained for its §1.1 and §2 |
 | `docs/AAOS_DRIVING_STATE_TESTING.md` | To be created by A1 Task 1 |
 
 ### 11.3 Glossary
