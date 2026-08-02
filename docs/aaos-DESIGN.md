@@ -54,19 +54,19 @@ typography:
     fontSize: 40px
     fontWeight: '700'
     lineHeight: 48px
-    letterSpacing: -0.02em
+    letterSpacing: 0em
   section-label:
     fontFamily: Hanken Grotesk
     fontSize: 22px
     fontWeight: '700'
     lineHeight: 28px
-    letterSpacing: -0.01em
+    letterSpacing: 0em
   card-title:
     fontFamily: Hanken Grotesk
     fontSize: 24px
     fontWeight: '700'
     lineHeight: 30px
-    letterSpacing: -0.01em
+    letterSpacing: 0em
   body-md:
     fontFamily: Hanken Grotesk
     fontSize: 18px
@@ -84,13 +84,13 @@ typography:
     fontSize: 20px
     fontWeight: '600'
     lineHeight: 24px
-    letterSpacing: 0.02em
+    letterSpacing: 0em
   caption-legal:
     fontFamily: Hanken Grotesk
     fontSize: 14px
     fontWeight: '400'
     lineHeight: 20px
-    letterSpacing: 0.01em
+    letterSpacing: 0em
 rounded:
   sm: 8px
   DEFAULT: 14px
@@ -103,6 +103,7 @@ spacing:
   system-bar-height: 80px
   nav-rail-width: 80px
   mini-player-height: 88px   # prototype value. Implementation target is 112dp — see "Units"
+  touch-target-min: 76px
   padding-card: 24px
   gutter-grid: 24px
   stack-gap-lg: 40px
@@ -167,8 +168,9 @@ screen. Never render any other product, brand, or placeholder name.
 ## Typography
 
 Hanken Grotesk throughout. No text may render below 14px, and no interactive label below
-18px, so it stays legible at arm's length in a moving vehicle. Headlines use tight
-letter-spacing; captions and legal text use slightly open spacing to speed scanning.
+18px, so it stays legible at arm's length in a moving vehicle. Letter spacing is `0` in
+the Android implementation; do not carry over generated negative tracking from the static
+mockups.
 
 The smallest text actually rendered is 15px — artist names in track rows. That satisfies the
 rule above, but 15px is small for a glance from the driver's seat, and car UI body styles are
@@ -255,13 +257,34 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
 
 ## Components
 
+### Implementation ownership
+
+Screens must compose from shared car components rather than each screen inventing its own
+chrome, buttons, cards, rows or empty states. This is both a maintenance rule and a safety
+rule: a one-off button is how a 76dp target or contrast rule regresses.
+
+| Component | Build/reuse rule |
+|---|---|
+| `CarSystemBar` / current `CarTopBar` | Evolve the existing top bar into the shared 80dp system bar; do not create per-screen bars |
+| `CarNavRail` | New shared rail; every destination screen uses the same instance and active-state logic |
+| `CarMiniPlayer` | Reuse and re-theme the existing component; add the queue button and combined artwork/title target |
+| `CarPillButton` / primary CTA | New shared 76dp button primitive for gold and ghost actions |
+| `CarChip` | New shared 76dp chip for browse filters, search browse-by categories and segmented states |
+| `CarContentCard` | New shared card primitive for album, playlist, mix, genre and recommendation cards |
+| `CarTrackRow` | New shared track row for favourites, album, playlist, queue and search result lists |
+| `CarPlaybackControls` | Shared full-player transport controls; mini-player may use a compact wrapper around the same semantics |
+| `CarRestrictionDialog` | Shared refusal/eviction explanation for every driving restriction |
+| `CarEmptyState` | Shared empty-state layout with optional CTA |
+| `CarLoadingSkeleton` | Shared loading placeholder; static while driving and when system animations are disabled |
+| `CarDownloadRow` | Shared downloads row with parked-only remove actions |
+
 - **Primary CTA:** gold `#C9A84C` fill, `#0A0A0C` text, 20px weight 600, 14px radius, 76px tall.
 - **Secondary button:** transparent fill, 1px `rgba(255,255,255,0.12)` border, white text, 76px tall.
 - **Content card:** 20px radius, `#181824` fill, 1px `rgba(255,255,255,0.06)` border. On focus,
-  the border becomes gold and the card lifts slightly.
+  the border becomes gold. Any lift or scale transition is parked-only.
 - **Filter chip:** fully rounded, 76px tall, 28px horizontal padding. Selected chips use a gold
   fill with dark bold text; unselected use `#1E1E2A` with a hairline white border.
-- **Text input:** 72px tall, 16px radius, `#1E1E2A` fill. Focused inputs take a 2px gold border
+- **Text input:** 76px tall, 16px radius, `#1E1E2A` fill. Focused inputs take a 2px gold border
   and a soft gold outer glow.
 - **Track list row:** 80px tall, 52px art at 8px radius, title 18px white, artist 15px `#ACACBC`,
   duration right-aligned in `#ACACBC`. The currently playing row carries a 3px gold bar on its
@@ -311,8 +334,9 @@ Motion is gated on the vehicle's UX-restriction state, not on taste.
 - **Driving:** all decorative motion stops. The ambient gradients freeze in place. Only motion
   that carries information continues — the progress bar, the clock, and the play/pause state.
 
-Nothing auto-scrolls, pulses, or parallaxes in either state. `prefers-reduced-motion` disables
-the decorative layer entirely.
+Nothing auto-scrolls, pulses, or parallaxes in either state. If the platform animator duration
+scale is `0` (`Settings.Global.ANIMATOR_DURATION_SCALE`), the decorative layer is disabled
+entirely even while parked.
 
 The original design doc recorded "no decorative motion" as a flat rule. Gating on parked
 vs driving is the same safety position, stated more precisely: it is motion *while the vehicle
@@ -327,16 +351,20 @@ is moving* that is restricted.
 | Restriction | Behaviour while driving |
 |---|---|
 | `UX_RESTRICTIONS_NO_SETUP` | Settings and the profile switcher refuse to open |
-| `UX_RESTRICTIONS_NO_KEYBOARD` | The search text field is replaced by a voice-only prompt |
+| `UX_RESTRICTIONS_NO_KEYBOARD` | The search text field is replaced by a system/Assistant voice-search prompt; the app records no audio itself |
 | `getMaxContentDepth()` = 1 | Drill-down into a playlist or album is refused |
 | `getMaxCumulativeContentItems()` = 21 | Content lists truncate to 21 items |
 | Decorative motion | Ambient gradients freeze |
+| Queue edits | Queue remains viewable and skip-to remains available; reorder, remove and clear are refused |
+| Downloads edits | Downloads remain viewable; delete/remove actions are refused |
 
 Entering a restricted screen is refused with an explanatory panel rather than a silent
 no-op. Starting to drive while already inside a restricted screen **evicts** you from it —
 gating entry alone is not sufficient, since the vehicle can start moving at any time.
 
-Tab switching, playback transport, seeking, and the queue stay available while driving.
+Tab switching, playback transport, seeking, queue view/skip-to, and download viewing stay
+available while driving. Setup, typed search, deletion, removal, reorder and clear actions do
+not.
 
 Not yet enforced: no cumulative item count is carried *across* a browse session, and
 `getMaxRestrictedStringLength()` (120 chars) is unchecked. Neither currently binds, because

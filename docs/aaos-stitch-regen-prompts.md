@@ -1,5 +1,11 @@
 # AAOS screen regeneration — Stitch prompts
 
+> **Archived prompt replay. Do not use for implementation.**
+> These prompts describe an early six-screen Stitch generation run and still contain stale
+> values such as 72px controls, `#A0A0B0` secondary text and six-screen-only scope.
+> Current implementation requirements live in `docs/AAOS_SCREEN_CONTRACT.md`,
+> `docs/AAOS_COMPLIANCE.md` and `docs/aaos-DESIGN.md`.
+
 Replay script for regenerating the six Nyasa Music AAOS screens after the Stitch
 quota resets. The design system already carries the chrome contract and the
 rendering rules, so each prompt below only describes screen-specific content.

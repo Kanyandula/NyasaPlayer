@@ -26,8 +26,8 @@ visual identity, with driving restrictions enforced from the vehicle's own signa
 assumed.
 
 The work is sequenced into **nine phases**. Phase A1 is foundation — tokens, touch-target
-primitives, build variants, and the restriction layer. Phases A2–A8 deliver the screens.
-Project B migrates the mobile app to the shared brand.
+primitives, build variants, and the restriction layer. Phases A2–A8 deliver the AAOS screens.
+Project B is tracked separately; the AAOS release does not wait for the mobile brand migration.
 
 **Current state:** design complete and measured **except for A6 search text entry**, which is an
 unresolved design problem rather than an unbuilt screen (see Q2). A1 is specced, planned, and
@@ -81,7 +81,7 @@ polish.
 | G2 | Enforce driving restrictions from real vehicle signals | Every `CarUxRestrictions` default the app models is read from the platform and acted on |
 | G3 | Every interactive control meets 76dp | Automated measurement returns zero controls below minimum |
 | G4 | Every non-disabled text pair clears AAA | Measured on every surface the token lands on, not just one |
-| G5 | Ship the 20-screen designed experience | All 20 screens implemented and matching the design system |
+| G5 | Ship the 20-screen designed experience | All 20 screens implemented and matching the design system and screen contract |
 | G6 | Keep a Play-compliant path open without blocking on it | `playstore` variant builds green **and** passes the merged-manifest gates in §8.2 |
 | G7 | Publish brand tokens the mobile app can adopt | Gold tokens live in `:core:common` and are consumable by `:app`. **Migrating mobile is out of scope — see §3.2** |
 
@@ -211,7 +211,7 @@ by gating an entry point; this one cannot.
 | FR-2.4 | While driving, content lists truncate to the item cap | Must |
 | FR-2.5 | **Transitioning to driving while already inside a restricted location evicts the user from it** | Must |
 | FR-2.6 | Every refusal shows an explanation; silent no-ops are prohibited | Must |
-| FR-2.7 | Playback transport, seeking, queue and tab switching remain available while driving | Must |
+| FR-2.7 | Playback transport, seeking, queue view/skip-to and tab switching remain available while driving | Must |
 | FR-2.8 | Decorative motion runs only while parked and freezes in motion | Must |
 | FR-2.9 | The launcher activity declares `distractionOptimized="true"`; parked-only activities do not (§8.3) | Must |
 
@@ -263,6 +263,10 @@ row: the chrome contract (NFR-4), the 76dp touch target (NFR-1), contrast (NFR-2
 **Screens 16, 17, 18 and 19 are states, not destinations.** They replace or overlay a
 destination rather than being navigated to, which is why they have no rail entry.
 
+The per-screen UI, CTA, state, component-reuse and motion contract lives in
+`docs/AAOS_SCREEN_CONTRACT.md`. This PRD owns product scope and compliance; the screen
+contract owns implementation completeness.
+
 ### 6.4 Non-functional
 
 | ID | Requirement | Target | Verification |
@@ -273,7 +277,7 @@ destination rather than being navigated to, which is why they have no rail entry
 | NFR-4 | Chrome consistency | System bar, nav rail and mini-player render identically on every screen | Single shared implementation |
 | NFR-5 | Static analysis | Detekt `maxIssues: 0`; Android Lint clean, **both flavors** | CI |
 | NFR-6 | Reduced motion | Decorative animation is disabled when the platform animator duration scale is `0` (`Settings.Global.ANIMATOR_DURATION_SCALE`), independently of driving state | Review |
-| NFR-7 | Both variants build | `oem` and `playstore` compile, test and lint green; `playstore` additionally passes §8.2 | CI |
+| NFR-7 | Both variants build | `oem` and `playstore` compile, test and lint green; `oem` passes §8.3 and `playstore` passes §8.2 | CI |
 
 > **NFR-2 has a subtlety worth preserving.** The binding surface is the *raised* surface
 > `#1E1E2A` at 7.4:1, not the base at 8.8:1. Measuring the secondary token against the base
@@ -294,7 +298,8 @@ destination rather than being navigated to, which is why they have no rail entry
 ## 7. Design
 
 **Source of truth:** `docs/aaos-DESIGN.md` — tokens, chrome contract, component specs, and
-measured contrast.
+measured contrast. `docs/AAOS_SCREEN_CONTRACT.md` turns that system into per-screen
+implementation requirements.
 
 **Reference implementations:**
 - `docs/aaos-screens.html` — all 20 screens, static
@@ -350,16 +355,13 @@ The `oem` variant deliberately does not satisfy this — that is the decision in
 Run against the **merged** manifest extracted from the built APK, not the source manifest,
 because merging pulls in declarations from `:core:playback` and every library.
 
-| Gate | Assertion |
-|---|---|
-| MG-1 | Zero activities declaring `android.intent.category.LAUNCHER` |
-| MG-2 | Zero exported activities other than those explicitly allow-listed for sign-in and settings |
-| MG-3 | `MediaLibraryService` / `MediaBrowserService` is present and exported |
-| MG-4 | The settings activity, if present, is reachable via `android.intent.action.APPLICATION_PREFERENCES` |
-| MG-5 | `<uses-feature android:name="android.hardware.type.automotive" android:required="true" />` is present |
-| MG-6 | The `com.android.automotive` descriptor declares `<uses name="media" />` |
+The gates themselves are defined in `docs/AAOS_COMPLIANCE.md` (`MG-*`). In summary: no
+launcher activity, no unexpected exported activities, the media service present and exported,
+settings reachable via `APPLICATION_PREFERENCES`, the automotive feature declared, and the
+descriptor declaring `<uses name="media" />`.
 
-MG-1 and MG-2 are the ones that matter. The rest guard against regressions in the merge.
+The first two are the ones that matter; the rest guard against regressions introduced by
+manifest merging.
 
 ### 8.3 Merged-manifest gates — `oem` variant
 
@@ -371,15 +373,16 @@ platform will not let the driver see it.
 The custom launcher is the product and is intended to remain usable in motion, so it must
 declare it. **No activity in this repository currently does.**
 
-| Gate | Assertion |
-|---|---|
-| OG-1 | `AutomotiveActivity` declares `<meta-data android:name="distractionOptimized" android:value="true" />` |
-| OG-2 | Every activity reachable while driving carries the same declaration |
-| OG-3 | Parked-only activities — sign-in, PIN opt-in, profile switcher, settings — **do not** declare it |
+**`docs/AAOS_COMPLIANCE.md` is the normative owner of every gate identifier** — `OG-*` for the
+`oem` variant, `MG-*` for `playstore`, `HR-*` for host-render smoke tests. This PRD does not
+restate them, because two documents numbering the same gates differently is how a review ends
+up citing an ID that means two things.
 
-OG-3 is the mirror of OG-1 and equally load-bearing. Declaring `distractionOptimized` on a
-parked-only flow asserts to the platform that it is safe in motion, which is the opposite of
-what §6.2 requires.
+The `oem` gates that matter most, by name rather than number: the launcher must declare
+`distractionOptimized`, every activity reachable while driving must declare it, and
+parked-only activities must not. That last one is the mirror of the first and equally
+load-bearing — declaring it on a sign-in flow asserts to the platform that the flow is safe
+in motion, which is the opposite of what §6.2 requires.
 
 **This declaration is an assertion, not a formality.** It states that the activity meets the
 driver-distraction guidelines — the touch targets of NFR-1, the contrast of NFR-2, the
@@ -391,26 +394,20 @@ Manifest checks prove nothing renders that should not. These prove the host **ca
 what it should. Run on the automotive emulator against the OEM media template, launched
 directly at `PlaybackService` rather than through any app launcher.
 
-| Test | Passes when |
-|---|---|
-| ST-1 | The app appears in the car's media source picker |
-| ST-2 | The browse tree renders its root, and one level of children |
-| ST-3 | Selecting an item starts playback |
-| ST-4 | Now Playing shows correct title, artist and artwork |
-| ST-5 | Queue is populated and skip-to works |
-| ST-6 | Search returns results via `onSearch` / `onGetSearchResult` |
-| ST-7 | Assistant voice playback works end to end |
-| ST-8 | Custom actions (like/unlike) appear and reflect state |
+The tests are defined in `docs/AAOS_COMPLIANCE.md` as `HR-1` … `HR-8`: the app appears in the
+media source picker, the host renders the browse root and one child level, playback starts,
+metadata is correct, the queue populates and skip-to works, search returns results, Assistant
+voice playback works, and custom actions reflect state.
 
-ST-4 and ST-8 cannot be verified by screenshot — Now Playing renders on `FLAG_SECURE`
-distant-display surfaces. Use `dumpsys media_session` as the oracle; it exposes playback
-state and the resolved custom-action list. This is recorded in
-`docs/AAOS_ARCHITECTURE.md` and was established during PR #13.
+`HR-4` and `HR-8` cannot be verified by screenshot — Now Playing renders on `FLAG_SECURE`
+distant-display surfaces. Use `dumpsys media_session` as the oracle; it exposes playback state
+and the resolved custom-action list. Recorded in `docs/AAOS_ARCHITECTURE.md`, established
+during PR #13.
 
 ### 8.5 When these gates run
 
 Both variants build on every change (NFR-7). The manifest gates (§8.2 and §8.3) are cheap and should
-be automated from A1, when the flavors are created. The smoke tests (§8.4) are manual and run
+be automated from A1, when the flavors are created. The host-render tests (`HR-*`, §8.4) are manual and run
 before any Play submission decision, not per-commit — the `playstore` variant is a preserved
 option, not an actively shipped artifact.
 
@@ -464,7 +461,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 | Q2 | How does text entry work on a head unit — on-screen keyboard when parked, voice-only when driving? The 20 screens do not solve this; the prototype only draws a disabled field. | Needs its own design cycle | **A6** |
 | Q3 | Is 15px acceptable for secondary text at arm's length, or should the floor rise? | Device testing | Type scale across all phases |
 | ~~Q4~~ | ~~Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted?~~ **Resolved 2026-08-02: bannered, not deleted.** §1.1 and §2 are load-bearing history — the two-surface inventory and the Play policy reasoning a future submission must still satisfy. | — | Closed |
-| Q5 | Does Downloads belong in the custom launcher, given it is content browse rather than settings? | Product owner | A8 scope |
+| ~~Q5~~ | ~~Does Downloads belong in the custom launcher, given it is content browse rather than settings?~~ **Resolved 2026-08-03:** yes for the `oem` launcher. The screen is part of A8; delete/remove actions remain parked-only, and the `playstore` path can expose offline content through the media browse tree if needed later. | — | Closed |
 
 ---
 
@@ -477,11 +474,13 @@ The programme is complete when:
 3. Every non-disabled text/surface pair measures **≥ 7:1**.
 4. Every restriction in §6.2 is enforced, including eviction (FR-2.5), and verified against a
    real driving-state transition — or Q1 is answered negatively and recorded.
-5. `oem` and `playstore` variants both build, test and lint green, and `playstore` passes the
-   merged-manifest gates (§8.2). Host-render smoke tests (§8.3) are required only before a
+5. `oem` and `playstore` variants both build, test and lint green; `oem` passes the
+   distraction-optimised manifest gates (§8.3) and `playstore` passes the Play media gates
+   (§8.2). Host-render smoke tests (`HR-*`, §8.4) are required only before a
    Play submission decision, not for this release.
 6. Detekt reports zero issues.
 7. ~~`docs/AAOS_UI_REDESIGN_PLAN.md` no longer contradicts the shipped architecture.~~ **Done** — superseded banner added 2026-08-02.
+
 **Project B is explicitly not an acceptance criterion.** Migrating the mobile app to gold is
 tracked separately and must not gate the AAOS release — it carries a wide visual regression
 surface across `:app` that has nothing to do with the car experience.
@@ -514,6 +513,8 @@ and cascade automatically; 4 hardcode the hex and need hand edits.
 | Document | Purpose |
 |---|---|
 | `docs/aaos-DESIGN.md` | Design system source of truth |
+| `docs/AAOS_SCREEN_CONTRACT.md` | Per-screen UI, CTA, state, motion and component-reuse contract |
+| `docs/AAOS_COMPLIANCE.md` | Variant-specific AAOS compliance gates and verification contract |
 | `docs/aaos-screens.html` | 20 screens, static reference |
 | `docs/aaos-app.html` | Interactive prototype |
 | `docs/superpowers/specs/2026-08-02-aaos-foundation-restrictions-design.md` | A1 spec |

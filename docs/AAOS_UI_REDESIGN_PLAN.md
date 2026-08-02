@@ -3,7 +3,8 @@
 > # ⛔ SUPERSEDED — 2026-08-02
 >
 > **Do not follow this document.** Its central decision has been reversed.
-> The current source of truth is **`docs/AAOS_PRD.md`**.
+> The current sources of truth are **`docs/AAOS_PRD.md`**,
+> **`docs/AAOS_SCREEN_CONTRACT.md`** and **`docs/AAOS_COMPLIANCE.md`**.
 >
 > §1 below commits to shipping AAOS as a Google-compliant media template app, with the
 > custom Compose screens archived. **That is no longer the plan.** The decision recorded

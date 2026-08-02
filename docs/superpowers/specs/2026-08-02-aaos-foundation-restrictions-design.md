@@ -222,13 +222,23 @@ productFlavors {
 
 | Flavor | Manifest contains | Purpose |
 |---|---|---|
-| `oem` | `AutomotiveActivity` + launcher filter, `PlaybackService` | the product |
+| `oem` | `AutomotiveActivity` + launcher filter + `distractionOptimized=true`, `PlaybackService` | the product |
 | `playstore` | `PlaybackService` only | future Play submission |
 
 **Implementation:** `AutomotiveActivity` moves **out of** `src/main/AndroidManifest.xml` into
 `src/oem/AndroidManifest.xml`. `src/playstore/AndroidManifest.xml` declares no launcher
 activity. The service, its intent filters, and the
 `androidx.car.app.launchable` meta-data stay in `main` — both flavors need them.
+
+The `oem` launcher also declares:
+
+```xml
+<meta-data android:name="distractionOptimized" android:value="true" />
+```
+
+That metadata is required because the custom launcher is intended to remain visible while the
+vehicle is moving. It is an assertion that A1's restrictions, touch targets and contrast gates
+hold; parked-only activities added in later phases must not declare it.
 
 Both flavors must compile, and Detekt and Lint must pass for both.
 
@@ -384,12 +394,37 @@ fun gate(location: CarUiLocation, state: UxRestrictionState): GateResult
 |---|---|---|
 | Tab root (`Home`/`Browse`/`Library`/`Favourites`) | — | allowed |
 | `overlay = FullPlayer` | — | allowed, it is playback control |
-| `overlay = Queue` | `maxCumulativeContentItems` | allowed, list truncated |
+| `overlay = Queue` | `maxCumulativeContentItems` | allowed, list truncated; skip-to only, no remove/reorder/clear |
 | `drillDepth >= 1` | `maxContentDepth` | **denied** when `drillDepth > maxContentDepth` |
 | `sheet = Settings` | `noSetup` | **denied** |
 | `sheet = Profile` | `noSetup` | **denied** |
 | `sheet = Search`, `textEntryActive = true` | `noTextEntry` | **denied**, voice offered |
 | `sheet = Search`, `textEntryActive = false` | — | allowed, browse-by only |
+
+### 8.3a Location gating vs action gating — they are different mechanisms
+
+`gate()` answers *"may the user be here?"*. It does **not** answer *"may the user do that?"*.
+
+The queue is the worked example. While driving the queue may be **viewed**, and skip-to is
+permitted, so `gate()` returns `Allowed` for `overlay = Queue`. But remove, reorder and clear
+are parked-only. That is an action inside a permitted location, and no location-shaped
+function can express it.
+
+**Action-level restriction is read directly from `UxRestrictionState` by the screen that owns
+the action**, not routed through `gate()`. This is already how the shipping code works:
+`CarQueueScreen` takes an `isDriving` flag and computes `canClear = !isDriving && queue.size > 1`,
+and disables row removal the same way.
+
+A1 therefore delivers two mechanisms, and an implementer must not go looking for the second
+inside the first:
+
+| Question | Mechanism | Example |
+|---|---|---|
+| May the user be here? | `gate(location, state)` | Settings refused; drill-down refused; eviction |
+| May the user do this here? | The screen reads `state.isDistractionOptimized` | Queue remove/reorder/clear; download delete |
+
+Disabled controls must be genuinely nonfunctional, not merely greyed — a control that looks
+disabled but still fires fails car-quality `GB-1`.
 
 ### 8.4 Safe eviction target
 
@@ -417,8 +452,8 @@ entry path leaves the user sitting on a restricted screen while driving.
 
 Denials show an explanation, never a silent no-op.
 
-**Playback transport, seeking, queue and tab switching stay available while driving.** They
-are not restricted, and blocking them would be wrong.
+**Playback transport, seeking, queue view/skip-to and tab switching stay available while
+driving.** Queue mutation — remove, reorder, clear — is parked-only.
 
 ---
 
@@ -460,6 +495,13 @@ path.
 
 Detekt (`maxIssues: 0`) and Android Lint must pass **for both flavors**.
 
+Merged-manifest gates must also pass:
+
+- `oem` contains the custom launcher expected for the product, and that launcher carries
+  `distractionOptimized=true`.
+- `playstore` contains no launcher activity and exposes only the media service / parked-only
+  allow-listed activities.
+
 ---
 
 ## 10. Risks
@@ -470,6 +512,7 @@ Detekt (`maxIssues: 0`) and Android Lint must pass **for both flavors**.
 | Detekt `maxIssues: 0` — no warnings tolerated | Every new file clean on first commit; run Detekt before each. |
 | Token migration breaks the existing 7 screens | They must compile and run throughout; re-theme, don't rewrite. |
 | Flavor split breaks the existing build | Both flavors build + pass Detekt/Lint before A1 is accepted. |
+| Launcher lacks `distractionOptimized=true` | The app disappears in motion before runtime restrictions can run; verify the merged `oem` manifest. |
 | Mixed palette (car gold, phone purple) | Accepted and documented until Project B. |
 | dp figures unverified on real hardware | Explicitly noted in §2; not a substitute for device testing. |
 
@@ -481,7 +524,7 @@ Detekt (`maxIssues: 0`) and Android Lint must pass **for both flavors**.
 2. px→dp policy written into `docs/aaos-DESIGN.md`, with the 112dp mini-player correction.
 3. Dimension tokens added; `CarCardCornerRadius` changed to 20.dp.
 4. `Modifier.carTouchTarget()` plus the six new components.
-5. `oem` / `playstore` flavors; both build and pass Detekt + Lint.
+5. `oem` / `playstore` flavors; both build, pass Detekt + Lint, and pass merged-manifest gates.
 6. `CarUxRestrictionsHandler` fixed and extended; mapping split into a platform wrapper and a
    raw-value pure function (§7.3).
 7. `CarUiLocation` introduced and derived from existing state; `CarScreen` gains `Favourites`.

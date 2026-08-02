@@ -1,7 +1,8 @@
 # NyasaPlayer — Android Automotive OS (AAOS) Architecture
 
-> Reference for the AAOS variant of NyasaPlayer. Updated 2026-04-23 to reflect
-> **Option B (Template Path)** — see §6 for the decision and trade-off.
+> Reference for the AAOS variant of NyasaPlayer. Updated 2026-08-03 for
+> `docs/AAOS_PRD.md` v1.0. The 2026-04-23 **Option B (Template Path)** decision is
+> now historical; it is retained in §6 because it explains the preserved Play path.
 
 ---
 
@@ -9,10 +10,10 @@
 
 1. [Overview](#overview)
 2. [Module Boundaries](#module-boundaries)
-3. [MediaLibrarySession — the AAOS surface](#medialibrarysession--the-aaos-surface)
+3. [MediaLibrarySession — shared AAOS media surface](#medialibrarysession--shared-aaos-media-surface)
 4. [State Synchronization](#state-synchronization)
-5. [Custom Flows (`:automotive`)](#custom-flows-automotive)
-6. [Decision: Option B — Template Path](#decision-option-b--template-path)
+5. [Variant-specific UI Surfaces (`:automotive`)](#variant-specific-ui-surfaces-automotive)
+6. [Historical Decision: Option B — Template Path](#historical-decision-option-b--template-path)
 7. [Firebase Backend Compatibility](#firebase-backend-compatibility)
 8. [Implementation Roadmap](#implementation-roadmap)
 
@@ -20,15 +21,21 @@
 
 ## Overview
 
-NyasaPlayer AAOS shares the domain, data, and playback layers with the mobile app. On
-AAOS the **OEM media template** is the UI for Home, Browse, Library, Now Playing, Queue,
-and Search — driven directly by our `MediaLibraryService`. The `:automotive` module
-ships only the parked-only custom flows Google permits for media apps: Auth, Settings,
-and a Sign-Out confirmation dialog.
+NyasaPlayer AAOS shares the domain, data, and playback layers with the mobile app. The
+current product decision is **dual-track by build variant**:
 
-**Target display:** 1280×720 landscape (16:9), automotive head unit.
-**Min SDK:** 28 (AAOS minimum).
-**`<uses name="media" />`:** required for Play Store AAOS submission.
+- **`oem`** is the product surface: a custom 20-screen Compose launcher in `:automotive`,
+  distributed through OEM partnership or direct install.
+- **`playstore`** is the preserved future Play media path: no launcher activity; browse,
+  search and playback are host-rendered from `PlaybackService` / `MediaLibraryService`.
+
+`PlaybackService` remains load-bearing in both tracks. It powers the Play media-template
+surface, Assistant voice playback/search, media-session controls, queue persistence and
+cross-device resume.
+
+**Target display:** 1920×1080 landscape design canvas, adapted with dp.
+**Min SDK:** 29.
+**`<uses name="media" />`:** required for the preserved Play Store AAOS media variant.
 
 ---
 
@@ -36,7 +43,7 @@ and a Sign-Out confirmation dialog.
 
 ```
 :core:common  <--  :core:data  <--  :core:playback  -+-- :app (mobile)
-                                                     +-- :automotive (AAOS: Auth + Settings)
+                                                     +-- :automotive (AAOS: OEM launcher + Play media variant)
 ```
 
 | Module | Package | Responsibility |
@@ -45,14 +52,14 @@ and a Sign-Out confirmation dialog.
 | `:core:data` | `core.data` | Repositories, Room, Firebase sync, preferences DataStore |
 | `:core:playback` | `core.playback` | `PlaybackService` (`MediaLibraryService`), `MediaBrowseTree`, `PlaybackQueueManager`, `PlaybackStatePersistence`, `SongMediaItemMapper`, `PlaybackCommands` |
 | `:app` | `com.example.nyasaplayer` | Mobile-only screens, ViewModels, navigation, `MediaController` client |
-| `:automotive` | `com.example.nyasaplayer.auto` | AAOS parked-only Activities (Auth, Settings); **no playback/browse UI** |
+| `:automotive` | `com.example.nyasaplayer.auto` | AAOS app shell. `oem` adds the custom launcher; `playstore` removes it and relies on `PlaybackService`. Parked-only setup/settings/sign-in flows stay custom where allowed |
 
 ### `:automotive` build.gradle (key)
 
 ```kotlin
 android {
     namespace = "com.example.nyasaplayer.auto"
-    defaultConfig { applicationId = "com.example.nyasaplayer"; minSdk = 28 }
+    defaultConfig { applicationId = "com.example.nyasaplayer"; minSdk = 29 }
     buildFeatures { compose = true }
 }
 
@@ -66,11 +73,13 @@ dependencies {
 
 ---
 
-## MediaLibrarySession — the AAOS surface
+## MediaLibrarySession — shared AAOS media surface
 
-Under Option B the AAOS-facing API surface is the `MediaLibrarySession.Callback`
-installed on `PlaybackService`. The OEM template calls these methods; what we return
-is what the user sees.
+The AAOS media API surface is the `MediaLibrarySession.Callback` installed on
+`PlaybackService`. In the `playstore` flavor, the OEM host calls these methods and what
+we return is the UI. In the `oem` flavor, the custom Compose launcher draws the product UI,
+but the same session remains the contract for Assistant, system voice search, media controls
+and external clients.
 
 ### Browse tree
 
@@ -137,46 +146,49 @@ Every song `MediaItem` sets on its `MediaMetadata`:
       - 250 ms polling
 ```
 
-Under Option B the car side does **not** run a `MediaController`-backed ViewModel. The
-OEM template is the controller. Our only AAOS ViewModels are `AutomotiveAuthViewModel`
-(Sign-In flow) and `CarSettingsViewModel` (Account + Audio Quality prefs).
+The car side now has two controller shapes. The `oem` custom launcher uses
+`AutomotivePlayerViewModel` and `AutomotiveContentViewModel` to bridge Compose screens to
+repositories and playback. The `playstore` flavor has no launcher; the OEM host is the media
+controller and talks to `PlaybackService` directly. `AutomotiveAuthViewModel` remains for
+parked sign-in/setup flows.
 
 ### BasePlayerStateCollector
 
 Still present in `:core:playback` — used by `PlayerViewModel` on mobile. No subclass in
-`:automotive`. If we ever need in-car playback state outside the template (e.g., to
-gate something in Settings), we can re-introduce a 500 ms collector at that time.
+`:automotive` today. If a later slice introduces a shared collector for custom playback
+screens, it should live in `:core:playback` or a car-specific adapter rather than duplicating
+mobile polling logic screen by screen.
 
 ---
 
-## Custom Flows (`:automotive`)
+## Variant-specific UI Surfaces (`:automotive`)
 
-Three flows ship as Compose. Everything else is template-rendered.
+### `oem` flavor
 
-### Auth
+- `AutomotiveActivity` is the launcher and hosts the custom 20-screen Compose app.
+- It must declare `<meta-data android:name="distractionOptimized" android:value="true" />`
+  only after A1's restriction, touch-target and contrast gates hold.
+- It must react to `CarUxRestrictions` at runtime: setup, typed search, deep drill-down,
+  queue mutation and download deletion are refused while driving; playback controls remain
+  available.
+- It must not request `RECORD_AUDIO` or draw an in-app microphone recorder. Driving voice
+  search is routed through Assistant/system search into `PlaybackService.onSearch` /
+  `onGetSearchResult`.
 
-- `CarAuthScreen.kt` — Google Sign-In via Credential Manager; CTS-compliant (no keyboard).
-- `AutomotiveAuthViewModel.kt` — credential flow + profile creation via `AuthRepository`.
-- Entry point: invoked when the MediaLibrarySession returns
-  `SessionError.ERROR_PERMISSION_DENIED`, or from Settings → Account → "Sign in again".
+### `playstore` flavor
 
-### Settings
+- No launcher activity is declared.
+- Browse, search, queue and playback are host-rendered from `PlaybackService`.
+- Any future standalone setup, settings or sign-in activity is parked-only and must not declare
+  `distractionOptimized`. Parked-only screens inside `AutomotiveActivity` are enforced by the
+  runtime gate instead.
 
-- `CarSettingsScreen.kt` — vertical list root: **Account**, **Audio Quality**, **About**.
-- `CarAccountScreen.kt` — avatar + name + email + Sign Out.
-- `CarAudioQualityScreen.kt` — radio list: Low / Normal / High / Very High. Persisted
-  via `AudioQualityPreference` DataStore in `:core:data`.
-- `CarAboutScreen.kt` — static version / build / Terms / Privacy / Licences.
-- `CarSettingsViewModel.kt` — Hilt VM, exposes current audio-quality pref, delegates
-  sign-out to `AuthRepository`.
-
-Manifest entry:
+Parked-only settings manifest shape:
 
 ```xml
 <activity
     android:name=".ui.SettingsActivity"
     android:exported="true"
-    android:distractionOptimized="false"
     android:theme="@style/Theme.NyasaPlayer">
     <intent-filter>
         <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
@@ -185,30 +197,37 @@ Manifest entry:
 </activity>
 ```
 
-### Sign-Out confirmation
+Do not add a false-valued distraction-optimised activity attribute. Android checks the
+activity metadata key only; for parked-only flows, omit the metadata entirely and let the
+system block those activities when distraction optimization is required.
 
-- `SignOutConfirmationDialog.kt` — modal, two 76 dp buttons (Cancel + Sign Out).
-- Sign Out button uses the purple **accent gradient** (not red) — sign-out is not
-  destructive in the "delete your account" sense.
+### Shared Compose flows
 
-### Distraction compliance for our custom screens
+- Auth, PIN opt-in, settings and profile switching are parked-only flows.
+- Sign-out confirmation uses two 76dp actions and the gold/dark token pair, not the old
+  purple gradient.
+- Screen implementation details live in `docs/AAOS_SCREEN_CONTRACT.md`.
 
-The OEM template handles distraction rules for all template-rendered surfaces. Our
-three custom flows need to meet the bar independently:
+### Distraction compliance
 
 | Rule | Our implementation |
 |---|---|
 | 76 dp min touch target | Enforced via `Modifier.sizeIn(minWidth = 76.dp, minHeight = 76.dp)` on every tappable element |
-| 24 sp min body text | `AutomotiveDimens` / typography scale (16/18/20/24/30/36 sp) |
-| Parked-only | `android:distractionOptimized="false"` on `SettingsActivity`; the system hides it while driving |
-| No keyboard | Auth uses Credential Manager; Settings never prompts for typed input |
-| Back affordance | Every Settings sub-screen has a 76 dp circular back button |
+| Text sizing | Compose text sizes use `sp`, not `dp`, so vehicle font scale is honoured |
+| Driving-reachable activity | `AutomotiveActivity` in `src/oem/AndroidManifest.xml` carries `distractionOptimized=true` metadata |
+| Parked-only flow | Standalone parked-only activities omit `distractionOptimized`; parked-only screens inside `AutomotiveActivity` are refused by the app gate |
+| No typed input while driving | `UX_RESTRICTIONS_NO_KEYBOARD` disables text entry and offers system voice search |
+| No setup while driving | `UX_RESTRICTIONS_NO_SETUP` refuses settings, profile switching and PIN setup |
+| Back/close affordance | Every overlay and parked flow exposes a 76dp dismiss or back target |
 
 ---
 
-## Decision: Option B — Template Path
+## Historical Decision: Option B — Template Path
 
 **Date:** 2026-04-23
+
+**Status:** Superseded for the product decision by `docs/AAOS_PRD.md` §3.3. Retained because
+the reasoning still defines the `playstore` variant.
 
 **Context:** Prior to this decision the `:automotive` module contained ~4,500 LOC of
 custom Compose (Home, Browse, Library, Full Player, Queue, Mini Player, Artist detail,
@@ -238,9 +257,9 @@ loss.
 
 ## Firebase Backend Compatibility
 
-Same Firebase project serves both `:app` and `:automotive`. The AAOS template reads
-from our existing repositories via the MediaBrowser callbacks — no schema changes
-required for Option B beyond what `:core:data` already provides.
+Same Firebase project serves `:app`, `oem` AAOS and `playstore` AAOS. The `oem` launcher reads
+through the automotive ViewModels and existing repositories; the `playstore` host reads through
+MediaBrowser callbacks. No schema changes are required by the AAOS UI upgrade.
 
 ### Playback state sync
 
@@ -264,52 +283,30 @@ are sufficient. See `firestore.rules`.
 
 ## Implementation Roadmap
 
-The Option-B migration is a single PR on `ek/aaos-ui-redesign` with four phased
-commits. Detailed plan at `/Users/admin/.claude/plans/let-s-go-with-b-piped-waffle.md`.
+The current AAOS upgrade is governed by:
 
-### Commit 1 — Docs & decision record ✅
+- `docs/AAOS_PRD.md` — product scope, phases, acceptance criteria.
+- `docs/AAOS_SCREEN_CONTRACT.md` — per-screen UI, CTA, state and reuse contract.
+- `docs/AAOS_COMPLIANCE.md` — `oem` / `playstore` manifest and runtime compliance gates.
+- `docs/superpowers/specs/2026-08-02-aaos-foundation-restrictions-design.md` — A1 spec.
+- `docs/superpowers/plans/2026-08-02-aaos-foundation-restrictions.md` — A1 plan.
 
-- Rewrite `docs/AAOS_UI_REDESIGN_PLAN.md`, `docs/AAOS_ARCHITECTURE.md` (this file),
-  `CLAUDE.md`, `README.md`, add `docs/stitch-screens/README.md`.
+Near-term sequence:
 
-### Commit 2 — `:core:playback` template gap closure
-
-- `MediaBrowseTree`: add `EXTRA_BROWSABLE_STYLE_HINT_*` extras; add Liked Songs root child.
-- `SongMediaItemMapper`: set `albumTitle` + `durationMs` on `MediaMetadata` top-level.
-- `PlaybackCommands`: add `CMD_TOGGLE_LIKE`.
-- `PlaybackService`: register `CMD_TOGGLE_LIKE` + handler; map `PlaybackException` to
-  `SessionError.ERROR_{PERMISSION_DENIED, IO, NOT_SUPPORTED}`.
-- Extend `MediaBrowseTreeTest`.
-
-### Commit 3 — `:automotive` prune
-
-- Delete 11 screen/component/nav files + 3 ViewModels (AutomotivePlayerViewModel,
-  AutomotiveContentViewModel, CarUxRestrictionsHandler).
-- Collapse `AutomotiveApp.kt` to Auth + Settings nav host.
-- Simplify `AutoAppModule`.
-- Clean up `automotive/build.gradle.kts` — drop unused deps after pruning.
-
-### Commit 4 — Manifest + Settings cluster
-
-- Update `AndroidManifest.xml`: remove LAUNCHER from `AutomotiveActivity`, add
-  `SettingsActivity` with `APPLICATION_PREFERENCES` intent.
-- Build the 4 Settings screens + SignOutConfirmationDialog + CarSettingsViewModel +
-  `AudioQualityPreference` DataStore in `:core:data`.
-- Wire navigation in `AutomotiveApp.kt`.
-- Verify end-to-end on AAOS emulator.
+1. A1 creates tokens, shared primitives, restriction mapping, `CarUiLocation`, `gate()`, and
+   `oem` / `playstore` manifest flavors.
+2. A2 builds shared chrome and Home against those primitives.
+3. A3-A8 implement the remaining 19 screens against `docs/AAOS_SCREEN_CONTRACT.md`.
 
 ### Verification
 
-Running on Android 13 / API 33 / Automotive-with-Play emulator:
-
-1. Launcher opens the **OEM media template**, not our activity.
-2. Browse tree shows grid for Genres/Artists, list for Recently Played / Liked Songs /
-   All Songs.
-3. Now Playing's Like button persists via `CMD_TOGGLE_LIKE`.
-4. Settings gear in the template opens our `SettingsActivity` (parked-only).
-5. Settings → Account → Sign Out confirms + returns to Auth.
-6. Voice intent (`adb shell am start -a android.intent.action.MEDIA_PLAY_FROM_SEARCH ...`)
-   resolves via `onSearch`.
+1. `oem` launches `AutomotiveActivity`, declares `distractionOptimized=true`, and enforces
+   runtime restrictions while driving.
+2. `playstore` declares no launcher activity and remains host-rendered from `PlaybackService`.
+3. Both flavors build, test, Detekt and Lint clean.
+4. Voice intent (`adb shell am start -a android.intent.action.MEDIA_PLAY_FROM_SEARCH ...`)
+   resolves via `PlaybackService.onSearch`.
+5. Host-render smoke tests for the `playstore` path run before any Play submission decision.
 
 ---
 
@@ -329,6 +326,8 @@ Running on Android 13 / API 33 / Automotive-with-Play emulator:
 | AutomotiveActivity | `automotive/src/main/java/.../auto/ui/AutomotiveActivity.kt` |
 | AutomotiveApp | `automotive/src/main/java/.../auto/ui/AutomotiveApp.kt` |
 | AndroidManifest | `automotive/src/main/AndroidManifest.xml` |
+| OEM manifest | `automotive/src/oem/AndroidManifest.xml` |
+| Playstore manifest | `automotive/src/playstore/AndroidManifest.xml` |
 | automotive_app_desc | `automotive/src/main/res/xml/automotive_app_desc.xml` |
 | FirebaseSyncManager | `core/data/src/main/java/.../sync/FirebaseSyncManager.kt` |
 | AuthRepository | `core/data/src/main/java/.../api/AuthRepository.kt` |

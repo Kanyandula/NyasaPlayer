@@ -60,7 +60,7 @@ Definition-of-done item 2 from the spec ("px→dp policy written into `docs/aaos
 | `automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarControls.kt` | `CarChip`, `CarPillButton`, `CarSectionHeader` |
 | `automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarTrackRow.kt` | Track list row |
 | `automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarEmptyState.kt` | Empty-state block |
-| `automotive/src/oem/AndroidManifest.xml` | Declares the launcher activity |
+| `automotive/src/oem/AndroidManifest.xml` | Declares the launcher activity and `distractionOptimized=true` metadata |
 | `automotive/src/playstore/AndroidManifest.xml` | Declares no launcher activity |
 | `docs/AAOS_DRIVING_STATE_TESTING.md` | adb recipe for driving state |
 
@@ -906,7 +906,10 @@ class CarRestrictionGateTest {
     }
 
     @Test
-    fun driving_allowsQueue() {
+    fun driving_allowsQueueLocation_mutationIsGatedElsewhere() {
+        // The queue may be VIEWED while driving, so the location is allowed.
+        // Remove/reorder/clear are actions, gated by the screen reading UxRestrictionState —
+        // see the spec, "Location gating vs action gating". Not this function's job.
         assertEquals(GateResult.Allowed, gate(at(overlay = CarOverlay.Queue), driving))
     }
 
@@ -975,7 +978,13 @@ private const val REASON_DEPTH =
  * callers must re-evaluate the current location whenever restrictions change and act on
  * [GateResult.Denied.evictTo]. See Task 10 in the implementation plan.
  *
- * Playback transport, seeking, the queue and tab switching are never denied.
+ * Playback transport, seeking, queue view/skip-to and tab switching are never denied.
+ *
+ * This function gates LOCATIONS, not ACTIONS. Queue remove/reorder/clear and download
+ * deletion are parked-only, but they are actions inside a permitted location, so they are
+ * not expressible here. The owning screen reads UxRestrictionState.isDistractionOptimized
+ * directly — see CarQueueScreen, which already does exactly this. Do not add action cases
+ * to this function.
  */
 fun gate(location: CarUiLocation, state: UxRestrictionState): GateResult {
     if (!state.isDistractionOptimized) return GateResult.Allowed
@@ -1440,7 +1449,7 @@ Using the recipe from Task 1:
 2. With the artist detail open, inject the driving state. Expect: you are returned to the Library root and `CarRestrictionDialog` appears explaining why.
 3. Dismiss the dialog. Attempt the same drill-down while still driving. Expect: refused, dialog appears again.
 4. Return to parked. Expect: the drill-down works again.
-5. While driving, confirm play/pause, skip, seek, the queue and tab switching all still work. **These must not be blocked.**
+5. While driving, confirm play/pause, skip, seek, queue view/skip-to and tab switching all still work. **These must not be blocked.** Queue remove/reorder/clear stays parked-only.
 
 Record the outcome. If Task 1 concluded that no driving-state injection works on this image, state explicitly that steps 2–4 could not be verified, and that the restriction layer rests on unit tests alone.
 
@@ -2170,7 +2179,7 @@ Install the `oem` variant and confirm all seven existing screens still render an
 2. px→dp policy in `docs/aaos-DESIGN.md` — **already done in `333cc0c`**
 3. Dimension tokens; `CarCardCornerRadius` = 20.dp — Task 7
 4. `Modifier.carTouchTarget()` plus components — Tasks 8, 9, 11
-5. `oem` / `playstore` flavors, both green — Task 13
+5. `oem` / `playstore` flavors, both green; `oem` has `distractionOptimized=true` and `playstore` has no launcher — Task 13
 6. `CarUxRestrictionsHandler` fixed; mapping split — Tasks 3, 4
 7. `CarUiLocation`; `CarScreen.Favourites` — Task 5
 8. `gate()` with refusal and eviction — Tasks 6, 10
