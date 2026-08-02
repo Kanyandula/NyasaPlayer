@@ -8,6 +8,7 @@
 | **Primary PRD** | `docs/AAOS_PRD.md` |
 | **Design system** | `docs/aaos-DESIGN.md` |
 | **Compliance gates** | `docs/AAOS_COMPLIANCE.md` |
+| **Notion** | https://app.notion.com/p/3b0728b1385d81a7b322ef7b917f1294 |
 
 This document answers the implementation-readiness question the PRD should not absorb: every
 screen, CTA, state, shared component, animation rule and colour rule needed to build the AAOS

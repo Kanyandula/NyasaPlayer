@@ -6,6 +6,7 @@
 | **Status** | Binding for A1 and later AAOS UI phases |
 | **Date** | 2026-08-03 |
 | **Primary PRD** | `docs/AAOS_PRD.md` |
+| **Notion** | https://app.notion.com/p/3b0728b1385d81afbfade86ccddd1eeb |
 
 This document makes the AAOS compliance split executable. It does not replace the PRD; it
 turns PRD §8 into variant-specific gates that can be checked against built APKs and emulator
