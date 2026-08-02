@@ -102,13 +102,43 @@ spacing:
   margin-screen: 48px
   system-bar-height: 80px
   nav-rail-width: 80px
-  mini-player-height: 88px
+  mini-player-height: 88px   # prototype value. Implementation target is 112dp — see "Units"
   padding-card: 24px
   gutter-grid: 24px
   stack-gap-lg: 40px
   stack-gap-md: 24px
   stack-gap-sm: 12px
 ---
+
+## Units — read before using any number here
+
+**Every figure in this document is CSS px on a 1920 x 1080 canvas.** The prototypes
+(`aaos-screens.html`, `aaos-app.html`) render in those units. The Android implementation is
+in **dp**, and the two are not interchangeable.
+
+Conversion rule, settled in
+`docs/superpowers/specs/2026-08-02-aaos-foundation-restrictions-design.md` §2:
+
+> Design px maps to dp 1:1, treating this canvas as a 1920 x 1080 dp logical space —
+> **except** where existing code already holds a considered value, which wins.
+
+Where that rule produces a different number, the implementation target is authoritative:
+
+| Value | This document | Implementation target | Why |
+|---|---|---|---|
+| Touch target | 76px | **76.dp** | agree — `CarTouchTargetSize` was already 76.dp, arrived at independently |
+| Mini-player height | 88px | **112.dp** | `CarMiniPlayerHeight` predates this design, exceeds its intent, and clears the touch target with room |
+| Card corner radius | 20px | **20.dp** | design wins; the existing 16.dp had no recorded rationale |
+
+The 88px mini-player figures below are therefore **correct for the prototype and wrong for
+the implementation**. They are left as-is rather than overwritten so this document continues
+to describe the HTML it documents.
+
+Note the nav-rail *item* height is also 88 — that one is unrelated to the mini-player and
+converts 1:1 to 88.dp.
+
+**dp is density-independent, but physical size is not.** These numbers are correct for the
+logical space; they are not a substitute for checking a real head unit.
 
 ## Brand & Style
 
@@ -172,6 +202,7 @@ place so the driver's muscle memory holds across the app:
 2. **Left navigation rail** — 80px wide, spanning from below the system bar down to the
    top of the mini-player.
 3. **Persistent mini-player** — full width, 88px tall, pinned to the bottom.
+   (Implementation target: **112.dp**, not 88 — see "Units".)
 
 Content occupies the region bounded by those three, with a 48px screen margin.
 
@@ -213,7 +244,8 @@ Exactly one item is active per screen, indicated by color and pill only.
 ### Persistent mini-player
 
 ```
-Height: 88px, background #181824, 1px top border rgba(255,255,255,0.08)
+Height: 88px in the prototype; 112.dp in the implementation (see "Units")
+Background #181824, 1px top border rgba(255,255,255,0.08)
 Left:   64px album art at 8px radius, then title 18px #FFFFFF over artist 15px #ACACBC.
         Art and title are ONE target (314x76) that opens the full player, not two.
 Center: progress bar, 4px tall, gold #C9A84C fill on #2A2A38 track, inside a 76px-tall

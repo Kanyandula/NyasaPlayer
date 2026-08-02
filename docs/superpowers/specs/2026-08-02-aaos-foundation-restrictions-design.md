@@ -278,14 +278,47 @@ prefix on the last one — Kotlin exposes it as the property `isRequiresDistract
 
 ### 7.3 Testability
 
-Extract the mapping to an **internal pure function**:
+The mapping must be split in two: a **platform-typed wrapper** and a **pure function over raw
+values**. Only the second is tested.
 
 ```kotlin
-internal fun CarUxRestrictions.toUxState(): UxRestrictionState
+// thin wrapper — not unit tested, no logic
+internal fun CarUxRestrictions.toUxState(): UxRestrictionState =
+    toUxState(
+        activeRestrictions = activeRestrictions,
+        requiresDistractionOptimization = isRequiresDistractionOptimization,
+        maxContentDepth = maxContentDepth,
+        maxCumulativeContentItems = maxCumulativeContentItems,
+    )
+
+// the tested unit — no platform types
+internal fun toUxState(
+    activeRestrictions: Int,
+    requiresDistractionOptimization: Boolean,
+    maxContentDepth: Int,
+    maxCumulativeContentItems: Int,
+): UxRestrictionState
 ```
 
-Currently `private`, so it cannot be tested. As a pure function over flags it is exhaustively
-testable on the JVM with no emulator and no Car service.
+**Why the raw-value signature is required.** An extension on `CarUxRestrictions` cannot be
+exercised in a plain JVM test. Verified against `android.car.jar`:
+
+- `CarUxRestrictions` is `final`, so it cannot be subclassed for a fake.
+- It *does* expose a public `Builder(boolean, int, long)` with setters, so instances are
+  constructible — the obstacle is not construction.
+- **Every stub method body is `throw new RuntimeException("Stub!")`.** Confirmed by
+  disassembling `getMaxContentDepth()`. So `build()` and every getter throw at test time.
+
+This rules out the tempting escape hatch. Setting
+`testOptions.unitTests.isReturnDefaultValues = true` stops the throwing, but then the getters
+return `0` / `false` instead of the values under test — the suite would pass while asserting
+against fabricated data. That is worse than no test.
+
+Robolectric would work for `android.jar`, but adds a dependency and its `android.car` coverage
+is not something to bet the restriction layer on.
+
+Keeping the logic in a function that takes `Int` and `Boolean` sidesteps all of it: no
+platform types, no new dependencies, exhaustively testable.
 
 ### 7.4 Lifecycle — verify, do not assume
 
@@ -301,16 +334,72 @@ the failure mode that matters here.
 
 ## 8. Restriction gating harness
 
-A pure decision function plus a UI affordance.
+### 8.1 There is no single "destination" today
+
+The gate cannot take a `CarDestination`, because the app has no such type. Where the user is
+is currently spread across four `rememberSaveable` values in `AutomotiveApp.kt:83-87` plus
+search state in a different ViewModel:
+
+| Dimension | Where it lives now | Values |
+|---|---|---|
+| Tab | `currentScreen: CarScreen` | `Home`, `Browse`, `Library` — **no `Favourites`**, which the design adds |
+| Full player | `showFullPlayer: Boolean` | overlay |
+| Queue | `showQueue: Boolean` | overlay |
+| Drill-down | `selectedArtist: FavoriteArtist?` | depth 2 when non-null |
+| Search | `contentState.searchQuery` in `AutomotiveContentViewModel` | text entry active when non-empty |
+
+Five dimensions, three owners, no single value to gate on. A1 must introduce one.
+
+### 8.2 `CarUiLocation`
+
+Collapse the above into one derived value. It is computed from existing state rather than
+replacing it, so the change is additive and the existing screens keep working:
+
+```kotlin
+data class CarUiLocation(
+    val tab: CarScreen,
+    val overlay: CarOverlay?,      // FullPlayer | Queue | null
+    val drillDepth: Int,           // 0 = tab root, 1 = artist/album/playlist detail
+    val sheet: CarSheet?,          // Settings | Profile | Search | null
+    val textEntryActive: Boolean,
+)
+```
+
+`CarScreen` gains `Favourites` in A1, since the design's rail has four items and the enum has
+three. This is a token-level change with no new screen: `Favourites` initially routes to the
+existing liked-songs content.
+
+### 8.3 Gate signature and matrix
 
 ```kotlin
 sealed interface GateResult {
     data object Allowed : GateResult
-    data class Denied(val reason: String) : GateResult
+    data class Denied(val reason: String, val evictTo: CarUiLocation) : GateResult
 }
 
-fun gate(destination: CarDestination, state: UxRestrictionState): GateResult
+fun gate(location: CarUiLocation, state: UxRestrictionState): GateResult
 ```
+
+| Location | Restriction | Driving |
+|---|---|---|
+| Tab root (`Home`/`Browse`/`Library`/`Favourites`) | — | allowed |
+| `overlay = FullPlayer` | — | allowed, it is playback control |
+| `overlay = Queue` | `maxCumulativeContentItems` | allowed, list truncated |
+| `drillDepth >= 1` | `maxContentDepth` | **denied** when `drillDepth > maxContentDepth` |
+| `sheet = Settings` | `noSetup` | **denied** |
+| `sheet = Profile` | `noSetup` | **denied** |
+| `sheet = Search`, `textEntryActive = true` | `noTextEntry` | **denied**, voice offered |
+| `sheet = Search`, `textEntryActive = false` | — | allowed, browse-by only |
+
+### 8.4 Safe eviction target
+
+`evictTo` is **always `CarUiLocation(tab = <current tab>, overlay = null, drillDepth = 0,
+sheet = null, textEntryActive = false)`** — the root of the tab the user is already on.
+
+Chosen deliberately over the two alternatives: evicting to `Home` disorients by moving the
+user somewhere they did not choose, and evicting to "previous location" can land on another
+restricted location and loop. Current-tab-root is always permitted by the matrix above, so
+eviction terminates in one step.
 
 Rules, mirroring the validated prototype:
 
@@ -393,10 +482,13 @@ Detekt (`maxIssues: 0`) and Android Lint must pass **for both flavors**.
 3. Dimension tokens added; `CarCardCornerRadius` changed to 20.dp.
 4. `Modifier.carTouchTarget()` plus the six new components.
 5. `oem` / `playstore` flavors; both build and pass Detekt + Lint.
-6. `CarUxRestrictionsHandler` fixed and extended; mapping extracted and pure.
-7. `gate()` harness with entry refusal and eviction.
-8. JVM unit tests for mapping and gate.
-9. Driving-state adb recipe documented, or its absence reported.
-10. Existing 7 screens still build and run, re-themed.
+6. `CarUxRestrictionsHandler` fixed and extended; mapping split into a platform wrapper and a
+   raw-value pure function (§7.3).
+7. `CarUiLocation` introduced and derived from existing state; `CarScreen` gains `Favourites`.
+8. `gate()` harness with entry refusal and eviction to current-tab-root.
+9. JVM unit tests for the raw-value mapping and for `gate()`, including the
+   `NO_TEXT_MESSAGE`-must-not-set-`noTextEntry` regression and the eviction transition.
+10. Driving-state adb recipe documented, or its absence reported.
+11. Existing 7 screens still build and run, re-themed.
 
 **Not in A1:** any new screen. Those follow in later slices against this foundation.
