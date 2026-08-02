@@ -29,8 +29,9 @@ The work is sequenced into **nine phases**. Phase A1 is foundation — tokens, t
 primitives, build variants, and the restriction layer. Phases A2–A8 deliver the screens.
 Project B migrates the mobile app to the shared brand.
 
-**Current state:** design complete and measured; A1 specced, planned, and externally reviewed.
-No implementation code written.
+**Current state:** design complete and measured **except for A6 search text entry**, which is an
+unresolved design problem rather than an unbuilt screen (see Q2). A1 is specced, planned, and
+externally reviewed. No implementation code written.
 
 ---
 
@@ -81,8 +82,8 @@ polish.
 | G3 | Every interactive control meets 76dp | Automated measurement returns zero controls below minimum |
 | G4 | Every non-disabled text pair clears AAA | Measured on every surface the token lands on, not just one |
 | G5 | Ship the 20-screen designed experience | All 20 screens implemented and matching the design system |
-| G6 | Keep a Play-compliant path open without blocking on it | A `playstore` build variant exists and builds green |
-| G7 | One brand across phone and car | Mobile migrated to the shared gold tokens |
+| G6 | Keep a Play-compliant path open without blocking on it | `playstore` variant builds green **and** passes the merged-manifest gates in §8.2 |
+| G7 | Publish brand tokens the mobile app can adopt | Gold tokens live in `:core:common` and are consumable by `:app`. **Migrating mobile is out of scope — see §3.2** |
 
 ### 3.2 Non-goals
 
@@ -93,6 +94,9 @@ polish.
 - **Redesigning the mobile app's layouts.** Project B changes brand colour and button
   treatment only.
 - **Offline-first rearchitecture, new backend work, or catalogue changes.** Out of scope.
+- **Migrating the mobile app to the gold brand (Project B).** A1 publishes the tokens; adopting
+  them in `:app` is a separate piece of work with its own PRD, and the AAOS release does not
+  wait on it. The interim state — car gold, phone purple — is accepted.
 
 ### 3.3 The architecture decision (G1)
 
@@ -131,9 +135,59 @@ is mid-interaction. That last property drives one of the more consequential requ
 
 ---
 
-## 5. Requirements
+## 5. User stories
 
-### 5.1 Functional — driving restrictions
+Each story is stated for both vehicle states, because the same surface behaves differently in
+each and the pair is where most requirements actually come from. **P** = parked, **D** = driving.
+
+### Authentication and profile
+
+| ID | As a driver, I want to… | State | Behaviour |
+|---|---|---|---|
+| US-1 | sign in to my account | P | Full auth flow available |
+| US-2 | sign in | D | Refused with explanation; audio from a previous session continues |
+| US-3 | protect my profile with a PIN | P | PIN opt-in offered after sign-in |
+| US-4 | switch to another profile | P | Profile switcher available |
+| US-5 | switch profile | D | Refused — `NO_SETUP` |
+
+### Finding music
+
+| ID | As a driver, I want to… | State | Behaviour |
+|---|---|---|---|
+| US-6 | browse my library by playlist, album or artist | P | Full depth browsing |
+| US-7 | browse my library | D | Tab roots only; drill-down refused past the depth cap, lists truncated to the item cap |
+| US-8 | search by typing | P | On-screen keyboard **(design unresolved — Q2)** |
+| US-9 | search | D | Text entry refused; voice search offered as the primary path |
+| US-10 | see what I recently played | P/D | Home surfaces it in both states |
+
+### Playing music
+
+| ID | As a driver, I want to… | State | Behaviour |
+|---|---|---|---|
+| US-11 | play, pause, skip and seek | P/D | Always available — never restricted |
+| US-12 | see what is playing without leaving my screen | P/D | Persistent mini-player |
+| US-13 | open the full player | P/D | Available in both states |
+| US-14 | see and reorder what is coming next | P/D | Queue available; truncated to the item cap while driving |
+| US-15 | like the current track | P/D | Available in both states |
+
+### Settings and edge cases
+
+| ID | As a driver, I want to… | State | Behaviour |
+|---|---|---|---|
+| US-16 | change audio quality or download settings | P | Settings available |
+| US-17 | change settings | D | Refused — `NO_SETUP` |
+| US-18 | keep listening when the network drops | P/D | Downloaded content plays; a no-connection state explains the rest |
+| US-19 | understand why a track will not play | P/D | Explicit error with a retry and a skip action |
+| US-20 | **not be stranded on a screen when I start driving** | P→D | **The app evicts me to a permitted location and explains why (FR-2.5)** |
+
+US-20 is the story the architecture is shaped around. Every other restriction can be satisfied
+by gating an entry point; this one cannot.
+
+---
+
+## 6. Requirements
+
+### 6.1 Functional — driving restrictions
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -145,7 +199,7 @@ is mid-interaction. That last property drives one of the more consequential requ
 | FR-1.6 | Distraction-optimised state comes from `isRequiresDistractionOptimization()`, not re-derived from flags | Must |
 | FR-1.7 | A failed connection to the Car service must be retryable, not permanent for the process lifetime | Must |
 
-### 5.2 Functional — restriction enforcement
+### 6.2 Functional — restriction enforcement
 
 | ID | Requirement | Priority |
 |---|---|---|
@@ -163,50 +217,66 @@ is mid-interaction. That last property drives one of the more consequential requ
 > a library. The prototype demonstrated this behaviour and it is why the gate returns an
 > eviction target rather than a boolean.
 
-### 5.3 Functional — screens
+### 6.3 Functional — screens
 
 Twenty screens. Seven exist today in pre-design layouts; thirteen do not exist.
 
-| # | Screen | Today | Phase |
-|---|---|---|---|
-| 1 | CarAuthScreen | exists | A7 |
-| 2 | CarPinOptInScreen | missing | A7 |
-| 3 | CarHomeScreen | exists | A2 |
-| 4 | CarBrowseScreen | exists | A3 |
-| 5 | CarSearchScreen | missing | A6 |
-| 6 | CarSearchResultsScreen | missing | A6 |
-| 7 | CarLibraryScreen | exists | A3 |
-| 8 | CarFavouriteMusicScreen | missing | A4 |
-| 9 | CarArtistLikedSongsScreen | exists | A4 |
-| 10 | CarPlaylistScreen | missing | A3 |
-| 11 | CarAlbumScreen | missing | A3 |
-| 12 | CarFullPlayerScreen | exists | A5 |
-| 13 | CarQueueScreen | exists | A5 |
-| 14 | CarSettingsScreen | missing | A7 |
-| 15 | CarDownloadsScreen | missing | A8 |
-| 16 | CarNoConnectionScreen | missing | A8 |
-| 17 | CarEmptyFavouritesScreen | missing | A4 |
-| 18 | CarLoadingScreen | missing | A8 |
-| 19 | CarPlaybackErrorOverlay | exists | A8 |
-| 20 | CarProfileSwitcherScreen | missing | A7 |
+**This table is the traceability matrix.** Every screen names its entry point, its primary
+actions, the states it must handle, and what it does while driving. A screen is not complete
+until every column is satisfied. Per-screen acceptance criteria live in that phase's spec;
+this table is what those specs are written against, so nothing is silently dropped.
 
-### 5.4 Non-functional
+Data sources are existing repository components: `AutomotiveContentViewModel` (catalogue,
+liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `AutomotiveAuthViewModel`
+(account).
+
+| # | Screen | Entry point | Primary actions | States | While driving | Data | Phase |
+|---|---|---|---|---|---|---|---|
+| 1 | CarAuthScreen | App launch when signed out | Google / phone / email sign-in | loading, error | **Refused** — parked only | Auth VM | A7 |
+| 2 | CarPinOptInScreen | After first sign-in | Enter PIN, Enable, Not now | partial entry, error | **Refused** — `NO_SETUP` | Auth VM | A7 |
+| 3 | CarHomeScreen | Rail: Home (default) | Play a recent item, open a mix | loading, empty, error | Allowed; lists truncated | Content VM | A2 |
+| 4 | CarBrowseScreen | Rail: Browse | Filter by chip, open a genre | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
+| 5 | CarSearchScreen | System bar: search | Type **(Q2)**, voice, recent, browse-by | idle, no results | Text entry refused; voice offered | Content VM | A6 |
+| 6 | CarSearchResultsScreen | Submitting a search | Play result, open album/artist | empty results | Allowed; drill-down refused | Content VM | A6 |
+| 7 | CarLibraryScreen | Rail: Library | Open playlist, album or artist | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
+| 8 | CarFavouriteMusicScreen | Rail: Favourites | Play all, shuffle, play one, unlike | **empty → screen 17** | Allowed; truncated | Content VM | A4 |
+| 9 | CarArtistLikedSongsScreen | Library or Favourites → artist | Play all, play one, unlike | empty, loading | **Refused** past depth cap | Content VM | A4 |
+| 10 | CarPlaylistScreen | Library → playlist | Play, shuffle, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
+| 11 | CarAlbumScreen | Library → album, or search result | Play, download, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
+| 12 | CarFullPlayerScreen | Mini-player artwork/title | Play/pause, skip, seek, shuffle, repeat, like, queue | buffering, error → 19 | **Allowed** — playback control | Player VM | A5 |
+| 13 | CarQueueScreen | Mini-player queue icon, or full player | Skip to, remove, reorder, clear | empty queue | Allowed; truncated to item cap | Player VM | A5 |
+| 14 | CarSettingsScreen | System bar: settings | Toggle prefs, sign out | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
+| 15 | CarDownloadsScreen | Library → Downloads chip | Remove one, remove all | empty, in-progress | Allowed (read-only) — see Q5 | Content VM | A8 |
+| 16 | CarNoConnectionScreen | Network loss | Retry, go to downloads | — | Allowed | NetworkMonitor | A8 |
+| 17 | CarEmptyFavouritesScreen | Favourites with none liked | Browse music | — | Allowed | Content VM | A4 |
+| 18 | CarLoadingScreen | Initial content load | none | — | Allowed | Content VM | A8 |
+| 19 | CarPlaybackErrorOverlay | Playback failure | Try again, skip to next | — | **Allowed** — must be dismissible while driving | Player VM | A8 |
+| 20 | CarProfileSwitcherScreen | System bar: avatar | Switch, add profile | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
+
+**Cross-cutting requirements that apply to every screen**, and are therefore not repeated per
+row: the chrome contract (NFR-4), the 76dp touch target (NFR-1), contrast (NFR-2), text sizing
+(NFR-3), and eviction on transition to driving (FR-2.5).
+
+**Screens 16, 17, 18 and 19 are states, not destinations.** They replace or overlay a
+destination rather than being navigated to, which is why they have no rail entry.
+
+### 6.4 Non-functional
 
 | ID | Requirement | Target | Verification |
 |---|---|---|---|
 | NFR-1 | Minimum touch target | 76 × 76dp on every interactive control | Automated measurement |
 | NFR-2 | Text contrast | ≥ 7:1 (AAA) for all non-disabled text, on every surface it lands on | Computed per pair |
-| NFR-3 | Minimum text size | No text below 14dp; no interactive label below 18dp | Review |
+| NFR-3 | Minimum text size | No text below **14sp**; no interactive label below **18sp**. Text is sized in `sp` so it honours the vehicle's font-scale setting; only touch targets and spacing use `dp` | Review |
 | NFR-4 | Chrome consistency | System bar, nav rail and mini-player render identically on every screen | Single shared implementation |
 | NFR-5 | Static analysis | Detekt `maxIssues: 0`; Android Lint clean, **both flavors** | CI |
-| NFR-6 | Reduced motion | `prefers-reduced-motion` disables decorative animation | Review |
-| NFR-7 | Both variants build | `oem` and `playstore` compile, test and lint green | CI |
+| NFR-6 | Reduced motion | Decorative animation is disabled when the platform animator duration scale is `0` (`Settings.Global.ANIMATOR_DURATION_SCALE`), independently of driving state | Review |
+| NFR-7 | Both variants build | `oem` and `playstore` compile, test and lint green; `playstore` additionally passes §8.2 | CI |
 
 > **NFR-2 has a subtlety worth preserving.** The binding surface is the *raised* surface
 > `#1E1E2A` at 7.4:1, not the base at 8.8:1. Measuring the secondary token against the base
 > gives a false pass. This is precisely how the original 6.8:1 failure went unnoticed.
 
-### 5.5 Constraints
+### 6.5 Constraints
 
 - **Platform:** AAOS, `minSdk 29`, `compileSdk 35`, Kotlin 2.0.21, AGP 8.8.0, JVM target 11.
 - **`android.car.jar` is `compileOnly`** and its stub methods throw `RuntimeException("Stub!")`.
@@ -218,7 +288,7 @@ Twenty screens. Seven exist today in pre-design layouts; thirteen do not exist.
 
 ---
 
-## 6. Design
+## 7. Design
 
 **Source of truth:** `docs/aaos-DESIGN.md` — tokens, chrome contract, component specs, and
 measured contrast.
@@ -227,7 +297,7 @@ measured contrast.
 - `docs/aaos-screens.html` — all 20 screens, static
 - `docs/aaos-app.html` — navigable prototype with restrictions enforced
 
-### 6.1 Visual identity
+### 7.1 Visual identity
 
 Champagne gold `#C9A84C` on obsidian `#0A0A0C`. Gold is reserved for what is active or
 actionable — the selected nav item, primary CTAs, the play button, progress fill — and never
@@ -237,14 +307,14 @@ used for body text.
 **2.29:1** and unusable. The token `NyasaOnGold` exists specifically so this mistake cannot be
 made by habit.
 
-### 6.2 Chrome contract
+### 7.2 Chrome contract
 
 Three regions render identically on every screen: an 80dp system bar, an 80dp navigation rail,
 and the persistent mini-player. This is a contract rather than a guideline because the original
 generated designs drifted — six screens produced six different system bars, and only two of six
 carried the rail.
 
-### 6.3 Motion
+### 7.3 Motion
 
 Ambient background gradients drift and follow the current album artwork **while parked**, and
 freeze **while driving**. Nothing auto-scrolls or pulses in either state.
@@ -254,7 +324,72 @@ This refines rather than contradicts the original "no decorative motion" rule: i
 
 ---
 
-## 7. Phasing
+## 8. AAOS compliance gates
+
+"The `playstore` variant builds green" is not evidence of compliance — it only proves the
+code compiles. Compliance is a property of the **merged manifest** and of what the OEM host
+can actually render. These gates make it checkable.
+
+### 8.1 What the policy requires
+
+For an app distributed in Play's AAOS **media** category:
+
+- Browse and playback UI are **host-rendered** from the app's `MediaBrowserService` /
+  `MediaLibraryService`. The app does not draw them.
+- App activities are permitted only for **parked** setup, settings and sign-in flows
+  (Google's car app quality rule **PE-1**).
+
+The `oem` variant deliberately does not satisfy this — that is the decision in §3.3. The
+`playstore` variant must, and these gates prove it rather than assuming it.
+
+### 8.2 Merged-manifest gates — `playstore` variant
+
+Run against the **merged** manifest extracted from the built APK, not the source manifest,
+because merging pulls in declarations from `:core:playback` and every library.
+
+| Gate | Assertion |
+|---|---|
+| MG-1 | Zero activities declaring `android.intent.category.LAUNCHER` |
+| MG-2 | Zero exported activities other than those explicitly allow-listed for sign-in and settings |
+| MG-3 | `MediaLibraryService` / `MediaBrowserService` is present and exported |
+| MG-4 | The settings activity, if present, is reachable via `android.intent.action.APPLICATION_PREFERENCES` |
+| MG-5 | `<uses-feature android:name="android.hardware.type.automotive" android:required="true" />` is present |
+| MG-6 | The `com.android.automotive` descriptor declares `<uses name="media" />` |
+
+MG-1 and MG-2 are the ones that matter. The rest guard against regressions in the merge.
+
+### 8.3 Host-render smoke tests — `playstore` variant
+
+Manifest checks prove nothing renders that should not. These prove the host **can** render
+what it should. Run on the automotive emulator against the OEM media template, launched
+directly at `PlaybackService` rather than through any app launcher.
+
+| Test | Passes when |
+|---|---|
+| ST-1 | The app appears in the car's media source picker |
+| ST-2 | The browse tree renders its root, and one level of children |
+| ST-3 | Selecting an item starts playback |
+| ST-4 | Now Playing shows correct title, artist and artwork |
+| ST-5 | Queue is populated and skip-to works |
+| ST-6 | Search returns results via `onSearch` / `onGetSearchResult` |
+| ST-7 | Assistant voice playback works end to end |
+| ST-8 | Custom actions (like/unlike) appear and reflect state |
+
+ST-4 and ST-8 cannot be verified by screenshot — Now Playing renders on `FLAG_SECURE`
+distant-display surfaces. Use `dumpsys media_session` as the oracle; it exposes playback
+state and the resolved custom-action list. This is recorded in
+`docs/AAOS_ARCHITECTURE.md` and was established during PR #13.
+
+### 8.4 When these gates run
+
+Both variants build on every change (NFR-7). The manifest gates (6A.2) are cheap and should
+be automated from A1, when the flavors are created. The smoke tests (6A.3) are manual and run
+before any Play submission decision, not per-commit — the `playstore` variant is a preserved
+option, not an actively shipped artifact.
+
+---
+
+## 9. Phasing
 
 | Phase | Delivers | Depends on | Status |
 |---|---|---|---|
@@ -263,10 +398,10 @@ This refines rather than contradicts the original "no decorative motion" rule: i
 | **A3** | Browse, Library, Playlist, Album | A2 | Not started |
 | **A4** | Favourites, ArtistLikedSongs, EmptyFavourites | A2 | Not started |
 | **A5** | FullPlayer, Queue | A2 | Not started |
-| **A6** | Search, SearchResults | A2 + design work | Blocked, see §9 |
+| **A6** | Search, SearchResults | A2 + design work | Blocked, see §11 |
 | **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Not started |
 | **A8** | NoConnection, Loading, Downloads, PlaybackError | A2 | Not started |
-| **Project B** | Mobile brand migration | A1 tokens | Not started |
+| **Project B** | Mobile brand migration — **separate PRD, non-blocking** | A1 tokens | Not started |
 
 **Why A1 first.** The restriction layer has a live bug and there is no touch-target discipline.
 Building twenty screens on that foundation means rebuilding them.
@@ -280,7 +415,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 
 ---
 
-## 8. Risks
+## 10. Risks
 
 | Risk | Impact | Likelihood | Mitigation |
 |---|---|---|---|
@@ -293,7 +428,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 
 ---
 
-## 9. Open questions
+## 11. Open questions
 
 | # | Question | Owner | Blocks |
 |---|---|---|---|
@@ -305,25 +440,29 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 
 ---
 
-## 10. Acceptance criteria
+## 12. Acceptance criteria
 
 The programme is complete when:
 
 1. All 20 screens are implemented and match `docs/aaos-DESIGN.md`.
 2. Automated measurement returns **zero** interactive controls below 76dp.
 3. Every non-disabled text/surface pair measures **≥ 7:1**.
-4. Every restriction in §5.2 is enforced, including eviction (FR-2.5), and verified against a
+4. Every restriction in §6.2 is enforced, including eviction (FR-2.5), and verified against a
    real driving-state transition — or Q1 is answered negatively and recorded.
-5. `oem` and `playstore` variants both build, test and lint green.
+5. `oem` and `playstore` variants both build, test and lint green, and `playstore` passes the
+   merged-manifest gates (§8.2). Host-render smoke tests (§8.3) are required only before a
+   Play submission decision, not for this release.
 6. Detekt reports zero issues.
 7. ~~`docs/AAOS_UI_REDESIGN_PLAN.md` no longer contradicts the shipped architecture.~~ **Done** — superseded banner added 2026-08-02.
-8. Mobile and car share one brand (Project B complete).
+**Project B is explicitly not an acceptance criterion.** Migrating the mobile app to gold is
+tracked separately and must not gate the AAOS release — it carries a wide visual regression
+surface across `:app` that has nothing to do with the car experience.
 
 ---
 
-## 11. Appendix
+## 13. Appendix
 
-### 11.1 Measured reference data
+### 13.1 Measured reference data
 
 | Pair | Ratio | Verdict |
 |---|---|---|
@@ -342,7 +481,7 @@ The programme is complete when:
 **Brand migration blast radius:** 32 files reference the purple brand. 29 use the token name
 and cascade automatically; 4 hardcode the hex and need hand edits.
 
-### 11.2 Related documents
+### 13.2 Related documents
 
 | Document | Purpose |
 |---|---|
@@ -355,7 +494,7 @@ and cascade automatically; 4 hardcode the hex and need hand edits.
 | `docs/AAOS_UI_REDESIGN_PLAN.md` | **Superseded** by §3.3 — bannered, retained for its §1.1 and §2 |
 | `docs/AAOS_DRIVING_STATE_TESTING.md` | To be created by A1 Task 1 |
 
-### 11.3 Glossary
+### 13.3 Glossary
 
 | Term | Meaning |
 |---|---|
