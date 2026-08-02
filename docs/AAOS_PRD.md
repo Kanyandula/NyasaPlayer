@@ -167,7 +167,8 @@ each and the pair is where most requirements actually come from. **P** = parked,
 | US-11 | play, pause, skip and seek | P/D | Always available — never restricted |
 | US-12 | see what is playing without leaving my screen | P/D | Persistent mini-player |
 | US-13 | open the full player | P/D | Available in both states |
-| US-14 | see and reorder what is coming next | P/D | Queue available; truncated to the item cap while driving |
+| US-14 | see and reorder what is coming next | P | Queue available; reorder, remove and clear all permitted |
+| US-14b | see what is coming next | D | Queue viewable and skip-to permitted; **reorder, remove and clear are refused** |
 | US-15 | like the current track | P/D | Available in both states |
 
 ### Settings and edge cases
@@ -205,12 +206,14 @@ by gating an entry point; this one cannot.
 |---|---|---|
 | FR-2.1 | While driving, Settings and profile switching are refused | Must |
 | FR-2.2 | While driving, text entry is refused; voice search is offered instead | Must |
+| FR-2.2a | Voice search is **system/Assistant driven**, routed through `PlaybackService.onSearch` / `onGetSearchResult`. The app does not record audio, requests no `RECORD_AUDIO` permission, and ships no in-app recording UI | Must |
 | FR-2.3 | While driving, drill-down beyond the depth cap is refused | Must |
 | FR-2.4 | While driving, content lists truncate to the item cap | Must |
 | FR-2.5 | **Transitioning to driving while already inside a restricted location evicts the user from it** | Must |
 | FR-2.6 | Every refusal shows an explanation; silent no-ops are prohibited | Must |
 | FR-2.7 | Playback transport, seeking, queue and tab switching remain available while driving | Must |
 | FR-2.8 | Decorative motion runs only while parked and freezes in motion | Must |
+| FR-2.9 | The launcher activity declares `distractionOptimized="true"`; parked-only activities do not (§8.3) | Must |
 
 > **FR-2.5 is the requirement most likely to be missed.** Gating entry is insufficient: a
 > vehicle can start moving while the driver is already inside Settings or three levels deep in
@@ -244,9 +247,9 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 | 10 | CarPlaylistScreen | Library → playlist | Play, shuffle, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
 | 11 | CarAlbumScreen | Library → album, or search result | Play, download, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
 | 12 | CarFullPlayerScreen | Mini-player artwork/title | Play/pause, skip, seek, shuffle, repeat, like, queue | buffering, error → 19 | **Allowed** — playback control | Player VM | A5 |
-| 13 | CarQueueScreen | Mini-player queue icon, or full player | Skip to, remove, reorder, clear | empty queue | Allowed; truncated to item cap | Player VM | A5 |
+| 13 | CarQueueScreen | Mini-player queue icon, or full player | **P:** skip to, remove, reorder, clear · **D:** skip to only | empty queue | Viewable; edit actions refused, list truncated | Player VM | A5 |
 | 14 | CarSettingsScreen | System bar: settings | Toggle prefs, sign out | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
-| 15 | CarDownloadsScreen | Library → Downloads chip | Remove one, remove all | empty, in-progress | Allowed (read-only) — see Q5 | Content VM | A8 |
+| 15 | CarDownloadsScreen | Library → Downloads chip | **P:** remove one, remove all · **D:** view only | empty, in-progress | Viewable; delete actions refused | Content VM | A8 |
 | 16 | CarNoConnectionScreen | Network loss | Retry, go to downloads | — | Allowed | NetworkMonitor | A8 |
 | 17 | CarEmptyFavouritesScreen | Favourites with none liked | Browse music | — | Allowed | Content VM | A4 |
 | 18 | CarLoadingScreen | Initial content load | none | — | Allowed | Content VM | A8 |
@@ -358,7 +361,31 @@ because merging pulls in declarations from `:core:playback` and every library.
 
 MG-1 and MG-2 are the ones that matter. The rest guard against regressions in the merge.
 
-### 8.3 Host-render smoke tests — `playstore` variant
+### 8.3 Merged-manifest gates — `oem` variant
+
+**The `oem` variant has its own manifest requirement, and it is not optional.** AAOS blocks
+any foreground activity that has not declared itself distraction optimised once the vehicle is
+in motion. An activity without that declaration is not merely un-styled while driving — the
+platform will not let the driver see it.
+
+The custom launcher is the product and is intended to remain usable in motion, so it must
+declare it. **No activity in this repository currently does.**
+
+| Gate | Assertion |
+|---|---|
+| OG-1 | `AutomotiveActivity` declares `<meta-data android:name="distractionOptimized" android:value="true" />` |
+| OG-2 | Every activity reachable while driving carries the same declaration |
+| OG-3 | Parked-only activities — sign-in, PIN opt-in, profile switcher, settings — **do not** declare it |
+
+OG-3 is the mirror of OG-1 and equally load-bearing. Declaring `distractionOptimized` on a
+parked-only flow asserts to the platform that it is safe in motion, which is the opposite of
+what §6.2 requires.
+
+**This declaration is an assertion, not a formality.** It states that the activity meets the
+driver-distraction guidelines — the touch targets of NFR-1, the contrast of NFR-2, the
+restriction behaviour of §6.2. It should be added when those hold, not before.
+
+### 8.4 Host-render smoke tests — `playstore` variant
 
 Manifest checks prove nothing renders that should not. These prove the host **can** render
 what it should. Run on the automotive emulator against the OEM media template, launched
@@ -380,10 +407,10 @@ distant-display surfaces. Use `dumpsys media_session` as the oracle; it exposes 
 state and the resolved custom-action list. This is recorded in
 `docs/AAOS_ARCHITECTURE.md` and was established during PR #13.
 
-### 8.4 When these gates run
+### 8.5 When these gates run
 
-Both variants build on every change (NFR-7). The manifest gates (6A.2) are cheap and should
-be automated from A1, when the flavors are created. The smoke tests (6A.3) are manual and run
+Both variants build on every change (NFR-7). The manifest gates (§8.2 and §8.3) are cheap and should
+be automated from A1, when the flavors are created. The smoke tests (§8.4) are manual and run
 before any Play submission decision, not per-commit — the `playstore` variant is a preserved
 option, not an actively shipped artifact.
 
@@ -419,6 +446,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 
 | Risk | Impact | Likelihood | Mitigation |
 |---|---|---|---|
+| Launcher activity is not declared distraction optimised, so the platform blocks it while driving | The custom launcher — the product — is unusable in motion, and the entire restriction layer is moot | **Was certain until found** | Gate OG-1; added to A1's flavor task |
 | No adb recipe exists to put the emulator into a driving state | Restriction layer ships unverified end to end | Medium | Spike is Task 1 of A1 so it fails early; a documented "no recipe" is an acceptable deliverable that triggers re-planning |
 | Play policy changes, making the deferred compliant path urgent | Rework | Low | `playstore` flavor is built and kept green from A1 onward |
 | Design figures are px, hardware is dp at unknown density | Controls smaller in practice than measured | Medium | Conversion rule recorded; requires validation on real hardware |

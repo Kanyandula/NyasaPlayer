@@ -2032,6 +2032,24 @@ Create `automotive/src/oem/AndroidManifest.xml` with exactly this content:
             android:exported="true"
             android:label="@string/auto_app_name"
             android:theme="@style/Theme.NyasaPlayer">
+
+            <!--
+                REQUIRED. Without this, AAOS blocks the activity once the vehicle is in
+                motion - the driver cannot see it at all, and the entire restriction layer
+                built in Tasks 3-10 never gets a chance to run.
+
+                This declaration asserts the activity meets the driver-distraction
+                guidelines: the 76dp targets of Task 8, the contrast of Task 2, and the
+                gating of Tasks 6 and 10. It is only honest once those are in place, which
+                is why it lands here and not earlier.
+
+                Parked-only activities added in later phases - sign-in, PIN opt-in, profile
+                switcher, settings - must NOT declare it. See AAOS_PRD.md gate OG-3.
+            -->
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -2073,7 +2091,20 @@ Create `automotive/src/playstore/AndroidManifest.xml`:
 
 Expected: BUILD SUCCESSFUL for both.
 
-- [ ] **Step 5: Verify the manifests actually differ**
+- [ ] **Step 5: Verify the launcher is declared distraction optimised**
+
+```bash
+aapt2 dump xmltree --file AndroidManifest.xml \
+  automotive/build/outputs/apk/oem/debug/automotive-oem-debug.apk | grep -c "distractionOptimized"
+```
+
+Expected: non-zero.
+
+This is not cosmetic. `distractionOptimized` appears nowhere in the repository today, and
+without it AAOS refuses to show the activity while the vehicle is moving — so the restriction
+work in Tasks 3-10 would never execute in the state it was written for.
+
+- [ ] **Step 6: Verify the manifests actually differ**
 
 ```bash
 aapt2 dump xmltree --file AndroidManifest.xml \
@@ -2088,7 +2119,7 @@ If `aapt2` is not on your PATH, find it under `$ANDROID_HOME/build-tools/<versio
 
 This step is the whole point of the task. Do not skip it — a flavor that compiles but ships the same manifest achieves nothing.
 
-- [ ] **Step 6: Run tests and Detekt for both flavors**
+- [ ] **Step 7: Run tests and Detekt for both flavors**
 
 ```bash
 ./gradlew :automotive:testOemDebugUnitTest :automotive:testPlaystoreDebugUnitTest
@@ -2100,7 +2131,7 @@ Expected: 22 tests pass in each flavor; Detekt and Lint BUILD SUCCESSFUL for **b
 flavors. Linting only `oem` would leave the Play-facing variant unchecked, which is the one
 variant whose manifest correctness actually matters for submission.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add automotive/build.gradle.kts \
