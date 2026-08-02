@@ -665,6 +665,7 @@ git commit -m "fix: gate text entry on NO_KEYBOARD, not NO_TEXT_MESSAGE"
 **Files:**
 - Modify: `automotive/src/main/java/com/example/nyasaplayer/auto/ui/navigation/CarScreen.kt`
 - Create: `automotive/src/main/java/com/example/nyasaplayer/auto/ui/navigation/CarUiLocation.kt`
+- Modify: `automotive/src/main/java/com/example/nyasaplayer/auto/ui/AutomotiveApp.kt` (the `when` branch, Step 3)
 
 **Interfaces:**
 - Consumes: nothing
@@ -739,23 +740,29 @@ non-exhaustive `when` **statement** over an enum is a compile error, not a warni
 project is on Kotlin 2.0.21. Adding the enum constant **will break the build** until this
 branch exists.
 
-In that `when`, after the `CarScreen.Library ->` branch, add:
+In that `when`, after the `CarScreen.Library ->` branch, add exactly this — the argument
+list is copied verbatim from the existing `CarScreen.Library ->` branch at
+`AutomotiveApp.kt:294`, which is the only correct source for it:
 
 ```kotlin
                 CarScreen.Favourites -> CarLibraryScreen(
-                    likedSongs = contentState.likedSongs.take(maxItems),
-                    favoriteArtists = contentState.favoriteArtists,
-                    onSongClick = onLikedSongClick,
+                    favoriteArtists = contentState.favoriteArtists.take(maxItems),
+                    albums = contentState.albums.take(maxItems),
                     onArtistClick = onArtistClick,
-                    onShuffleClick = onShuffleLikedSongs,
+                    onAlbumClick = onAlbumClick,
+                    likedSongs = contentState.likedSongs.take(maxItems),
                     currentlyPlayingMediaId = currentlyPlayingMediaId,
                     isPlaying = isPlaying,
+                    onShuffleLikedSongs = onShuffleLikedSongs,
+                    onLikedSongClick = onLikedSongClick,
+                    onSignOut = onSignOut,
+                    userDisplayName = userDisplayName,
                 )
 ```
 
-Match the argument list to whatever the existing `CarScreen.Library ->` branch passes — copy
-it verbatim and change nothing else. Favourites routes to the same content as Library for
-now; the real Favourites screen is a later slice.
+Favourites routes to the same content as Library for now; the real Favourites screen is a
+later slice. If the `CarScreen.Library ->` branch has changed since this plan was written,
+copy from it rather than from the block above — it is the source of truth, not this plan.
 
 - [ ] **Step 4: Build to verify it compiles**
 
@@ -1807,8 +1814,12 @@ git commit -m "feat: add car chip, pill button, track row and empty state"
 re-themed, and Step 6's check fails otherwise.
 
 **Interfaces:**
-- Consumes: `NyasaGold`, `NyasaOnGold` (Task 2); `CarChrome`, `CarGlass`, `CarTextSecondary`, `CarSystemBarHeight` (Task 7); `carTouchTarget()` (Task 8)
-- Produces: nothing new — these components keep their existing public signatures
+- Consumes: `NyasaGold`, `NyasaGoldDim`, `NyasaOnGold` (Task 2); `CarChrome`, `CarGlass`, `CarTextSecondary`, `CarSystemBarHeight` (Task 7); `carTouchTarget()` (Task 8)
+- Produces: **one signature change** — `CarMiniPlayer` gains
+  `onQueueClick: () -> Unit = {}` (Step 3). Defaulted and added after the existing optional
+  parameters, so `modifier` stays the first optional and both current call sites
+  (`AutomotiveApp.kt:312` and `CarScreenPreviews.kt:189`) keep compiling untouched.
+  Every other component keeps its existing signature.
 
 **Re-theme, do not rewrite.** All three work today. This task changes colours, one dimension, and one touch-target grouping. If you find yourself restructuring layout, stop — that belongs to a later screen slice.
 
@@ -1879,15 +1890,37 @@ Use whatever the existing expand callback is named in this file rather than inve
 
 - [ ] **Step 4: Re-theme the seven screens**
 
-Apply the same three substitutions to every file in
-`automotive/src/main/java/com/example/nyasaplayer/auto/ui/screens/`:
+**The governing rule, because the table below cannot enumerate every call site:**
 
-| Old | New |
-|---|---|
-| `NyasaSurface2` | `CarGlass` |
-| `NyasaTextSecondary` | `CarTextSecondary` |
-| `Brush.*Gradient(listOf(NyasaPrimary, NyasaPrimaryDark))` as a fill | solid `NyasaGold` |
-| `Color.White` **on** a former-purple fill | `NyasaOnGold` |
+> `NyasaPrimary` is the **accent**; `NyasaPrimaryDark` is its darker partner. Gold on a dark
+> surface is 8.7:1, so an accent used as a *tint*, *text colour* or *border* becomes
+> `NyasaGold` with nothing else to change. An accent used as a **fill behind content** becomes
+> `NyasaGold` **and** the content on it must become `NyasaOnGold` — white on gold is 2.29:1.
+> Where an API requires a two-stop list or a `Brush`, keep the shape and use
+> `NyasaGold` / `NyasaGoldDim`.
+
+Every usage shape present in these files, enumerated by grep:
+
+| Old | New | Note |
+|---|---|---|
+| `NyasaSurface2` | `CarGlass` | surface |
+| `NyasaTextSecondary` | `CarTextSecondary` | text |
+| `.background(Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark)))` | `.background(NyasaGold)` | fill — flip content to `NyasaOnGold` |
+| `.background(Brush.linearGradient(listOf(NyasaPrimary, NyasaPrimaryDark)))` | `.background(NyasaGold)` | fill — flip content to `NyasaOnGold` |
+| `Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark))` assigned to a `Brush` | `SolidColor(NyasaGold)` | the API wants a `Brush`; import `androidx.compose.ui.graphics.SolidColor` |
+| `gradientColors = listOf(NyasaPrimary, NyasaPrimaryDark)` | `listOf(NyasaGold, NyasaGoldDim)` | the parameter needs two stops |
+| `BrowseCategory(..., listOf(NyasaPrimary, NyasaPrimaryDark))` | `listOf(NyasaGold, NyasaGoldDim)` | data, not a modifier |
+| `listOf(NyasaPrimaryDark.copy(alpha = 0.15f), Color.Transparent)` | `listOf(NyasaGoldDim.copy(alpha = 0.15f), Color.Transparent)` | keep the alpha |
+| `NyasaPrimary.copy(alpha = X)` | `NyasaGold.copy(alpha = X)` | keep the alpha |
+| `tint = NyasaPrimary` | `tint = NyasaGold` | accent on dark — no flip needed |
+| `color = NyasaPrimary` | `color = NyasaGold` | accent on dark — no flip needed |
+| `activeTrackColor = NyasaPrimary` | `activeTrackColor = NyasaGold` | accent on dark — no flip needed |
+| `if (cond) NyasaPrimary else NyasaTextSecondary` | `if (cond) NyasaGold else CarTextSecondary` | both sides change |
+
+Known locations for the less obvious ones: `gradientColors` at `CarHomeScreen.kt:155`,
+`BrowseCategory` at `CarBrowseScreen.kt:105`, the `.copy(alpha)` chip accents at
+`CarQueueScreen.kt:230-231`, the scrim list at `CarFullPlayerScreen.kt:90`, and
+`activeTrackColor` at `CarFullPlayerScreen.kt:256`.
 
 List the files to work through:
 
