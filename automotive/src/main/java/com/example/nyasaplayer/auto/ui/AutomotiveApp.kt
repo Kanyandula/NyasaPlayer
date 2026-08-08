@@ -236,7 +236,7 @@ private fun BrowseShell(
 ) {
     val currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId
     val isPlaying = playerState.playback.isPlaying
-    val maxItems = playerState.restrictions.limitedContentItems
+    val maxItems = playerState.restrictions.maxCumulativeContentItems
 
     Column(modifier = modifier.fillMaxSize()) {
         CarTopBar(currentScreen = currentScreen, onSelectTab = onSelectTab)
