@@ -24,7 +24,8 @@ re-laying-out screens built against a moving target. That is the whole reason A2
 
 - Not the other screens. Browse/Library/Playlist/Album are A3; Favourites is A4;
   FullPlayer/Queue are A5. A2 only guarantees they have a correct shell to sit in.
-- Not the real Favourites screen (see the open question in §4.3).
+- Not the *designed* Favourites screen — A4 owns that. A2 ships a minimal one so the
+  rail never changes shape (D2).
 - Not Project B. Mobile stays purple.
 
 ## 2. The structural change nobody has written down yet
@@ -115,7 +116,7 @@ yet use — that is by design, not leftover scope.
 | Height | `CarSystemBarHeight` (80.dp), full bleed |
 | Background | `CarChrome` |
 | Left | "Nyasa Music" wordmark, `NyasaGold`, 20sp weight 700, 24dp from edge, never wraps |
-| Right | search, settings, avatar (32dp), clock, wi-fi, bluetooth, battery — in that order, 24dp from edge |
+| Right | search, settings, avatar (32dp), clock — in that order, 24dp from edge. Wi-fi/bluetooth/battery deferred (D7) |
 | Icons | 24dp, white at 80% |
 | Tappable | search, settings, avatar each in a 76dp hit area via `carTouchTarget()` |
 
@@ -135,14 +136,18 @@ fun CarSystemBar(
 **Search, settings and avatar have no destinations yet** — Search is A6, Settings and Profile
 are A7. They must not be silent no-ops; FR-2.6 prohibits that.
 
-`CarRestrictionDialog` cannot be reused as-is: it hardcodes the title "Not available while
-driving" (`CarRestrictionDialog.kt:66`), which is the wrong sentence for a feature that does
-not exist yet and would be actively misleading while parked. Either give it a `title`
-parameter defaulted to the current string, or render the three controls disabled. See §7, Q3.
+**D3: they render disabled**, tinted `CarTextDisabled`, with no click handler. `CarTextDisabled`
+is a token A1 declared and nothing consumes yet; this is its first consumer, and disabled text
+is exempt from the contrast floor.
+
+`CarRestrictionDialog` is deliberately *not* reused here: it hardcodes the title "Not
+available while driving" (`CarRestrictionDialog.kt:66`), which is wrong for a feature that
+does not exist yet and actively misleading while parked. It gains a `title` parameter when A7
+needs it.
 
 The existing `ClockDisplay` composable is reused as-is. Wi-fi, bluetooth and battery are
-presentation-only for now; wiring them to real system state is not A2 scope, and they should
-render from a single `CarSystemStatus` value so the wiring is one change later.
+deferred entirely (D7): `core.common.ui.icons` has no vectors for them, and static icons
+claiming a connected radio and a full battery would be a lie the driver may act on.
 
 ### 3.2 `CarNavRail` (new)
 
@@ -189,15 +194,13 @@ That matters for the rest of this section. Remaining for A2:
   chip/pill outline token — wrong value and wrong role. Add `CarDivider = Color(0x14FFFFFF)`
   rather than reusing `CarOutline` or hardcoding.
 
-- **A 76dp-tall seek target around the progress bar.** Currently a `LinearProgressIndicator`
-  with no seek affordance. This is new interaction, and it **conflicts with the row-wide
-  click above**: a seek gesture inside a fully clickable row will also fire `onExpand`. The
-  row-level clickable must be narrowed to the artwork-and-title block before the seek target
-  is added, or seeking is unreachable. Signature:
-
-  ```kotlin
-  onSeek: (Long) -> Unit,   // backed by AutomotivePlayerViewModel.seekTo(Long)
-  ```
+- **No seek target (D6).** The design asks for one, and it cannot coexist with the row-wide
+  click: a seek gesture inside a fully clickable row also fires `onExpand`, so adding seek
+  means narrowing the largest, most forgiving target in the app. In a moving vehicle that
+  trade is the wrong way round, and the full player — one tap away, allowed while driving —
+  already seeks via `AutomotivePlayerViewModel.seekTo(Long)`. The progress bar stays a
+  non-interactive indicator, vertically centred in the 76dp region so the layout still
+  matches. **Record this deviation in `aaos-DESIGN.md` §Chrome.**
 
 - **Control order.** Design: heart, previous, play/pause, next, queue. Current: previous,
   play/pause, next, progress, heart, queue.
@@ -249,17 +252,20 @@ searchQuery, searchResults, isLoading, errorMessage
 
 There is no mixes concept and no recommendation concept anywhere in the data layer. So:
 
-| Contract section | Available source | Decision |
+| Contract section | Available source | Decision (D1) |
 |---|---|---|
-| Continue Listening | `recentlyPlayed` | Direct map |
-| Your Mixes | *nothing* | Substitute `genres` as "Browse by mood", or defer |
-| Recommended | *nothing* | Substitute `popularSongs` as "Popular now", or defer |
-| Play card/item | `recentlyPlayed.first()` | Direct map |
+| Play card/item | `recentlyPlayed.first()` | Resume hero |
+| Continue Listening | `recentlyPlayed` | Ships |
+| Recommended | *nothing* | **Dropped** — no recommender exists |
+| Your Mixes | *nothing* | **Dropped** — no mixes concept exists |
+| — | `popularSongs` | Ships as **Popular Now** |
 
-Inventing a recommender is out of scope for a chrome slice. The honest options are to ship
-the substitutions under truthful section titles, or to ship Continue Listening plus Popular
-and leave the third section out until a repository slice adds one. **This needs a product
-decision — see §7, Q1.** Do not implement a fake "Your Mixes" that is really genres.
+Dropped, not renamed. A section titled "Your Mixes" that is really a genre list promises
+personalisation the backend does not do. `genres` stays in Browse, which owns genre
+discovery; surfacing it on Home as well would duplicate the rail's job.
+
+The section slots remain, so adding a real recommender later is a data-source change, not a
+layout change.
 
 Every list takes `maxCumulativeContentItems` — A1 clamps that value at ingestion, so `.take()`
 is safe without further guarding.
@@ -275,9 +281,8 @@ today's parameter list. `BrowseShell` currently passes only `recentlyPlayed`
 ```kotlin
 @Composable
 fun CarHomeScreen(
-    recentlyPlayed: List<Song>,          // Continue Listening
-    popularSongs: List<Song>,            // pending Q1
-    genres: List<Genre>,                 // pending Q1
+    recentlyPlayed: List<Song>,          // resume hero + Continue Listening
+    popularSongs: List<Song>,            // Popular Now
     isLoading: Boolean,
     errorMessage: String?,
     onSongClick: (Song) -> Unit,
@@ -288,9 +293,8 @@ fun CarHomeScreen(
 )
 ```
 
-`onQuickActionClick: (String) -> Unit` is dropped here on the assumption Q5 removes the
-quick-access grid. If Q5 keeps it, the replacement takes `CarScreen` rather than raw strings
-now that the rail owns navigation.
+`onQuickActionClick: (String) -> Unit` is removed with the grid (D5), along with the
+`when (action)` string dispatch in `AutomotiveApp`.
 
 ### 4.3 The Favourites duplication becomes visible
 
@@ -298,8 +302,26 @@ A1 added `CarScreen.Favourites` for `when`-exhaustiveness and routed it to `CarL
 as a placeholder. It is currently unreachable because the top bar renders only three tabs.
 
 The moment A2 ships a four-item rail, **two rail destinations render byte-identical content,
-including a Sign Out button on both.** The real screen is A4. This needs a decision — see
-§7, Q2.
+including a Sign Out button on both.**
+
+**D2: Favourites gets a minimal real screen in A2.** Liked songs only, via `CarTrackRow` and
+`CarEmptyState`. No favourite-artists row, no albums, no Sign Out — those belong to Library.
+A4 replaces it with the designed screen (hero, Play all, Shuffle, unlike).
+
+```kotlin
+@Composable
+fun CarFavouriteMusicScreen(
+    likedSongs: List<Song>,
+    onSongClick: (Song) -> Unit,
+    onBrowseClick: () -> Unit,           // empty-state CTA routes to Browse root
+    modifier: Modifier = Modifier,
+    currentlyPlayingMediaId: String? = null,
+    isPlaying: Boolean = false,
+)
+```
+
+The alternative — hiding the rail item until A4 — would change the rail's shape mid-programme,
+which contradicts the fixed-chrome contract this slice exists to establish.
 
 ## 5. Ambient motion
 
@@ -344,11 +366,11 @@ Nothing exists for this. Two new pieces:
    individual screens. That is a change to all seven screens and belongs in the chrome half
    of this slice, not bolted on with the motion work.
 
-**Artwork-following hue needs a dependency decision.** Extracting a colour from album art
-means `androidx.palette`, which is **not** in `gradle/libs.versions.toml`. A1 explicitly
-deferred adding dependencies inside a foundation slice. Either add it deliberately here, or
-ship the fixed two-tone ambient and treat artwork-following as a later refinement — see §7,
-Q4.
+**D4: artwork-following hue is deferred.** It would mean `androidx.palette` — not in
+`gradle/libs.versions.toml` — plus bitmap access from Coil, off-main-thread extraction,
+caching, and fallbacks for missing or single-colour art. The design says the hue *may* follow
+artwork, so it is optional by its own wording. Ship the fixed `CarAmbientBlue` /
+`CarAmbientPurple` two-tone; swapping the colour source later does not change the layer.
 
 ## 6. Verification
 
@@ -388,16 +410,19 @@ scripted driving-state injection.
   recorded at **8.4:1** in `docs/aaos-DESIGN.md` §Contrast, so the rail's rest state clears
   AAA. Re-measure only if a new colour pair is introduced.
 
-## 7. Open questions
+## 7. Decisions
 
-| # | Question | Blocks | Owner |
-|---|---|---|---|
-| Q1 | Home's third and fourth sections: ship `genres`/`popularSongs` under truthful titles, or ship two sections and defer? Inventing a recommender is out of scope. | §4.2 | Product |
-| Q2 | Favourites on the rail before A4 builds it: hide the item, render it disabled with a "coming soon" state, or accept two tabs showing identical content? | §4.3 | Product |
-| Q3 | Search/settings/avatar have no destinations until A6/A7. Render them disabled, or give `CarRestrictionDialog` a `title` parameter so it can say something other than "not available while driving"? FR-2.6 forbids silent no-ops either way. | §3.1 | Product |
-| Q4 | Add `androidx.palette` for artwork-following ambient hue, or ship fixed two-tone and defer? | §5.1 | Tech |
-| Q5 | Does the quick-access grid survive once the rail exists? Three of its four actions (My Music, Favorites, Trending) become rail destinations or duplicates of them. | §4.1 | Product |
-| Q6 | Narrowing the mini-player's row-wide click to the artwork/title block is required before a seek target can work, but it removes a large existing tap area. Acceptable, or should seek live only in the full player? | §3.3 | Product |
+Taken 2026-08-08. Recorded here so implementation does not re-litigate them.
+
+| # | Decision | Rationale |
+|---|---|---|
+| D1 | Home ships **Continue Listening** (`recentlyPlayed`), **Popular Now** (`popularSongs`) and a resume hero. "Your Mixes" and "Recommended" are dropped, not renamed. | The backend has no recommender. A truthful section title beats dressing `genres` up as personalisation. Genre discovery belongs to Browse; duplicating it on Home muddies the rail's job. The section slots remain, so a future recommender swaps a data source without touching layout. |
+| D2 | The rail ships **all four items**, and Favourites gets a **minimal real screen** — liked songs only, `CarTrackRow` + `CarEmptyState`, no artists, no albums, no Sign Out. A4 replaces it. | Hiding the item would change the rail's shape in A4, contradicting the fixed-chrome contract this slice exists to establish. Two tabs rendering identical content, with two Sign Out buttons, is a visible bug. ~40 lines is the cheapest way to have neither. |
+| D3 | Search, settings and avatar render **disabled**, using `CarTextDisabled`. No dialog. | FR-2.6 prohibits *silent no-ops* — a control that looks live and does nothing. A visibly disabled control is honest state, not a no-op. A dialog costs a tap and a dismissal to learn nothing. `CarRestrictionDialog` gains a `title` parameter when A7 needs it, not before. |
+| D4 | **No `androidx.palette`.** Ambient ships as the fixed `CarAmbientBlue`/`CarAmbientPurple` two-tone. | The design says the hue *may* follow artwork — explicitly optional. Extracting it needs a dependency plus bitmap access, off-main-thread work, caching and fallbacks for missing or single-colour art. A1 refused to add a dependency inside a foundation slice for the same reason. The layer's structure does not change when the colour source later does. |
+| D5 | **Delete the quick-access grid** and the `onQuickActionClick: (String) -> Unit` hop with it. | Three of its four actions become rail destinations; two navigation systems on one screen is the muscle-memory problem the chrome contract prevents. The fourth, Radio, has no implementation and routes to Browse — a dead label. Frees the space D1 fills. |
+| D7 | **Defer the wi-fi, bluetooth and battery indicators.** The bar ships as wordmark · search · settings · avatar · clock. | `core.common.ui.icons` has no vectors for them (only `WifiOffIcon`), so shipping them means authoring three `ImageVector`s *and* wiring real system state. Static icons claiming a full battery and a connected radio are a lie the driver may act on. On AAOS the OEM system bar generally owns these. Record in `aaos-DESIGN.md` beside D6. |
+| D6 | **No seek in the mini-player.** The progress bar stays a non-interactive indicator inside the 76dp region, and the row-wide tap-to-expand is kept. | The row-wide target is large and forgiving, which is what a moving vehicle needs; narrowing it for a precision gesture is a net loss. Seeking already exists in the full player, one tap away and permitted while driving. This deviates from `aaos-DESIGN.md` §Chrome and must be recorded there rather than silently skipped. |
 
 ## 8. Risks
 
@@ -417,10 +442,11 @@ scripted driving-state injection.
 4. Every rail destination and content-region screen renders identical chrome, per §2.2.
    FullPlayer, Queue and Auth are explicitly outside it.
 5. Background painting moved into the shell; no screen paints its own opaque background.
-6. `CarMiniPlayer` has its 8% top border, the design's control order, `basicMarquee`
-   removed, and — subject to Q6 — a 76dp seek target with the row-wide click narrowed.
-7. `CarHomeScreen` rebuilt against the chrome, with loading and error states, and the
-   sections resolved by Q1.
+6. `CarMiniPlayer` has its 8% top border, the design's control order, and `basicMarquee`
+   removed. No seek target; the deviation is recorded in `aaos-DESIGN.md`.
+7. `CarHomeScreen` rebuilt: resume hero, Continue Listening, Popular Now, loading and error
+   states, quick-access grid deleted.
+7a. `CarFavouriteMusicScreen` exists in minimal form and is reachable from the rail.
 8. Decorative motion runs only when parked and only when the animator scale is non-zero,
    with JVM tests on the predicate.
 9. Both flavors green; Detekt zero; the §6.2 checklist executed and its outcome recorded.
