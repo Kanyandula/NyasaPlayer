@@ -255,6 +255,20 @@ Center: progress bar, 4px tall, gold #C9A84C fill on #2A2A38 track, inside a 76p
 Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each in a 76x76 area
 ```
 
+**Two implementation deviations, decided in slice A2** (spec §7):
+
+- **The progress bar is not a seek target (D6).** A seek gesture cannot coexist with the
+  row-wide tap-to-expand: the whole mini-player row is one clickable, and narrowing it to fit
+  a precision control trades the largest, most forgiving target in the app for a gesture that
+  is hard to land in a moving vehicle. Seeking lives in the full player, one tap away and
+  permitted while driving. The bar renders as a non-interactive indicator, vertically centred
+  in the 76dp region so the layout still matches.
+- **Wi-fi, bluetooth and battery are not rendered (D7).** `core.common.ui.icons` has no
+  vectors for them, and there is no wiring to real system state, so shipping them would mean
+  static icons claiming a full battery and a connected radio — a lie the driver may act on.
+  On AAOS the OEM system bar generally owns these. The bar ships as wordmark · search ·
+  settings · avatar · clock.
+
 ## Components
 
 ### Implementation ownership
