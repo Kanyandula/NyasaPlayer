@@ -173,16 +173,11 @@ private fun AuthenticatedApp(
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
                 onSkipPrevious = playerViewModel::skipPrevious,
-                onSongClick = { song ->
-                    playerViewModel.playSong(contentState.recentlyPlayed, song)
+                onSongClick = { songs, song ->
+                    playerViewModel.playSong(songs, song)
                     showFullPlayer = true
                 },
-                onQuickActionClick = { action ->
-                    when (action) {
-                        "my_music", "favorites" -> currentScreen = CarScreen.Library
-                        "trending", "radio" -> currentScreen = CarScreen.Browse
-                    }
-                },
+                onRetry = contentViewModel::retryLoad,
                 onAlbumClick = { album ->
                     scope.launch {
                         val songs = contentViewModel.getSongsByAlbum(album.id)
@@ -304,8 +299,8 @@ private fun BrowseShell(
     onTogglePlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
-    onSongClick: (Song) -> Unit,
-    onQuickActionClick: (String) -> Unit,
+    onSongClick: (List<Song>, Song) -> Unit,
+    onRetry: () -> Unit,
     onAlbumClick: (Album) -> Unit,
     onArtistClick: (FavoriteArtist) -> Unit,
     selectedArtist: FavoriteArtist?,
@@ -348,8 +343,11 @@ private fun BrowseShell(
                 when (currentScreen) {
                     CarScreen.Home -> CarHomeScreen(
                         recentlyPlayed = contentState.recentlyPlayed.take(maxItems),
+                        popularSongs = contentState.popularSongs.take(maxItems),
+                        isLoading = contentState.isLoading,
+                        errorMessage = contentState.errorMessage,
                         onSongClick = onSongClick,
-                        onQuickActionClick = onQuickActionClick,
+                        onRetry = onRetry,
                         currentlyPlayingMediaId = currentlyPlayingMediaId,
                         isPlaying = isPlaying,
                     )

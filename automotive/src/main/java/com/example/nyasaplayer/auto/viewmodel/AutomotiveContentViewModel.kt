@@ -58,6 +58,17 @@ class AutomotiveContentViewModel @Inject constructor(
         loadContent()
     }
 
+    /**
+     * Retry after a load failure.
+     *
+     * Distinct from [reloadUserContent], which early-returns when the signed-in user has not
+     * changed — it is a user-switch hook, so wiring an error state's Retry button to it would
+     * produce a no-op.
+     */
+    fun retryLoad() {
+        loadContent()
+    }
+
     fun reloadUserContent() {
         val newUserId = authRepository.currentUser?.uid
         if (newUserId == currentUserId) return
