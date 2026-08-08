@@ -127,6 +127,41 @@ non-`userdebug`/`eng` builds, and `adbd` cannot be rooted to get around it.
 | emulator console `car` command | does not exist — see `adb emu help` |
 | emulator gRPC on `127.0.0.1:8554` | up, but token-authenticated and `grpcurl` is not installed |
 
+## Open issue: the launcher is still blocked while driving
+
+**Unresolved as of 2026-08-08.** With the vehicle in motion the platform replaces the app
+with its own "You can't use this feature while driving / Close app" screen, so none of the
+restriction layer in `:automotive` gets a chance to run. Every driving-state behaviour is
+therefore still verified by unit tests only.
+
+`CarPackageManagerService` is the oracle:
+
+```bash
+adb -s emulator-5554 shell dumpsys car_service --services CarPackageManagerService \
+  | grep -o 'is_root_activity_do=[a-z]*'
+```
+
+It reports `is_root_activity_do=false` even though the shipped manifest carries the
+declaration. Confirmed against the **installed** APK, not just the build output:
+
+```bash
+aapt2 dump xmltree --file AndroidManifest.xml base.apk | grep -A1 '"distractionOptimized"'
+```
+
+Two encodings were tried, both rejected:
+
+| `android:value` | How aapt encodes it | Result |
+|---|---|---|
+| `"true"` (the form in Google's docs) | typed boolean, no `Raw:` string | `is_root_activity_do=false` |
+| `"@string/…"` resolving to `true` | string reference | `is_root_activity_do=false` |
+
+The manifest keeps the documented `"true"` form. Things not yet ruled out, roughly in order
+of likelihood: `CarPackageManagerService` caching its distraction-optimised activity list
+until reboot rather than on package replace; the Play image requiring the app to appear in a
+vendor allowlist (`Allowlist string in resource` in that same dump) regardless of metadata;
+or a signature requirement on this image. Reboot the emulator and re-check before
+investigating further — it is the cheapest of the three.
+
 ## If you need scripted injection
 
 Install a non-Play **AOSP automotive** system image, which ships as `userdebug`, and create a
