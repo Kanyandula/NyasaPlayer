@@ -13,11 +13,11 @@ sealed interface GateResult {
     data class Denied(val reason: String, val evictTo: CarUiLocation) : GateResult
 }
 
-private const val REASON_SETTINGS = "Settings can only be changed while the vehicle is parked."
-private const val REASON_PROFILE = "Profiles can only be switched while the vehicle is parked."
-private const val REASON_TEXT_ENTRY =
+private const val ReasonSettings = "Settings can only be changed while the vehicle is parked."
+private const val ReasonProfile = "Profiles can only be switched while the vehicle is parked."
+private const val ReasonTextEntry =
     "Typing is unavailable while driving. Use voice search instead."
-private const val REASON_DEPTH =
+private const val ReasonDepth =
     "Browsing this far into your library is limited while the vehicle is moving."
 
 /**
@@ -39,11 +39,11 @@ fun gate(location: CarUiLocation, state: UxRestrictionState): GateResult {
     if (!state.isDistractionOptimized) return GateResult.Allowed
 
     val reason = when {
-        state.noSetup && location.sheet == CarSheet.Settings -> REASON_SETTINGS
-        state.noSetup && location.sheet == CarSheet.Profile -> REASON_PROFILE
+        state.noSetup && location.sheet == CarSheet.Settings -> ReasonSettings
+        state.noSetup && location.sheet == CarSheet.Profile -> ReasonProfile
         state.noTextEntry && location.sheet == CarSheet.Search && location.textEntryActive ->
-            REASON_TEXT_ENTRY
-        location.drillDepth > state.maxContentDepth -> REASON_DEPTH
+            ReasonTextEntry
+        location.drillDepth > state.maxContentDepth -> ReasonDepth
         else -> null
     }
 
