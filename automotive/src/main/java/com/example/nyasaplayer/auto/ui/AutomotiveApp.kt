@@ -305,6 +305,22 @@ private fun BrowseShell(
                         userDisplayName = userDisplayName,
                     )
                 }
+
+                // Routed to Library's content for now — the real Favourites screen is a
+                // later slice. The destination exists so the rail can carry four items.
+                CarScreen.Favourites -> CarLibraryScreen(
+                    favoriteArtists = contentState.favoriteArtists.take(maxItems),
+                    albums = contentState.albums.take(maxItems),
+                    onArtistClick = onArtistClick,
+                    onAlbumClick = onAlbumClick,
+                    likedSongs = contentState.likedSongs.take(maxItems),
+                    currentlyPlayingMediaId = currentlyPlayingMediaId,
+                    isPlaying = isPlaying,
+                    onShuffleLikedSongs = onShuffleLikedSongs,
+                    onLikedSongClick = onLikedSongClick,
+                    onSignOut = onSignOut,
+                    userDisplayName = userDisplayName,
+                )
             }
         }
 
