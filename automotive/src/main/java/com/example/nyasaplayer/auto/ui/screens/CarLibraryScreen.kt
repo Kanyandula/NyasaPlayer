@@ -46,6 +46,7 @@ import coil.compose.SubcomposeAsyncImage
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
+import com.example.nyasaplayer.auto.ui.theme.CarScrim
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
@@ -61,7 +62,6 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 
 private val AlbumItemArtSize = 64.dp
 private val SignOutRed = Color(0xFFEF5350)
-private const val BackdropAlpha = 0.8f
 private const val ModalWidthFraction = 0.5f
 
 @Suppress("LongParameterList", "LongMethod")
@@ -214,7 +214,7 @@ private fun SignOutConfirmationOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = BackdropAlpha))
+            .background(CarScrim)
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
 import com.example.nyasaplayer.auto.ui.theme.CarChrome
+import com.example.nyasaplayer.auto.ui.theme.CarOutline
 import com.example.nyasaplayer.auto.ui.theme.CarSystemBarHeight
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
@@ -158,7 +159,7 @@ private fun CarTab(
                 if (isSelected) {
                     Modifier.background(NyasaGold, shape)
                 } else {
-                    Modifier.border(1.dp, Color.White.copy(alpha = 0.1f), shape)
+                    Modifier.border(1.dp, CarOutline, shape)
                 },
             )
             .height(CarTouchTargetSize)

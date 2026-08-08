@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarGradientOrange
+import com.example.nyasaplayer.auto.ui.theme.CarScrim
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.core.common.ui.icons.RefreshIcon
 import com.example.nyasaplayer.core.common.ui.icons.WarningIcon
@@ -39,7 +40,6 @@ import com.example.nyasaplayer.core.playback.PlayerError
 
 private val IconCircleSize = 128.dp
 private val IconSize = 64.dp
-private const val BackdropAlpha = 0.8f
 private const val ModalWidthFraction = 0.5f
 
 @Composable
@@ -52,7 +52,7 @@ fun CarErrorOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = BackdropAlpha))
+            .background(CarScrim)
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {

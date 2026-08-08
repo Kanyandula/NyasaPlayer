@@ -37,8 +37,16 @@ class CarUxRestrictionsHandler @Inject constructor(
         try {
             val carInstance = car ?: Car.createCar(context) ?: return
             car = carInstance
+            // Release the half-open connection rather than leaving `car` assigned: the next
+            // connect() would otherwise reuse this same instance forever and never recover
+            // if the connection itself is what went wrong.
             val manager = carInstance.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE)
-                as? CarUxRestrictionsManager ?: return
+                as? CarUxRestrictionsManager
+                ?: run {
+                    carInstance.disconnect()
+                    car = null
+                    return
+                }
             restrictionsManager = manager
             _restrictions.value = manager.currentCarUxRestrictions.toUxState()
             val uxListener = CarUxRestrictionsManager.OnUxRestrictionsChangedListener { restrictions ->

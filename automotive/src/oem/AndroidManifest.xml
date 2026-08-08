@@ -19,13 +19,13 @@
             <!--
                 REQUIRED. Without this, AAOS blocks the activity once the vehicle is in
                 motion - the driver cannot see it at all, and the entire restriction layer
-                built in Tasks 3-10 never gets a chance to run. Verified on the emulator:
+                built in this module never gets a chance to run. Verified on the emulator:
                 without it the platform replaces the app with its own "You can't use this
                 feature while driving" screen.
 
                 This declaration asserts the activity meets the driver-distraction
-                guidelines: the 76dp targets of Task 8, the contrast of Task 2, and the
-                gating of Tasks 6 and 10. It is only honest once those are in place, which
+                guidelines: the 76dp touch targets, the contrast floor, and the
+                restriction gating. It is only honest once those are in place, which
                 is why it lands here and not earlier.
 
                 Parked-only activities added in later phases - sign-in, PIN opt-in, profile

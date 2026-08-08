@@ -37,6 +37,12 @@ internal object UxFlags {
  * Pure mapping from raw restriction values to [UxRestrictionState].
  *
  * Takes primitives so it can be unit tested without the platform type.
+ *
+ * The caps are clamped at zero because they cross a trust boundary: they come from the
+ * vehicle's HAL, nothing in the platform contract forbids a negative, and both consumers
+ * break badly on one. `List.take()` throws on a negative count, which would crash every
+ * browse screen at the moment the vehicle starts moving; and a negative depth cap would
+ * make gate() deny its own eviction target, stranding the driver behind a dialog.
  */
 internal fun toUxState(
     activeRestrictions: Int,
@@ -48,7 +54,7 @@ internal fun toUxState(
     noSetup = activeRestrictions and UxFlags.NO_SETUP != 0,
     noVideo = activeRestrictions and UxFlags.NO_VIDEO != 0,
     noFiltering = activeRestrictions and UxFlags.NO_FILTERING != 0,
-    maxContentDepth = maxContentDepth,
-    maxCumulativeContentItems = maxCumulativeContentItems,
+    maxContentDepth = maxContentDepth.coerceAtLeast(0),
+    maxCumulativeContentItems = maxCumulativeContentItems.coerceAtLeast(0),
     requiresDistractionOptimization = requiresDistractionOptimization,
 )

@@ -79,6 +79,16 @@ class UxFlagsTest {
         assertEquals(21, state.maxCumulativeContentItems)
     }
 
+    @Test
+    fun negativeContentCaps_clampToZero() {
+        // These come from the vehicle HAL. A negative item cap would make List.take() throw
+        // on every browse screen the moment the vehicle moves; a negative depth cap would
+        // make gate() deny its own eviction target.
+        val state = map(depth = -1, items = -1)
+        assertEquals(0, state.maxContentDepth)
+        assertEquals(0, state.maxCumulativeContentItems)
+    }
+
     // --- distraction optimization comes from the platform, not derived ---
 
     @Test

@@ -25,9 +25,15 @@ private const val ReasonDepth =
  *
  * Entry refusal alone is not sufficient: a vehicle can start moving at any moment, so
  * callers must re-evaluate the current location whenever restrictions change and act on
- * [GateResult.Denied.evictTo]. See Task 10 in the implementation plan.
+ * [GateResult.Denied.evictTo]. See AAOS_PRD.md FR-2.5.
  *
  * Playback transport, seeking, queue view/skip-to and tab switching are never denied.
+ *
+ * The three `sheet` branches below are deliberately unreachable today: AutomotiveApp's
+ * carUiLocation() hardcodes `sheet = null` because Settings and Profile do not exist yet and
+ * Search is not a distinct sheet. Until those slices land, search text entry is gated only by
+ * CarBrowseScreen's isSearchDisabled. Do not delete the branches as dead code — they are the
+ * contract those slices are written against, and they are covered by the gate tests.
  *
  * This function gates LOCATIONS, not ACTIONS. Queue remove/reorder/clear and download
  * deletion are parked-only, but they are actions inside a permitted location, so they are

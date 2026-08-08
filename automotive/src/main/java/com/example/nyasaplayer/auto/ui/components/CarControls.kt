@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.theme.CarChipHeight
+import com.example.nyasaplayer.auto.ui.theme.CarOutline
 import com.example.nyasaplayer.auto.ui.theme.CarPillButtonHeight
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
@@ -28,7 +29,6 @@ private val SelectedBorderWidth = 0.dp
 private val ChipLabelSize = 19.sp
 private val ButtonLabelSize = 20.sp
 private val SectionLabelSize = 22.sp
-private const val UnselectedBorderAlpha = 0.12f
 
 /**
  * Filter chip. Selection is shown by gold fill and label colour only — never by
@@ -54,7 +54,7 @@ fun CarChip(
                 color = if (selected) {
                     Color.Transparent
                 } else {
-                    Color.White.copy(alpha = UnselectedBorderAlpha)
+                    CarOutline
                 },
                 shape = RoundedCornerShape(CarChipHeight / 2),
             )
@@ -94,7 +94,7 @@ fun CarPillButton(
             )
             .border(
                 width = if (filled) SelectedBorderWidth else UnselectedBorderWidth,
-                color = if (filled) Color.Transparent else Color.White.copy(alpha = UnselectedBorderAlpha),
+                color = if (filled) Color.Transparent else CarOutline,
                 shape = RoundedCornerShape(CarPillButtonHeight / 2),
             )
             .clickable(onClick = onClick)

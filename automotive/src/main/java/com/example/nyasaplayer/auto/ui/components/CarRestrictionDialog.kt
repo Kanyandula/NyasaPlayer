@@ -22,11 +22,11 @@ import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarPillButtonHeight
+import com.example.nyasaplayer.auto.ui.theme.CarScrim
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 
-private const val ScrimAlpha = 0.74f
 private val DialogWidth = 780.dp
 private val DialogPadding = 44.dp
 private val DialogSpacing = 16.dp
@@ -50,7 +50,7 @@ fun CarRestrictionDialog(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = ScrimAlpha))
+            .background(CarScrim)
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {

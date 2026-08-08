@@ -118,6 +118,26 @@ class CarRestrictionGateTest {
     }
 
     @Test
+    fun whenSeveralReasonsApply_setupWinsOverDepth() {
+        // Locks in the when-branch precedence: a Settings sheet opened past the depth cap
+        // reports the setup reason, not the depth one. Either is defensible; the point is
+        // that reordering the branches should fail a test rather than silently change what
+        // the driver is told.
+        val denied = gate(at(sheet = CarSheet.Settings, drillDepth = 3), driving) as GateResult.Denied
+        assertTrue(denied.reason.contains("parked"))
+    }
+
+    @Test
+    fun evictionTerminates_evenAtTheTightestDepthCap() {
+        // toUxState clamps a hostile HAL value to 0, which is the tightest cap gate() can
+        // ever see. A tab root must still be allowed at that cap, or the driver is evicted
+        // to a location that is itself refused.
+        val clamped = driving.copy(maxContentDepth = 0)
+        val denied = gate(at(tab = CarScreen.Library, drillDepth = 1), clamped) as GateResult.Denied
+        assertEquals(GateResult.Allowed, gate(denied.evictTo, clamped))
+    }
+
+    @Test
     fun denial_carriesANonEmptyReason() {
         val denied = gate(at(sheet = CarSheet.Settings), driving) as GateResult.Denied
         assertTrue(denied.reason.isNotBlank())

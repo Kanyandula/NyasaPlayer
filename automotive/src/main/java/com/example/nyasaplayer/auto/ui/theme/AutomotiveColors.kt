@@ -29,7 +29,22 @@ val CarTextSecondary = Color(0xFFACACBC)
 /** Disabled labels. Exempt from contrast minimums. */
 val CarTextDisabled = Color(0xFF555568)
 
-/** Ambient background tints. Never used as a fill on an interactive element. */
+/**
+ * Dimming behind a modal. One value, because three had already drifted apart (0.8, 0.8,
+ * 0.74) before this token existed.
+ */
+val CarScrim = Color(0xCC000000)
+
+/** Outline on an unselected chip, pill or tab. */
+val CarOutline = Color(0x1FFFFFFF)
+
+/**
+ * Ambient background tints. Never used as a fill on an interactive element.
+ *
+ * Unused until the ambient-motion work; screens currently draw NyasaBackground. Same for
+ * [CarObsidian] and [CarTextDisabled] — declared here so the whole surface ramp is defined
+ * in one place rather than arriving piecemeal.
+ */
 val CarAmbientBlue = Color(0xFF1A3A5C)
 val CarAmbientPurple = Color(0x4D643CB4)
 
