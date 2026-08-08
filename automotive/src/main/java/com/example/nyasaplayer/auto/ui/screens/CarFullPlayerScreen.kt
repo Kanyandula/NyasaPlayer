@@ -78,6 +78,8 @@ fun CarFullPlayerScreen(
     val song = playback.currentSong
 
     Box(
+        // Opaque for the same reason as the queue: a full-screen overlay, outside the chrome
+        // contract (spec 2.2).
         modifier = modifier
             .fillMaxSize()
             .background(NyasaBackground),

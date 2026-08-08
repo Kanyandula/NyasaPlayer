@@ -75,7 +75,6 @@ import com.example.nyasaplayer.core.common.ui.icons.PlaylistAddIcon
 import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
-import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
@@ -131,9 +130,7 @@ fun CarBrowseScreen(
     val isSearching = searchQuery.isNotEmpty()
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(NyasaBackground),
+        modifier = modifier.fillMaxSize(),
     ) {
         LazyColumn(
             state = listState,

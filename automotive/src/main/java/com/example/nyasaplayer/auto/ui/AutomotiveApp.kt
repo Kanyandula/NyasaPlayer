@@ -3,7 +3,9 @@ package com.example.nyasaplayer.auto.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,8 +20,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
+import com.example.nyasaplayer.auto.ui.components.CarNavRail
 import com.example.nyasaplayer.auto.ui.components.CarRestrictionDialog
-import com.example.nyasaplayer.auto.ui.components.CarTopBar
+import com.example.nyasaplayer.auto.ui.components.CarSystemBar
 import com.example.nyasaplayer.auto.ui.navigation.CarOverlay
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
 import com.example.nyasaplayer.auto.ui.navigation.CarUiLocation
@@ -32,6 +35,7 @@ import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
+import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
@@ -52,19 +56,26 @@ fun AutomotiveApp(
 ) {
     val authState by authViewModel.uiState.collectAsState()
 
-    if (authState.isAuthenticated) {
-        AuthenticatedApp(
-            onSignOut = authViewModel::signOut,
-            userDisplayName = authViewModel.currentUserDisplayName,
-            modifier = modifier,
-        )
-    } else {
-        CarAuthScreen(
-            uiState = authState,
-            onGoogleToken = authViewModel::signInWithGoogleToken,
-            onGoogleError = authViewModel::onGoogleSignInError,
-            modifier = modifier,
-        )
+    // The background is painted once, here, rather than by each screen — the ambient layer
+    // sits above it and would be hidden by any opaque surface drawn on top. It has to be at
+    // the root and not in the shell, because the auth branch never passes through the shell.
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(NyasaBackground),
+    ) {
+        if (authState.isAuthenticated) {
+            AuthenticatedApp(
+                onSignOut = authViewModel::signOut,
+                userDisplayName = authViewModel.currentUserDisplayName,
+            )
+        } else {
+            CarAuthScreen(
+                uiState = authState,
+                onGoogleToken = authViewModel::signInWithGoogleToken,
+                onGoogleError = authViewModel::onGoogleSignInError,
+            )
+        }
     }
 }
 
@@ -116,11 +127,9 @@ private fun AuthenticatedApp(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(NyasaBackground),
-    ) {
+    // No background here: the root paints it, and an opaque surface at this level would
+    // hide the ambient layer. This Box exists only to stack the overlays.
+    Box(modifier = modifier.fillMaxSize()) {
         if (showFullPlayer) {
             CarFullPlayerScreen(
                 playback = playerState.playback,
@@ -303,59 +312,86 @@ private fun BrowseShell(
     val maxItems = playerState.restrictions.maxCumulativeContentItems
 
     Column(modifier = modifier.fillMaxSize()) {
-        CarTopBar(currentScreen = currentScreen, onSelectTab = onSelectTab)
+        // The callbacks are no-ops until A6/A7 give search, settings and profile somewhere
+        // to go; the controls render disabled in the meantime.
+        CarSystemBar(onSearchClick = {}, onSettingsClick = {}, onAvatarClick = {})
 
+        // Above the rail: an app-level condition, not screen content.
         OfflineBanner(isOffline = playerState.isOffline)
 
-        Box(modifier = Modifier.weight(1f)) {
-            when (currentScreen) {
-                CarScreen.Home -> CarHomeScreen(
-                    recentlyPlayed = contentState.recentlyPlayed.take(maxItems),
-                    onSongClick = onSongClick,
-                    onQuickActionClick = onQuickActionClick,
-                    currentlyPlayingMediaId = currentlyPlayingMediaId,
-                    isPlaying = isPlaying,
-                )
+        Row(modifier = Modifier.weight(1f)) {
+            CarNavRail(currentScreen = currentScreen, onSelectTab = onSelectTab)
 
-                CarScreen.Browse -> {
-                    val currentAlbumId = playerState.playback.currentSong?.albumId
-                    CarBrowseScreen(
-                        albums = contentState.albums.take(maxItems),
-                        onAlbumClick = onAlbumClick,
-                        currentlyPlayingAlbumId = currentAlbumId,
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(CarScreenMargin),
+            ) {
+                when (currentScreen) {
+                    CarScreen.Home -> CarHomeScreen(
+                        recentlyPlayed = contentState.recentlyPlayed.take(maxItems),
+                        onSongClick = onSongClick,
+                        onQuickActionClick = onQuickActionClick,
                         currentlyPlayingMediaId = currentlyPlayingMediaId,
                         isPlaying = isPlaying,
-                        onCategoryClick = onCategoryClick,
-                        searchQuery = contentState.searchQuery,
-                        searchResults = contentState.searchResults.take(maxItems),
-                        onSearchQueryChange = onSearchQueryChange,
-                        onClearSearch = onClearSearch,
-                        onSearchResultClick = onSearchResultClick,
-                        isSearchDisabled = playerState.restrictions.isDistractionOptimized,
                     )
-                }
 
-                CarScreen.Library -> if (selectedArtist != null) {
-                    val artistLikedSongs = remember(
-                        contentState.likedSongs,
-                        selectedArtist.artistId,
-                        maxItems,
-                    ) {
-                        contentState.likedSongs
-                            .filter { it.artistId == selectedArtist.artistId }
-                            .take(maxItems)
+                    CarScreen.Browse -> {
+                        val currentAlbumId = playerState.playback.currentSong?.albumId
+                        CarBrowseScreen(
+                            albums = contentState.albums.take(maxItems),
+                            onAlbumClick = onAlbumClick,
+                            currentlyPlayingAlbumId = currentAlbumId,
+                            currentlyPlayingMediaId = currentlyPlayingMediaId,
+                            isPlaying = isPlaying,
+                            onCategoryClick = onCategoryClick,
+                            searchQuery = contentState.searchQuery,
+                            searchResults = contentState.searchResults.take(maxItems),
+                            onSearchQueryChange = onSearchQueryChange,
+                            onClearSearch = onClearSearch,
+                            onSearchResultClick = onSearchResultClick,
+                            isSearchDisabled = playerState.restrictions.isDistractionOptimized,
+                        )
                     }
-                    CarArtistLikedSongsScreen(
-                        artistName = selectedArtist.artistName,
-                        likedSongs = artistLikedSongs,
-                        onBackClick = onBackFromArtist,
-                        onSongClick = { song -> onArtistSongClick(artistLikedSongs, song) },
-                        onShufflePlay = { onShuffleArtistSongs(artistLikedSongs) },
-                        currentlyPlayingMediaId = currentlyPlayingMediaId,
-                        isPlaying = isPlaying,
-                    )
-                } else {
-                    CarLibraryScreen(
+
+                    CarScreen.Library -> if (selectedArtist != null) {
+                        val artistLikedSongs = remember(
+                            contentState.likedSongs,
+                            selectedArtist.artistId,
+                            maxItems,
+                        ) {
+                            contentState.likedSongs
+                                .filter { it.artistId == selectedArtist.artistId }
+                                .take(maxItems)
+                        }
+                        CarArtistLikedSongsScreen(
+                            artistName = selectedArtist.artistName,
+                            likedSongs = artistLikedSongs,
+                            onBackClick = onBackFromArtist,
+                            onSongClick = { song -> onArtistSongClick(artistLikedSongs, song) },
+                            onShufflePlay = { onShuffleArtistSongs(artistLikedSongs) },
+                            currentlyPlayingMediaId = currentlyPlayingMediaId,
+                            isPlaying = isPlaying,
+                        )
+                    } else {
+                        CarLibraryScreen(
+                            favoriteArtists = contentState.favoriteArtists.take(maxItems),
+                            albums = contentState.albums.take(maxItems),
+                            onArtistClick = onArtistClick,
+                            onAlbumClick = onAlbumClick,
+                            likedSongs = contentState.likedSongs.take(maxItems),
+                            currentlyPlayingMediaId = currentlyPlayingMediaId,
+                            isPlaying = isPlaying,
+                            onShuffleLikedSongs = onShuffleLikedSongs,
+                            onLikedSongClick = onLikedSongClick,
+                            onSignOut = onSignOut,
+                            userDisplayName = userDisplayName,
+                        )
+                    }
+
+                    // Routed to Library's content for now — the real Favourites screen is a
+                    // later slice. The destination exists so the rail can carry four items.
+                    CarScreen.Favourites -> CarLibraryScreen(
                         favoriteArtists = contentState.favoriteArtists.take(maxItems),
                         albums = contentState.albums.take(maxItems),
                         onArtistClick = onArtistClick,
@@ -369,22 +405,6 @@ private fun BrowseShell(
                         userDisplayName = userDisplayName,
                     )
                 }
-
-                // Routed to Library's content for now — the real Favourites screen is a
-                // later slice. The destination exists so the rail can carry four items.
-                CarScreen.Favourites -> CarLibraryScreen(
-                    favoriteArtists = contentState.favoriteArtists.take(maxItems),
-                    albums = contentState.albums.take(maxItems),
-                    onArtistClick = onArtistClick,
-                    onAlbumClick = onAlbumClick,
-                    likedSongs = contentState.likedSongs.take(maxItems),
-                    currentlyPlayingMediaId = currentlyPlayingMediaId,
-                    isPlaying = isPlaying,
-                    onShuffleLikedSongs = onShuffleLikedSongs,
-                    onLikedSongClick = onLikedSongClick,
-                    onSignOut = onSignOut,
-                    userDisplayName = userDisplayName,
-                )
             }
         }
 

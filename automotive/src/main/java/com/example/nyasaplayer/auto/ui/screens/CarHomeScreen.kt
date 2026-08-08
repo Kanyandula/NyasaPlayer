@@ -47,7 +47,6 @@ import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
 import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
-import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
@@ -65,7 +64,6 @@ fun CarHomeScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(NyasaBackground)
             .padding(24.dp),
     ) {
         HomeHeader()

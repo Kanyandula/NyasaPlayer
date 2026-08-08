@@ -37,7 +37,6 @@ import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.auto.viewmodel.CarAuthUiState
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
-import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaError
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
@@ -59,8 +58,7 @@ fun CarAuthScreen(
 ) {
     Box(
         modifier = modifier
-            .fillMaxSize()
-            .background(NyasaBackground),
+            .fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         Column(

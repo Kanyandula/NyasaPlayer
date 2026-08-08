@@ -1,8 +1,6 @@
 package com.example.nyasaplayer.auto.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -12,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,21 +21,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nyasaplayer.auto.ui.navigation.CarScreen
 import com.example.nyasaplayer.auto.ui.theme.CarChrome
-import com.example.nyasaplayer.auto.ui.theme.CarOutline
 import com.example.nyasaplayer.auto.ui.theme.CarSystemBarHeight
+import com.example.nyasaplayer.auto.ui.theme.CarTextDisabled
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
-import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
-import com.example.nyasaplayer.core.common.ui.icons.HomeIcon
-import com.example.nyasaplayer.core.common.ui.icons.LibraryIcon
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
+import com.example.nyasaplayer.core.common.ui.icons.ProfileIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
+import com.example.nyasaplayer.core.common.ui.icons.SettingsIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import kotlinx.coroutines.delay
@@ -46,13 +40,28 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val TabCornerRadius = 24.dp
 private val LogoSize = 40.dp
+private val ControlIconSize = 24.dp
+private val ControlSpacing = 8.dp
 
+/**
+ * The top system bar. One of the three chrome regions, rendered identically on every screen
+ * inside the shell.
+ *
+ * Navigation is deliberately absent: it lives in [CarNavRail]. The design specifies this bar
+ * as a wordmark plus a right-hand control cluster, and having tabs in both places is how a
+ * driver's muscle memory breaks between screens.
+ *
+ * The three callbacks are accepted but unused: the controls they belong to are disabled
+ * until A6 and A7 give them destinations. They are in the signature now so enabling each is
+ * a one-line change rather than a signature change rippling to the caller.
+ */
+@Suppress("UnusedParameter")
 @Composable
-fun CarTopBar(
-    currentScreen: CarScreen,
-    onSelectTab: (CarScreen) -> Unit,
+fun CarSystemBar(
+    onSearchClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onAvatarClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -65,9 +74,8 @@ fun CarTopBar(
     ) {
         AppLogo()
         Spacer(modifier = Modifier.weight(1f))
-        NavigationTabs(currentScreen = currentScreen, onSelectTab = onSelectTab)
-        Spacer(modifier = Modifier.weight(1f))
-        ClockDisplay()
+        SystemBarControls()
+        ClockDisplay(modifier = Modifier.padding(start = 16.dp))
     }
 }
 
@@ -93,7 +101,7 @@ private fun AppLogo(modifier: Modifier = Modifier) {
         }
         Text(
             text = "Nyasa Music",
-            color = Color.White,
+            color = NyasaGold,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 12.dp),
@@ -101,26 +109,46 @@ private fun AppLogo(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Search, settings and profile.
+ *
+ * All three are **disabled** until A6 (search) and A7 (settings, profile) give them
+ * destinations. Disabled rather than silently inert: FR-2.6 prohibits a control that looks
+ * live and does nothing. They keep their full hit areas so the bar does not reflow when the
+ * later slices enable them, and the callbacks stay in the signature so enabling each is a
+ * one-line change.
+ *
+ * Wi-fi, bluetooth and battery are deliberately absent — see the A2 spec, D7.
+ */
 @Composable
-private fun NavigationTabs(
-    currentScreen: CarScreen,
-    onSelectTab: (CarScreen) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun SystemBarControls(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(ControlSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CarTab(icon = HomeIcon, label = "Home", isSelected = currentScreen == CarScreen.Home) {
-            onSelectTab(CarScreen.Home)
-        }
-        CarTab(icon = SearchIcon, label = "Browse", isSelected = currentScreen == CarScreen.Browse) {
-            onSelectTab(CarScreen.Browse)
-        }
-        CarTab(icon = LibraryIcon, label = "Library", isSelected = currentScreen == CarScreen.Library) {
-            onSelectTab(CarScreen.Library)
-        }
+        SystemBarControl(SearchIcon, "Search")
+        SystemBarControl(SettingsIcon, "Settings")
+        SystemBarControl(ProfileIcon, "Profile")
+    }
+}
+
+@Composable
+private fun SystemBarControl(
+    icon: ImageVector,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.carTouchTarget(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = CarTextDisabled,
+            modifier = Modifier.size(ControlIconSize),
+        )
     }
 }
 
@@ -142,47 +170,4 @@ private fun ClockDisplay(modifier: Modifier = Modifier) {
         fontSize = 16.sp,
         modifier = modifier,
     )
-}
-
-@Composable
-private fun CarTab(
-    icon: ImageVector,
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    val shape = RoundedCornerShape(TabCornerRadius)
-    Box(
-        modifier = Modifier
-            .clip(shape)
-            .then(
-                if (isSelected) {
-                    Modifier.background(NyasaGold, shape)
-                } else {
-                    Modifier.border(1.dp, CarOutline, shape)
-                },
-            )
-            .height(CarTouchTargetSize)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (isSelected) NyasaOnGold else CarTextSecondary,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = label,
-                color = if (isSelected) NyasaOnGold else CarTextSecondary,
-                fontSize = 14.sp,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            )
-        }
-    }
 }
