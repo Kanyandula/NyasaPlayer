@@ -31,6 +31,7 @@ import com.example.nyasaplayer.auto.ui.navigation.gate
 import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarAuthScreen
 import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
+import com.example.nyasaplayer.auto.ui.screens.CarFavouriteMusicScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
@@ -389,20 +390,12 @@ private fun BrowseShell(
                         )
                     }
 
-                    // Routed to Library's content for now — the real Favourites screen is a
-                    // later slice. The destination exists so the rail can carry four items.
-                    CarScreen.Favourites -> CarLibraryScreen(
-                        favoriteArtists = contentState.favoriteArtists.take(maxItems),
-                        albums = contentState.albums.take(maxItems),
-                        onArtistClick = onArtistClick,
-                        onAlbumClick = onAlbumClick,
+                    CarScreen.Favourites -> CarFavouriteMusicScreen(
                         likedSongs = contentState.likedSongs.take(maxItems),
+                        onSongClick = onLikedSongClick,
+                        onBrowseClick = { onSelectTab(CarScreen.Browse) },
                         currentlyPlayingMediaId = currentlyPlayingMediaId,
                         isPlaying = isPlaying,
-                        onShuffleLikedSongs = onShuffleLikedSongs,
-                        onLikedSongClick = onLikedSongClick,
-                        onSignOut = onSignOut,
-                        userDisplayName = userDisplayName,
                     )
                 }
             }

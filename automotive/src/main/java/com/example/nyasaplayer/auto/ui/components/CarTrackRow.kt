@@ -19,9 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.theme.CarListRowHeight
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
@@ -49,6 +52,7 @@ fun CarTrackRow(
     isPlaying: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    coverUrl: String = "",
 ) {
     Row(
         modifier = modifier
@@ -65,7 +69,10 @@ fun CarTrackRow(
                 .padding(vertical = PlayingBarInset)
                 .background(if (isPlaying) NyasaGold else Color.Transparent),
         )
-        Box(
+        AsyncImage(
+            model = coverUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .size(ArtSize)
                 .clip(RoundedCornerShape(ArtRadius))
@@ -77,11 +84,15 @@ fun CarTrackRow(
                 color = if (isPlaying) NyasaGold else Color.White,
                 fontSize = TitleSize,
                 fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = artist,
                 color = CarTextSecondary,
                 fontSize = ArtistSize,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         Text(
