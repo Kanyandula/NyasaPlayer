@@ -39,6 +39,14 @@ val CarScrim = Color(0xCC000000)
 val CarOutline = Color(0x1FFFFFFF)
 
 /**
+ * Hairline divider between chrome regions — the mini-player's top border.
+ *
+ * 8% white per the design, deliberately lighter than [CarOutline]'s 12%: that one outlines
+ * an interactive control, this one separates two surfaces.
+ */
+val CarDivider = Color(0x14FFFFFF)
+
+/**
  * Ambient background tints. Never used as a fill on an interactive element.
  *
  * Unused until the ambient-motion work; screens currently draw NyasaBackground. Same for

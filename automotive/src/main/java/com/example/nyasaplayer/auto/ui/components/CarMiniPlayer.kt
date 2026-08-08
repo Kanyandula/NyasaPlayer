@@ -1,7 +1,6 @@
 package com.example.nyasaplayer.auto.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,12 +23,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarDivider
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.auto.ui.theme.CarMiniPlayerHeight
@@ -45,6 +48,7 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 
 private val PlayButtonSize = 80.dp
+private val TopBorderWidth = 1.dp
 
 @Suppress("LongParameterList")
 @Composable
@@ -66,6 +70,9 @@ fun CarMiniPlayer(
             .fillMaxWidth()
             .height(CarMiniPlayerHeight)
             .background(CarGlass)
+            .drawBehind {
+                drawLine(CarDivider, Offset.Zero, Offset(size.width, 0f), TopBorderWidth.toPx())
+            }
             .clickable(onClick = onExpand)
             .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -76,20 +83,20 @@ fun CarMiniPlayer(
             coverUrl = song.resolvedCoverUrl,
             modifier = Modifier.weight(1f),
         )
-        MiniPlayerControls(
-            isPlaying = playback.isPlaying,
-            onTogglePlayPause = onTogglePlayPause,
-            onSkipNext = onSkipNext,
-            onSkipPrevious = onSkipPrevious,
-        )
         ProgressSection(
             currentPositionMs = playback.currentPositionMs,
             durationMs = playback.durationMs,
-            isLiked = isLiked,
-            onLikeClick = onLikeClick,
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 24.dp),
+                .padding(horizontal = 24.dp),
+        )
+        MiniPlayerControls(
+            isPlaying = playback.isPlaying,
+            isLiked = isLiked,
+            onLikeClick = onLikeClick,
+            onTogglePlayPause = onTogglePlayPause,
+            onSkipNext = onSkipNext,
+            onSkipPrevious = onSkipPrevious,
         )
         // The queue was reachable only from the full player; the design ends the
         // mini-player with it.
@@ -127,18 +134,18 @@ private fun NowPlayingInfo(
         Column {
             Text(
                 text = title,
-                modifier = Modifier.basicMarquee(),
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = artist,
-                modifier = Modifier.basicMarquee(),
                 color = CarTextSecondary,
                 fontSize = 16.sp,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -147,6 +154,8 @@ private fun NowPlayingInfo(
 @Composable
 private fun MiniPlayerControls(
     isPlaying: Boolean,
+    isLiked: Boolean,
+    onLikeClick: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
@@ -157,6 +166,21 @@ private fun MiniPlayerControls(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        IconButton(
+            onClick = onLikeClick,
+            modifier = Modifier
+                .size(CarTouchTargetSize)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.1f)),
+        ) {
+            Icon(
+                imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = if (isLiked) "Unlike" else "Like",
+                tint = if (isLiked) NyasaGold else CarTextSecondary,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+
         IconButton(
             onClick = onSkipPrevious,
             modifier = Modifier
@@ -198,8 +222,6 @@ private fun MiniPlayerControls(
 private fun ProgressSection(
     currentPositionMs: Long,
     durationMs: Long,
-    isLiked: Boolean,
-    onLikeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -226,21 +248,5 @@ private fun ProgressSection(
         )
 
         Text(formatDuration(durationMs), color = CarTextSecondary, fontSize = 14.sp)
-
-        IconButton(
-            onClick = onLikeClick,
-            modifier = Modifier
-                .padding(start = 12.dp)
-                .size(CarTouchTargetSize)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.1f)),
-        ) {
-            Icon(
-                imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = if (isLiked) "Unlike" else "Like",
-                tint = if (isLiked) NyasaGold else CarTextSecondary,
-                modifier = Modifier.size(24.dp),
-            )
-        }
     }
 }
