@@ -34,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -45,7 +44,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
+import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
@@ -54,10 +55,9 @@ import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
+import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 
 private val AlbumItemArtSize = 64.dp
 private val SignOutRed = Color(0xFFEF5350)
@@ -103,6 +103,8 @@ fun CarLibraryScreen(
                 item {
                     ShufflePlayButton(
                         onClick = onShuffleLikedSongs,
+                        fillColors = listOf(NyasaGoldDim, NyasaGold),
+                        contentColor = NyasaOnGold,
                         height = CarTouchTargetSize,
                     )
                 }
@@ -168,7 +170,7 @@ private fun LibraryHeader(
                 } else {
                     "All your music in one place"
                 },
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 18.sp,
             )
         }
@@ -230,7 +232,7 @@ private fun SignOutModalCard(
         modifier = modifier
             .fillMaxWidth(ModalWidthFraction)
             .clip(RoundedCornerShape(24.dp))
-            .background(NyasaSurface2)
+            .background(CarGlass)
             .clickable(enabled = false, onClick = {})
             .padding(48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -245,7 +247,7 @@ private fun SignOutModalCard(
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "You will need to sign in again to access your music library.",
-            color = NyasaTextSecondary,
+            color = CarTextSecondary,
             fontSize = 20.sp,
             textAlign = TextAlign.Center,
             lineHeight = 28.sp,
@@ -324,7 +326,7 @@ private fun LikedSongsHeader(
         Icon(
             imageVector = Icons.Filled.Favorite,
             contentDescription = null,
-            tint = NyasaPrimary,
+            tint = NyasaGold,
             modifier = Modifier.size(24.dp),
         )
         Text(
@@ -335,7 +337,7 @@ private fun LikedSongsHeader(
         )
         Text(
             text = "$count songs",
-            color = NyasaTextSecondary,
+            color = CarTextSecondary,
             fontSize = 16.sp,
         )
     }
@@ -353,7 +355,7 @@ internal fun LikedSongItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(CarCardCornerRadius))
-            .background(NyasaSurface2)
+            .background(CarGlass)
             .clickable(onClick = onClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -384,7 +386,7 @@ internal fun LikedSongItem(
             )
             Text(
                 text = song.resolvedArtistName,
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -458,13 +460,13 @@ private fun ArtistPlaceholder(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Brush.linearGradient(listOf(NyasaPrimary, NyasaPrimaryDark))),
+            .background(NyasaGold),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = MusicNoteIcon,
             contentDescription = null,
-            tint = Color.White,
+            tint = NyasaOnGold,
             modifier = Modifier.size(32.dp),
         )
     }
@@ -480,7 +482,7 @@ private fun AlbumListItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(CarCardCornerRadius))
-            .background(NyasaSurface2)
+            .background(CarGlass)
             .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -508,7 +510,7 @@ private fun AlbumListItem(
             )
             Text(
                 text = album.artistName,
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

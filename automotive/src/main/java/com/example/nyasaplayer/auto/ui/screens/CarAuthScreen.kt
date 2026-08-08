@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -33,15 +32,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.BuildConfig
+import com.example.nyasaplayer.auto.ui.theme.CarGlass
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.auto.viewmodel.CarAuthUiState
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaError
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
+import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -76,15 +75,13 @@ fun CarAuthScreen(
                 modifier = Modifier
                     .size(IconBackgroundSize)
                     .clip(CircleShape)
-                    .background(
-                        Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark)),
-                    ),
+                    .background(NyasaGold),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = MusicNoteIcon,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = NyasaOnGold,
                     modifier = Modifier.size(IconSize),
                 )
             }
@@ -102,7 +99,7 @@ fun CarAuthScreen(
 
             Text(
                 text = "Sign in to access your music library",
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 20.sp,
                 textAlign = TextAlign.Center,
             )
@@ -111,7 +108,7 @@ fun CarAuthScreen(
 
             if (uiState.isLoading) {
                 CircularProgressIndicator(
-                    color = NyasaPrimary,
+                    color = NyasaGold,
                     modifier = Modifier.size(48.dp),
                 )
             } else {
@@ -176,7 +173,7 @@ private fun GoogleSignInButton(
             .fillMaxWidth()
             .height(CarTouchTargetSize),
         shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = NyasaSurface2),
+        colors = ButtonDefaults.buttonColors(containerColor = CarGlass),
     ) {
         Text(
             text = "Sign in with Google",

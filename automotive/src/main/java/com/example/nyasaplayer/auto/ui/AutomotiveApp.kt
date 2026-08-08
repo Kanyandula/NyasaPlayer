@@ -147,6 +147,7 @@ private fun AuthenticatedApp(
                     currentScreen = it
                 },
                 onExpandPlayer = { showFullPlayer = true },
+                onQueueClick = { showQueue = true },
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
                 onSkipPrevious = playerViewModel::skipPrevious,
@@ -276,6 +277,7 @@ private fun BrowseShell(
     userDisplayName: String,
     onSelectTab: (CarScreen) -> Unit,
     onExpandPlayer: () -> Unit,
+    onQueueClick: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
@@ -395,6 +397,7 @@ private fun BrowseShell(
                 onExpand = onExpandPlayer,
                 isLiked = playerState.isCurrentSongLiked,
                 onLikeClick = onLikeClick,
+                onQueueClick = onQueueClick,
             )
         }
     }

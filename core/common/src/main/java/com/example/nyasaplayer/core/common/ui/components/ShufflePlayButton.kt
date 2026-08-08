@@ -34,6 +34,10 @@ fun ShufflePlayButton(
     modifier: Modifier = Modifier,
     text: String = "Shuffle Play",
     height: Dp = DefaultButtonHeight,
+    // Shared with mobile, which stays purple until Project B. AAOS passes gold, and
+    // must pass contentColor with it — white on gold measures 2.29:1.
+    fillColors: List<Color> = listOf(NyasaPrimaryDark, NyasaPrimary),
+    contentColor: Color = Color.White,
 ) {
     Button(
         onClick = onClick,
@@ -48,7 +52,7 @@ fun ShufflePlayButton(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.horizontalGradient(listOf(NyasaPrimaryDark, NyasaPrimary)),
+                    Brush.horizontalGradient(fillColors),
                     RoundedCornerShape(height / 2),
                 ),
             contentAlignment = Alignment.Center,
@@ -60,13 +64,13 @@ fun ShufflePlayButton(
                 Icon(
                     imageVector = ShuffleIcon,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = contentColor,
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
                     text = text,
                     style = MaterialTheme.typography.labelLarge,
-                    color = Color.White,
+                    color = contentColor,
                 )
             }
         }

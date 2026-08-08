@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
+import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarGradientBlue
 import com.example.nyasaplayer.auto.ui.theme.CarGradientBlueCyan
 import com.example.nyasaplayer.auto.ui.theme.CarGradientGreen
@@ -63,6 +64,7 @@ import com.example.nyasaplayer.auto.ui.theme.CarGradientOrangeDark
 import com.example.nyasaplayer.auto.ui.theme.CarGradientPink
 import com.example.nyasaplayer.auto.ui.theme.CarGradientRose
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Song
@@ -74,10 +76,9 @@ import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
+import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 
 private val CategoryIconSize = 56.dp
 private const val IconBgAlpha = 0.5f
@@ -96,13 +97,15 @@ private data class BrowseCategory(
     val name: String,
     val icon: ImageVector,
     val gradientColors: List<Color>,
+    // Gold is a light fill — white on it measures 2.29:1. Gold entries pass NyasaOnGold.
+    val contentColor: Color = Color.White,
 )
 
 private val browseCategories = listOf(
     BrowseCategory("Trending Now", MusicNoteIcon, listOf(CarGradientPink, CarGradientRose)),
     BrowseCategory("New Releases", AlbumIcon, listOf(CarGradientBlue, CarGradientBlueCyan)),
     BrowseCategory("Top Charts", QueueMusicIcon, listOf(CarGradientGreen, CarGradientGreenDark)),
-    BrowseCategory("Playlists", PlaylistAddIcon, listOf(NyasaPrimary, NyasaPrimaryDark)),
+    BrowseCategory("Playlists", PlaylistAddIcon, listOf(NyasaGold, NyasaGoldDim), NyasaOnGold),
     BrowseCategory("Genres", MusicNoteIcon, listOf(CarGradientOrange, CarGradientOrangeDark)),
     BrowseCategory("Podcasts", RadioIcon, listOf(CarGradientIndigoPurple, CarGradientIndigo)),
 )
@@ -276,7 +279,7 @@ private fun CarSearchBar(
             .fillMaxWidth()
             .height(CarTouchTargetSize)
             .clip(RoundedCornerShape(CarCardCornerRadius))
-            .background(NyasaSurface2)
+            .background(CarGlass)
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -284,14 +287,14 @@ private fun CarSearchBar(
         Icon(
             imageVector = SearchIcon,
             contentDescription = null,
-            tint = NyasaTextSecondary,
+            tint = CarTextSecondary,
             modifier = Modifier.size(24.dp),
         )
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
                 Text(
                     text = if (isDisabled) "Search unavailable while driving" else "Search songs, artists...",
-                    color = NyasaTextSecondary,
+                    color = CarTextSecondary,
                     fontSize = 18.sp,
                 )
             }
@@ -315,7 +318,7 @@ private fun CarSearchBar(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Clear search",
-                    tint = NyasaTextSecondary,
+                    tint = CarTextSecondary,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -335,7 +338,7 @@ private fun SearchResultItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(CarCardCornerRadius))
-            .background(NyasaSurface2)
+            .background(CarGlass)
             .clickable(onClick = onClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -366,7 +369,7 @@ private fun SearchResultItem(
             )
             Text(
                 text = song.resolvedArtistName,
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -388,7 +391,7 @@ private fun SearchEmptyState(
     ) {
         Text(
             text = "No results for \"$query\"",
-            color = NyasaTextSecondary,
+            color = CarTextSecondary,
             fontSize = 20.sp,
         )
     }
@@ -440,7 +443,7 @@ private fun CategoryCard(
         Icon(
             imageVector = category.icon,
             contentDescription = null,
-            tint = Color.White.copy(alpha = IconBgAlpha),
+            tint = category.contentColor.copy(alpha = IconBgAlpha),
             modifier = Modifier
                 .size(CategoryIconSize)
                 .align(Alignment.TopEnd)
@@ -448,7 +451,7 @@ private fun CategoryCard(
         )
         Text(
             text = category.name,
-            color = Color.White,
+            color = category.contentColor,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
@@ -540,7 +543,7 @@ private fun FeaturedPlaylistCard(
         )
         Text(
             text = "${album.songIds.size} songs",
-            color = NyasaTextSecondary,
+            color = CarTextSecondary,
             fontSize = 12.sp,
         )
     }
