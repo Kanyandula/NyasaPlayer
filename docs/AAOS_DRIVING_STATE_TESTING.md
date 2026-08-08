@@ -5,53 +5,66 @@ verified end to end, and how to read back what the platform actually thinks.
 
 Established 2026-08-08 as Task 1 of the A1 slice (PRD open question **Q1**).
 
-**Answer to Q1: yes, but not over adb.** On the Play system image the driving state can only
-be injected through the emulator's *Car data* GUI panel. Every adb path is blocked. This
-makes the manual checklists in the implementation plans workable, but restriction testing
-cannot be scripted or run in CI on this image.
+**Answer to Q1: yes, and it is scriptable — but only on a `userdebug` image.** Use the
+`AAOS_AOSP_33_userdebug` AVD. The Play image cannot do it, and cannot honour
+`distractionOptimized` either; see "Why not the Play image" below.
 
-## Environment
+## The AVDs
 
-| | |
-|---|---|
-| AVD | `Automotive_Distant_Display_with_Google_Play` |
-| API | 33 (Android 13) |
-| Build type | `user` — this is the whole problem |
-| Serial | `emulator-5554` (pass `-s` if another device is attached) |
+| AVD | Build type | Driving state | `distractionOptimized` |
+|---|---|---|---|
+| `AAOS_AOSP_33_userdebug` | `userdebug` | scriptable over adb | **honoured** |
+| `Automotive_Distant_Display_with_Google_Play` | `user` | GUI panel only | **ignored** |
+
+Use the first for anything touching driving state. The second remains useful only for
+checking behaviour against a Play-like image and its distant-display layout.
+
+`AAOS_AOSP_33_userdebug` was created with:
+
+```bash
+sdkmanager "system-images;android-33;android-automotive;x86_64"
+avdmanager create avd -n AAOS_AOSP_33_userdebug \
+  -k "system-images;android-33;android-automotive;x86_64" \
+  -d automotive_1024p_landscape
+```
+
+Note this machine is Intel — `x86_64`, not `arm64-v8a`. The image is
+`sdk_gcar_x86_64-userdebug`, ~5.7 GB. Modern `cmdline-tools` are installed at
+`$ANDROID_HOME/cmdline-tools/latest`; the legacy `$ANDROID_HOME/tools/bin/sdkmanager` is
+broken under the current JDK and should not be used.
 
 Launch:
 
 ```bash
-$ANDROID_HOME/emulator/emulator -avd Automotive_Distant_Display_with_Google_Play -no-snapshot-load &
-adb wait-for-device
-adb -s emulator-5554 shell getprop sys.boot_completed   # expect: 1
+$ANDROID_HOME/emulator/emulator -avd AAOS_AOSP_33_userdebug -no-snapshot-load &
+adb -s emulator-5554 wait-for-device
 ```
 
-## The recipe
+Always pass `-s emulator-5554`. A second device is often attached over the network, and a
+bare `adb shell` then fails with "more than one device".
 
-The emulator's *Car data* panel writes VHAL properties over the emulator's gRPC channel
-rather than through `car_service`'s shell, which is why it works where adb does not.
+## Driving the vehicle state
 
-1. Click **⋯ (Extended controls)** on the emulator toolbar.
-2. Select **Car data** in the left sidebar.
-3. **To start driving:** set **Speed** to `40` and apply.
-4. **To return to parked:** set **Gear** to **Park** and apply.
+```bash
+# One-shot: gear into DRIVE, then a speed sample
+adb -s emulator-5554 shell cmd car_service inject-vhal-event 0x11400400 8    # GEAR_SELECTION = DRIVE
+adb -s emulator-5554 shell cmd car_service inject-vhal-event 0x11600207 40   # PERF_VEHICLE_SPEED
 
-### Setting speed back to 0 does NOT park the vehicle
+# Hold MOVING for 60s at 5Hz - a single speed event decays back to IDLING
+adb -s emulator-5554 shell cmd car_service inject-continuous-events 0x11600207 40 -s 5 -d 60
 
-This costs time if you do not know it. The `moving` restriction config declares its speed
-range as `0.0 - 5.0`, **inclusive of zero**, so a vehicle in gear Drive at speed 0 is still
-classified `MOVING` and stays fully restricted. Only a gear change to Park transitions the
-state machine back.
+# Back to parked
+adb -s emulator-5554 shell cmd car_service inject-vhal-event 0x11400400 4    # GEAR_SELECTION = PARK
+```
 
-Observed: after applying speed `0`, the state was unchanged and no new event was logged at
-all — same restriction flags, same timestamp. Applying gear Park then produced
-`2 → 1 → 0` immediately.
+A single speed injection moves the state to `MOVING` and then straight back to `IDLING`,
+because nothing sustains the value. Use `inject-continuous-events` for anything that needs
+the vehicle to stay moving while you interact.
 
-## The oracle
+`cmd car_service -h` lists the rest — `enable-uxr`, `day-night-mode`, `get-property-value`,
+`garage-mode`.
 
-Two services. Read both — the first says what the platform decided, the second says what the
-app will be told.
+## The oracles
 
 ```bash
 # What driving state the vehicle is in, plus a transition log
@@ -59,25 +72,28 @@ adb -s emulator-5554 shell dumpsys car_service --services CarDrivingStateService
 
 # What restrictions that state produces
 adb -s emulator-5554 shell dumpsys car_service --services CarUxRestrictionsManagerService | grep '^Port:'
+
+# Whether an activity is registered as distraction optimised
+adb -s emulator-5554 shell cmd car_service get-do-activities com.example.nyasaplayer
+```
+
+`get-do-activities` is the direct answer for `distractionOptimized` — it does not require
+provoking a block. Expected:
+
+```
+DO Activities for com.example.nyasaplayer
+com.example.nyasaplayer.auto.ui.AutomotiveActivity
 ```
 
 `Current Driving State` values: `0` parked · `1` idling · `2` moving.
 
 ### Expected output
 
-Parked:
-
-```
-Current Driving State: 0
-Port: 0x00 UXR: DO: false UxR: 0 time: 1165332839060
-```
-
-Driving (speed 40):
-
-```
-Current Driving State: 2
-Port: 0x00 UXR: DO: true UxR: 255 time: 913009728845
-```
+| State | `CarDrivingStateService` | `CarUxRestrictionsManagerService` |
+|---|---|---|
+| Parked | `0` | `DO: false UxR: 0` |
+| Idling | `1` | `DO: true UxR: 16` |
+| Moving | `2` | `DO: true UxR: 255` |
 
 `UxR: 255` is `0xff` — every modelled restriction at once:
 
@@ -92,13 +108,16 @@ Port: 0x00 UXR: DO: true UxR: 255 time: 913009728845
 | `NO_SETUP` | 64 |
 | `NO_TEXT_MESSAGE` | 128 |
 
-The transition log is the better signal that something happened, because the `Port:` line
-also carries a timestamp — an unchanged timestamp means your input never reached the
-platform, which is easy to mistake for "the app ignored it".
+**Idling is not moving.** It reports `DO: true` with only `NO_VIDEO` set. Code must gate on
+the individual flags, never on `isDistractionOptimized` alone — otherwise an idling vehicle
+wrongly refuses settings and search. `gate()` in `CarRestrictionGate` does this correctly.
+
+The `Port:` line carries a timestamp. An unchanged timestamp means your input never reached
+the platform, which is easy to mistake for "the app ignored it".
 
 ### Caps this image reports
 
-From the same dump. Screens must honour these, not invented values:
+Screens must honour these, not invented values:
 
 | Cap | Value |
 |---|---|
@@ -106,99 +125,54 @@ From the same dump. Screens must honour these, not invented values:
 | Max cumulative content items | 21 |
 | Max string length | 120 |
 
-Note the configured `idling` state carries only `0x10` (`NO_VIDEO`) with `DO: true`, so
-idling is far less restricted than moving. The app must not assume `isDistractionOptimized`
-implies the full flag set.
+## Why not the Play image
 
-## What does not work, and why
-
-The AVD is a `user` build. `CarShellCommand` refuses every state-injecting command on
-non-`userdebug`/`eng` builds, and `adbd` cannot be rooted to get around it.
+`Automotive_Distant_Display_with_Google_Play` is `ro.build.type=user`, and
+`CarShellCommand` refuses every state-injecting command on non-`userdebug` builds. `adbd`
+cannot be rooted around it.
 
 | Attempt | Result |
 |---|---|
-| `cmd car_service inject-vhal-event 0x11600207 40` | `SecurityException: The command 'inject-vhal-event' requires non-user build` |
-| `cmd car_service inject-vhal-event PERF_VEHICLE_SPEED 40` | same |
-| `cmd car_service inject-vhal-event GEAR_SELECTION 8` | same |
+| `cmd car_service inject-vhal-event …` | `SecurityException: requires non-user build` |
 | `cmd car_service set-drivingstate moving` | same |
 | `cmd car_service -h` | same — even help is gated |
-| `dumpsys car_service inject-vhal-event PERF_VEHICLE_SPEED 40` | **silently ignored.** Exits 0, prints nothing, changes nothing. The most dangerous of the lot: it looks like it worked |
+| `dumpsys car_service inject-vhal-event …` | **silently ignored.** Exits 0, prints nothing, changes nothing |
 | `adb root` | `adbd cannot run as root in production builds` |
 | emulator console `car` command | does not exist — see `adb emu help` |
-| emulator gRPC on `127.0.0.1:8554` | up, but token-authenticated and `grpcurl` is not installed |
+| emulator gRPC on `127.0.0.1:8554` | up, but token-authenticated |
 
-## Open issue: the launcher is still blocked while driving
+Its only route is the GUI: **⋯ Extended controls → Car data**, set Speed and Gear. Gear
+dominates in both directions — setting speed to 0 while still in Drive leaves the vehicle
+`MOVING`, because the `moving` config's speed range starts at `0.0` inclusive.
 
-**Unresolved as of 2026-08-08.** With the vehicle in motion the platform replaces the app
-with its own "You can't use this feature while driving / Close app" screen, so none of the
-restriction layer in `:automotive` gets a chance to run. Every driving-state behaviour is
-therefore still verified by unit tests only.
+### The Play image ignores `distractionOptimized`
 
-`CarPackageManagerService` is the oracle:
+The same `oem` APK behaves differently on the two images:
 
-```bash
-adb -s emulator-5554 shell dumpsys car_service --services CarPackageManagerService \
-  | grep -o 'is_root_activity_do=[a-z]*'
-```
+| Image | `get-do-activities` / block behaviour |
+|---|---|
+| `AAOS_AOSP_33_userdebug` | activity listed; app renders normally while moving |
+| Play image | `is_root_activity_do=false`; platform shows "You can't use this feature while driving" |
 
-It reports `is_root_activity_do=false` even though the shipped manifest carries the
-declaration. Confirmed against the **installed** APK, not just the build output:
+On the Play image this was checked exhaustively and is **not** a manifest bug: the
+declaration is present in the installed APK (`aapt2 dump xmltree` against
+`/data/app/.../base.apk`), both `android:value="true"` (typed boolean) and a string-resource
+reference were rejected identically, and a cold emulator restart with the app installed
+before boot — so `car_service` parsed it fresh — still reported false. Every entry in that
+image's `CarPackageManagerService` allowlist is a platform-signed system or Google package,
+so a debug-signed third-party app appears unable to be distraction optimised there at all.
 
-```bash
-aapt2 dump xmltree --file AndroidManifest.xml base.apk | grep -A1 '"distractionOptimized"'
-```
-
-Two encodings were tried, both rejected:
-
-| `android:value` | How aapt encodes it | Result |
-|---|---|---|
-| `"true"` (the form in Google's docs) | typed boolean, no `Raw:` string | `is_root_activity_do=false` |
-| `"@string/…"` resolving to `true` | string reference | `is_root_activity_do=false` |
-
-The manifest keeps the documented `"true"` form.
-
-**Stale-cache hypothesis: eliminated.** The emulator was cold-restarted with the app already
-installed, so `car_service` parsed the package from scratch at boot with the declaration
-present in the shipped manifest. It still reported `is_root_activity_do=false` and still
-blocked the activity. This is not a cache that a reinstall or reboot failed to invalidate.
-
-What remains, in order of likelihood:
-
-1. The Play image requires the package to appear in a vendor allowlist — see
-   `Allowlist string in resource` and `Allowlist map from resource` in the
-   `CarPackageManagerService` dump. Every entry there is a system or Google package.
-2. A signature requirement: the allowlisted entries carry platform signatures, and this is a
-   `user` build with `mEnableActivityBlocking:true`.
-
-Both would mean a third-party debug-signed app simply cannot be distraction optimised on the
-Play system image, and that verifying the restriction layer end to end needs an AOSP
-`userdebug` image — the same image the scripted-injection section below calls for.
+**Practical consequence:** verify all driving-state behaviour on the userdebug AVD. A block
+screen on the Play image is expected and is not a regression.
 
 ### Do not use `adb reboot`
 
 It restarts Android but leaves the emulator's VHAL bridge wedged: afterwards the *Car data*
 panel silently stops reaching the platform. Symptom is the `Port:` timestamp never changing
-and `CarDrivingStateService` logging only its boot entry, no matter what you set. Reopening
-Extended Controls does not fix it.
-
-Kill and relaunch the emulator process instead:
+and `CarDrivingStateService` logging only its boot entry. Reopening Extended Controls does
+not fix it. Kill and relaunch the emulator process instead:
 
 ```bash
 adb -s emulator-5554 emu kill
-$ANDROID_HOME/emulator/emulator -avd Automotive_Distant_Display_with_Google_Play -no-snapshot-load &
+$ANDROID_HOME/emulator/emulator -avd AAOS_AOSP_33_userdebug -no-snapshot-load &
 ```
-
-Note that a cold boot resets the vehicle to parked and resets the emulator clock, and the
-panel's gear/speed must both be set again — setting only the one that did not change
-produces no event.
-
-## If you need scripted injection
-
-Install a non-Play **AOSP automotive** system image, which ships as `userdebug`, and create a
-second AVD from it. On that image the `inject-vhal-event` commands above work as documented
-and restriction testing becomes scriptable. Not done here — the GUI recipe was sufficient for
-A1, and the download is multi-gigabyte.
-
-Note that `$ANDROID_HOME/tools/bin/sdkmanager` on this machine is the legacy copy and crashes
-under the current JDK (`NoClassDefFoundError: javax/xml/bind/annotation/XmlSchema`); modern
-`cmdline-tools` are not installed. Install those first.
