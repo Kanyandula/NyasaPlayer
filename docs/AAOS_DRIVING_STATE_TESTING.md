@@ -155,12 +155,42 @@ Two encodings were tried, both rejected:
 | `"true"` (the form in Google's docs) | typed boolean, no `Raw:` string | `is_root_activity_do=false` |
 | `"@string/…"` resolving to `true` | string reference | `is_root_activity_do=false` |
 
-The manifest keeps the documented `"true"` form. Things not yet ruled out, roughly in order
-of likelihood: `CarPackageManagerService` caching its distraction-optimised activity list
-until reboot rather than on package replace; the Play image requiring the app to appear in a
-vendor allowlist (`Allowlist string in resource` in that same dump) regardless of metadata;
-or a signature requirement on this image. Reboot the emulator and re-check before
-investigating further — it is the cheapest of the three.
+The manifest keeps the documented `"true"` form.
+
+**Stale-cache hypothesis: eliminated.** The emulator was cold-restarted with the app already
+installed, so `car_service` parsed the package from scratch at boot with the declaration
+present in the shipped manifest. It still reported `is_root_activity_do=false` and still
+blocked the activity. This is not a cache that a reinstall or reboot failed to invalidate.
+
+What remains, in order of likelihood:
+
+1. The Play image requires the package to appear in a vendor allowlist — see
+   `Allowlist string in resource` and `Allowlist map from resource` in the
+   `CarPackageManagerService` dump. Every entry there is a system or Google package.
+2. A signature requirement: the allowlisted entries carry platform signatures, and this is a
+   `user` build with `mEnableActivityBlocking:true`.
+
+Both would mean a third-party debug-signed app simply cannot be distraction optimised on the
+Play system image, and that verifying the restriction layer end to end needs an AOSP
+`userdebug` image — the same image the scripted-injection section below calls for.
+
+### Do not use `adb reboot`
+
+It restarts Android but leaves the emulator's VHAL bridge wedged: afterwards the *Car data*
+panel silently stops reaching the platform. Symptom is the `Port:` timestamp never changing
+and `CarDrivingStateService` logging only its boot entry, no matter what you set. Reopening
+Extended Controls does not fix it.
+
+Kill and relaunch the emulator process instead:
+
+```bash
+adb -s emulator-5554 emu kill
+$ANDROID_HOME/emulator/emulator -avd Automotive_Distant_Display_with_Google_Play -no-snapshot-load &
+```
+
+Note that a cold boot resets the vehicle to parked and resets the emulator clock, and the
+panel's gear/speed must both be set again — setting only the one that did not change
+produces no event.
 
 ## If you need scripted injection
 
