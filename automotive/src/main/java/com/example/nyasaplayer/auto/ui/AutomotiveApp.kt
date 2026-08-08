@@ -18,8 +18,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
+import com.example.nyasaplayer.auto.ui.components.CarRestrictionDialog
 import com.example.nyasaplayer.auto.ui.components.CarTopBar
+import com.example.nyasaplayer.auto.ui.navigation.CarOverlay
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
+import com.example.nyasaplayer.auto.ui.navigation.CarUiLocation
+import com.example.nyasaplayer.auto.ui.navigation.GateResult
+import com.example.nyasaplayer.auto.ui.navigation.gate
 import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarAuthScreen
 import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
@@ -84,7 +89,32 @@ private fun AuthenticatedApp(
     var showFullPlayer by rememberSaveable { mutableStateOf(false) }
     var showQueue by rememberSaveable { mutableStateOf(false) }
     var selectedArtist by rememberSaveable { mutableStateOf<FavoriteArtist?>(null) }
+    var denialReason by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    val location = carUiLocation(
+        tab = currentScreen,
+        showFullPlayer = showFullPlayer,
+        showQueue = showQueue,
+        selectedArtist = selectedArtist,
+        searchQuery = contentState.searchQuery,
+    )
+
+    // Keyed on both the restrictions and the location so it fires when the vehicle starts
+    // moving *and* when the user navigates. Gating entry alone is not enough — a vehicle
+    // can start moving while the driver is already inside a restricted screen.
+    LaunchedEffect(playerState.restrictions, location) {
+        when (val result = gate(location, playerState.restrictions)) {
+            is GateResult.Allowed -> Unit
+            is GateResult.Denied -> {
+                showFullPlayer = false
+                showQueue = false
+                selectedArtist = null
+                currentScreen = result.evictTo.tab
+                denialReason = result.reason
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -201,8 +231,40 @@ private fun AuthenticatedApp(
                 },
             )
         }
+
+        val reason = denialReason
+        if (reason != null) {
+            CarRestrictionDialog(
+                reason = reason,
+                onDismiss = { denialReason = null },
+            )
+        }
     }
 }
+
+/**
+ * Collapses the five scattered pieces of navigation state into the one value [gate] decides
+ * on. Derived, not authoritative — the individual values stay where the screens read them.
+ */
+private fun carUiLocation(
+    tab: CarScreen,
+    showFullPlayer: Boolean,
+    showQueue: Boolean,
+    selectedArtist: FavoriteArtist?,
+    searchQuery: String,
+): CarUiLocation = CarUiLocation(
+    tab = tab,
+    overlay = when {
+        showFullPlayer -> CarOverlay.FullPlayer
+        showQueue -> CarOverlay.Queue
+        else -> null
+    },
+    drillDepth = if (selectedArtist != null) 1 else 0,
+    // Settings and Profile are later slices, and Search is not yet a distinct sheet in this
+    // app. The field exists so those slices have nothing to retrofit.
+    sheet = null,
+    textEntryActive = searchQuery.isNotEmpty(),
+)
 
 @Suppress("LongParameterList", "LongMethod")
 @Composable
