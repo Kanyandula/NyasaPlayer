@@ -63,8 +63,7 @@ fun CarHomeScreen(
 ) {
     Column(
         modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
+            .fillMaxSize(),
     ) {
         HomeHeader()
         Spacer(modifier = Modifier.height(20.dp))

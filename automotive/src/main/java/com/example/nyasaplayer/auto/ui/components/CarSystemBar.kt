@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.theme.CarChrome
@@ -42,6 +43,7 @@ import java.util.Locale
 
 private val LogoSize = 40.dp
 private val ControlIconSize = 24.dp
+private val AvatarIconSize = 32.dp
 private val ControlSpacing = 8.dp
 
 /**
@@ -53,8 +55,9 @@ private val ControlSpacing = 8.dp
  * driver's muscle memory breaks between screens.
  *
  * The three callbacks are accepted but unused: the controls they belong to are disabled
- * until A6 and A7 give them destinations. They are in the signature now so enabling each is
- * a one-line change rather than a signature change rippling to the caller.
+ * until A6 and A7 give them destinations. They are in the signature now so the caller does
+ * not need a signature change later; the disabled-state plumbing inside SystemBarControl
+ * still has to be added when those slices land.
  */
 @Suppress("UnusedParameter")
 @Composable
@@ -115,8 +118,7 @@ private fun AppLogo(modifier: Modifier = Modifier) {
  * All three are **disabled** until A6 (search) and A7 (settings, profile) give them
  * destinations. Disabled rather than silently inert: FR-2.6 prohibits a control that looks
  * live and does nothing. They keep their full hit areas so the bar does not reflow when the
- * later slices enable them, and the callbacks stay in the signature so enabling each is a
- * one-line change.
+ * later slices enable them.
  *
  * Wi-fi, bluetooth and battery are deliberately absent — see the A2 spec, D7.
  */
@@ -129,7 +131,7 @@ private fun SystemBarControls(modifier: Modifier = Modifier) {
     ) {
         SystemBarControl(SearchIcon, "Search")
         SystemBarControl(SettingsIcon, "Settings")
-        SystemBarControl(ProfileIcon, "Profile")
+        SystemBarControl(ProfileIcon, "Profile", iconSize = AvatarIconSize)
     }
 }
 
@@ -138,6 +140,7 @@ private fun SystemBarControl(
     icon: ImageVector,
     contentDescription: String,
     modifier: Modifier = Modifier,
+    iconSize: Dp = ControlIconSize,
 ) {
     Box(
         modifier = modifier.carTouchTarget(),
@@ -147,7 +150,7 @@ private fun SystemBarControl(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = CarTextDisabled,
-            modifier = Modifier.size(ControlIconSize),
+            modifier = Modifier.size(iconSize),
         )
     }
 }

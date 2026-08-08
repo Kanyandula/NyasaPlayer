@@ -86,6 +86,7 @@ private const val GradientOverlayStartY = 80f
 private const val FeaturedPlaylistsMax = 10
 private const val CategoryCardAspectRatio = 1.4f
 private const val BrowseGridColumns = 3
+private val ScrollbarGap = 8.dp
 private val ScrollbarWidth = 8.dp
 private val ScrollbarTrackCornerRadius = 4.dp
 private const val ScrollbarTrackAlpha = 0.15f
@@ -136,7 +137,7 @@ fun CarBrowseScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 24.dp, end = 24.dp + ScrollbarWidth + 8.dp),
+                .padding(end = ScrollbarWidth + ScrollbarGap),
             contentPadding = PaddingValues(vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {

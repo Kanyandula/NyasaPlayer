@@ -119,7 +119,9 @@ private fun CarNavRailItem(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = label,
+            // The Text below already labels this row; describing the icon too makes
+            // TalkBack announce "Home, Home".
+            contentDescription = null,
             tint = tint,
             modifier = Modifier.size(RailIconSize),
         )
