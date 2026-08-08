@@ -21,11 +21,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
+import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 
 @Suppress("LongParameterList")
 @Composable
@@ -58,6 +61,8 @@ fun CarArtistLikedSongsScreen(
             item {
                 ShufflePlayButton(
                     onClick = onShufflePlay,
+                    fillColors = listOf(NyasaGoldDim, NyasaGold),
+                    contentColor = NyasaOnGold,
                     height = CarTouchTargetSize,
                 )
             }
@@ -103,7 +108,7 @@ private fun ArtistDetailHeader(
         )
         Text(
             text = "$songCount liked songs",
-            color = NyasaTextSecondary,
+            color = CarTextSecondary,
             fontSize = 18.sp,
         )
     }

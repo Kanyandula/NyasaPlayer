@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
 import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
@@ -46,9 +47,9 @@ import com.example.nyasaplayer.core.common.ui.icons.ShuffleIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipNextIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipPreviousIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
+import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextTertiary
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
@@ -87,7 +88,7 @@ fun CarFullPlayerScreen(
                 .fillMaxSize()
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(NyasaPrimaryDark.copy(alpha = 0.15f), Color.Transparent),
+                        colors = listOf(NyasaGoldDim.copy(alpha = 0.15f), Color.Transparent),
                         radius = 800f,
                     ),
                 ),
@@ -228,7 +229,7 @@ private fun TrackInfo(
         Text(
             text = artistAlbum,
             modifier = Modifier.basicMarquee(),
-            color = NyasaTextSecondary,
+            color = CarTextSecondary,
             fontSize = 24.sp,
             maxLines = 1,
         )
@@ -253,7 +254,7 @@ private fun ProgressSlider(
             modifier = Modifier.fillMaxWidth(),
             colors = SliderDefaults.colors(
                 thumbColor = Color.White,
-                activeTrackColor = NyasaPrimary,
+                activeTrackColor = NyasaGold,
                 inactiveTrackColor = Color.White.copy(alpha = 0.2f),
             ),
         )
@@ -261,8 +262,8 @@ private fun ProgressSlider(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(formatDuration(playback.currentPositionMs), color = NyasaTextSecondary, fontSize = 18.sp)
-            Text(formatDuration(playback.durationMs), color = NyasaTextSecondary, fontSize = 18.sp)
+            Text(formatDuration(playback.currentPositionMs), color = CarTextSecondary, fontSize = 18.sp)
+            Text(formatDuration(playback.durationMs), color = CarTextSecondary, fontSize = 18.sp)
         }
     }
 }
@@ -286,7 +287,7 @@ private fun MainControls(
             icon = ShuffleIcon,
             contentDescription = "Shuffle",
             size = CarTouchTargetSize,
-            tint = if (playback.isShuffled) NyasaPrimary else NyasaTextSecondary,
+            tint = if (playback.isShuffled) NyasaGold else CarTextSecondary,
             onClick = onShuffleClick,
         )
         Spacer(modifier = Modifier.width(16.dp))
@@ -310,7 +311,7 @@ private fun MainControls(
         Spacer(modifier = Modifier.width(16.dp))
 
         val repeatIcon = if (playback.repeatMode == RepeatMode.One) RepeatOneIcon else RepeatIcon
-        val repeatTint = if (playback.repeatMode != RepeatMode.Off) NyasaPrimary else NyasaTextSecondary
+        val repeatTint = if (playback.repeatMode != RepeatMode.Off) NyasaGold else CarTextSecondary
         CircleIconButton(
             icon = repeatIcon,
             contentDescription = "Repeat",
@@ -332,12 +333,12 @@ private fun PlayPauseButton(
         modifier = modifier
             .size(PlayButtonSize)
             .clip(CircleShape)
-            .background(Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark))),
+            .background(NyasaGold),
     ) {
         Icon(
             imageVector = if (isPlaying) PauseIcon else Icons.Default.PlayArrow,
             contentDescription = if (isPlaying) "Pause" else "Play",
-            tint = Color.White,
+            tint = NyasaOnGold,
             modifier = Modifier.size(48.dp),
         )
     }
@@ -358,7 +359,7 @@ private fun LikeButton(
             contentDescription = if (isLiked) "Unlike" else "Like",
             size = CarTouchTargetSize,
             iconSize = 24.dp,
-            tint = if (isLiked) NyasaPrimary else NyasaTextSecondary,
+            tint = if (isLiked) NyasaGold else CarTextSecondary,
             onClick = onClick,
         )
     }

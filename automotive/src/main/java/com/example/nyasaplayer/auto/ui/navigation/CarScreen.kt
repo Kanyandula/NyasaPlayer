@@ -4,4 +4,5 @@ enum class CarScreen(val route: String) : java.io.Serializable {
     Home("home"),
     Browse("browse"),
     Library("library"),
+    Favourites("favourites"),
 }

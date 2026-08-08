@@ -1,5 +1,40 @@
 # NyasaPlayer AAOS — Custom-Flow Plan
 
+> # ⛔ SUPERSEDED — 2026-08-02
+>
+> **Do not follow this document.** Its central decision has been reversed.
+> The current sources of truth are **`docs/AAOS_PRD.md`**,
+> **`docs/AAOS_SCREEN_CONTRACT.md`** and **`docs/AAOS_COMPLIANCE.md`**.
+>
+> §1 below commits to shipping AAOS as a Google-compliant media template app, with the
+> custom Compose screens archived. **That is no longer the plan.** The decision recorded
+> in `AAOS_PRD.md` §3.3 is the opposite: the **custom launcher is the product**, Play
+> Store distribution in the AAOS media category is **not a hard requirement** for this
+> release, and the compliant path is preserved as a `playstore` **build variant** rather
+> than by deleting screens.
+>
+> This resolves the open question §1.1 raised — *"Resolving it is a decision, not a
+> cleanup"*. The decision was taken on 2026-08-02: drop the media-template compliance
+> goal for now, keep the template path first-class for Assistant and voice search, and
+> build the 20-screen custom experience.
+>
+> **What in here is still accurate and worth reading:**
+> - **§1.1 "What actually shipped"** — the two-surface inventory is correct and was the
+>   evidence the new decision was made on.
+> - **§2 "Why this path"** — the Play policy constraints are real. They are why the
+>   `playstore` flavor exists at all. Only the conclusion drawn from them changed.
+> - The archived screen inventory, as a record of prior work.
+>
+> **What is now wrong:**
+> - §1's decision, and every instruction to archive or delete custom screens.
+> - The claim that only Auth, Settings and Sign-Out may be custom.
+> - §4.2's Settings cluster as the sole remaining custom UI — Settings is now one screen
+>   of twenty, delivered in phase A7.
+>
+> Kept rather than deleted because §1.1 and §2 are load-bearing history: they document
+> how the app reached a two-surface state, and the policy reasoning that a future Play
+> submission would have to satisfy.
+
 > Scope of what we build ourselves for AAOS, and what the OEM media template renders
 > against `:core:playback`'s `MediaLibraryService`.
 > Pair with `docs/AAOS_ARCHITECTURE.md`.
@@ -9,6 +44,9 @@
 > `ek/aaos-option-b` today is *both* surfaces: the template path works end to end,
 > **and** the pre-decision custom Compose screens are still shipping. The planned
 > Settings cluster (§4.2) does not exist. Read §1.1 before trusting anything below it.
+>
+> *(Superseded 2026-08-02 — see the banner above. This status note remains accurate as a
+> description of the state the new decision was made from.)*
 
 ---
 

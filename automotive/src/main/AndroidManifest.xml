@@ -34,16 +34,6 @@
         <meta-data
             android:name="com.android.automotive"
             android:resource="@xml/automotive_app_desc" />
-
-        <activity
-            android:name=".ui.AutomotiveActivity"
-            android:exported="true"
-            android:label="@string/auto_app_name"
-            android:theme="@style/Theme.NyasaPlayer">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- AutomotiveActivity is declared in src/oem only. See that manifest. -->
     </application>
 </manifest>

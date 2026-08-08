@@ -12,19 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class UxRestrictionState(
-    val noTextEntry: Boolean = false,
-    val limitedContentItems: Int = Int.MAX_VALUE,
-    val noVideo: Boolean = false,
-    val noFiltering: Boolean = false,
-) {
-    /**
-     * True when the car is in motion and distraction-optimised UX rules apply.
-     * Maps to the same flags the AAOS platform uses to gate text entry + filtering.
-     */
-    val isDistractionOptimized: Boolean get() = noFiltering || noTextEntry
-}
-
 /**
  * Wraps the Car API's distraction rules as a reactive StateFlow.
  *
@@ -45,19 +32,28 @@ class CarUxRestrictionsHandler @Inject constructor(
 
     @Suppress("TooGenericExceptionCaught")
     fun connect() {
-        if (car != null) return
+        if (restrictionsManager != null) return
+        assertUxFlagsMatchPlatform()
         try {
-            car = Car.createCar(context)?.also { carInstance ->
-                val manager = carInstance.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE)
-                    as? CarUxRestrictionsManager ?: return
-                restrictionsManager = manager
-                _restrictions.value = manager.currentCarUxRestrictions.toState()
-                val uxListener = CarUxRestrictionsManager.OnUxRestrictionsChangedListener { restrictions ->
-                    _restrictions.value = restrictions.toState()
+            val carInstance = car ?: Car.createCar(context) ?: return
+            car = carInstance
+            // Release the half-open connection rather than leaving `car` assigned: the next
+            // connect() would otherwise reuse this same instance forever and never recover
+            // if the connection itself is what went wrong.
+            val manager = carInstance.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE)
+                as? CarUxRestrictionsManager
+                ?: run {
+                    carInstance.disconnect()
+                    car = null
+                    return
                 }
-                listener = uxListener
-                manager.registerListener(uxListener)
+            restrictionsManager = manager
+            _restrictions.value = manager.currentCarUxRestrictions.toUxState()
+            val uxListener = CarUxRestrictionsManager.OnUxRestrictionsChangedListener { restrictions ->
+                _restrictions.value = restrictions.toUxState()
             }
+            listener = uxListener
+            manager.registerListener(uxListener)
         } catch (e: Exception) {
             Log.e("CarUxRestrictions", "Failed to connect to Car service", e)
             car?.disconnect()
@@ -75,12 +71,25 @@ class CarUxRestrictionsHandler @Inject constructor(
     }
 }
 
-private fun CarUxRestrictions.toState(): UxRestrictionState {
-    val flags = activeRestrictions
-    return UxRestrictionState(
-        noTextEntry = flags and CarUxRestrictions.UX_RESTRICTIONS_NO_TEXT_MESSAGE != 0,
-        limitedContentItems = maxCumulativeContentItems,
-        noVideo = flags and CarUxRestrictions.UX_RESTRICTIONS_NO_VIDEO != 0,
-        noFiltering = flags and CarUxRestrictions.UX_RESTRICTIONS_NO_FILTERING != 0,
-    )
+/**
+ * Thin platform adapter. Holds no logic — see [toUxState] for the tested mapping.
+ */
+private fun CarUxRestrictions.toUxState(): UxRestrictionState = toUxState(
+    activeRestrictions = activeRestrictions,
+    requiresDistractionOptimization = isRequiresDistractionOptimization,
+    maxContentDepth = maxContentDepth,
+    maxCumulativeContentItems = maxCumulativeContentItems,
+)
+
+/**
+ * Fails loudly on device if the mirrored literals in [UxFlags] ever drift from the
+ * platform. They cannot be referenced directly from unit tests, so this is where
+ * they are proven correct.
+ */
+private fun assertUxFlagsMatchPlatform() {
+    check(UxFlags.NO_FILTERING == CarUxRestrictions.UX_RESTRICTIONS_NO_FILTERING) { "NO_FILTERING drift" }
+    check(UxFlags.NO_KEYBOARD == CarUxRestrictions.UX_RESTRICTIONS_NO_KEYBOARD) { "NO_KEYBOARD drift" }
+    check(UxFlags.NO_VIDEO == CarUxRestrictions.UX_RESTRICTIONS_NO_VIDEO) { "NO_VIDEO drift" }
+    check(UxFlags.NO_SETUP == CarUxRestrictions.UX_RESTRICTIONS_NO_SETUP) { "NO_SETUP drift" }
+    check(UxFlags.NO_TEXT_MESSAGE == CarUxRestrictions.UX_RESTRICTIONS_NO_TEXT_MESSAGE) { "NO_TEXT_MESSAGE drift" }
 }

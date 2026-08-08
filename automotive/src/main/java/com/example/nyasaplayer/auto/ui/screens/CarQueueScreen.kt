@@ -34,25 +34,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.icons.MoreVertIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaError
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.common.util.formatDurationLong
 
@@ -156,7 +155,7 @@ private fun QueueHeader(
             )
             Text(
                 text = formatUpcomingLine(upcomingCount, upcomingDurationMs),
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 18.sp,
             )
         }
@@ -227,8 +226,8 @@ private fun DrivingHelperChip(modifier: Modifier = Modifier) {
         modifier = modifier
             .height(HelperChipHeight)
             .clip(chipShape)
-            .background(NyasaPrimary.copy(alpha = HelperChipFillOpacity))
-            .border(1.dp, NyasaPrimary.copy(alpha = HelperChipBorderOpacity), chipShape)
+            .background(NyasaGold.copy(alpha = HelperChipFillOpacity))
+            .border(1.dp, NyasaGold.copy(alpha = HelperChipBorderOpacity), chipShape)
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -236,12 +235,12 @@ private fun DrivingHelperChip(modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Filled.Info,
             contentDescription = null,
-            tint = NyasaPrimary,
+            tint = NyasaGold,
             modifier = Modifier.size(20.dp),
         )
         Text(
             text = "Park the car to reorder or clear your queue.",
-            color = NyasaPrimary,
+            color = NyasaGold,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
         )
@@ -261,9 +260,7 @@ private fun QueueRow(
 ) {
     var showRemoveConfirm by remember { mutableStateOf(false) }
     val rowShape = remember { RoundedCornerShape(QueueRowCornerRadius) }
-    val currentTrackBrush = remember {
-        Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark))
-    }
+    val currentTrackBrush = remember { SolidColor(NyasaGold) }
 
     Row(
         modifier = modifier
@@ -277,7 +274,7 @@ private fun QueueRow(
                     Modifier
                 },
             )
-            .background(NyasaSurface2)
+            .background(CarGlass)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -300,7 +297,7 @@ private fun QueueRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
-                color = if (isCurrentTrack) NyasaPrimary else Color.White,
+                color = if (isCurrentTrack) NyasaGold else Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -308,7 +305,7 @@ private fun QueueRow(
             )
             Text(
                 text = song.resolvedArtistName,
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -316,7 +313,7 @@ private fun QueueRow(
         }
         Text(
             text = formatDuration(song.durationMs),
-            color = NyasaTextSecondary,
+            color = CarTextSecondary,
             fontSize = 16.sp,
         )
         OverflowButton(
@@ -377,7 +374,7 @@ private fun RemoveConfirmDialog(
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(24.dp))
-                .background(NyasaSurface2)
+                .background(CarGlass)
                 .clickable(enabled = false, onClick = {})
                 .padding(48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -391,7 +388,7 @@ private fun RemoveConfirmDialog(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "\"$songTitle\" will no longer play.",
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 18.sp,
             )
             Spacer(modifier = Modifier.height(24.dp))

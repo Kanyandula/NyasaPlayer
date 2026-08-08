@@ -26,20 +26,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarGradientOrange
+import com.example.nyasaplayer.auto.ui.theme.CarScrim
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.core.common.ui.icons.RefreshIcon
 import com.example.nyasaplayer.core.common.ui.icons.WarningIcon
 import com.example.nyasaplayer.core.common.ui.icons.WifiOffIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaError
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
+import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import com.example.nyasaplayer.core.playback.PlayerError
 
 private val IconCircleSize = 128.dp
 private val IconSize = 64.dp
-private const val BackdropAlpha = 0.8f
 private const val ModalWidthFraction = 0.5f
 
 @Composable
@@ -52,7 +52,7 @@ fun CarErrorOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = BackdropAlpha))
+            .background(CarScrim)
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
@@ -71,7 +71,7 @@ private fun ErrorModalCard(
         modifier = modifier
             .fillMaxWidth(ModalWidthFraction)
             .clip(RoundedCornerShape(24.dp))
-            .background(NyasaSurface2)
+            .background(CarGlass)
             .clickable(enabled = false, onClick = {})
             .padding(48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -121,7 +121,7 @@ private fun ErrorText(
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = message,
-            color = NyasaTextSecondary,
+            color = CarTextSecondary,
             fontSize = 20.sp,
             textAlign = TextAlign.Center,
             lineHeight = 28.sp,
@@ -160,7 +160,7 @@ private fun ErrorActions(
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark)))
+                .background(NyasaGold)
                 .clickable(onClick = onRetry)
                 .padding(vertical = 20.dp),
             contentAlignment = Alignment.Center,
@@ -169,10 +169,10 @@ private fun ErrorActions(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(RefreshIcon, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                Icon(RefreshIcon, null, tint = NyasaOnGold, modifier = Modifier.size(24.dp))
                 Text(
                     text = "Retry",
-                    color = Color.White,
+                    color = NyasaOnGold,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Medium,
                 )

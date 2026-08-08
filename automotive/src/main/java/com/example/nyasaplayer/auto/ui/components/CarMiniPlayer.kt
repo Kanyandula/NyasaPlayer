@@ -24,23 +24,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.auto.ui.theme.CarMiniPlayerHeight
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
+import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipNextIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipPreviousIcon
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
+import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 
@@ -57,6 +57,7 @@ fun CarMiniPlayer(
     modifier: Modifier = Modifier,
     isLiked: Boolean = false,
     onLikeClick: () -> Unit = {},
+    onQueueClick: () -> Unit = {},
 ) {
     val song = playback.currentSong ?: return
 
@@ -64,7 +65,7 @@ fun CarMiniPlayer(
         modifier = modifier
             .fillMaxWidth()
             .height(CarMiniPlayerHeight)
-            .background(NyasaSurface2)
+            .background(CarGlass)
             .clickable(onClick = onExpand)
             .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -90,6 +91,16 @@ fun CarMiniPlayer(
                 .weight(1f)
                 .padding(start = 24.dp),
         )
+        // The queue was reachable only from the full player; the design ends the
+        // mini-player with it.
+        IconButton(onClick = onQueueClick, modifier = Modifier.carTouchTarget()) {
+            Icon(
+                imageVector = QueueMusicIcon,
+                contentDescription = "Queue",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp),
+            )
+        }
     }
 }
 
@@ -125,7 +136,7 @@ private fun NowPlayingInfo(
             Text(
                 text = artist,
                 modifier = Modifier.basicMarquee(),
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 16.sp,
                 maxLines = 1,
             )
@@ -161,12 +172,12 @@ private fun MiniPlayerControls(
             modifier = Modifier
                 .size(PlayButtonSize)
                 .clip(CircleShape)
-                .background(Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark))),
+                .background(NyasaGold),
         ) {
             Icon(
                 imageVector = if (isPlaying) PauseIcon else Icons.Default.PlayArrow,
                 contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = Color.White,
+                tint = NyasaOnGold,
                 modifier = Modifier.size(32.dp),
             )
         }
@@ -196,7 +207,7 @@ private fun ProgressSection(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.End,
     ) {
-        Text(formatDuration(currentPositionMs), color = NyasaTextSecondary, fontSize = 14.sp)
+        Text(formatDuration(currentPositionMs), color = CarTextSecondary, fontSize = 14.sp)
 
         val progress = if (durationMs > 0) {
             (currentPositionMs.toFloat() / durationMs).coerceIn(0f, 1f)
@@ -210,11 +221,11 @@ private fun ProgressSection(
                 .padding(horizontal = 12.dp)
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp)),
-            color = NyasaPrimary,
+            color = NyasaGold,
             trackColor = Color.White.copy(alpha = 0.2f),
         )
 
-        Text(formatDuration(durationMs), color = NyasaTextSecondary, fontSize = 14.sp)
+        Text(formatDuration(durationMs), color = CarTextSecondary, fontSize = 14.sp)
 
         IconButton(
             onClick = onLikeClick,
@@ -227,7 +238,7 @@ private fun ProgressSection(
             Icon(
                 imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 contentDescription = if (isLiked) "Unlike" else "Like",
-                tint = if (isLiked) NyasaPrimary else NyasaTextSecondary,
+                tint = if (isLiked) NyasaGold else CarTextSecondary,
                 modifier = Modifier.size(24.dp),
             )
         }

@@ -24,28 +24,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
+import com.example.nyasaplayer.auto.ui.theme.CarChrome
+import com.example.nyasaplayer.auto.ui.theme.CarOutline
+import com.example.nyasaplayer.auto.ui.theme.CarSystemBarHeight
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.ui.icons.HomeIcon
 import com.example.nyasaplayer.core.common.ui.icons.LibraryIcon
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
+import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val TopBarHeight = 76.dp
 private val TabCornerRadius = 24.dp
 private val LogoSize = 40.dp
 
@@ -58,8 +58,8 @@ fun CarTopBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(TopBarHeight)
-            .background(NyasaSurface2)
+            .height(CarSystemBarHeight)
+            .background(CarChrome)
             .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -81,13 +81,13 @@ private fun AppLogo(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(LogoSize)
                 .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(NyasaPrimary, NyasaPrimaryDark))),
+                .background(NyasaGold),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = MusicNoteIcon,
                 contentDescription = null,
-                tint = Color.White,
+                tint = NyasaOnGold,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -138,7 +138,7 @@ private fun ClockDisplay(modifier: Modifier = Modifier) {
     val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
     Text(
         text = timeFormat.format(Date(currentTime)),
-        color = NyasaTextSecondary,
+        color = CarTextSecondary,
         fontSize = 16.sp,
         modifier = modifier,
     )
@@ -157,9 +157,9 @@ private fun CarTab(
             .clip(shape)
             .then(
                 if (isSelected) {
-                    Modifier.background(Brush.horizontalGradient(listOf(NyasaPrimary, NyasaPrimaryDark)), shape)
+                    Modifier.background(NyasaGold, shape)
                 } else {
-                    Modifier.border(1.dp, Color.White.copy(alpha = 0.1f), shape)
+                    Modifier.border(1.dp, CarOutline, shape)
                 },
             )
             .height(CarTouchTargetSize)
@@ -174,12 +174,12 @@ private fun CarTab(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected) Color.White else NyasaTextSecondary,
+                tint = if (isSelected) NyasaOnGold else CarTextSecondary,
                 modifier = Modifier.size(18.dp),
             )
             Text(
                 text = label,
-                color = if (isSelected) Color.White else NyasaTextSecondary,
+                color = if (isSelected) NyasaOnGold else CarTextSecondary,
                 fontSize = 14.sp,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
             )

@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarGradientBlue
 import com.example.nyasaplayer.auto.ui.theme.CarGradientIndigo
 import com.example.nyasaplayer.auto.ui.theme.CarGradientPink
@@ -40,16 +41,16 @@ import com.example.nyasaplayer.auto.ui.theme.CarGradientRed
 import com.example.nyasaplayer.auto.ui.theme.CarGradientRedDark
 import com.example.nyasaplayer.auto.ui.theme.CarGradientRose
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
+import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
 import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
-import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
-import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
-import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
+import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
+import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import com.example.nyasaplayer.core.common.util.greetingResource
 
 @Composable
@@ -91,7 +92,7 @@ private fun HomeHeader(modifier: Modifier = Modifier) {
         )
         Text(
             text = "Ready for your drive?",
-            color = NyasaTextSecondary,
+            color = CarTextSecondary,
             fontSize = 18.sp,
         )
     }
@@ -152,7 +153,8 @@ private fun QuickActionsColumn(
                 QuickActionCard(
                     icon = MusicNoteIcon,
                     label = "My Music",
-                    gradientColors = listOf(NyasaPrimary, NyasaPrimaryDark),
+                    gradientColors = listOf(NyasaGold, NyasaGoldDim),
+                    contentColor = NyasaOnGold,
                     onClick = { onQuickActionClick("my_music") },
                     modifier = Modifier.weight(1f),
                 )
@@ -226,6 +228,8 @@ private fun QuickActionCard(
     gradientColors: List<Color>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    // Gold is a light fill — white on it measures 2.29:1. Gold cards pass NyasaOnGold.
+    contentColor: Color = Color.White,
 ) {
     Box(
         modifier = modifier
@@ -239,8 +243,8 @@ private fun QuickActionCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(icon, label, tint = Color.White, modifier = Modifier.size(48.dp))
-            Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+            Icon(icon, label, tint = contentColor, modifier = Modifier.size(48.dp))
+            Text(label, color = contentColor, fontSize = 18.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -257,7 +261,7 @@ private fun RecentlyPlayedItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(NyasaSurface2)
+            .background(CarGlass)
             .clickable(onClick = onClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -288,7 +292,7 @@ private fun RecentlyPlayedItem(
             )
             Text(
                 text = song.resolvedArtistName,
-                color = NyasaTextSecondary,
+                color = CarTextSecondary,
                 fontSize = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

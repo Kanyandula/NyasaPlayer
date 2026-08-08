@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nyasa Music — AAOS interactive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* hue custom properties are registered so they can be transitioned on track change */
+@property --h1 { syntax: '<number>'; inherits: true; initial-value: 265; }
+@property --h2 { syntax: '<number>'; inherits: true; initial-value: 325; }
+/* ambient saturation, raised on sparse hero screens and pulled back behind dense lists */
+@property --sat { syntax: '<number>'; inherits: true; initial-value: 60; }
+
+:root{
+  --bg:#0A0A0C; --chrome:#111118; --glass:#181824; --raised:#1E1E2A;
+  --gold:#C9A84C; --txt:#fff; --txt2:#ACACBC; --txt3:#555568;
+  --line:rgba(255,255,255,.08); --line-soft:rgba(255,255,255,.06);
+  --track:#2A2A38; --error:#FFB4AB;
+  --font:"Hanken Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+.ic{width:24px;height:24px;flex:none}
+/* 76x76 minimum touch target. The glyph keeps its visual size; the padding carries the target. */
+.hit{display:inline-grid;place-items:center;min-width:76px;min-height:76px;cursor:pointer}
+body{background:#050506;font-family:var(--font);color:var(--txt);padding:28px 24px 80px}
+
+/* ---------- page furniture (outside the simulated display) ---------- */
+.wrap{max-width:1280px;margin:0 auto}
+.bar{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px}
+.bar h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-right:auto}
+.seg{display:flex;background:#14141c;border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px}
+.seg button{appearance:none;border:0;background:transparent;color:var(--txt2);font-family:inherit;
+            font-size:14px;font-weight:600;padding:8px 20px;border-radius:999px;cursor:pointer;letter-spacing:.02em}
+.seg button.on{background:var(--gold);color:#0A0A0C}
+.hint{color:var(--txt3);font-size:13px;line-height:1.6;margin-top:14px}
+.hint b{color:var(--txt2);font-weight:600}
+
+.frame{position:relative;width:100%;aspect-ratio:16/9;border:1px solid var(--line);
+       border-radius:12px;overflow:hidden;background:#000}
+.stage{position:absolute;top:0;left:0;width:1920px;height:1080px;transform-origin:top left;
+       background:var(--bg);overflow:hidden;transition:--h1 1.4s ease,--h2 1.4s ease,--sat .7s ease}
+
+/* ---------- ambient: the only decorative motion, parked-only ---------- */
+.aurora{position:absolute;inset:0;pointer-events:none;z-index:0}
+/* --amb damps the ambient per screen: full on sparse views, near-off behind dense lists */
+.aurora i{position:absolute;border-radius:50%;filter:blur(130px);display:block;
+          opacity:var(--amb,1);transition:opacity .7s ease}
+.aurora i:nth-child(1){width:1000px;height:700px;left:-200px;bottom:-220px;
+  background:hsl(var(--h2) calc(var(--sat) * 1%) 30% / .50);animation:drift1 26s ease-in-out infinite alternate}
+.aurora i:nth-child(2){width:880px;height:620px;right:-160px;top:-180px;
+  background:hsl(var(--h1) calc(var(--sat) * 1.06%) 32% / .42);animation:drift2 34s ease-in-out infinite alternate}
+.aurora i:nth-child(3){width:640px;height:520px;left:44%;top:30%;
+  background:hsl(var(--h1) calc(var(--sat) * .84%) 26% / .26);animation:drift3 44s ease-in-out infinite alternate}
+@keyframes drift1{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(160px,-90px,0) scale(1.18)}}
+@keyframes drift2{from{transform:translate3d(0,0,0) scale(1.1)}to{transform:translate3d(-140px,110px,0) scale(.92)}}
+@keyframes drift3{from{transform:translate3d(0,0,0)}to{transform:translate3d(-180px,-120px,0)}}
+/* driving: motion stops dead. AAOS restricts decorative movement in motion. */
+.stage.driving .aurora i{animation-play-state:paused}
+
+/* ---------- chrome ---------- */
+/* 80px, not 48: the bar holds app-tappable controls, so it must fit a 76px target */
+.sysbar{position:absolute;top:0;left:0;right:0;height:80px;background:var(--chrome);display:flex;
+        align-items:center;justify-content:space-between;padding:0 24px;z-index:5}
+.wordmark{color:var(--gold);font-size:20px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.sysbar-right{display:flex;align-items:center;gap:4px}
+.sysbar-right .ic{opacity:.8}
+.tap{cursor:pointer}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--raised);border:1px solid var(--line);
+        display:grid;place-items:center;font-size:14px;font-weight:600;color:var(--txt2)}
+.clock{font-size:16px;font-weight:500;opacity:.8;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.rail{position:absolute;left:0;top:80px;bottom:88px;width:80px;background:var(--chrome);
+      display:flex;flex-direction:column;align-items:center;padding-top:16px;z-index:4}
+.rail-pill{position:absolute;left:2px;width:76px;height:88px;border-radius:999px;
+           background:rgba(201,168,76,.12);box-shadow:0 0 32px rgba(201,168,76,.22);
+           transition:top .3s cubic-bezier(.4,0,.2,1),opacity .2s}
+.rail-item{position:relative;width:76px;height:88px;display:flex;flex-direction:column;align-items:center;
+           justify-content:center;gap:8px;color:var(--txt2);cursor:pointer;transition:color .22s}
+.rail-item .ic{width:28px;height:28px}
+.rail-item span{font-size:13px;font-weight:500}
+.rail-item.on{color:var(--gold)}
+
+.mini{position:absolute;left:0;right:0;bottom:0;height:88px;background:var(--glass);
+      border-top:1px solid var(--line);display:flex;align-items:center;gap:20px;padding:0 28px;z-index:5}
+/* artwork + title act as one target, so the whole "now playing" block opens the player */
+.mini-open{display:flex;align-items:center;gap:20px;min-height:76px;flex:none;cursor:pointer}
+.mini-art{width:64px;height:64px;border-radius:8px;flex:none}
+.mini-meta{width:230px;flex:none;min-width:0}
+.mini-meta b{display:block;font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-meta span{display:block;font-size:15px;color:var(--txt2)}
+/* the seek strip stays 4px visually but is 76px tall to hit */
+.mini-bar{flex:1;height:76px;display:flex;align-items:center;cursor:pointer}
+.mini-bar u{display:block;width:100%;height:4px;border-radius:2px;background:var(--track);text-decoration:none}
+.mini-bar u i{display:block;height:100%;background:var(--gold);border-radius:2px}
+.mini-ctl{display:flex;align-items:center;gap:2px;flex:none}
+.mini-ctl .ic{width:28px;height:28px;cursor:pointer}
+.playbtn{width:76px;height:76px;border-radius:50%;background:var(--gold);display:grid;place-items:center;
+         flex:none;cursor:pointer;box-shadow:0 0 24px rgba(201,168,76,.3)}
+.playbtn .ic{width:30px;height:30px;color:#0A0A0C}
+.liked{color:var(--gold)}
+
+/* ---------- content + overlays ---------- */
+.content{position:absolute;left:80px;right:0;top:80px;bottom:88px;padding:32px 48px;overflow:hidden;
+         z-index:1;transition:opacity .16s ease}
+.content.nonav{left:0}
+.overlay{position:absolute;inset:0;z-index:8;display:none}
+.overlay.on{display:block}
+
+/* ---------- type + components (same tokens as the static sheet) ---------- */
+.title{font-size:40px;font-weight:700;letter-spacing:-.02em}
+.sect{font-size:22px;font-weight:700;letter-spacing:-.01em;margin-bottom:16px}
+.sub{font-size:22px;color:var(--txt2)}
+.meta{font-size:15px;color:var(--txt2)}
+.row{display:flex;align-items:center;gap:16px}
+.card{background:var(--glass);border:1px solid var(--line-soft);border-radius:20px}
+.chip{height:76px;padding:0 28px;border-radius:999px;display:inline-flex;align-items:center;font-size:19px;
+      font-weight:500;background:var(--raised);border:1px solid rgba(255,255,255,.12);color:var(--txt);cursor:pointer}
+.chip.on{background:var(--gold);color:#0A0A0C;font-weight:700;border-color:transparent}
+.pillbtn{height:76px;padding:0 36px;border-radius:999px;display:inline-flex;align-items:center;gap:12px;
+         font-size:20px;font-weight:600;cursor:pointer}
+.btn-gold{background:var(--gold);color:#0A0A0C;box-shadow:0 0 32px rgba(201,168,76,.22)}
+.btn-ghost{border:1px solid rgba(255,255,255,.12);color:var(--txt)}
+.art{border-radius:8px;flex:none}
+.hdr-art{border-radius:16px;flex:none;box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.num{width:34px;text-align:right;font-size:18px;color:var(--txt2);flex:none;font-variant-numeric:tabular-nums}
+.trow{display:flex;align-items:center;gap:16px;height:80px;position:relative;
+      border-top:1px solid var(--line);cursor:pointer}
+.trow:hover{background:rgba(255,255,255,.03)}
+.trow .bar3{position:absolute;left:-20px;top:14px;bottom:14px;width:3px;background:var(--gold);border-radius:2px}
+.back{display:inline-flex;align-items:center;gap:12px;color:var(--txt);font-size:20px;font-weight:600;
+      cursor:pointer;min-height:76px;padding-right:24px}
+.scrub{height:6px;border-radius:3px;background:var(--track);position:relative;cursor:pointer}
+.scrub i{position:absolute;left:0;top:0;height:100%;border-radius:3px;background:var(--gold)}
+.scrub b{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;background:var(--gold);
+         transform:translate(-50%,-50%);box-shadow:0 0 18px rgba(201,168,76,.6)}
+.setrow{display:flex;align-items:center;gap:20px;height:96px;padding:0 24px;border-bottom:1px solid var(--line)}
+.setrow:last-child{border-bottom:0}
+.setrow[data-toggle]{cursor:pointer}
+.setrow[data-toggle]:hover{background:rgba(255,255,255,.03)}
+.toggle{width:64px;height:36px;border-radius:999px;background:var(--track);position:relative;flex:none;
+        transition:background .2s ease}
+.toggle i{position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:50%;background:#6d6d80;
+          transition:left .2s cubic-bezier(.4,0,.2,1),background .2s ease}
+.toggle.on{background:var(--gold)}
+.toggle.on i{left:32px;background:#0A0A0C}
+.scrim{position:absolute;inset:0;background:rgba(4,4,6,.74);backdrop-filter:blur(4px)}
+.dialog{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--glass);
+        border:1px solid var(--line);border-radius:24px;box-shadow:0 40px 120px rgba(0,0,0,.7)}
+
+.g-violet{background:linear-gradient(135deg,#3b1e6e,#7c3aed 55%,#a855f7)}
+.g-teal{background:linear-gradient(135deg,#07343a,#0d9488 60%,#2dd4bf)}
+.g-blue{background:linear-gradient(135deg,#0b1f3f,#1d4ed8 60%,#60a5fa)}
+.g-amber{background:linear-gradient(135deg,#4a2408,#b45309 55%,#f59e0b)}
+.g-pink{background:linear-gradient(135deg,#7a1140,#db2777 55%,#fb7185)}
+.g-slate{background:linear-gradient(135deg,#111c2e,#334155 60%,#64748b)}
+.g-cyan{background:linear-gradient(135deg,#04303a,#0891b2 55%,#22d3ee)}
+.g-mauve{background:linear-gradient(135deg,#3d1b33,#9d5c7c 55%,#e0a3b8)}
+.g-bronze{background:linear-gradient(135deg,#2e1a06,#92601f 55%,#d9a441)}
+.g-green{background:linear-gradient(135deg,#062e21,#059669 60%,#34d399)}
+
+@media (prefers-reduced-motion: reduce){
+  .aurora i{animation:none !important}
+  .rail-pill,.content,.stage{transition:none !important}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-search"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></g>
+<g id="i-settings"><circle cx="12" cy="12" r="3.1"/><circle cx="12" cy="12" r="7.3"/><path d="M12 4.7V2.5M12 21.5v-2.2M19.3 12h2.2M2.5 12h2.2M17.16 6.84l1.56-1.56M5.28 18.72l1.56-1.56M17.16 17.16l1.56 1.56M5.28 5.28l1.56 1.56"/></g>
+<g id="i-wifi"><path d="M2.5 8.5a15 15 0 0 1 19 0M5.5 12a10.5 10.5 0 0 1 13 0M8.5 15.5a6 6 0 0 1 7 0"/><circle cx="12" cy="19" r="1.1" fill="currentColor" stroke="none"/></g>
+<g id="i-bt"><path d="M7.5 7.5 16 16l-4 4V4l4 4-8.5 8.5"/></g>
+<g id="i-battery"><rect x="2.5" y="7.5" width="17" height="9" rx="2.2"/><path d="M21.5 10.5v3"/><rect x="4.5" y="9.5" width="10" height="5" rx="1" fill="currentColor" stroke="none"/></g>
+<g id="i-home"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></g>
+<g id="i-grid"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></g>
+<g id="i-library"><path d="M4 4.5h7v15H5.5a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M13 4.5h6a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6z"/><path d="M16.5 9v6"/></g>
+<g id="i-heart"><path d="M12 20s-7.5-4.7-7.5-9.4A4.1 4.1 0 0 1 12 7.6a4.1 4.1 0 0 1 7.5 3C19.5 15.3 12 20 12 20z"/></g>
+<g id="i-heart-fill"><path d="M12 20s-7.5-4.7-7.5-9.4A4.1 4.1 0 0 1 12 7.6a4.1 4.1 0 0 1 7.5 3C19.5 15.3 12 20 12 20z" fill="currentColor"/></g>
+<g id="i-prev"><path d="M18 5.5v13L8.5 12z" fill="currentColor" stroke="none"/><path d="M6 5.5v13" stroke-width="2.4"/></g>
+<g id="i-next"><path d="M6 5.5v13L15.5 12z" fill="currentColor" stroke="none"/><path d="M18 5.5v13" stroke-width="2.4"/></g>
+<g id="i-play"><path d="M7 4.5v15L20 12z" fill="currentColor" stroke="none"/></g>
+<g id="i-pause"><rect x="6.5" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/><rect x="13.5" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/></g>
+<g id="i-queue"><path d="M3.5 6.5h12M3.5 11.5h12M3.5 16.5h7"/><path d="M18.5 9v9.2"/><circle cx="16.6" cy="18.4" r="2" fill="currentColor" stroke="none"/></g>
+<g id="i-mic"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5"/></g>
+<g id="i-car"><path d="M3.5 15.5v-3l2-4.5h13l2 4.5v3"/><path d="M3.5 15.5h17"/><circle cx="7.5" cy="17" r="1.6"/><circle cx="16.5" cy="17" r="1.6"/></g>
+<g id="i-clock"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.3l3.2 2"/></g>
+<g id="i-chev"><path d="M9 5.5 15.5 12 9 18.5"/></g>
+<g id="i-back"><path d="M15 5.5 8.5 12 15 18.5"/></g>
+<g id="i-x"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></g>
+<g id="i-dots"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></g>
+<g id="i-note"><path d="M9 18V5.5l10-2V16"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="16.5" cy="16" r="2.6"/></g>
+<g id="i-wave"><path d="M2 12h3l2.5-7 3 14 3-11 2.5 6 2-2h4"/></g>
+<g id="i-bolt"><path d="M13.5 2.5 5 13.5h6l-1.5 8 8.5-11h-6z"/></g>
+<g id="i-eq"><path d="M4 15V9M8.5 19V5M13 16.5v-9M17.5 13v-2M21 17V7"/></g>
+<g id="i-vinyl"><circle cx="12" cy="12" r="8.8"/><circle cx="12" cy="12" r="2.4"/></g>
+<g id="i-sax"><path d="M9 3.5v7.5a5.5 5.5 0 0 0 5.5 5.5h1a3 3 0 0 1 0 6h-4"/><path d="M6.5 3.5h5"/></g>
+<g id="i-download"><path d="M12 3.5v11M7.5 10.5 12 15l4.5-4.5"/><path d="M4 17.5v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></g>
+<g id="i-shuffle"><path d="M16 4.5h4.5V9M20.5 4.5 13 12M16 19.5h4.5V15M20.5 19.5 14.5 13.5M3.5 4.5 9 10M3.5 19.5 9.5 13.5"/></g>
+<g id="i-repeat"><path d="M6.5 3.5 3.5 6.5l3 3"/><path d="M3.5 6.5h13a4 4 0 0 1 4 4v1"/><path d="M17.5 20.5l3-3-3-3"/><path d="M20.5 17.5h-13a4 4 0 0 1-4-4v-1"/></g>
+<g id="i-drag"><path d="M4 8.5h16M4 15.5h16"/></g>
+<g id="i-chev-down"><path d="M5.5 9 12 15.5 18.5 9"/></g>
+<g id="i-volume"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8.5 8.5 0 0 1 0 11"/></g>
+<g id="i-plus"><path d="M12 4.5v15M4.5 12h15"/></g>
+<g id="i-trash"><path d="M4.5 6.5h15M9.5 6.5V4.2h5v2.3"/><path d="M6.5 6.5 7.5 20a1 1 0 0 0 1 .9h7a1 1 0 0 0 1-.9l1-13.5"/></g>
+</defs></svg>
+
+<div class="wrap">
+  <div class="bar">
+    <h1>Nyasa Music — AAOS</h1>
+    <div class="seg" id="uxmode">
+      <button data-mode="parked" class="on">Parked</button>
+      <button data-mode="driving">Driving</button>
+    </div>
+  </div>
+  <div class="frame"><div class="stage" id="stage"></div></div>
+  <div class="hint">
+    <b>Try:</b> the rail switches tabs · cards and track rows play · Library drills into a playlist or album, Back returns ·
+    the mini-player artwork opens the full player, the queue icon opens the queue · hearts toggle ·
+    the progress bar and scrubber seek · the system bar search, settings and avatar open their screens.<br>
+    <b>Driving</b> enforces the <code>CarUxRestrictions</code> defaults: ambient motion freezes, Settings and profile
+    switching are refused, drill-down into a playlist or album is refused, the search keyboard is replaced by a voice
+    prompt, and lists truncate to 21 items. Switching to Driving while already inside a restricted screen ejects you
+    from it. Tabs, transport, seeking and the queue stay available.
+  </div>
+</div>
+
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const ICON = (id, cls, sz) =>
+  `<svg class="ic ${cls||''}" ${sz?`style="width:${sz}px;height:${sz}px"`:''} viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#${id}"/></svg>`;
+
+/* ------------------------------------------------------------------ data */
+const TRACKS = [
+  {t:'After Midnight',  a:'Nova Grey',      al:'Glass Roads',  d:222, g:'g-violet', h:265},
+  {t:'City Lights',     a:'Electric North', al:'Northbound',   d:271, g:'g-teal',   h:172},
+  {t:'Blue Horizon',    a:'Ava Lane',       al:'Midnight Haze',d:252, g:'g-amber',  h:35 },
+  {t:'Midnight Sun',    a:'Ava Lane',       al:'Midnight Haze',d:255, g:'g-green',  h:150},
+  {t:'Midnight City',   a:'Electric North', al:'Northbound',   d:301, g:'g-blue',   h:220},
+  {t:'Harbour Lights',  a:'Ava Lane',       al:'Midnight Haze',d:213, g:'g-mauve',  h:320},
+  {t:'Slow Radio',      a:'Electric North', al:'Northbound',   d:320, g:'g-cyan',   h:190},
+  {t:'Paper Lanterns',  a:'Mira Vale',      al:'Paper Weight', d:231, g:'g-pink',   h:340},
+  {t:'Low Tide',        a:'Nova Grey',      al:'Glass Roads',  d:199, g:'g-bronze', h:40 },
+  {t:'Neon Quiet',      a:'Nova Grey',      al:'Glass Roads',  d:287, g:'g-slate',  h:215},
+];
+const PLAYLISTS = [
+  {n:'Night Drive', c:'24 songs', g:'g-violet', ix:[0,1,4,2,5,6,7]},
+  {n:'Liked Songs', c:'128 songs',g:'g-pink',   ix:[0,8,3,7,6,5]},
+  {n:'Deep Focus',  c:'52 songs', g:'g-blue',   ix:[6,9,4,1]},
+  {n:'Sunday Slow', c:'18 songs', g:'g-amber',  ix:[2,5,8]},
+  {n:'Roadtrip',    c:'76 songs', g:'g-teal',   ix:[1,4,0,3]},
+  {n:'Late Shift',  c:'31 songs', g:'g-mauve',  ix:[9,6,5,7]},
+];
+const ALBUM = {n:'Glass Roads', a:'Nova Grey', y:2024, g:'g-blue', ix:[0,8,9]};
+const RAIL = [['i-home','Home','home'],['i-grid','Browse','browse'],
+              ['i-library','Library','library'],['i-heart','Favourites','fav']];
+const GENRES = [['Pop','g-pink','i-note'],['Hip-Hop','g-bronze','i-wave'],['Rock','g-slate','i-bolt'],
+                ['Electronic','g-cyan','i-eq'],['R&B','g-mauve','i-vinyl'],['Jazz','g-amber','i-sax']];
+
+/* ------------------------------------------------------------------ state */
+const S = {
+  tab:'home', drill:null, overlay:null, sheet:null,
+  playing:true, ix:0, pos:138,
+  liked:new Set([0,8,3]), parked:true,
+  chip:{browse:0, library:0},
+  settings:{wifiOnly:true, hq:false, explicit:true, crossfade:false, lyrics:true},
+  blockedReason:'',
+};
+
+/* Mirrors CarUxRestrictions defaults. These bite only while driving. */
+const UXR = {
+  maxContentDepth: 1,            // getMaxContentDepth()
+  maxCumulativeContentItems: 21, // getMaxCumulativeContentItems()
+  noSetup: true,                 // UX_RESTRICTIONS_NO_SETUP
+  noKeyboard: true,              // UX_RESTRICTIONS_NO_KEYBOARD
+};
+/* truncate any content list to the cumulative-item cap while driving */
+const cap = a => S.parked ? a : a.slice(0, UXR.maxCumulativeContentItems);
+const SETTINGS = [
+  ['wifiOnly',  'Download over Wi-Fi only', 'Avoids using mobile data'],
+  ['hq',        'High quality streaming',   'Uses more data while driving'],
+  ['explicit',  'Allow explicit content',   'Applies to this profile only'],
+  ['crossfade', 'Crossfade tracks',         'Blends the last 6 seconds'],
+  ['lyrics',    'Show lyrics',              'Parked mode only'],
+];
+/* ambient per view: [opacity, saturation]. Sparse screens carry it, dense lists damp it out. */
+const AMBIENT = {
+  home:[1,84], fav:[.55,64], browse:[.4,56], library:[.35,52],
+  playlist:[.3,52], album:[.3,52], search:[.3,50], settings:[.2,46],
+};
+const cur = () => TRACKS[S.ix];
+const mmss = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+const viewKey = () => S.sheet || (S.drill ? S.drill.type + ':' + S.drill.id : S.tab);
+
+/* ------------------------------------------------------------------ chrome */
+const stage = $('#stage');
+stage.innerHTML = `
+  <div class="aurora"><i></i><i></i><i></i></div>
+  <div class="content" id="content"></div>
+  <div class="rail" id="rail">
+    <div class="rail-pill" id="pill"></div>
+    ${RAIL.map(([ic,l,k]) => `<div class="rail-item" data-tab="${k}">${ICON(ic)}<span>${l}</span></div>`).join('')}
+  </div>
+  <div class="sysbar">
+    <div class="wordmark">Nyasa Music</div>
+    <div class="sysbar-right">
+      <span class="hit" data-sheet="search">${ICON('i-search')}</span>
+      <span class="hit" data-sheet="settings">${ICON('i-settings')}</span>
+      <span class="hit" data-sheet="profile"><span class="avatar">A</span></span>
+      <div class="clock" id="clock" style="margin:0 12px">--:--</div>
+      ${ICON('i-wifi')}${ICON('i-bt')}${ICON('i-battery')}
+    </div>
+  </div>
+  <div class="mini">
+    <div class="mini-open" data-open="player">
+      <div class="mini-art art" id="mArt"></div>
+      <div class="mini-meta" id="mMeta"><b></b><span></span></div>
+    </div>
+    <div class="mini-bar" id="mBar"><u><i id="mFill"></i></u></div>
+    <div class="mini-ctl">
+      <span id="mHeart" class="hit">${ICON('i-heart')}</span>
+      <span class="hit" data-act="prev">${ICON('i-prev')}</span>
+      <div class="playbtn" data-act="toggle"><span id="mPlay">${ICON('i-pause')}</span></div>
+      <span class="hit" data-act="next">${ICON('i-next')}</span>
+      <span class="hit" data-open="queue">${ICON('i-queue')}</span>
+    </div>
+  </div>
+  <div class="overlay" id="overlay"></div>`;
+
+const content = $('#content'), overlay = $('#overlay'), pill = $('#pill');
+
+/* ------------------------------------------------------------------ views */
+const trow = (i, {n, showArt=true, album=false}={}) => {
+  const t = TRACKS[i], on = i === S.ix;
+  return `<div class="trow" data-play="${i}">
+    ${on?'<div class="bar3"></div>':''}
+    ${n!=null?`<div class="num">${n}</div>`:''}
+    ${showArt?`<div class="art ${t.g}" style="width:52px;height:52px"></div>`:''}
+    <div style="flex:1;min-width:0">
+      <div style="font-size:18px;font-weight:600;${on?'color:var(--gold)':''}">${t.t}</div>
+      <div class="meta">${album?t.al:t.a}</div>
+    </div>
+    <span class="hit ${S.liked.has(i)?'liked':''}" data-like="${i}" style="${S.liked.has(i)?'':'color:var(--txt2)'}">
+      ${ICON(S.liked.has(i)?'i-heart-fill':'i-heart','',26)}</span>
+    <div class="meta" style="font-size:16px">${mmss(t.d)}</div>
+    <span style="color:var(--txt2)">${ICON('i-dots','',22)}</span>
+  </div>`;
+};
+
+const VIEWS = {
+  home: () => `
+    <div class="title">Good evening, Alex</div>
+    <div class="sub" style="margin-top:8px">Saturday · Clear skies · 21°C</div>
+    <div class="sect" style="margin-top:34px">Continue Listening</div>
+    <div style="display:flex;gap:24px">
+      ${[0,1,2].map(i => `
+        <div class="art ${TRACKS[i].g} tap" data-play="${i}"
+             style="width:380px;height:224px;border-radius:20px;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.72))"></div>
+          <div style="position:absolute;left:22px;bottom:20px">
+            <div style="font-size:24px;font-weight:700">${TRACKS[i].t}</div>
+            <div style="font-size:18px;color:#cfcfda">${TRACKS[i].a}</div>
+          </div>
+          ${i===S.ix?`<div style="position:absolute;right:20px;bottom:18px;width:56px;height:56px;border-radius:50%;
+            background:var(--gold);display:grid;place-items:center;box-shadow:0 0 28px rgba(201,168,76,.4)">
+            ${ICON(S.playing?'i-pause':'i-play','',24).replace('class="ic "','class="ic" style="color:#0A0A0C"')}</div>`:''}
+        </div>`).join('')}
+    </div>
+    <div class="sect" style="margin-top:36px">Your Mixes</div>
+    <div style="display:flex;gap:24px">
+      ${cap([3,4,5,6,7]).map(i => `<div class="art ${TRACKS[i].g} tap" data-play="${i}"
+          style="width:280px;height:280px;border-radius:20px"></div>`).join('')}
+    </div>`,
+
+  browse: () => `
+    <div class="title">Browse</div>
+    <div style="display:flex;gap:16px;margin:24px 0 28px">
+      ${['All','Genres','Moods','Podcasts','New Releases'].map((c,i) =>
+        `<div class="chip ${S.chip.browse===i?'on':''}" data-chip="browse:${i}">${c}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px">
+      ${GENRES.map(([n,g,ic],i) => `
+        <div class="art ${g} tap" data-play="${i}" style="height:296px;border-radius:20px;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.5))"></div>
+          <div style="position:absolute;left:24px;bottom:20px;font-size:36px;font-weight:800;font-style:italic">${n}</div>
+          <div style="position:absolute;right:22px;bottom:22px;opacity:.45">${ICON(ic,'',44)}</div>
+        </div>`).join('')}
+    </div>`,
+
+  library: () => `
+    <div class="title">Your Library</div>
+    <div style="display:flex;gap:16px;margin:22px 0 26px">
+      ${['Playlists','Albums','Artists','Downloads'].map((c,i) =>
+        `<div class="chip ${S.chip.library===i?'on':''}" data-chip="library:${i}">${c}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px">
+      ${PLAYLISTS.map((p,i) => `
+        <div class="card row tap" data-drill="playlist:${i}" style="padding:16px;gap:20px">
+          <div class="art ${p.g}" style="width:96px;height:96px;border-radius:12px"></div>
+          <div><div style="font-size:24px;font-weight:700">${p.n}</div><div class="meta" style="font-size:17px">${p.c}</div></div>
+        </div>`).join('')}
+      <div class="card row tap" data-drill="album:0" style="padding:16px;gap:20px">
+        <div class="art ${ALBUM.g}" style="width:96px;height:96px;border-radius:12px"></div>
+        <div><div style="font-size:24px;font-weight:700">${ALBUM.n}</div>
+             <div class="meta" style="font-size:17px">${ALBUM.a} · ${ALBUM.y}</div></div>
+      </div>
+    </div>`,
+
+  fav: () => {
+    const ids = cap([...S.liked]);
+    if (!ids.length) return `
+      <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="width:180px;height:180px;border-radius:50%;display:grid;place-items:center;
+             background:radial-gradient(circle at 50% 40%,#1b1b28,#101018 70%);border:1px solid var(--line)">
+          <span style="color:var(--gold)">${ICON('i-heart','',76)}</span></div>
+        <div class="title" style="margin-top:34px">No favourites yet</div>
+        <div class="sub" style="margin-top:12px">Tap the heart on any song and it will be saved here for the drive.</div>
+        <div class="pillbtn btn-gold tap" data-tab="browse" style="margin-top:32px">Browse music</div>
+      </div>`;
+    return `
+      <div style="display:flex;gap:44px;height:100%">
+        <div style="width:400px;flex:none">
+          <div class="art g-pink hdr-art" style="width:400px;height:400px"></div>
+          <div style="font-size:36px;font-weight:700;margin-top:24px">Liked Songs</div>
+          <div class="meta" style="font-size:18px;margin-top:4px">${ids.length} songs</div>
+          <div style="display:flex;gap:14px;margin-top:22px">
+            <div class="pillbtn btn-gold tap" data-play="${ids[0]}">${ICON('i-play')}Play</div>
+            <div class="pillbtn btn-ghost tap" data-play="${ids[ids.length-1]}">${ICON('i-shuffle')}Shuffle</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="sect">Recently liked</div>
+          ${ids.map(i => trow(i)).join('')}
+        </div>
+      </div>`;
+  },
+
+  search: () => `
+    <div class="back" data-close="sheet">${ICON('i-back','',26)}<span>Back</span></div>
+    ${S.parked ? `
+    <div style="height:72px;border-radius:16px;background:var(--raised);border:2px solid var(--gold);
+                box-shadow:0 0 28px rgba(201,168,76,.18);display:flex;align-items:center;gap:18px;padding:0 22px;margin-top:16px">
+      <span style="color:var(--txt2)">${ICON('i-search','',26)}</span>
+      <div style="flex:1;font-size:22px;color:var(--txt3)">Search songs, artists, albums, or playlists</div>
+      <span style="color:var(--gold)">${ICON('i-mic','',26)}</span>
+    </div>` : `
+    <div style="height:72px;border-radius:16px;background:rgba(201,168,76,.08);
+                border:1px solid rgba(201,168,76,.35);display:flex;align-items:center;gap:16px;
+                padding:0 22px;margin-top:16px;color:var(--gold)">
+      ${ICON('i-car','',24)}
+      <div style="font-size:20px;font-weight:600">Typing is unavailable while driving — use voice search</div>
+    </div>`}
+    <div style="display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:56px;margin-top:38px">
+      <div>
+        <div class="sect">Recent</div>
+        ${[0,1,6,7].map((i,k) => `
+          <div class="row tap" data-play="${i}" style="height:80px;${k?'border-top:1px solid var(--line);':''}">
+            <span style="color:var(--txt2)">${ICON('i-clock')}</span><span style="font-size:22px">${TRACKS[i].t}</span>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div style="width:260px;height:260px;border-radius:50%;border:2px solid var(--gold);
+             background:radial-gradient(circle at 50% 45%,#123049,#0b1a2b 70%);display:grid;place-items:center;
+             box-shadow:0 0 60px rgba(201,168,76,.22)">${ICON('i-mic','',86)}</div>
+        <div style="font-size:26px;font-weight:700;margin-top:26px">Tap to search by voice</div>
+        <div style="font-size:18px;color:var(--txt2);font-style:italic;margin-top:8px">Voice search is recommended while driving</div>
+      </div>
+      <div>
+        <div class="sect">Browse by</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          ${['Songs','Albums','Artists','Playlists','Podcasts'].map(c =>
+            `<div class="chip" style="justify-content:center">${c}</div>`).join('')}
+        </div>
+      </div>
+    </div>`,
+
+  settings: () => {
+    /* the whole 96px row is the target, not just the 64px switch */
+    const r = ([k,l,h]) => `<div class="setrow" data-toggle="${k}"><div style="flex:1">
+      <div style="font-size:20px;font-weight:600">${l}</div><div class="meta">${h}</div></div>
+      <div class="toggle ${S.settings[k]?'on':''}"><i></i></div></div>`;
+    return `
+      <div class="back" data-close="sheet">${ICON('i-back','',26)}<span>Back</span></div>
+      <div class="title" style="margin-top:14px">Settings</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:24px">
+        <div class="card">${SETTINGS.slice(0,3).map(r).join('')}</div>
+        <div class="card">
+          ${SETTINGS.slice(3).map(r).join('')}
+          <div class="setrow"><div style="flex:1">
+            <div style="font-size:20px;font-weight:600">Sign out</div>
+            <div class="meta">Signed in as alex@example.com</div></div>
+            <span style="color:var(--txt2)">${ICON('i-chev')}</span></div>
+        </div>
+      </div>`;
+  },
+};
+
+const drillView = () => {
+  const {type, id} = S.drill;
+  if (type === 'playlist') {
+    const p = PLAYLISTS[id];
+    return `<div style="display:flex;gap:44px;height:100%">
+      <div style="width:380px;flex:none">
+        <div class="back" data-close="drill" style="margin-bottom:18px">${ICON('i-back','',26)}<span>Library</span></div>
+        <div class="art ${p.g} hdr-art" style="width:380px;height:380px"></div>
+        <div style="font-size:36px;font-weight:700;margin-top:22px">${p.n}</div>
+        <div class="meta" style="font-size:18px;margin-top:4px">${p.c}</div>
+        <div style="display:flex;gap:14px;margin-top:20px">
+          <div class="pillbtn btn-gold tap" data-play="${p.ix[0]}">${ICON('i-play')}Play</div>
+          <div class="pillbtn btn-ghost tap" data-play="${p.ix[p.ix.length-1]}">${ICON('i-shuffle')}Shuffle</div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:0;padding-top:58px">
+        ${p.ix.map((i,k) => trow(i,{n:k+1})).join('')}
+      </div></div>`;
+  }
+  return `<div style="display:flex;gap:44px;height:100%">
+    <div style="width:380px;flex:none">
+      <div class="back" data-close="drill" style="margin-bottom:18px">${ICON('i-back','',26)}<span>Library</span></div>
+      <div class="art ${ALBUM.g} hdr-art" style="width:380px;height:380px"></div>
+      <div style="font-size:36px;font-weight:700;margin-top:22px">${ALBUM.n}</div>
+      <div class="meta" style="font-size:18px;margin-top:4px">${ALBUM.a} · ${ALBUM.y} · ${ALBUM.ix.length} songs</div>
+      <div style="display:flex;gap:14px;margin-top:20px">
+        <div class="pillbtn btn-gold tap" data-play="${ALBUM.ix[0]}">${ICON('i-play')}Play</div>
+        <div class="pillbtn btn-ghost">${ICON('i-download')}Download</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;padding-top:58px">
+      ${ALBUM.ix.map((i,k) => trow(i,{n:k+1,showArt:false,album:true})).join('')}
+    </div></div>`;
+};
+
+/* ------------------------------------------------------------------ overlays */
+const OVERLAYS = {
+  player: () => {
+    const t = cur();
+    return `<div style="position:absolute;inset:0;background:
+        radial-gradient(120% 95% at 12% 25%, hsl(var(--h1) 58% 20%), transparent 62%),
+        radial-gradient(110% 85% at 88% 85%, hsl(var(--h2) 52% 16%), transparent 60%),
+        #07070a"></div>
+      <div style="position:absolute;inset:0;display:flex;gap:64px;align-items:center;padding:40px 80px">
+        <div class="hit" data-close="overlay" style="position:absolute;left:40px;top:40px;color:var(--txt2)">
+          ${ICON('i-chev-down','',34)}</div>
+        <div class="art ${t.g} hdr-art" style="width:460px;height:460px;border-radius:24px"></div>
+        <div style="flex:1;min-width:0">
+          <div class="meta" style="font-size:17px;letter-spacing:.08em;text-transform:uppercase">Playing from ${t.al}</div>
+          <div style="font-size:64px;font-weight:800;letter-spacing:-.03em;line-height:1.05;margin-top:12px">${t.t}</div>
+          <div style="font-size:28px;color:var(--txt2);margin-top:10px">${t.a}</div>
+          <div id="pScrub" style="height:76px;display:flex;align-items:center;margin-top:24px;cursor:pointer">
+            <div class="scrub" style="flex:1"><i id="pFill"></i><b id="pDot"></b></div></div>
+          <div class="row" style="justify-content:space-between;margin-top:-6px">
+            <span class="meta" style="font-size:17px" id="pNow">0:00</span>
+            <span class="meta" style="font-size:17px">${mmss(t.d)}</span>
+          </div>
+          <div class="row" style="gap:16px;margin-top:20px">
+            <span class="hit" style="color:var(--txt2)">${ICON('i-shuffle','',30)}</span>
+            <span class="hit" data-act="prev">${ICON('i-prev','',38)}</span>
+            <div class="playbtn" data-act="toggle" style="width:96px;height:96px;box-shadow:0 0 48px rgba(201,168,76,.42)">
+              <span id="pPlay">${ICON(S.playing?'i-pause':'i-play','',40)}</span></div>
+            <span class="hit" data-act="next">${ICON('i-next','',38)}</span>
+            <span class="hit" style="color:var(--gold)">${ICON('i-repeat','',30)}</span>
+          </div>
+          <div class="row" style="gap:16px;margin-top:16px;color:var(--txt2)">
+            <span class="hit ${S.liked.has(S.ix)?'liked':''}" data-like="${S.ix}">
+              ${ICON(S.liked.has(S.ix)?'i-heart-fill':'i-heart','',28)}</span>
+            <span class="hit" data-open="queue">${ICON('i-queue','',28)}</span>
+            <span class="hit">${ICON('i-volume','',28)}</span><span class="hit">${ICON('i-download','',28)}</span>
+          </div>
+        </div>
+      </div>`;
+  },
+
+  queue: () => {
+    const next = cap(TRACKS.map((_,i)=>i).filter(i => i !== S.ix).slice(0,8));
+    return `<div style="position:absolute;left:0;right:0;top:80px;bottom:88px;background:
+        radial-gradient(90% 70% at 80% 15%, hsl(var(--h1) 45% 14%), transparent 65%), #08080b"></div>
+      <div style="position:absolute;left:0;right:0;top:80px;bottom:88px;padding:40px 48px;overflow:hidden">
+        <div class="row" style="justify-content:space-between">
+          <div class="title">Queue</div>
+          <div class="pillbtn btn-ghost tap" data-close="overlay">${ICON('i-x')}Close</div>
+        </div>
+        <div class="sect" style="margin-top:26px">Now playing</div>
+        ${trow(S.ix)}
+        <div class="sect" style="margin-top:26px">Next up</div>
+        ${next.map(i => `<div class="trow" data-play="${i}">
+          <span style="color:var(--txt3)">${ICON('i-drag','',24)}</span>
+          <div class="art ${TRACKS[i].g}" style="width:52px;height:52px"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:18px;font-weight:600">${TRACKS[i].t}</div>
+            <div class="meta">${TRACKS[i].a}</div></div>
+          <div class="meta" style="font-size:16px">${mmss(TRACKS[i].d)}</div>
+          <span style="color:var(--txt2)">${ICON('i-dots','',22)}</span></div>`).join('')}
+      </div>`;
+  },
+
+  blocked: () => `
+    <div class="scrim" data-close="overlay"></div>
+    <div class="dialog" style="width:780px;padding:44px 48px;text-align:center">
+      <div style="width:96px;height:96px;border-radius:50%;margin:0 auto;display:grid;place-items:center;
+           background:rgba(201,168,76,.10);border:1px solid rgba(201,168,76,.35);color:var(--gold)">
+        ${ICON('i-car','',46)}</div>
+      <div class="title" style="margin-top:26px">Not available while driving</div>
+      <div class="sub" style="margin-top:14px;line-height:1.4">${S.blockedReason}</div>
+      <div class="pillbtn btn-gold tap" data-close="overlay"
+           style="margin-top:32px;justify-content:center;min-width:240px">Got it</div>
+    </div>`,
+
+  profile: () => `
+    <div class="scrim" data-close="overlay"></div>
+    <div class="dialog" style="width:940px;padding:44px 48px">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <div style="display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 20px;border-radius:999px;
+             border:1px solid rgba(201,168,76,.5);color:var(--gold);font-size:17px;font-weight:600">
+          ${ICON('i-car','',20)}Parked mode only</div>
+        <div class="title" style="margin-top:20px">Switch profile</div>
+        <div class="sub" style="margin-top:10px">Each profile keeps its own library and queue.</div>
+      </div>
+      <div style="display:flex;gap:28px;justify-content:center;margin-top:34px">
+        ${[['A','Alex','Signed in','g-violet',1],['S','Sam','Tap to switch','g-teal',0],
+           ['G','Guest','No history kept','g-slate',0]].map(([c,n,h,g,on]) => `
+          <div style="width:200px;text-align:center">
+            <div class="art ${g}" style="width:140px;height:140px;border-radius:50%;margin:0 auto;display:grid;
+                 place-items:center;font-size:48px;font-weight:700;
+                 ${on?'box-shadow:0 0 0 4px var(--gold),0 0 40px rgba(201,168,76,.35)':''}">${c}</div>
+            <div style="font-size:22px;font-weight:700;margin-top:16px;${on?'color:var(--gold)':''}">${n}</div>
+            <div class="meta">${h}</div></div>`).join('')}
+        <div style="width:200px;text-align:center">
+          <div style="width:140px;height:140px;border-radius:50%;margin:0 auto;display:grid;place-items:center;
+               border:2px dashed var(--txt3);color:var(--txt2)">${ICON('i-plus','',44)}</div>
+          <div style="font-size:22px;font-weight:700;margin-top:16px;color:var(--txt2)">Add profile</div>
+          <div class="meta">Requires a PIN</div></div>
+      </div>
+    </div>`,
+};
+
+/* ------------------------------------------------------------------ render */
+let lastKey = null;
+
+function renderContent(force) {
+  const key = viewKey();
+  if (!force && key === lastKey) return;
+  lastKey = key;
+  const html = S.drill ? drillView() : VIEWS[S.sheet || S.tab]();
+  content.style.opacity = 0;
+  setTimeout(() => { content.innerHTML = html; content.style.opacity = 1; }, 120);
+}
+
+function renderOverlay() {
+  overlay.classList.toggle('on', !!S.overlay);
+  overlay.innerHTML = S.overlay ? OVERLAYS[S.overlay]() : '';
+}
+
+/* cheap per-tick updates: never re-render the whole chrome */
+function sync() {
+  const t = cur(), pct = Math.min(100, S.pos / t.d * 100);
+  $('#mArt').className = 'mini-art art ' + t.g;
+  $('#mMeta').innerHTML = `<b>${t.t}</b><span>${t.a}</span>`;
+  $('#mFill').style.width = pct + '%';
+  $('#mPlay').innerHTML = ICON(S.playing ? 'i-pause' : 'i-play');
+  const lk = S.liked.has(S.ix);
+  $('#mHeart').className = 'hit' + (lk ? ' liked' : '');   // keep .hit — it carries the touch target
+  $('#mHeart').innerHTML = ICON(lk ? 'i-heart-fill' : 'i-heart');
+  $('#mHeart').dataset.like = S.ix;
+
+  stage.style.setProperty('--h1', t.h);
+  stage.style.setProperty('--h2', (t.h + 60) % 360);
+  const [amb, sat] = AMBIENT[S.sheet || (S.drill ? S.drill.type : S.tab)] ?? [.5, 52];
+  stage.style.setProperty('--amb', amb);
+  stage.style.setProperty('--sat', sat);
+  stage.classList.toggle('driving', !S.parked);
+
+  const idx = RAIL.findIndex(r => r[2] === S.tab);
+  pill.style.top = (16 + idx * 88) + 'px';
+  pill.style.opacity = (S.drill || S.sheet) ? .35 : 1;
+  document.querySelectorAll('.rail-item').forEach(el =>
+    el.classList.toggle('on', el.dataset.tab === S.tab && !S.sheet));
+
+  const f = $('#pFill');
+  if (f) {
+    f.style.width = pct + '%';
+    $('#pDot').style.left = pct + '%';
+    $('#pNow').textContent = mmss(S.pos);
+    $('#pPlay').innerHTML = ICON(S.playing ? 'i-pause' : 'i-play', '', 40);
+  }
+  const d = new Date();
+  $('#clock').textContent =
+    `${((d.getHours() + 11) % 12) + 1}:${String(d.getMinutes()).padStart(2,'0')} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
+}
+
+/* ------------------------------------------------------------------ actions */
+function play(i) {
+  if (i === S.ix) { S.playing = !S.playing; }
+  else { S.ix = i; S.pos = 0; S.playing = true; }
+  renderContent(true); renderOverlay(); sync();
+}
+function step(d) { S.ix = (S.ix + d + TRACKS.length) % TRACKS.length; S.pos = 0; S.playing = true;
+                   renderContent(true); renderOverlay(); sync(); }
+
+function block(reason) { S.blockedReason = reason; S.overlay = 'blocked'; renderOverlay(); sync(); }
+
+const BLOCK_MSG = {
+  settings: 'Settings can only be changed while the vehicle is parked.',
+  profile:  'Profiles can only be switched while the vehicle is parked.',
+  drill:    'Browsing this far into your library is limited while the vehicle is moving. '
+          + 'Use voice search or the player controls instead.',
+};
+
+stage.addEventListener('click', e => {
+  const el = t => e.target.closest(t);
+  let n;
+
+  if ((n = el('[data-tab]')))    { S.tab = n.dataset.tab; S.drill = null; S.sheet = null; S.overlay = null;
+                                   renderContent(); renderOverlay(); sync(); return; }
+  if ((n = el('[data-sheet]')))  { const s = n.dataset.sheet;
+                                   // UX_RESTRICTIONS_NO_SETUP: no configuration while in motion
+                                   if (!S.parked && UXR.noSetup && (s === 'settings' || s === 'profile'))
+                                     return block(BLOCK_MSG[s]);
+                                   S.sheet = s;
+                                   if (S.sheet === 'profile') { S.sheet = null; S.overlay = 'profile'; renderOverlay(); }
+                                   else { S.drill = null; renderContent(); }
+                                   sync(); return; }
+  if ((n = el('[data-drill]')))  { // getMaxContentDepth(): a drill-down puts us 2 levels from root
+                                   if (!S.parked && UXR.maxContentDepth < 2) return block(BLOCK_MSG.drill);
+                                   const [ty,id] = n.dataset.drill.split(':');
+                                   S.drill = {type:ty, id:+id}; S.sheet = null; renderContent(); sync(); return; }
+  if ((n = el('[data-close]')))  { const w = n.dataset.close;
+                                   if (w === 'overlay') S.overlay = null;
+                                   if (w === 'drill')   S.drill = null;
+                                   if (w === 'sheet')   S.sheet = null;
+                                   renderContent(); renderOverlay(); sync(); return; }
+  if ((n = el('[data-open]')))   { S.overlay = n.dataset.open; renderOverlay(); sync(); return; }
+  if ((n = el('[data-like]')))   { const i = +n.dataset.like;
+                                   S.liked.has(i) ? S.liked.delete(i) : S.liked.add(i);
+                                   renderContent(true); renderOverlay(); sync(); return; }
+  if ((n = el('[data-act]')))    { const a = n.dataset.act;
+                                   if (a === 'toggle') S.playing = !S.playing;
+                                   if (a === 'prev') return step(-1);
+                                   if (a === 'next') return step(1);
+                                   renderContent(true); renderOverlay(); sync(); return; }
+  /* flip in place rather than re-rendering, so the knob keeps its slide */
+  if ((n = el('[data-toggle]'))) { const k = n.dataset.toggle;
+                                   S.settings[k] = !S.settings[k];
+                                   n.querySelector('.toggle').classList.toggle('on', S.settings[k]);
+                                   return; }
+  if ((n = el('[data-chip]')))   { const [g,i] = n.dataset.chip.split(':');
+                                   S.chip[g] = +i; renderContent(true); sync(); return; }
+  if ((n = el('[data-play]')))   { return play(+n.dataset.play); }
+
+  if ((n = el('#mBar')) || (n = el('#pScrub'))) {
+    const r = n.getBoundingClientRect();
+    S.pos = Math.max(0, Math.min(cur().d, (e.clientX - r.left) / r.width * cur().d));
+    sync();
+  }
+});
+
+$('#uxmode').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.parked = b.dataset.mode === 'parked';
+  document.querySelectorAll('#uxmode button').forEach(x => x.classList.toggle('on', x === b));
+
+  // starting to drive must evict any screen that is now restricted, not just gate new entries
+  let evicted = null;
+  if (!S.parked) {
+    if (S.sheet === 'settings')  { S.sheet = null;   evicted = BLOCK_MSG.settings; }
+    if (S.overlay === 'profile') { S.overlay = null; evicted = BLOCK_MSG.profile; }
+    if (S.drill)                 { S.drill = null;   evicted = BLOCK_MSG.drill; }
+  }
+  renderContent(true);
+  if (evicted) block(evicted); else { renderOverlay(); sync(); }
+});
+
+/* ------------------------------------------------------------------ loop */
+setInterval(() => {
+  if (S.playing) {
+    S.pos += 0.25;
+    if (S.pos >= cur().d) { S.ix = (S.ix + 1) % TRACKS.length; S.pos = 0; renderContent(true); renderOverlay(); }
+  }
+  sync();
+}, 250);
+
+/* deep links so a given state can be reopened: ?tab=library&open=player&mode=driving&drill=playlist:0 */
+(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('tab') && VIEWS[q.get('tab')]) S.tab = q.get('tab');
+  if (q.get('drill')) { const [ty,id] = q.get('drill').split(':'); S.drill = {type:ty, id:+id}; }
+  if (q.get('sheet') && VIEWS[q.get('sheet')]) S.sheet = q.get('sheet');
+  if (q.get('open') && OVERLAYS[q.get('open')]) S.overlay = q.get('open');
+  if (q.get('mode') === 'driving') {
+    S.parked = false;
+    document.querySelectorAll('#uxmode button')
+      .forEach(b => b.classList.toggle('on', b.dataset.mode === 'driving'));
+  }
+})();
+
+const fit = () => { const f = document.querySelector('.frame');
+                    stage.style.transform = `scale(${f.clientWidth / 1920})`; };
+renderContent(true); renderOverlay(); sync(); fit();
+addEventListener('resize', fit);
+</script>
+</body>
+</html>
