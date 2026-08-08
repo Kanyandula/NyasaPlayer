@@ -42,6 +42,21 @@ android {
             )
         }
     }
+
+    // Play's AAOS media category rejects apps shipping custom activities for playback or
+    // browse. Review inspects the shipped manifest, so a runtime flag cannot substitute for
+    // splitting the launcher activity out by flavor. See docs/AAOS_PRD.md 3.3.
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("oem") {
+            dimension = "distribution"
+            isDefault = true
+        }
+        create("playstore") {
+            dimension = "distribution"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11

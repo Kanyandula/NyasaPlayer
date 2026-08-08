@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Deliberately declares no launcher activity.
+
+        This flavor is the Play-compliant variant: the OEM media template is the entire
+        UI, driven by PlaybackService and MediaBrowseTree from src/main.
+    -->
+    <application />
+
+</manifest>
