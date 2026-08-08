@@ -18,11 +18,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
+import com.example.nyasaplayer.auto.ui.components.CarAmbientBackground
 import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
 import com.example.nyasaplayer.auto.ui.components.CarNavRail
 import com.example.nyasaplayer.auto.ui.components.CarRestrictionDialog
 import com.example.nyasaplayer.auto.ui.components.CarSystemBar
+import com.example.nyasaplayer.auto.ui.motion.decorativeMotionEnabled
+import com.example.nyasaplayer.auto.ui.motion.rememberAnimatorDurationScale
 import com.example.nyasaplayer.auto.ui.navigation.CarOverlay
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
 import com.example.nyasaplayer.auto.ui.navigation.CarUiLocation
@@ -128,9 +131,17 @@ private fun AuthenticatedApp(
         }
     }
 
+    val animatorScale by rememberAnimatorDurationScale()
+    val motionEnabled = decorativeMotionEnabled(
+        isDistractionOptimized = playerState.restrictions.isDistractionOptimized,
+        animatorScale = animatorScale,
+    )
+
     // No background here: the root paints it, and an opaque surface at this level would
     // hide the ambient layer. This Box exists only to stack the overlays.
     Box(modifier = modifier.fillMaxSize()) {
+        CarAmbientBackground(animate = motionEnabled)
+
         if (showFullPlayer) {
             CarFullPlayerScreen(
                 playback = playerState.playback,
@@ -158,6 +169,7 @@ private fun AuthenticatedApp(
                 },
                 onExpandPlayer = { showFullPlayer = true },
                 onQueueClick = { showQueue = true },
+                decorativeMotionEnabled = motionEnabled,
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
                 onSkipPrevious = playerViewModel::skipPrevious,
@@ -288,6 +300,7 @@ private fun BrowseShell(
     onSelectTab: (CarScreen) -> Unit,
     onExpandPlayer: () -> Unit,
     onQueueClick: () -> Unit,
+    decorativeMotionEnabled: Boolean,
     onTogglePlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
@@ -321,7 +334,11 @@ private fun BrowseShell(
         OfflineBanner(isOffline = playerState.isOffline)
 
         Row(modifier = Modifier.weight(1f)) {
-            CarNavRail(currentScreen = currentScreen, onSelectTab = onSelectTab)
+            CarNavRail(
+                currentScreen = currentScreen,
+                onSelectTab = onSelectTab,
+                animateSelection = decorativeMotionEnabled,
+            )
 
             Box(
                 modifier = Modifier
