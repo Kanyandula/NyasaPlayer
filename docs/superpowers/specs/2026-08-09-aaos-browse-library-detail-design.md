@@ -202,15 +202,32 @@ instead makes `openDetail` wait for the emission rather than race it, and costs 
 snapshot listener. It also needs no new method on a `:core:data` interface shared with `:app`.
 
 ```kotlin
-val userId = authRepository.currentUser?.uid ?: return   // same guard as observeLikedSongs()
+val userId = authRepository.currentUserId ?: return      // same guard as observeLikedSongs()
 val playlist = playlistRepository.getPlaylists(userId).first()
     .firstOrNull { it.id == destination.playlistId }
 ```
 
-A null result here is a **genuinely missing playlist** — a stale id restored after the playlist
-was deleted elsewhere — not a timing gap, because the emission has already arrived. It sets
-`errorMessage` with `isLoading = false`. `first()` terminates in every case, including the
-signed-in-user-with-zero-playlists one, so no path leaves a permanent spinner.
+`currentUserId` is a `String?` added to `AuthRepository` alongside the existing
+`currentUser: FirebaseUser?`. It exists because `FirebaseUser` is an abstract SDK class with no
+constructible form, and no mocking library is on the catalog — so without it no unit test can
+produce a signed-in user, and §7.1 could not be written at all.
+
+A null playlist here sets `errorMessage` with `isLoading = false`.
+
+**What this costs offline, stated plainly.** An earlier draft of this section claimed `first()`
+"terminates in every case, so no path leaves a permanent spinner". That is true about hanging and
+wrong about what the user sees. Firestore's `addSnapshotListener` serves an initial event from
+cache almost always — including an **empty** snapshot when nothing is cached. So the realistic bad
+path is not a spinner, it is a *wrong error*: cold start, offline, empty cache → `first()` returns
+`[]` → the playlist is reported missing → **"This playlist is no longer available"** for a playlist
+that exists. Because `LaunchedEffect(drillDown)` never re-runs, that message sticks until the user
+backs out and re-enters.
+
+A3 ships this knowingly rather than adding a bounded wait. Distinguishing "not synced yet" from
+"genuinely deleted" needs either a timeout constant this module has nowhere else, or a
+`first { it.any { p -> p.id == playlistId } }` that reintroduces the hang for a genuinely deleted
+id. Offline behaviour is revisited in A6 and A8; §7.1 case 8 pins the current behaviour so the
+change is a deliberate one when it comes.
 
 ### 3.3 Ordering
 
@@ -481,7 +498,7 @@ A2's D1–D7.
 | D14 | **Sign-out stays on `CarLibraryScreen`** with its confirmation overlay, marked for deletion in A7. | It belongs on screen 14. Removing it in A3 leaves no way to sign out of the vehicle at all, since the system bar's avatar is disabled until A7. Keeping ~50 lines for two slices beats shipping an app a user cannot sign out of. |
 | D15 | `CarPlaylistScreen` wires **read-only** playlist access. The four `PlaylistRepository` write methods stay unused. | Creating and editing playlists is not in any PRD phase, and playlist mutation is a parked-only, keyboard-bound interaction the restriction layer would refuse anyway. |
 | D16 | `CarDestination.Artist` carries **`artistName` alongside `artistId`**, and the artist screen never resolves against `favoriteArtists` nor clears itself when the artist is absent. | `rememberSaveable` restores `drillDown` synchronously after process death, while `likedSongs` — and therefore `favoriteArtists`, which is derived from it — is still empty pending Firestore's first emission. Any "resolve the artist or clear the destination" rule fires during that gap and drops the user back to Library on every restore. Today's code sidesteps this by saving the whole `FavoriteArtist`; carrying one display string preserves that property without storing a domain object. The track list is a live filter over `likedSongs` and is correctly empty until it loads. |
-| D17 | `openDetail` resolves a playlist with `playlistRepository.getPlaylists(userId).first()`, **not** by looking it up in `contentState.playlists`, and no `getPlaylistById` is added to `PlaylistRepository`. | `LaunchedEffect(drillDown)` fires once and never re-runs when data arrives, so anything `openDetail` reads must be available on the first call — including the call after process death. `Album` already satisfies that through the one-shot `getAlbumById`; `PlaylistRepository` has no equivalent, and reading `contentState.playlists` would resolve against an empty list during exactly the gap D16 describes — leaving the screen permanently empty rather than briefly so, because nothing re-triggers the load. Taking `first()` from the flow suspends until the emission instead of racing it, and terminates in every case. Adding a read method to a `:core:data` interface shared with `:app`, to solve a problem the existing method already solves, is the larger change rather than the smaller one. |
+| D17 | `openDetail` resolves a playlist with `playlistRepository.getPlaylists(userId).first()`, **not** by looking it up in `contentState.playlists`, and no `getPlaylistById` is added to `PlaylistRepository`. | `LaunchedEffect(drillDown)` fires once and never re-runs when data arrives, so anything `openDetail` reads must be available on the first call — including the call after process death. `Album` already satisfies that through the one-shot `getAlbumById`; `PlaylistRepository` has no equivalent, and reading `contentState.playlists` would resolve against an empty list during exactly the gap D16 describes — leaving the screen permanently empty rather than briefly so, because nothing re-triggers the load. Taking `first()` from the flow suspends until the emission instead of racing it. Its cost is a wrong error offline rather than a hang — see §3.2, which states that plainly; A3 accepts it and A6/A8 revisit offline behaviour. Adding a read method to a `:core:data` interface shared with `:app`, to solve a problem the existing method already solves, is the larger change rather than the smaller one. |
 
 ## 9. Risks
 
