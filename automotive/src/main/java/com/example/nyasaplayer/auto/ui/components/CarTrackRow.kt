@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,6 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,12 +46,14 @@ private val RowSpacing = 16.dp
 private val TitleSize = 18.sp
 private val ArtistSize = 15.sp
 private val DurationSize = 16.sp
+private val HeartGlyphSize = 32.dp
 
 /**
  * One track in a list.
  *
  * The currently playing row carries a gold bar on its left edge and a gold title.
  */
+@Suppress("LongMethod")
 @Composable
 fun CarTrackRow(
     title: String,
@@ -53,12 +63,32 @@ fun CarTrackRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     coverUrl: String = "",
+    onLikeToggle: (() -> Unit)? = null,
+    isLiked: Boolean = true,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(CarListRowHeight)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .then(
+                if (onLikeToggle == null) {
+                    Modifier
+                } else {
+                    Modifier.semantics {
+                        stateDescription = if (isLiked) "Liked" else "Not liked"
+                        customActions = listOf(
+                            CustomAccessibilityAction(
+                                label = if (isLiked) "Unlike" else "Like",
+                                action = {
+                                    onLikeToggle()
+                                    true
+                                },
+                            ),
+                        )
+                    }
+                },
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(RowSpacing),
     ) {
@@ -100,5 +130,20 @@ fun CarTrackRow(
             color = CarTextSecondary,
             fontSize = DurationSize,
         )
+        if (onLikeToggle != null) {
+            Box(
+                modifier = Modifier
+                    .carTouchTarget()
+                    .clickable(onClick = onLikeToggle),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = if (isLiked) "Unlike" else "Like",
+                    tint = if (isLiked) NyasaGold else CarTextSecondary,
+                    modifier = Modifier.size(HeartGlyphSize),
+                )
+            }
+        }
     }
 }
