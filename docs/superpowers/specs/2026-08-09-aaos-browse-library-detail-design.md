@@ -202,15 +202,32 @@ instead makes `openDetail` wait for the emission rather than race it, and costs 
 snapshot listener. It also needs no new method on a `:core:data` interface shared with `:app`.
 
 ```kotlin
-val userId = authRepository.currentUser?.uid ?: return   // same guard as observeLikedSongs()
+val userId = authRepository.currentUserId ?: return      // same guard as observeLikedSongs()
 val playlist = playlistRepository.getPlaylists(userId).first()
     .firstOrNull { it.id == destination.playlistId }
 ```
 
-A null result here is a **genuinely missing playlist** — a stale id restored after the playlist
-was deleted elsewhere — not a timing gap, because the emission has already arrived. It sets
-`errorMessage` with `isLoading = false`. `first()` terminates in every case, including the
-signed-in-user-with-zero-playlists one, so no path leaves a permanent spinner.
+`currentUserId` is a `String?` added to `AuthRepository` alongside the existing
+`currentUser: FirebaseUser?`. It exists because `FirebaseUser` is an abstract SDK class with no
+constructible form, and no mocking library is on the catalog — so without it no unit test can
+produce a signed-in user, and §7.1 could not be written at all.
+
+A null playlist here sets `errorMessage` with `isLoading = false`.
+
+**What this costs offline, stated plainly.** An earlier draft of this section claimed `first()`
+"terminates in every case, so no path leaves a permanent spinner". That is true about hanging and
+wrong about what the user sees. Firestore's `addSnapshotListener` serves an initial event from
+cache almost always — including an **empty** snapshot when nothing is cached. So the realistic bad
+path is not a spinner, it is a *wrong error*: cold start, offline, empty cache → `first()` returns
+`[]` → the playlist is reported missing → **"This playlist is no longer available"** for a playlist
+that exists. Because `LaunchedEffect(drillDown)` never re-runs, that message sticks until the user
+backs out and re-enters.
+
+A3 ships this knowingly rather than adding a bounded wait. Distinguishing "not synced yet" from
+"genuinely deleted" needs either a timeout constant this module has nowhere else, or a
+`first { it.any { p -> p.id == playlistId } }` that reintroduces the hang for a genuinely deleted
+id. Offline behaviour is revisited in A6 and A8; §7.1 case 8 pins the current behaviour so the
+change is a deliberate one when it comes.
 
 ### 3.3 Ordering
 
@@ -476,12 +493,12 @@ A2's D1–D7.
 | D9 | **No genre detail screen.** Tapping a Browse card shuffle-plays the genre. | There is no `CarGenreScreen` among the 20. Playing on tap is the current behaviour and matches "Play/open category" in the contract's CTA column. Inventing a screen mid-slice would put an unspecced destination at depth 1 next to two specced ones. |
 | D10 | Browse's search field is **deleted in A3**, not carried until A6. | It is off-contract — screen 4 lists no search, screens 5 and 6 own it. Rebuilding Browse around a field that A6 relocates means laying out the screen twice. Search is unreachable between A3 and A6; the system-bar search control already renders disabled from A2's D3, so the app is honest about it in the meantime rather than half-offering the feature. |
 | D11 | **No Browse filter chips**, despite the contract listing them. Recorded as a data blocker in `aaos-DESIGN.md`. | `Genre` is `id`, `name`, `color`, `imageUrl`, `popularity`, `songIds` — nothing backs "mood" or "category". Any chip set would be invented taxonomy, and §Phase Acceptance Additions requires missing data be recorded as a blocker rather than filled with placeholders. The grid is unchanged by chips arriving later. |
-| D12 | **No Download button on `CarAlbumScreen`**, despite the contract listing one, and no download-progress state. Recorded as a **module blocker** in `aaos-DESIGN.md`: *downloads are unreachable from `:automotive` until `SongDownloadManager` leaves `:app`.* | `DownloadRepository` (`:core:data`) is reachable but is Room bookkeeping only — `addDownload`, `updateProgress`, `markCompleted`. The code that actually fetches and writes the file is `SongDownloadManager`, `@Singleton` in `:app`, and `:automotive` does not and should not depend on `:app`. Wiring the repository alone ships a button that permanently claims a download is in progress, which is worse than no button. Extracting the manager into a shared module is a real piece of work with six `:app` call sites, and it belongs to A8, which owns downloads and needs it anyway. |
+| D12 | **No Download button on `CarAlbumScreen`**, despite the contract listing one, and no download-progress state. Recorded as a **module blocker** in `aaos-DESIGN.md`: *downloads are unreachable from `:automotive` until `SongDownloadManager` leaves `:app`.* | `DownloadRepository` (`:core:data`) is reachable but is Room bookkeeping only — `addDownload`, `updateProgress`, `markCompleted`. The code that actually fetches and writes the file is `SongDownloadManager`, `@Singleton` in `:app`, and `:automotive` does not and should not depend on `:app`. Wiring the repository alone ships a button that permanently claims a download is in progress, which is worse than no button. Extracting the manager into a shared module is a real piece of work touching seven `:app` files — `NyasaPlayerNavigation`, `PlayerViewModel`, `SongOverflowWithDownload`, `DownloadsViewModel`, `LibraryScreen`, `PlaylistDetailScreen`, `SearchScreen` — and it belongs to A8, which owns downloads and needs it anyway. |
 | D13 | Library's **Downloads row renders visibly disabled** rather than being hidden. | Same reasoning as A2's D3: a disabled control is honest state, and hiding it would change Library's shape when A8 lands, which is the churn the chrome contract exists to prevent. |
 | D14 | **Sign-out stays on `CarLibraryScreen`** with its confirmation overlay, marked for deletion in A7. | It belongs on screen 14. Removing it in A3 leaves no way to sign out of the vehicle at all, since the system bar's avatar is disabled until A7. Keeping ~50 lines for two slices beats shipping an app a user cannot sign out of. |
 | D15 | `CarPlaylistScreen` wires **read-only** playlist access. The four `PlaylistRepository` write methods stay unused. | Creating and editing playlists is not in any PRD phase, and playlist mutation is a parked-only, keyboard-bound interaction the restriction layer would refuse anyway. |
 | D16 | `CarDestination.Artist` carries **`artistName` alongside `artistId`**, and the artist screen never resolves against `favoriteArtists` nor clears itself when the artist is absent. | `rememberSaveable` restores `drillDown` synchronously after process death, while `likedSongs` — and therefore `favoriteArtists`, which is derived from it — is still empty pending Firestore's first emission. Any "resolve the artist or clear the destination" rule fires during that gap and drops the user back to Library on every restore. Today's code sidesteps this by saving the whole `FavoriteArtist`; carrying one display string preserves that property without storing a domain object. The track list is a live filter over `likedSongs` and is correctly empty until it loads. |
-| D17 | `openDetail` resolves a playlist with `playlistRepository.getPlaylists(userId).first()`, **not** by looking it up in `contentState.playlists`, and no `getPlaylistById` is added to `PlaylistRepository`. | `LaunchedEffect(drillDown)` fires once and never re-runs when data arrives, so anything `openDetail` reads must be available on the first call — including the call after process death. `Album` already satisfies that through the one-shot `getAlbumById`; `PlaylistRepository` has no equivalent, and reading `contentState.playlists` would resolve against an empty list during exactly the gap D16 describes — leaving the screen permanently empty rather than briefly so, because nothing re-triggers the load. Taking `first()` from the flow suspends until the emission instead of racing it, and terminates in every case. Adding a read method to a `:core:data` interface shared with `:app`, to solve a problem the existing method already solves, is the larger change rather than the smaller one. |
+| D17 | `openDetail` resolves a playlist with `playlistRepository.getPlaylists(userId).first()`, **not** by looking it up in `contentState.playlists`, and no `getPlaylistById` is added to `PlaylistRepository`. | `LaunchedEffect(drillDown)` fires once and never re-runs when data arrives, so anything `openDetail` reads must be available on the first call — including the call after process death. `Album` already satisfies that through the one-shot `getAlbumById`; `PlaylistRepository` has no equivalent, and reading `contentState.playlists` would resolve against an empty list during exactly the gap D16 describes — leaving the screen permanently empty rather than briefly so, because nothing re-triggers the load. Taking `first()` from the flow suspends until the emission instead of racing it. Its cost is a wrong error offline rather than a hang — see §3.2, which states that plainly; A3 accepts it and A6/A8 revisit offline behaviour. Adding a read method to a `:core:data` interface shared with `:app`, to solve a problem the existing method already solves, is the larger change rather than the smaller one. |
 
 ## 9. Risks
 

@@ -3,12 +3,15 @@ package com.example.nyasaplayer.auto.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nyasaplayer.auto.ui.navigation.CarDestination
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.data.api.AlbumRepository
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.GenreRepository
+import com.example.nyasaplayer.core.data.api.PlaylistRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -32,12 +36,17 @@ private const val PopularLimit = 8
 private const val SearchLimit = 50
 private const val SearchDebounceMs = 300L
 private const val TAG = "AutoContentVM"
+private const val DetailLoadError = "Could not load this. Check your connection and try again."
+private const val AlbumMissingError = "This album is no longer available."
+private const val PlaylistMissingError = "This playlist is no longer available."
 
 @HiltViewModel
+@Suppress("TooManyFunctions") // One view model backs all three tabs plus detail loading.
 class AutomotiveContentViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val genreRepository: GenreRepository,
     private val albumRepository: AlbumRepository,
+    private val playlistRepository: PlaylistRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
 ) : ViewModel() {
@@ -50,6 +59,9 @@ class AutomotiveContentViewModel @Inject constructor(
     private var likedSongsJob: Job? = null
     private var genresJob: Job? = null
     private var albumsJob: Job? = null
+    private var playlistsJob: Job? = null
+    private var detailJob: Job? = null
+    private var detailToken = 0
     private var popularSongsJob: Job? = null
     private var currentUserId: String? = null
 
@@ -78,19 +90,27 @@ class AutomotiveContentViewModel @Inject constructor(
         popularSongsJob?.cancel()
         recentlyPlayedJob?.cancel()
         likedSongsJob?.cancel()
+        playlistsJob?.cancel()
     }
 
     fun reloadUserContent() {
-        val newUserId = authRepository.currentUser?.uid
+        val newUserId = authRepository.currentUserId
         if (newUserId == currentUserId) return
         currentUserId = newUserId
         recentlyPlayedJob?.cancel()
         likedSongsJob?.cancel()
+        playlistsJob?.cancel()
         _contentState.update {
-            it.copy(recentlyPlayed = emptyList(), likedSongs = emptyList(), favoriteArtists = emptyList())
+            it.copy(
+                recentlyPlayed = emptyList(),
+                likedSongs = emptyList(),
+                favoriteArtists = emptyList(),
+                playlists = emptyList(),
+            )
         }
         loadRecentlyPlayed()
         observeLikedSongs()
+        observePlaylists()
     }
 
     private fun loadContent() {
@@ -105,6 +125,7 @@ class AutomotiveContentViewModel @Inject constructor(
         loadRecentlyPlayed()
         loadPopularSongs()
         observeLikedSongs()
+        observePlaylists()
     }
 
     private fun observeGenres() {
@@ -127,7 +148,7 @@ class AutomotiveContentViewModel @Inject constructor(
 
     @Suppress("TooGenericExceptionCaught")
     private fun loadRecentlyPlayed() {
-        val userId = authRepository.currentUser?.uid ?: return
+        val userId = authRepository.currentUserId ?: return
         currentUserId = userId
         recentlyPlayedJob = userRepository.getRecentlyPlayed(userId, RecentlyPlayedLimit).onEach { entries ->
             try {
@@ -147,7 +168,7 @@ class AutomotiveContentViewModel @Inject constructor(
 
     @Suppress("TooGenericExceptionCaught")
     private fun observeLikedSongs() {
-        val userId = authRepository.currentUser?.uid ?: return
+        val userId = authRepository.currentUserId ?: return
         likedSongsJob = userRepository.getLikedSongs(userId).onEach { likedEntries ->
             try {
                 val songIds = likedEntries.map { it.mediaId }.distinct()
@@ -167,6 +188,15 @@ class AutomotiveContentViewModel @Inject constructor(
             }
         }.catch { e ->
             Log.e(TAG, "Error observing liked songs", e)
+        }.launchIn(viewModelScope)
+    }
+
+    private fun observePlaylists() {
+        val userId = authRepository.currentUserId ?: return
+        playlistsJob = playlistRepository.getPlaylists(userId).onEach { playlists ->
+            _contentState.update { it.copy(playlists = playlists) }
+        }.catch { e ->
+            Log.e(TAG, "Error observing playlists", e)
         }.launchIn(viewModelScope)
     }
 
@@ -235,15 +265,107 @@ class AutomotiveContentViewModel @Inject constructor(
         emptyList()
     }
 
+    /**
+     * Load the content behind [destination] into `contentState.detail`.
+     *
+     * Driven from one `LaunchedEffect(drillDown)` in the shell, which means this fires **once**
+     * per destination and never re-runs when data arrives later. Everything it reads therefore
+     * comes from a repository call, not from `_contentState` — including the call that follows
+     * process death, when the observed flows have not emitted yet (D17).
+     *
+     * Guarded against redundant reloads: `drillDown` survives activity recreation (a night-mode
+     * `uiMode` flip, say) via `rememberSaveable`, and `LaunchedEffect(drillDown)` fires again on
+     * every fresh composition — including recreation. Without this guard an already-settled
+     * detail would flash back to its skeleton and re-hit Room/Firestore for no reason. A
+     * mismatched destination, a still-loading state, or a settled error all fall through and
+     * reload, so retry after a failure keeps working.
+     */
+    fun openDetail(destination: CarDestination) {
+        val settled = _contentState.value.detail
+        val isSettledForDestination = settled != null &&
+            settled.destination == destination &&
+            !settled.isLoading &&
+            settled.errorMessage == null
+        if (isSettledForDestination) {
+            return
+        }
+        detailJob?.cancel()
+        val token = ++detailToken
+        if (destination is CarDestination.Artist) {
+            _contentState.update { it.copy(detail = null) }
+            return
+        }
+        _contentState.update { it.copy(detail = CarDetailState(destination = destination)) }
+        detailJob = viewModelScope.launch(exceptionHandler) {
+            val loaded = loadDetail(destination)
+            _contentState.update { state ->
+                // Rejects the result of a stale coroutine that resumed anyway. cancel() is not
+                // enough: a continuation parked in a Firestore or Room callback can be resumed
+                // by that callback without ever observing the cancellation, and then run on to
+                // here. [token] is what actually decides it — [destination] alone would let a
+                // stale load of album A overwrite a later, successful load of the same album A.
+                val isCurrent = token == detailToken && state.detail?.destination == destination
+                if (isCurrent) state.copy(detail = loaded) else state
+            }
+        }
+    }
+
+    fun closeDetail() {
+        detailJob?.cancel()
+        detailToken++
+        _contentState.update { it.copy(detail = null) }
+    }
+
     @Suppress("TooGenericExceptionCaught")
-    suspend fun getSongsByAlbum(albumId: String): List<Song> = try {
-        val album = albumRepository.getAlbumById(albumId) ?: return emptyList()
-        songRepository.getSongsByIds(album.songIds)
+    private suspend fun loadDetail(destination: CarDestination): CarDetailState = try {
+        when (destination) {
+            is CarDestination.Album -> loadAlbumDetail(destination)
+            is CarDestination.Playlist -> loadPlaylistDetail(destination)
+            // Filtered out by openDetail; a when over a sealed interface must be exhaustive.
+            is CarDestination.Artist -> CarDetailState(destination, isLoading = false)
+        }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        Log.e(TAG, "Error loading songs for album $albumId", e)
-        emptyList()
+        Log.e(TAG, "Error loading detail for $destination", e)
+        CarDetailState(destination = destination, isLoading = false, errorMessage = DetailLoadError)
+    }
+
+    private suspend fun loadAlbumDetail(destination: CarDestination.Album): CarDetailState {
+        val album = albumRepository.getAlbumById(destination.albumId)
+            ?: return CarDetailState(destination, isLoading = false, errorMessage = AlbumMissingError)
+        // Album songIds come straight from synced Firestore data with no dedupe guarantee,
+        // unlike PlaylistRepository which already guards against duplicates. A duplicated id
+        // would otherwise crash CarDetailScreen's LazyColumn, keyed on mediaId.
+        val tracks = songRepository.getSongsByIds(album.songIds).distinctBy { it.mediaId }
+        return CarDetailState(
+            destination = destination,
+            title = album.name,
+            subtitle = album.artistName,
+            artworkUrl = album.imageUrl,
+            tracks = tracks,
+            isLoading = false,
+        )
+    }
+
+    private suspend fun loadPlaylistDetail(destination: CarDestination.Playlist): CarDetailState {
+        val userId = authRepository.currentUserId
+            ?: return CarDetailState(destination, isLoading = false, errorMessage = PlaylistMissingError)
+        // first(), not contentState.playlists: this suspends until Firestore's first emission
+        // rather than racing it. Playlist has no getPlaylistById to read one-shot (D17).
+        val playlist = playlistRepository.getPlaylists(userId).first()
+            .firstOrNull { it.id == destination.playlistId }
+            ?: return CarDetailState(destination, isLoading = false, errorMessage = PlaylistMissingError)
+        val tracks = songRepository.getSongsByIds(playlist.songIds)
+        return CarDetailState(
+            destination = destination,
+            title = playlist.name,
+            // Playlist has no cover field; artwork is the first resolved track's, same
+            // derivation deriveFavoriteArtists() uses for artist avatars.
+            artworkUrl = tracks.firstOrNull()?.resolvedCoverUrl.orEmpty(),
+            tracks = tracks,
+            isLoading = false,
+        )
     }
 }
 
@@ -261,8 +383,26 @@ data class AutomotiveContentState(
     val albums: List<Album> = emptyList(),
     val popularSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
+    val playlists: List<Playlist> = emptyList(),
+    val detail: CarDetailState? = null,
     val searchQuery: String = "",
     val searchResults: List<Song> = emptyList(),
+    val isLoading: Boolean = true,
+    val errorMessage: String? = null,
+)
+
+/**
+ * One loaded detail screen — album or playlist.
+ *
+ * Artist detail is deliberately absent: its track list is a live filter over `likedSongs`, and
+ * snapshotting it here would freeze the screen against unlikes performed on it (D16).
+ */
+data class CarDetailState(
+    val destination: CarDestination,
+    val title: String = "",
+    val subtitle: String = "",
+    val artworkUrl: String = "",
+    val tracks: List<Song> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )

@@ -15,6 +15,8 @@ import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
+import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
@@ -56,6 +58,19 @@ private val PreviewAlbums = listOf(
     Album(id = "a2", name = "Hip Hop Essentials", artistName = "Various", songIds = List(42) { "s$it" }),
     Album(id = "a3", name = "Jazz Classics", artistName = "Various", songIds = List(38) { "s$it" }),
     Album(id = "a4", name = "Pop Hits", artistName = "Various", songIds = List(65) { "s$it" }),
+)
+
+private val PreviewGenres = listOf(
+    Genre(id = "g1", name = "Electronic", imageUrl = "", songIds = List(30) { "s$it" }),
+    Genre(id = "g2", name = "Hip Hop", imageUrl = "", songIds = List(25) { "s$it" }),
+    Genre(id = "g3", name = "Jazz", imageUrl = "", songIds = List(15) { "s$it" }),
+    Genre(id = "g4", name = "Pop", imageUrl = "", songIds = emptyList()),
+)
+
+private val PreviewPlaylists = listOf(
+    Playlist(id = "p1", name = "Road Trip", songIds = List(12) { "s$it" }),
+    Playlist(id = "p2", name = "Late Night", songIds = List(8) { "s$it" }),
+    Playlist(id = "p3", name = "Workout", songIds = List(20) { "s$it" }),
 )
 
 private val PreviewFavoriteArtists = listOf(
@@ -127,8 +142,9 @@ private fun FullPlayerPreview() {
 private fun BrowseScreenPreview() {
     AppTheme {
         CarBrowseScreen(
-            albums = PreviewAlbums,
-            onAlbumClick = {},
+            genres = PreviewGenres,
+            onGenreClick = {},
+            onLibraryClick = {},
         )
     }
 }
@@ -144,17 +160,21 @@ private fun BrowseScreenPreview() {
 private fun LibraryScreenPreview() {
     AppTheme {
         CarLibraryScreen(
-            favoriteArtists = PreviewFavoriteArtists,
+            recentlyPlayed = PreviewSongs,
+            playlists = PreviewPlaylists,
             albums = PreviewAlbums,
-            onArtistClick = {},
+            favoriteArtists = PreviewFavoriteArtists,
+            likedSongCount = PreviewSongs.size,
+            onSongClick = { _, _ -> },
+            onPlaylistClick = {},
             onAlbumClick = {},
-            likedSongs = PreviewSongs,
-            currentlyPlayingMediaId = "1",
-            isPlaying = true,
-            onShuffleLikedSongs = {},
-            onLikedSongClick = {},
+            onArtistClick = {},
+            onFavouritesClick = {},
+            onBrowseClick = {},
             onSignOut = {},
             userDisplayName = "John Doe",
+            currentlyPlayingMediaId = "1",
+            isPlaying = true,
         )
     }
 }

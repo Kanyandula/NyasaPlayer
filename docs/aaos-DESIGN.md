@@ -255,7 +255,7 @@ Center: progress bar, 4px tall, gold #C9A84C fill on #2A2A38 track, inside a 76p
 Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each in a 76x76 area
 ```
 
-**Two implementation deviations, decided in slice A2** (spec §7):
+**Implementation deviations** (spec §7):
 
 - **The progress bar is not a seek target (D6).** A seek gesture cannot coexist with the
   row-wide tap-to-expand: the whole mini-player row is one clickable, and narrowing it to fit
@@ -268,6 +268,34 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   static icons claiming a full battery and a connected radio — a lie the driver may act on.
   On AAOS the OEM system bar generally owns these. The bar ships as wordmark · search ·
   settings · avatar · clock.
+- **D11 — No Browse filter chips.** Screen 4 lists them. `Genre` is `id`, `name`, `color`,
+  `imageUrl`, `popularity`, `songIds` — nothing backs "mood" or "category", so any chip set would
+  be invented taxonomy. **Data blocker:** a genre taxonomy field in Firestore. The grid is
+  unchanged by chips arriving later.
+- **D12 — No Download button on `CarAlbumScreen`, and no download-progress state.** Screen 11
+  lists both. **Module blocker: downloads are unreachable from `:automotive` until
+  `SongDownloadManager` leaves `:app`.** `DownloadRepository` (`:core:data`) is reachable but
+  records download state in Room only — `addDownload`, `updateProgress`, `markCompleted`. The code
+  that fetches and writes the file is `SongDownloadManager`, `@Singleton` in `:app`, and
+  `:automotive` does not and should not depend on `:app`. Wiring the repository alone ships a
+  button that permanently claims a download is in progress. Extracting the manager into a shared
+  module touches seven `:app` files — `NyasaPlayerNavigation`, `PlayerViewModel`,
+  `SongOverflowWithDownload`, `DownloadsViewModel`, `LibraryScreen`, `PlaylistDetailScreen`,
+  `SearchScreen` — and belongs to A8, which owns downloads and needs it anyway.
+- **D14 — Sign-out stays on `CarLibraryScreen`** with its confirmation overlay, marked for
+  deletion in A7. It belongs on screen 14, but removing it in A3 leaves no way to sign out of the
+  vehicle at all, since the system bar's avatar is disabled until A7 (A2 D3).
+- **D18 — Library's playlist cards render the gold placeholder, not the first resolved track's
+  artwork.** The spec defines playlist artwork as the first resolved track's `resolvedCoverUrl`
+  (same derivation `deriveFavoriteArtists()` uses for artist avatars), and `CarPlaylistScreen`
+  already shows it once a playlist is opened — so the same playlist reads as gold-placeholder on
+  Library and real artwork one tap later, visible inconsistency within one journey. Accepted
+  rather than closed: unlike artists, whose avatars derive from `likedSongs` already held in
+  memory, a playlist's `songIds` are not part of any loaded state, so deriving its artwork means
+  a `getSongsByIds` repository call per playlist on every `observePlaylists()` emission, purely to
+  decorate a card. **Cost to close:** cache the first resolved track per playlist (e.g. alongside
+  `Playlist` in `AutomotiveContentState`, refreshed only when a playlist's `songIds` change) so
+  Library reads it without a query on every emission.
 
 ## Components
 

@@ -37,3 +37,9 @@ CLAUDE.md
 # Graphify (generated knowledge graph — regenerate with `graphify update .`)
 graphify-out/
 .graphify_*
+
+# Subagent-driven development scratch (ledgers, briefs, review packages)
+.superpowers/
+
+# Kotlin incremental build artifacts
+.kotlin/
