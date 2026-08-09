@@ -83,6 +83,9 @@ minimally and say so.
 Isolated and additive. Both new parameters default so that `CarHomeScreen` and `CarDetailScreen`
 compile and render exactly as now, with no call-site changes.
 
+The heart goes *inside* the shared row rather than into a new row variant or each call site, so
+its 76dp touch target is enforced once, in the component (spec D22).
+
 **Files:**
 - Modify: `automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarTrackRow.kt`
 
@@ -485,7 +488,13 @@ four. Put this as the very first line of the file, above the `package` declarati
 After `closeDetail()`:
 
 ```kotlin
-    /** Marks a visit to the Favourites tab. Deliberately does not freeze — see spec D19. */
+    /**
+     * Marks a visit to the Favourites tab.
+     *
+     * Deliberately does not freeze (spec D19) and deliberately clears nothing (spec D20). The
+     * effect that calls this re-runs on every Activity recreation — a night-mode flip mid-drive —
+     * and anything cleared here would silently reconcile the driver's held-back rows.
+     */
     fun openFavourites() = Unit
 
     /** Ends the visit. The next unlike starts a new freeze. */
