@@ -236,6 +236,13 @@ private fun AuthenticatedApp(
                     playerViewModel.playSong(contentState.likedSongs, song)
                     showFullPlayer = true
                 },
+                onLikeToggle = { song ->
+                    scope.launch {
+                        if (!contentViewModel.toggleFavourite(song.mediaId, freeze = true)) {
+                            playerViewModel.reportUnlikeFailed()
+                        }
+                    }
+                },
             )
         }
 
@@ -328,6 +335,7 @@ private fun BrowseShell(
     onLikeClick: () -> Unit,
     onGenreClick: (Genre) -> Unit,
     onLikedSongClick: (Song) -> Unit,
+    onLikeToggle: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId
@@ -434,11 +442,18 @@ private fun BrowseShell(
                     }
 
                     CarScreen.Favourites -> CarFavouriteMusicScreen(
-                        likedSongs = contentState.likedSongs.take(maxItems),
+                        songs = (contentState.favourites ?: contentState.likedSongs).take(maxItems),
+                        pendingUnlikes = contentState.pendingUnlikes,
                         onSongClick = onLikedSongClick,
+                        onPlayAll = { onPlayTracks(contentState.favourites ?: contentState.likedSongs) },
+                        onShuffle = { onShuffleTracks(contentState.favourites ?: contentState.likedSongs) },
+                        onLikeToggle = onLikeToggle,
                         onBrowseClick = { onSelectTab(CarScreen.Browse) },
                         currentlyPlayingMediaId = currentlyPlayingMediaId,
                         isPlaying = isPlaying,
+                        isLoading = contentState.isLoading,
+                        errorMessage = contentState.errorMessage,
+                        onRetry = onRetry,
                     )
                 }
             }
