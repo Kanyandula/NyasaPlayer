@@ -144,6 +144,7 @@ private fun BrowseScreenPreview() {
         CarBrowseScreen(
             genres = PreviewGenres,
             onGenreClick = {},
+            onLibraryClick = {},
         )
     }
 }

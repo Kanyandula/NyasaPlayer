@@ -283,6 +283,17 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
 - **D14 — Sign-out stays on `CarLibraryScreen`** with its confirmation overlay, marked for
   deletion in A7. It belongs on screen 14, but removing it in A3 leaves no way to sign out of the
   vehicle at all, since the system bar's avatar is disabled until A7 (A2 D3).
+- **D18 — Library's playlist cards render the gold placeholder, not the first resolved track's
+  artwork.** The spec defines playlist artwork as the first resolved track's `resolvedCoverUrl`
+  (same derivation `deriveFavoriteArtists()` uses for artist avatars), and `CarPlaylistScreen`
+  already shows it once a playlist is opened — so the same playlist reads as gold-placeholder on
+  Library and real artwork one tap later, visible inconsistency within one journey. Accepted
+  rather than closed: unlike artists, whose avatars derive from `likedSongs` already held in
+  memory, a playlist's `songIds` are not part of any loaded state, so deriving its artwork means
+  a `getSongsByIds` repository call per playlist on every `observePlaylists()` emission, purely to
+  decorate a card. **Cost to close:** cache the first resolved track per playlist (e.g. alongside
+  `Playlist` in `AutomotiveContentState`, refreshed only when a playlist's `songIds` change) so
+  Library reads it without a query on every emission.
 
 ## Components
 

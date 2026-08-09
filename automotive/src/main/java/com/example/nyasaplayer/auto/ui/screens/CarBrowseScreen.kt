@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +37,7 @@ import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
+import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.core.common.models.Genre
 
@@ -62,6 +65,7 @@ private const val ScrollbarAnimationDurationMs = 150
 fun CarBrowseScreen(
     genres: List<Genre>,
     onGenreClick: (Genre) -> Unit,
+    onLibraryClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
     errorMessage: String? = null,
@@ -82,6 +86,8 @@ fun CarBrowseScreen(
             title = "Nothing to browse yet",
             body = "Genres will appear here once your library has synced.",
             modifier = modifier,
+            actionLabel = "Open Library",
+            onAction = onLibraryClick,
         )
 
         else -> BrowseGrid(genres = genres, onGenreClick = onGenreClick, modifier = modifier)
@@ -109,13 +115,22 @@ private fun BrowseGrid(
             // Chunked rows rather than LazyVerticalGrid: the rest of this module lays out in
             // LazyColumn, and the scrollbar below reads LazyListState.
             items(genres.chunked(BrowseGridColumns)) { rowGenres ->
-                Row(horizontalArrangement = Arrangement.spacedBy(GridSpacing)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(GridSpacing),
+                ) {
                     rowGenres.forEach { genre ->
                         CarContentCard(
                             title = genre.name,
                             onClick = { onGenreClick(genre) },
                             artworkUrl = genre.imageUrl,
+                            modifier = Modifier.weight(1f),
                         )
+                    }
+                    // Pads a short final row so its cards match the width of a full row above,
+                    // rather than stretching to fill the row on their own.
+                    repeat(BrowseGridColumns - rowGenres.size) {
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -145,7 +160,7 @@ private fun BrowseSkeleton(modifier: Modifier = Modifier) {
                 repeat(BrowseGridColumns) {
                     Box(
                         modifier = Modifier
-                            .size(180.dp)
+                            .size(CarContentCardSize)
                             .clip(RoundedCornerShape(CarCardCornerRadius))
                             .background(CarRaised),
                     )

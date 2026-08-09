@@ -368,6 +368,7 @@ private fun BrowseShell(
                     CarScreen.Browse -> CarBrowseScreen(
                         genres = contentState.genres.take(maxItems),
                         onGenreClick = onGenreClick,
+                        onLibraryClick = { onSelectTab(CarScreen.Library) },
                         isLoading = contentState.isLoading,
                         errorMessage = contentState.errorMessage,
                         onRetry = onRetry,

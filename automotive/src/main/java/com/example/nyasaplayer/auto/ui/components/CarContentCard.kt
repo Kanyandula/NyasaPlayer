@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
+import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarTextDisabled
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
@@ -39,8 +40,6 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 /** Square for albums, playlists and genres; circle for artists. */
 enum class CarCardShape { Square, Circle }
 
-private val CardWidth = 180.dp
-private val ArtSize = 180.dp
 private val LabelSpacing = 10.dp
 private val PlaceholderIconSize = 48.dp
 private val TitleSize = 18.sp
@@ -69,9 +68,13 @@ fun CarContentCard(
         CarCardShape.Square -> RoundedCornerShape(CarCardCornerRadius)
         CarCardShape.Circle -> CircleShape
     }
+    // `modifier` is applied before the default width so a caller-supplied width or weight
+    // (e.g. BrowseGrid's Modifier.weight(1f)) constrains this card from the outside; the
+    // default width(CarContentCardSize) below only takes effect when the caller supplies
+    // neither, which is what every existing Library call site relies on.
     Column(
         modifier = modifier
-            .width(CardWidth)
+            .width(CarContentCardSize)
             .alpha(if (enabled) 1f else DisabledAlpha)
             .clickable(enabled = enabled, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -81,7 +84,7 @@ fun CarContentCard(
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(ArtSize)
+                .size(CarContentCardSize)
                 .clip(cardShape)
                 .background(CarRaised),
             loading = { CardPlaceholder() },

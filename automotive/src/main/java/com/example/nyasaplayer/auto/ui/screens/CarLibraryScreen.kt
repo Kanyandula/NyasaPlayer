@@ -44,6 +44,7 @@ import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
+import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
@@ -62,8 +63,10 @@ private const val ModalWidthFraction = 0.5f
 private val RowSpacing = 32.dp
 private val CardSpacing = 24.dp
 private val ListPadding = 24.dp
-private val SkeletonCardSize = 180.dp
-private const val SkeletonRowCount = 3
+
+// 2 rows, matching BrowseSkeleton: 3 rows (604dp) clips the third inside Library's
+// content slot (roughly 432dp), and this is a static placeholder, not scrollable content.
+private const val SkeletonRowCount = 2
 private const val SkeletonCardCount = 4
 
 /**
@@ -308,7 +311,7 @@ private fun LibrarySkeleton(modifier: Modifier = Modifier) {
                 repeat(SkeletonCardCount) {
                     Box(
                         modifier = Modifier
-                            .size(SkeletonCardSize)
+                            .size(CarContentCardSize)
                             .clip(RoundedCornerShape(CarCardCornerRadius))
                             .background(CarRaised),
                     )
