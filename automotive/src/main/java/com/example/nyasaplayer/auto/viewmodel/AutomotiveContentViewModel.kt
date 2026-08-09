@@ -3,6 +3,7 @@ package com.example.nyasaplayer.auto.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nyasaplayer.auto.ui.navigation.CarDestination
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Playlist
@@ -284,8 +285,25 @@ data class AutomotiveContentState(
     val popularSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
     val playlists: List<Playlist> = emptyList(),
+    val detail: CarDetailState? = null,
     val searchQuery: String = "",
     val searchResults: List<Song> = emptyList(),
+    val isLoading: Boolean = true,
+    val errorMessage: String? = null,
+)
+
+/**
+ * One loaded detail screen — album or playlist.
+ *
+ * Artist detail is deliberately absent: its track list is a live filter over `likedSongs`, and
+ * snapshotting it here would freeze the screen against unlikes performed on it (D16).
+ */
+data class CarDetailState(
+    val destination: CarDestination,
+    val title: String = "",
+    val subtitle: String = "",
+    val artworkUrl: String = "",
+    val tracks: List<Song> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )
