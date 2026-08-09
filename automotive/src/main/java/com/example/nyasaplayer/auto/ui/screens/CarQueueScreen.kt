@@ -85,6 +85,8 @@ fun CarQueueScreen(
     }
 
     Column(
+        // Opaque: this is an overlay above the shell, not a content-region screen, so it
+        // must occlude what is behind it rather than inherit the root background.
         modifier = modifier
             .fillMaxSize()
             .background(NyasaBackground),

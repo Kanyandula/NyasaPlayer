@@ -1,7 +1,6 @@
 package com.example.nyasaplayer.auto.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +33,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -78,6 +78,8 @@ fun CarFullPlayerScreen(
     val song = playback.currentSong
 
     Box(
+        // Opaque for the same reason as the queue: a full-screen overlay, outside the chrome
+        // contract (spec 2.2).
         modifier = modifier
             .fillMaxSize()
             .background(NyasaBackground),
@@ -220,18 +222,18 @@ private fun TrackInfo(
     Column(modifier = modifier) {
         Text(
             text = title,
-            modifier = Modifier.basicMarquee(),
             color = Color.White,
             fontSize = 36.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = artistAlbum,
-            modifier = Modifier.basicMarquee(),
             color = CarTextSecondary,
             fontSize = 24.sp,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

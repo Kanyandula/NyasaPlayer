@@ -75,7 +75,6 @@ import com.example.nyasaplayer.core.common.ui.icons.PlaylistAddIcon
 import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
-import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
@@ -87,6 +86,7 @@ private const val GradientOverlayStartY = 80f
 private const val FeaturedPlaylistsMax = 10
 private const val CategoryCardAspectRatio = 1.4f
 private const val BrowseGridColumns = 3
+private val ScrollbarGap = 8.dp
 private val ScrollbarWidth = 8.dp
 private val ScrollbarTrackCornerRadius = 4.dp
 private const val ScrollbarTrackAlpha = 0.15f
@@ -131,15 +131,13 @@ fun CarBrowseScreen(
     val isSearching = searchQuery.isNotEmpty()
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(NyasaBackground),
+        modifier = modifier.fillMaxSize(),
     ) {
         LazyColumn(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 24.dp, end = 24.dp + ScrollbarWidth + 8.dp),
+                .padding(end = ScrollbarWidth + ScrollbarGap),
             contentPadding = PaddingValues(vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {

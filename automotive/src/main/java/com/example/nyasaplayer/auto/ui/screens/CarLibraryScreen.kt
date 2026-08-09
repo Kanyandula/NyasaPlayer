@@ -55,7 +55,6 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
-import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
@@ -84,10 +83,7 @@ fun CarLibraryScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NyasaBackground)
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {

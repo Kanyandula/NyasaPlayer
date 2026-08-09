@@ -48,6 +48,9 @@ class AutomotiveContentViewModel @Inject constructor(
     private var searchJob: Job? = null
     private var recentlyPlayedJob: Job? = null
     private var likedSongsJob: Job? = null
+    private var genresJob: Job? = null
+    private var albumsJob: Job? = null
+    private var popularSongsJob: Job? = null
     private var currentUserId: String? = null
 
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
@@ -56,6 +59,25 @@ class AutomotiveContentViewModel @Inject constructor(
 
     init {
         loadContent()
+    }
+
+    /**
+     * Retry after a load failure.
+     *
+     * Distinct from [reloadUserContent], which early-returns when the signed-in user has not
+     * changed — it is a user-switch hook, so wiring an error state's Retry button to it would
+     * produce a no-op.
+     */
+    fun retryLoad() {
+        loadContent()
+    }
+
+    private fun cancelContentJobs() {
+        genresJob?.cancel()
+        albumsJob?.cancel()
+        popularSongsJob?.cancel()
+        recentlyPlayedJob?.cancel()
+        likedSongsJob?.cancel()
     }
 
     fun reloadUserContent() {
@@ -72,6 +94,11 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     private fun loadContent() {
+        // Cancel before relaunching. loadContent() used to be reachable only from init, so
+        // this was latent; retryLoad() puts it behind a button a driver may tap repeatedly,
+        // and each call otherwise leaks a Room collector and a Firestore snapshot listener
+        // for the life of the ViewModel.
+        cancelContentJobs()
         _contentState.update { it.copy(isLoading = true, errorMessage = null) }
         observeGenres()
         observeAlbums()
@@ -81,7 +108,7 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     private fun observeGenres() {
-        genreRepository.getGenres().onEach { genres ->
+        genresJob = genreRepository.getGenres().onEach { genres ->
             _contentState.update { it.copy(genres = genres, isLoading = false) }
         }.catch { e ->
             Log.e(TAG, "Error observing genres", e)
@@ -90,7 +117,7 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     private fun observeAlbums() {
-        albumRepository.getAlbums().onEach { albums ->
+        albumsJob = albumRepository.getAlbums().onEach { albums ->
             _contentState.update { it.copy(albums = albums, isLoading = false) }
         }.catch { e ->
             Log.e(TAG, "Error observing albums", e)
@@ -159,7 +186,7 @@ class AutomotiveContentViewModel @Inject constructor(
 
     @Suppress("TooGenericExceptionCaught")
     private fun loadPopularSongs() {
-        viewModelScope.launch(exceptionHandler) {
+        popularSongsJob = viewModelScope.launch(exceptionHandler) {
             try {
                 val songs = songRepository.getSongsByPopularity(PopularLimit)
                 _contentState.update { it.copy(popularSongs = songs) }

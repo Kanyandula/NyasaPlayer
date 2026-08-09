@@ -79,8 +79,12 @@ private fun HomeScreenPreview() {
     AppTheme {
         CarHomeScreen(
             recentlyPlayed = PreviewSongs,
-            onSongClick = {},
-            onQuickActionClick = {},
+            popularSongs = PreviewSongs,
+            isLoading = false,
+            errorMessage = null,
+            onSongClick = { _, _ -> },
+            onRetry = {},
+            onBrowseClick = {},
             currentlyPlayingMediaId = "1",
             isPlaying = true,
         )
