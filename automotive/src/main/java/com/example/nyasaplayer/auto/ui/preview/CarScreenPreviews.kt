@@ -15,6 +15,7 @@ import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
+import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
@@ -56,6 +57,13 @@ private val PreviewAlbums = listOf(
     Album(id = "a2", name = "Hip Hop Essentials", artistName = "Various", songIds = List(42) { "s$it" }),
     Album(id = "a3", name = "Jazz Classics", artistName = "Various", songIds = List(38) { "s$it" }),
     Album(id = "a4", name = "Pop Hits", artistName = "Various", songIds = List(65) { "s$it" }),
+)
+
+private val PreviewGenres = listOf(
+    Genre(id = "g1", name = "Electronic", imageUrl = ""),
+    Genre(id = "g2", name = "Hip Hop", imageUrl = ""),
+    Genre(id = "g3", name = "Jazz", imageUrl = ""),
+    Genre(id = "g4", name = "Pop", imageUrl = ""),
 )
 
 private val PreviewFavoriteArtists = listOf(
@@ -127,8 +135,8 @@ private fun FullPlayerPreview() {
 private fun BrowseScreenPreview() {
     AppTheme {
         CarBrowseScreen(
-            albums = PreviewAlbums,
-            onAlbumClick = {},
+            genres = PreviewGenres,
+            onGenreClick = {},
         )
     }
 }

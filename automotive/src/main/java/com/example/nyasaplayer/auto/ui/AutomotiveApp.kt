@@ -48,6 +48,7 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
+import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
@@ -196,11 +197,8 @@ private fun AuthenticatedApp(
                     playerViewModel.shufflePlay(songs)
                     showFullPlayer = true
                 },
-                onCategoryClick = { categoryName ->
+                onGenreClick = { genre ->
                     scope.launch {
-                        val genre = contentState.genres.firstOrNull {
-                            it.name.equals(categoryName, ignoreCase = true)
-                        } ?: return@launch
                         val songs = contentViewModel.getSongsByGenre(genre.id)
                         if (songs.isNotEmpty()) {
                             playerViewModel.shufflePlay(songs)
@@ -212,12 +210,6 @@ private fun AuthenticatedApp(
                 onShuffleLikedSongs = { playerViewModel.shufflePlay(contentState.likedSongs) },
                 onLikedSongClick = { song ->
                     playerViewModel.playSong(contentState.likedSongs, song)
-                    showFullPlayer = true
-                },
-                onSearchQueryChange = contentViewModel::onSearchQueryChange,
-                onClearSearch = contentViewModel::clearSearch,
-                onSearchResultClick = { song ->
-                    playerViewModel.playSong(contentState.searchResults, song)
                     showFullPlayer = true
                 },
             )
@@ -308,11 +300,8 @@ private fun BrowseShell(
     onShuffleArtistSongs: (List<Song>) -> Unit,
     onLikeClick: () -> Unit,
     onShuffleLikedSongs: () -> Unit,
-    onCategoryClick: (String) -> Unit,
+    onGenreClick: (Genre) -> Unit,
     onLikedSongClick: (Song) -> Unit,
-    onSearchQueryChange: (String) -> Unit,
-    onClearSearch: () -> Unit,
-    onSearchResultClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId
@@ -352,23 +341,13 @@ private fun BrowseShell(
                         isPlaying = isPlaying,
                     )
 
-                    CarScreen.Browse -> {
-                        val currentAlbumId = playerState.playback.currentSong?.albumId
-                        CarBrowseScreen(
-                            albums = contentState.albums.take(maxItems),
-                            onAlbumClick = onAlbumClick,
-                            currentlyPlayingAlbumId = currentAlbumId,
-                            currentlyPlayingMediaId = currentlyPlayingMediaId,
-                            isPlaying = isPlaying,
-                            onCategoryClick = onCategoryClick,
-                            searchQuery = contentState.searchQuery,
-                            searchResults = contentState.searchResults.take(maxItems),
-                            onSearchQueryChange = onSearchQueryChange,
-                            onClearSearch = onClearSearch,
-                            onSearchResultClick = onSearchResultClick,
-                            isSearchDisabled = playerState.restrictions.isDistractionOptimized,
-                        )
-                    }
+                    CarScreen.Browse -> CarBrowseScreen(
+                        genres = contentState.genres.take(maxItems),
+                        onGenreClick = onGenreClick,
+                        isLoading = contentState.isLoading,
+                        errorMessage = contentState.errorMessage,
+                        onRetry = onRetry,
+                    )
 
                     CarScreen.Library -> {
                         val artist = drillDown as? CarDestination.Artist

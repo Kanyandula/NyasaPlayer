@@ -3,32 +3,21 @@ package com.example.nyasaplayer.auto.ui.screens
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -40,51 +29,17 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.components.CarContentCard
+import com.example.nyasaplayer.auto.ui.components.CarEmptyState
+import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
-import com.example.nyasaplayer.auto.ui.theme.CarGlass
-import com.example.nyasaplayer.auto.ui.theme.CarGradientBlue
-import com.example.nyasaplayer.auto.ui.theme.CarGradientBlueCyan
-import com.example.nyasaplayer.auto.ui.theme.CarGradientGreen
-import com.example.nyasaplayer.auto.ui.theme.CarGradientGreenDark
-import com.example.nyasaplayer.auto.ui.theme.CarGradientIndigo
-import com.example.nyasaplayer.auto.ui.theme.CarGradientIndigoPurple
-import com.example.nyasaplayer.auto.ui.theme.CarGradientOrange
-import com.example.nyasaplayer.auto.ui.theme.CarGradientOrangeDark
-import com.example.nyasaplayer.auto.ui.theme.CarGradientPink
-import com.example.nyasaplayer.auto.ui.theme.CarGradientRose
-import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
-import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
-import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
-import com.example.nyasaplayer.core.common.models.Album
-import com.example.nyasaplayer.core.common.models.Song
-import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
-import com.example.nyasaplayer.core.common.ui.icons.AlbumIcon
-import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
-import com.example.nyasaplayer.core.common.ui.icons.PlaylistAddIcon
-import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
-import com.example.nyasaplayer.core.common.ui.icons.RadioIcon
-import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
-import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
-import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
-import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
+import com.example.nyasaplayer.auto.ui.theme.CarRaised
+import com.example.nyasaplayer.core.common.models.Genre
 
-private val CategoryIconSize = 56.dp
-private const val IconBgAlpha = 0.5f
-private val PlaylistCardSize = 140.dp
-private const val GradientOverlayStartY = 80f
-private const val FeaturedPlaylistsMax = 10
-private const val CategoryCardAspectRatio = 1.4f
+private val GridSpacing = 24.dp
+private val ListPadding = 24.dp
 private const val BrowseGridColumns = 3
 private val ScrollbarGap = 8.dp
 private val ScrollbarWidth = 8.dp
@@ -93,85 +48,75 @@ private const val ScrollbarTrackAlpha = 0.15f
 private const val ScrollbarThumbAlpha = 0.6f
 private const val ScrollbarAnimationDurationMs = 150
 
-private data class BrowseCategory(
-    val name: String,
-    val icon: ImageVector,
-    val gradientColors: List<Color>,
-    // Gold is a light fill — white on it measures 2.29:1. Gold entries pass NyasaOnGold.
-    val contentColor: Color = Color.White,
-)
-
-private val browseCategories = listOf(
-    BrowseCategory("Trending Now", MusicNoteIcon, listOf(CarGradientPink, CarGradientRose)),
-    BrowseCategory("New Releases", AlbumIcon, listOf(CarGradientBlue, CarGradientBlueCyan)),
-    BrowseCategory("Top Charts", QueueMusicIcon, listOf(CarGradientGreen, CarGradientGreenDark)),
-    BrowseCategory("Playlists", PlaylistAddIcon, listOf(NyasaGold, NyasaGoldDim), NyasaOnGold),
-    BrowseCategory("Genres", MusicNoteIcon, listOf(CarGradientOrange, CarGradientOrangeDark)),
-    BrowseCategory("Podcasts", RadioIcon, listOf(CarGradientIndigoPurple, CarGradientIndigo)),
-)
-
-@Suppress("LongParameterList")
+/**
+ * Browse.
+ *
+ * A grid of real genres. Tapping one shuffle-plays it — there is no `CarGenreScreen` among the
+ * twenty, and playing on tap is what "Play/open category" means in its absence (D9).
+ *
+ * No filter chips: `Genre` is id, name, color, imageUrl, popularity and songIds, and nothing
+ * backs "mood" or "category". Any chip set would be invented taxonomy (D11). No search field:
+ * screen 4 lists none, screens 5 and 6 own it, and A6 relocates it (D10).
+ */
 @Composable
 fun CarBrowseScreen(
-    albums: List<Album>,
-    onAlbumClick: (Album) -> Unit,
+    genres: List<Genre>,
+    onGenreClick: (Genre) -> Unit,
     modifier: Modifier = Modifier,
-    currentlyPlayingAlbumId: String? = null,
-    currentlyPlayingMediaId: String? = null,
-    isPlaying: Boolean = false,
-    onCategoryClick: (String) -> Unit = {},
-    searchQuery: String = "",
-    searchResults: List<Song> = emptyList(),
-    onSearchQueryChange: (String) -> Unit = {},
-    onClearSearch: () -> Unit = {},
-    onSearchResultClick: (Song) -> Unit = {},
-    isSearchDisabled: Boolean = false,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    onRetry: () -> Unit = {},
+) {
+    when {
+        errorMessage != null && genres.isEmpty() -> CarEmptyState(
+            title = "Something went wrong",
+            body = errorMessage,
+            modifier = modifier,
+            actionLabel = "Try again",
+            onAction = onRetry,
+        )
+
+        isLoading && genres.isEmpty() -> BrowseSkeleton(modifier = modifier)
+
+        genres.isEmpty() -> CarEmptyState(
+            title = "Nothing to browse yet",
+            body = "Genres will appear here once your library has synced.",
+            modifier = modifier,
+        )
+
+        else -> BrowseGrid(genres = genres, onGenreClick = onGenreClick, modifier = modifier)
+    }
+}
+
+@Composable
+private fun BrowseGrid(
+    genres: List<Genre>,
+    onGenreClick: (Genre) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    val isSearching = searchQuery.isNotEmpty()
 
-    Box(
-        modifier = modifier.fillMaxSize(),
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(end = ScrollbarWidth + ScrollbarGap),
-            contentPadding = PaddingValues(vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            contentPadding = PaddingValues(vertical = ListPadding),
+            verticalArrangement = Arrangement.spacedBy(GridSpacing),
         ) {
-            item {
-                CarSearchBar(
-                    query = searchQuery,
-                    onQueryChange = onSearchQueryChange,
-                    onClear = onClearSearch,
-                    isDisabled = isSearchDisabled,
-                )
-            }
-
-            if (isSearching) {
-                if (searchResults.isEmpty()) {
-                    item { SearchEmptyState(query = searchQuery) }
-                } else {
-                    items(searchResults, key = { it.mediaId }) { song ->
-                        SearchResultItem(
-                            song = song,
-                            isCurrentTrack = song.mediaId == currentlyPlayingMediaId,
-                            isPlaying = isPlaying,
-                            onClick = { onSearchResultClick(song) },
+            item { CarSectionHeader(title = "Browse by genre") }
+            // Chunked rows rather than LazyVerticalGrid: the rest of this module lays out in
+            // LazyColumn, and the scrollbar below reads LazyListState.
+            items(genres.chunked(BrowseGridColumns)) { rowGenres ->
+                Row(horizontalArrangement = Arrangement.spacedBy(GridSpacing)) {
+                    rowGenres.forEach { genre ->
+                        CarContentCard(
+                            title = genre.name,
+                            onClick = { onGenreClick(genre) },
+                            artworkUrl = genre.imageUrl,
                         )
                     }
-                }
-            } else {
-                item { BrowseAllGrid(onCategoryClick = onCategoryClick) }
-                item {
-                    FeaturedPlaylistsSection(
-                        albums = albums,
-                        onAlbumClick = onAlbumClick,
-                        currentlyPlayingAlbumId = currentlyPlayingAlbumId,
-                        isPlaying = isPlaying,
-                    )
                 }
             }
         }
@@ -183,6 +128,30 @@ fun CarBrowseScreen(
                 .fillMaxHeight()
                 .padding(vertical = 16.dp, horizontal = 8.dp),
         )
+    }
+}
+
+/** Static placeholders, no shimmer — the ambient layer is the app's only decorative motion. */
+@Composable
+private fun BrowseSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(vertical = ListPadding),
+        verticalArrangement = Arrangement.spacedBy(GridSpacing),
+    ) {
+        repeat(2) {
+            Row(horizontalArrangement = Arrangement.spacedBy(GridSpacing)) {
+                repeat(BrowseGridColumns) {
+                    Box(
+                        modifier = Modifier
+                            .size(180.dp)
+                            .clip(RoundedCornerShape(CarCardCornerRadius))
+                            .background(CarRaised),
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -263,286 +232,3 @@ private data class ScrollbarInfo(
     val thumbRatio: Float,
     val scrollFraction: Float,
 )
-
-@Composable
-private fun CarSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClear: () -> Unit,
-    modifier: Modifier = Modifier,
-    isDisabled: Boolean = false,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(CarTouchTargetSize)
-            .clip(RoundedCornerShape(CarCardCornerRadius))
-            .background(CarGlass)
-            .padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            imageVector = SearchIcon,
-            contentDescription = null,
-            tint = CarTextSecondary,
-            modifier = Modifier.size(24.dp),
-        )
-        Box(modifier = Modifier.weight(1f)) {
-            if (query.isEmpty()) {
-                Text(
-                    text = if (isDisabled) "Search unavailable while driving" else "Search songs, artists...",
-                    color = CarTextSecondary,
-                    fontSize = 18.sp,
-                )
-            }
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
-                singleLine = true,
-                cursorBrush = SolidColor(Color.White),
-                enabled = !isDisabled,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        if (query.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .size(CarTouchTargetSize)
-                    .clickable(onClick = onClear),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Clear search",
-                    tint = CarTextSecondary,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SearchResultItem(
-    song: Song,
-    isCurrentTrack: Boolean,
-    isPlaying: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(CarCardCornerRadius))
-            .background(CarGlass)
-            .clickable(onClick = onClick)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        NowPlayingOverlay(
-            isCurrentTrack = isCurrentTrack,
-            isPlaying = isPlaying,
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            AsyncImage(
-                model = song.resolvedCoverUrl,
-                contentDescription = song.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(CarListArtSize)
-                    .clip(RoundedCornerShape(12.dp)),
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = song.title,
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = song.resolvedArtistName,
-                color = CarTextSecondary,
-                fontSize = 16.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SearchEmptyState(
-    query: String,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "No results for \"$query\"",
-            color = CarTextSecondary,
-            fontSize = 20.sp,
-        )
-    }
-}
-
-@Composable
-private fun BrowseAllGrid(
-    onCategoryClick: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Browse All",
-            color = Color.White,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        browseCategories.chunked(BrowseGridColumns).forEach { rowItems ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                rowItems.forEach { category ->
-                    CategoryCard(
-                        category = category,
-                        onClick = { onCategoryClick(category.name) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CategoryCard(
-    category: BrowseCategory,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .aspectRatio(CategoryCardAspectRatio)
-            .clip(RoundedCornerShape(CarCardCornerRadius))
-            .background(Brush.linearGradient(category.gradientColors))
-            .clickable(onClick = onClick),
-    ) {
-        Icon(
-            imageVector = category.icon,
-            contentDescription = null,
-            tint = category.contentColor.copy(alpha = IconBgAlpha),
-            modifier = Modifier
-                .size(CategoryIconSize)
-                .align(Alignment.TopEnd)
-                .padding(8.dp),
-        )
-        Text(
-            text = category.name,
-            color = category.contentColor,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(12.dp),
-        )
-    }
-}
-
-@Composable
-private fun FeaturedPlaylistsSection(
-    albums: List<Album>,
-    onAlbumClick: (Album) -> Unit,
-    currentlyPlayingAlbumId: String?,
-    isPlaying: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Featured Playlists",
-            color = Color.White,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            items(albums.take(FeaturedPlaylistsMax), key = { it.id }) { album ->
-                FeaturedPlaylistCard(
-                    album = album,
-                    isCurrentAlbum = album.id == currentlyPlayingAlbumId,
-                    isPlaying = isPlaying,
-                    onClick = { onAlbumClick(album) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeaturedPlaylistCard(
-    album: Album,
-    isCurrentAlbum: Boolean,
-    isPlaying: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .width(PlaylistCardSize)
-            .clickable(onClick = onClick),
-    ) {
-        NowPlayingOverlay(
-            isCurrentTrack = isCurrentAlbum,
-            isPlaying = isPlaying,
-            shape = RoundedCornerShape(CarCardCornerRadius),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(PlaylistCardSize)
-                    .clip(RoundedCornerShape(CarCardCornerRadius)),
-            ) {
-                AsyncImage(
-                    model = album.imageUrl,
-                    contentDescription = album.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f)),
-                                startY = GradientOverlayStartY,
-                            ),
-                        ),
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = album.name,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = "${album.songIds.size} songs",
-            color = CarTextSecondary,
-            fontSize = 12.sp,
-        )
-    }
-}
