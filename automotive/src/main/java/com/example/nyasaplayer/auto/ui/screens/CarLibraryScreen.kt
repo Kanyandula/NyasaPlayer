@@ -297,14 +297,23 @@ private fun LibraryRow(
     }
 }
 
-/** Row-shaped placeholders, so the headings stay put and the screen does not jump. */
+/**
+ * Row-shaped placeholders, so the headings stay put and the screen does not jump.
+ *
+ * Budget: the ~432dp content slot minus this composable's own `padding(vertical = ListPadding)`
+ * (24dp top + 24dp bottom) leaves 384dp, exactly 2 * CarContentCardSize (180dp) + CardSpacing
+ * (24dp). Using RowSpacing (32dp) here — the gap `LibraryRows` puts *between* rows — double-counts
+ * padding the real layout doesn't have at this level, so the second row's box gets coerced down to
+ * ~172dp. CardSpacing matches the 24dp gap BrowseSkeleton uses between its own two rows, for the
+ * same reason.
+ */
 @Composable
 private fun LibrarySkeleton(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(vertical = ListPadding),
-        verticalArrangement = Arrangement.spacedBy(RowSpacing),
+        verticalArrangement = Arrangement.spacedBy(CardSpacing),
     ) {
         repeat(SkeletonRowCount) {
             Row(horizontalArrangement = Arrangement.spacedBy(CardSpacing)) {

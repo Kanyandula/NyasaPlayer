@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -79,12 +80,17 @@ fun CarContentCard(
             .clickable(enabled = enabled, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // Square and derived from the card's own resolved width (set above via the caller's
+        // modifier, or the CarContentCardSize default) rather than a fixed size, so the tile
+        // stays fully covered by its clickable region in both Browse's weighted grid and
+        // Library's fixed-width carousels.
         SubcomposeAsyncImage(
             model = artworkUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(CarContentCardSize)
+                .fillMaxWidth()
+                .aspectRatio(1f)
                 .clip(cardShape)
                 .background(CarRaised),
             loading = { CardPlaceholder() },
