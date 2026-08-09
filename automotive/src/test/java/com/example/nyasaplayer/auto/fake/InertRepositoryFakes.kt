@@ -12,6 +12,7 @@ import com.example.nyasaplayer.core.data.api.UserRepository
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 
 class FakeGenreRepository : GenreRepository {
@@ -21,11 +22,34 @@ class FakeGenreRepository : GenreRepository {
 }
 
 class FakeUserRepository : UserRepository {
+    val liked = MutableStateFlow<List<LikedSong>>(emptyList())
+
+    /** Set to make the next likeSong/unlikeSong throw, so the revert path can be tested. */
+    var failNextWrite: Boolean = false
+
+    var likeCallCount = 0
+    var unlikeCallCount = 0
+
+    override fun getLikedSongs(userId: String): Flow<List<LikedSong>> = liked
+
+    override suspend fun likeSong(userId: String, mediaId: String) {
+        likeCallCount++
+        if (failNextWrite) {
+            failNextWrite = false
+            error("write failed")
+        }
+    }
+
+    override suspend fun unlikeSong(userId: String, mediaId: String) {
+        unlikeCallCount++
+        if (failNextWrite) {
+            failNextWrite = false
+            error("write failed")
+        }
+    }
+
     override fun getUserProfile(userId: String): Flow<UserProfile?> = flowOf(null)
     override suspend fun createOrUpdateProfile(profile: UserProfile) = Unit
-    override fun getLikedSongs(userId: String): Flow<List<LikedSong>> = flowOf(emptyList())
-    override suspend fun likeSong(userId: String, mediaId: String) = Unit
-    override suspend fun unlikeSong(userId: String, mediaId: String) = Unit
     override fun isLiked(userId: String, mediaId: String): Flow<Boolean> = flowOf(false)
     override fun getRecentlyPlayed(userId: String, limit: Int): Flow<List<RecentlyPlayedEntry>> =
         flowOf(emptyList())

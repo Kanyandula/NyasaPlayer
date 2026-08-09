@@ -1,3 +1,11 @@
+@file:Suppress(
+    // 19 functions before A4, against detekt's thresholdInFiles of 20. The class-level suppression
+    // does not cover the file threshold. This class now owns search, genres, albums, playlists,
+    // recently-played, liked songs, popular, detail and favourites — the next slice to touch it
+    // should split it rather than suppress again. See spec D23.
+    "TooManyFunctions",
+)
+
 package com.example.nyasaplayer.auto.viewmodel
 
 import android.util.Log
@@ -106,6 +114,9 @@ class AutomotiveContentViewModel @Inject constructor(
                 likedSongs = emptyList(),
                 favoriteArtists = emptyList(),
                 playlists = emptyList(),
+                // A previous account's freeze must not survive a sign-out.
+                favourites = null,
+                pendingUnlikes = emptySet(),
             )
         }
         loadRecentlyPlayed()
@@ -316,6 +327,67 @@ class AutomotiveContentViewModel @Inject constructor(
         _contentState.update { it.copy(detail = null) }
     }
 
+    /**
+     * Marks a visit to the Favourites tab.
+     *
+     * Deliberately does not freeze (spec D19) and deliberately clears nothing (spec D20). The
+     * effect that calls this re-runs on every Activity recreation — a night-mode flip mid-drive —
+     * and anything cleared here would silently reconcile the driver's held-back rows.
+     */
+    fun openFavourites() = Unit
+
+    /** Ends the visit. The next unlike starts a new freeze. */
+    fun closeFavourites() {
+        _contentState.update { it.copy(favourites = null, pendingUnlikes = emptySet()) }
+    }
+
+    /**
+     * Toggles one song's liked state, optimistically.
+     *
+     * The first unlike of a visit freezes the list as it stands *before* the removal lands, so the
+     * row cannot move under the driver (spec D19). Returns false when the write failed, having
+     * already reverted the optimistic change; the caller surfaces the error.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    suspend fun toggleFavourite(mediaId: String): Boolean {
+        val userId = authRepository.currentUserId ?: return false
+        val wasPending = mediaId in _contentState.value.pendingUnlikes
+        _contentState.update { state ->
+            state.copy(
+                // Freeze on the first unlike only. Never re-freeze: a second call must not
+                // recapture a list the live flow has already changed.
+                favourites = state.favourites ?: state.likedSongs,
+                pendingUnlikes = if (wasPending) {
+                    state.pendingUnlikes - mediaId
+                } else {
+                    state.pendingUnlikes + mediaId
+                },
+            )
+        }
+        return try {
+            if (wasPending) {
+                userRepository.likeSong(userId, mediaId)
+            } else {
+                userRepository.unlikeSong(userId, mediaId)
+            }
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Error toggling favourite $mediaId", e)
+            _contentState.update { state ->
+                state.copy(
+                    pendingUnlikes = if (wasPending) {
+                        state.pendingUnlikes + mediaId
+                    } else {
+                        state.pendingUnlikes - mediaId
+                    },
+                )
+            }
+            false
+        }
+    }
+
     @Suppress("TooGenericExceptionCaught")
     private suspend fun loadDetail(destination: CarDestination): CarDetailState = try {
         when (destination) {
@@ -384,6 +456,8 @@ data class AutomotiveContentState(
     val popularSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
     val playlists: List<Playlist> = emptyList(),
+    val favourites: List<Song>? = null,
+    val pendingUnlikes: Set<String> = emptySet(),
     val detail: CarDetailState? = null,
     val searchQuery: String = "",
     val searchResults: List<Song> = emptyList(),
