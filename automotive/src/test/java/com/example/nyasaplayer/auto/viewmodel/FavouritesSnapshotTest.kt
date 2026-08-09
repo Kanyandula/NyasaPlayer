@@ -258,6 +258,28 @@ class FavouritesSnapshotTest {
     }
 
     @Test
+    fun unfrozenToggleAfterAFreeze_leavesTheFreezeIntact() = runTest {
+        // Pins the `else` branch of the freeze capture, which is the identity: an unfrozen toggle
+        // must preserve a freeze already taken, not clear it. No other test drives freeze = true
+        // followed by freeze = false, so changing that branch to `null` passes all 13 others —
+        // and a driver who unlikes on Favourites, drills into an artist, unlikes there and comes
+        // back would find the held-back row silently reconciled.
+        songs.songs.value = listOf(song("a"), song("b"))
+        val vm = viewModel()
+        users.liked.value = listOf(likedSong("a"), likedSong("b"))
+        advanceUntilIdle()
+        vm.openFavourites()
+        vm.toggleFavourite("a", freeze = true)
+        advanceUntilIdle()
+
+        vm.toggleFavourite("b", freeze = false)
+        advanceUntilIdle()
+
+        assertEquals(listOf("a", "b"), vm.contentState.value.favourites?.map { it.mediaId })
+        assertTrue("b" in vm.contentState.value.pendingUnlikes)
+    }
+
+    @Test
     fun userSwitch_clearsTheFreezeAndPendingUnlikes() = runTest {
         songs.songs.value = listOf(song("a"), song("b"))
         val vm = viewModel()
