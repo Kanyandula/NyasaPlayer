@@ -32,6 +32,7 @@ import com.example.nyasaplayer.auto.ui.navigation.CarScreen
 import com.example.nyasaplayer.auto.ui.navigation.CarUiLocation
 import com.example.nyasaplayer.auto.ui.navigation.GateResult
 import com.example.nyasaplayer.auto.ui.navigation.gate
+import com.example.nyasaplayer.auto.ui.screens.CarAlbumScreen
 import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarAuthScreen
 import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
@@ -39,6 +40,7 @@ import com.example.nyasaplayer.auto.ui.screens.CarFavouriteMusicScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
+import com.example.nyasaplayer.auto.ui.screens.CarPlaylistScreen
 import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
@@ -46,6 +48,7 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
+import com.example.nyasaplayer.auto.viewmodel.CarDetailState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
@@ -134,6 +137,17 @@ private fun AuthenticatedApp(
         }
     }
 
+    // One entry point. openDetail early-returns for Artist, whose tracks are a live filter over
+    // likedSongs rather than a snapshot (D16).
+    LaunchedEffect(drillDown) {
+        val destination = drillDown
+        if (destination != null) {
+            contentViewModel.openDetail(destination)
+        } else {
+            contentViewModel.closeDetail()
+        }
+    }
+
     val animatorScale by rememberAnimatorDurationScale()
     val motionEnabled = decorativeMotionEnabled(
         isDistractionOptimized = playerState.restrictions.isDistractionOptimized,
@@ -195,9 +209,15 @@ private fun AuthenticatedApp(
                     playerViewModel.playSong(songs, song)
                     showFullPlayer = true
                 },
-                onShuffleArtistSongs = { songs ->
+                onShuffleTracks = { songs ->
                     playerViewModel.shufflePlay(songs)
                     showFullPlayer = true
+                },
+                onPlayTracks = { tracks ->
+                    tracks.firstOrNull()?.let { first ->
+                        playerViewModel.playSong(tracks, first)
+                        showFullPlayer = true
+                    }
                 },
                 onGenreClick = { genre ->
                     scope.launch {
@@ -299,7 +319,8 @@ private fun BrowseShell(
     drillDown: CarDestination?,
     onBackFromDetail: () -> Unit,
     onArtistSongClick: (List<Song>, Song) -> Unit,
-    onShuffleArtistSongs: (List<Song>) -> Unit,
+    onShuffleTracks: (List<Song>) -> Unit,
+    onPlayTracks: (List<Song>) -> Unit,
     onLikeClick: () -> Unit,
     onGenreClick: (Genre) -> Unit,
     onLikedSongClick: (Song) -> Unit,
@@ -350,49 +371,61 @@ private fun BrowseShell(
                         onRetry = onRetry,
                     )
 
-                    CarScreen.Library -> {
-                        val artist = drillDown as? CarDestination.Artist
-                        if (artist != null) {
+                    CarScreen.Library -> when (val destination = drillDown) {
+                        is CarDestination.Artist -> {
                             val artistLikedSongs = remember(
                                 contentState.likedSongs,
-                                artist.artistId,
+                                destination.artistId,
                                 maxItems,
                             ) {
                                 contentState.likedSongs
-                                    .filter { it.artistId == artist.artistId }
+                                    .filter { it.artistId == destination.artistId }
                                     .take(maxItems)
                             }
                             CarArtistLikedSongsScreen(
-                                artistName = artist.artistName,
+                                artistName = destination.artistName,
                                 likedSongs = artistLikedSongs,
                                 onBackClick = onBackFromDetail,
                                 onSongClick = { song -> onArtistSongClick(artistLikedSongs, song) },
-                                onShufflePlay = { onShuffleArtistSongs(artistLikedSongs) },
+                                onShufflePlay = { onShuffleTracks(artistLikedSongs) },
                                 currentlyPlayingMediaId = currentlyPlayingMediaId,
                                 isPlaying = isPlaying,
-                            )
-                        } else {
-                            CarLibraryScreen(
-                                recentlyPlayed = contentState.recentlyPlayed.take(maxItems),
-                                playlists = contentState.playlists.take(maxItems),
-                                albums = contentState.albums.take(maxItems),
-                                favoriteArtists = contentState.favoriteArtists.take(maxItems),
-                                likedSongCount = contentState.likedSongs.size,
-                                onSongClick = onSongClick,
-                                onPlaylistClick = onPlaylistClick,
-                                onAlbumClick = onAlbumClick,
-                                onArtistClick = onArtistClick,
-                                onFavouritesClick = { onSelectTab(CarScreen.Favourites) },
-                                onBrowseClick = { onSelectTab(CarScreen.Browse) },
-                                onSignOut = onSignOut,
-                                userDisplayName = userDisplayName,
-                                currentlyPlayingMediaId = currentlyPlayingMediaId,
-                                isPlaying = isPlaying,
-                                isLoading = contentState.isLoading,
-                                errorMessage = contentState.errorMessage,
-                                onRetry = onRetry,
                             )
                         }
+
+                        is CarDestination.Album, is CarDestination.Playlist -> DetailRoute(
+                            destination = destination,
+                            detail = contentState.detail,
+                            maxItems = maxItems,
+                            onBackClick = onBackFromDetail,
+                            onPlayTracks = onPlayTracks,
+                            onShuffleTracks = onShuffleTracks,
+                            onSongClick = onSongClick,
+                            currentlyPlayingMediaId = currentlyPlayingMediaId,
+                            isPlaying = isPlaying,
+                            onRetry = onRetry,
+                        )
+
+                        null -> CarLibraryScreen(
+                            recentlyPlayed = contentState.recentlyPlayed.take(maxItems),
+                            playlists = contentState.playlists.take(maxItems),
+                            albums = contentState.albums.take(maxItems),
+                            favoriteArtists = contentState.favoriteArtists.take(maxItems),
+                            likedSongCount = contentState.likedSongs.size,
+                            onSongClick = onSongClick,
+                            onPlaylistClick = onPlaylistClick,
+                            onAlbumClick = onAlbumClick,
+                            onArtistClick = onArtistClick,
+                            onFavouritesClick = { onSelectTab(CarScreen.Favourites) },
+                            onBrowseClick = { onSelectTab(CarScreen.Browse) },
+                            onSignOut = onSignOut,
+                            userDisplayName = userDisplayName,
+                            currentlyPlayingMediaId = currentlyPlayingMediaId,
+                            isPlaying = isPlaying,
+                            isLoading = contentState.isLoading,
+                            errorMessage = contentState.errorMessage,
+                            onRetry = onRetry,
+                        )
                     }
 
                     CarScreen.Favourites -> CarFavouriteMusicScreen(
@@ -418,5 +451,64 @@ private fun BrowseShell(
                 onQueueClick = onQueueClick,
             )
         }
+    }
+}
+
+/**
+ * Applies the driving item cap to a loaded detail and picks the screen.
+ *
+ * `contentState.detail` is null for one frame after [drillDown] changes, before `openDetail`'s
+ * first state write lands — and for one frame after *that* it can still hold the previous
+ * destination. Both cases render the loading state rather than falling through, which is what
+ * stops the wrong tracks appearing under the right title on entry.
+ */
+@Suppress("LongParameterList")
+@Composable
+private fun DetailRoute(
+    destination: CarDestination,
+    detail: CarDetailState?,
+    maxItems: Int,
+    onBackClick: () -> Unit,
+    onPlayTracks: (List<Song>) -> Unit,
+    onShuffleTracks: (List<Song>) -> Unit,
+    onSongClick: (List<Song>, Song) -> Unit,
+    currentlyPlayingMediaId: String?,
+    isPlaying: Boolean,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val capped = remember(detail, destination, maxItems) {
+        detail?.takeIf { it.destination == destination }
+            ?.let { loaded -> loaded.copy(tracks = loaded.tracks.take(maxItems)) }
+            ?: CarDetailState(destination = destination, isLoading = true)
+    }
+
+    when (destination) {
+        is CarDestination.Album -> CarAlbumScreen(
+            detail = capped,
+            onBackClick = onBackClick,
+            onPlay = onPlayTracks,
+            onShuffle = onShuffleTracks,
+            onSongClick = onSongClick,
+            modifier = modifier,
+            currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isPlaying = isPlaying,
+            onRetry = onRetry,
+        )
+
+        is CarDestination.Playlist -> CarPlaylistScreen(
+            detail = capped,
+            onBackClick = onBackClick,
+            onPlay = onPlayTracks,
+            onShuffle = onShuffleTracks,
+            onSongClick = onSongClick,
+            modifier = modifier,
+            currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isPlaying = isPlaying,
+            onRetry = onRetry,
+        )
+
+        // Routed by the caller's own branch; a when over a sealed interface must be exhaustive.
+        is CarDestination.Artist -> Unit
     }
 }
