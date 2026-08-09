@@ -179,15 +179,7 @@ private fun AuthenticatedApp(
                     showFullPlayer = true
                 },
                 onRetry = contentViewModel::retryLoad,
-                onAlbumClick = { album ->
-                    scope.launch {
-                        val songs = contentViewModel.getSongsByAlbum(album.id)
-                        if (songs.isNotEmpty()) {
-                            playerViewModel.playSong(songs, songs.first())
-                            showFullPlayer = true
-                        }
-                    }
-                },
+                onAlbumClick = { album -> drillDown = CarDestination.Album(album.id) },
                 onArtistClick = { favoriteArtist ->
                     drillDown = CarDestination.Artist(
                         artistId = favoriteArtist.artistId,
