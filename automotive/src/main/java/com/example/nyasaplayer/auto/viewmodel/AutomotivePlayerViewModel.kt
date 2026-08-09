@@ -81,6 +81,9 @@ class AutomotivePlayerViewModel @Inject constructor(
                         } else {
                             error.message ?: "Playback error"
                         },
+                        // The current item is what failed, so Retry re-attempting it via
+                        // togglePlayPause() acts on the thing the error is actually about.
+                        isRetryable = true,
                     ),
                 )
             }
@@ -308,10 +311,10 @@ class AutomotivePlayerViewModel @Inject constructor(
     }
 
     /**
-     * Surfaces the case where a genre's `songIds` resolved to zero actual songs — distinct from
-     * an empty genre, which the Browse screen disables before it can be tapped at all. Routed
-     * through the same error overlay as playback errors rather than a new channel: this is a
-     * failure to start playback, same as any other.
+     * Surfaces the case where a genre's tap resolves to zero actual songs — whether the genre
+     * is genuinely empty or its `songIds` just disagree with the `Song.genreIds` reverse index
+     * tracks are actually resolved by. Routed through the same error overlay as playback errors
+     * rather than a new channel: this is a failure to start playback, same as any other.
      */
     fun reportEmptyGenrePlayback() {
         _uiState.update {

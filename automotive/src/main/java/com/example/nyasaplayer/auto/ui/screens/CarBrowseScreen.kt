@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -37,7 +37,6 @@ import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
-import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.core.common.models.Genre
 
@@ -124,7 +123,6 @@ private fun BrowseGrid(
                             title = genre.name,
                             onClick = { onGenreClick(genre) },
                             artworkUrl = genre.imageUrl,
-                            enabled = genre.songIds.isNotEmpty(),
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -147,25 +145,44 @@ private fun BrowseGrid(
     }
 }
 
-/** Static placeholders, no shimmer — the ambient layer is the app's only decorative motion. */
+/**
+ * Static placeholders, no shimmer — the ambient layer is the app's only decorative motion.
+ *
+ * One row only, not two. Real Browse cards are now width-flexed and square (BrowseGrid), so a
+ * placeholder row's *height* is whatever its *width* works out to. On the 1024dp AVD this was
+ * verified against, the content slot is 1024 - CarNavRailWidth (80) - 2 * CarScreenMargin (96)
+ * = 848dp wide; matching BrowseGrid's own `end = ScrollbarWidth + ScrollbarGap` (16dp)
+ * reservation below brings that to 832dp, so each of the 3 columns is (832 - 2 * GridSpacing) /
+ * 3 = (832 - 48) / 3 ≈ 261dp — and a row is therefore ~261dp tall, not 180dp.
+ *
+ * The vertical budget one row has to fit in is CarSystemBarHeight (80) subtracted from the
+ * screen height, then CarMiniPlayerHeight (112) *if something is playing* and OfflineBanner's
+ * height *if offline* — both conditional, both only ever shrinking the slot — then 2 *
+ * CarScreenMargin (96) for this row's own container. Worst case on a 720dp-tall screen with the
+ * mini player showing: 720 - 80 - 112 - 96 = 432dp. One 261dp row clears that with room left
+ * for the mini player and system bar. Two rows (2 * 261 + GridSpacing = 546dp) does not fit even
+ * the *best* case (no mini player: 720 - 80 - 96 = 544dp) — that overflow, silently clipped by
+ * this `Column`, is what this fixes.
+ */
 @Composable
 private fun BrowseSkeleton(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(vertical = ListPadding),
-        verticalArrangement = Arrangement.spacedBy(GridSpacing),
+            .padding(top = ListPadding, bottom = ListPadding, end = ScrollbarWidth + ScrollbarGap),
     ) {
-        repeat(2) {
-            Row(horizontalArrangement = Arrangement.spacedBy(GridSpacing)) {
-                repeat(BrowseGridColumns) {
-                    Box(
-                        modifier = Modifier
-                            .size(CarContentCardSize)
-                            .clip(RoundedCornerShape(CarCardCornerRadius))
-                            .background(CarRaised),
-                    )
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(GridSpacing),
+        ) {
+            repeat(BrowseGridColumns) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(CarCardCornerRadius))
+                        .background(CarRaised),
+                )
             }
         }
     }

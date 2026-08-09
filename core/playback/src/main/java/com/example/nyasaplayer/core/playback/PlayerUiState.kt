@@ -14,6 +14,11 @@ data class PlayerError(
     val title: String,
     val message: String,
     val isPlaybackError: Boolean = true,
+    // True only when Retry re-attempts the same failed action (the current item erroring out).
+    // Errors unrelated to what's currently playing — a failed like sync, an unresolved genre,
+    // a dead controller connection — must not offer a Retry that pauses/resumes someone else's
+    // queue, so they leave this false.
+    val isRetryable: Boolean = false,
 )
 
 data class PlayerUiState(
