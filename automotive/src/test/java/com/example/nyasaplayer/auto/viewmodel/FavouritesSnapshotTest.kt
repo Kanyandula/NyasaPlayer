@@ -18,6 +18,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FavouritesSnapshotTest {
@@ -27,6 +28,7 @@ class FavouritesSnapshotTest {
 
     private val songs = FakeSongRepository()
     private val users = FakeUserRepository()
+    private val auth = FakeAuthRepository()
 
     private fun viewModel() = AutomotiveContentViewModel(
         songRepository = songs,
@@ -34,7 +36,7 @@ class FavouritesSnapshotTest {
         albumRepository = FakeAlbumRepository(),
         playlistRepository = FakePlaylistRepository(),
         userRepository = users,
-        authRepository = FakeAuthRepository(),
+        authRepository = auth,
     )
 
     private fun song(id: String) = Song(mediaId = id, title = "Title $id", artistName = "Artist $id")
@@ -70,7 +72,7 @@ class FavouritesSnapshotTest {
         advanceUntilIdle()
         vm.openFavourites()
 
-        vm.toggleFavourite("a")
+        vm.toggleFavourite("a", freeze = true)
         advanceUntilIdle()
 
         assertEquals(listOf("a", "b"), vm.contentState.value.favourites?.map { it.mediaId })
@@ -84,7 +86,7 @@ class FavouritesSnapshotTest {
         users.liked.value = listOf(likedSong("a"), likedSong("b"))
         advanceUntilIdle()
         vm.openFavourites()
-        vm.toggleFavourite("a")
+        vm.toggleFavourite("a", freeze = true)
         advanceUntilIdle()
 
         users.liked.value = listOf(likedSong("b"))
@@ -100,14 +102,18 @@ class FavouritesSnapshotTest {
         users.liked.value = listOf(likedSong("a"), likedSong("b"))
         advanceUntilIdle()
         vm.openFavourites()
-        vm.toggleFavourite("a")
+        vm.toggleFavourite("a", freeze = true)
         advanceUntilIdle()
 
-        vm.toggleFavourite("a")
+        vm.toggleFavourite("a", freeze = true)
         advanceUntilIdle()
 
         assertFalse("a" in vm.contentState.value.pendingUnlikes)
         assertEquals(listOf("a", "b"), vm.contentState.value.favourites?.map { it.mediaId })
+        // Pins *which* write happened. Without these, swapping the branch so a re-like sends a
+        // second unlikeSong leaves every other assertion green while the server drops the song.
+        assertEquals(1, users.unlikeCallCount)
+        assertEquals(1, users.likeCallCount)
     }
 
     /**
@@ -124,12 +130,12 @@ class FavouritesSnapshotTest {
         users.liked.value = listOf(likedSong("a"), likedSong("b"), likedSong("c"))
         advanceUntilIdle()
         vm.openFavourites()
-        vm.toggleFavourite("a")
+        vm.toggleFavourite("a", freeze = true)
         advanceUntilIdle()
         users.liked.value = listOf(likedSong("b"), likedSong("c"))
         advanceUntilIdle()
 
-        vm.toggleFavourite("b")
+        vm.toggleFavourite("b", freeze = true)
         advanceUntilIdle()
 
         assertEquals(listOf("a", "b", "c"), vm.contentState.value.favourites?.map { it.mediaId })
@@ -144,7 +150,7 @@ class FavouritesSnapshotTest {
         users.liked.value = listOf(likedSong("a"), likedSong("b"))
         advanceUntilIdle()
         vm.openFavourites()
-        vm.toggleFavourite("a")
+        vm.toggleFavourite("a", freeze = true)
         advanceUntilIdle()
         users.liked.value = listOf(likedSong("b"))
         advanceUntilIdle()
@@ -164,7 +170,7 @@ class FavouritesSnapshotTest {
         users.liked.value = listOf(likedSong("a"), likedSong("b"))
         advanceUntilIdle()
         vm.openFavourites()
-        vm.toggleFavourite("a")
+        vm.toggleFavourite("a", freeze = true)
         advanceUntilIdle()
 
         vm.openFavourites()
@@ -182,10 +188,92 @@ class FavouritesSnapshotTest {
         vm.openFavourites()
         users.failNextWrite = true
 
-        val ok = vm.toggleFavourite("a")
+        val ok = vm.toggleFavourite("a", freeze = true)
         advanceUntilIdle()
 
         assertFalse(ok)
         assertFalse("a" in vm.contentState.value.pendingUnlikes)
+        assertEquals(1, users.unlikeCallCount)
+        // Records the intended behaviour, which was previously unpinned in both directions: the
+        // freeze survives a failed write. The row goes back to solid, but the list must still
+        // not reflow under the driver's finger for the rest of the visit.
+        assertEquals(listOf("a"), vm.contentState.value.favourites?.map { it.mediaId })
+    }
+
+    @Test
+    fun failedReLike_restoresThePendingUnlike() = runTest {
+        songs.songs.value = listOf(song("a"))
+        val vm = viewModel()
+        users.liked.value = listOf(likedSong("a"))
+        advanceUntilIdle()
+        vm.openFavourites()
+        vm.toggleFavourite("a", freeze = true)
+        advanceUntilIdle()
+
+        // The other direction of the revert. Collapsing it to an unconditional `- mediaId`
+        // survives failedUnlike_… but loses the pending unlike here, leaving the heart solid
+        // for a song the server still has unliked.
+        users.failNextWrite = true
+        val ok = vm.toggleFavourite("a", freeze = true)
+        advanceUntilIdle()
+
+        assertFalse(ok)
+        assertTrue("a" in vm.contentState.value.pendingUnlikes)
+    }
+
+    @Test
+    fun cancelledWrite_propagatesInsteadOfReportingFailure() = runTest {
+        songs.songs.value = listOf(song("a"))
+        val vm = viewModel()
+        users.liked.value = listOf(likedSong("a"))
+        advanceUntilIdle()
+        vm.openFavourites()
+        users.throwOnNextWrite = CancellationException("collector cancelled")
+
+        val thrown = runCatching { vm.toggleFavourite("a", freeze = true) }.exceptionOrNull()
+
+        // Without the CancellationException rethrow the generic catch swallows it and returns
+        // false, and the caller raises a spurious "Couldn't Save" for a write that probably
+        // landed — the screen was simply torn down while it was in flight.
+        assertTrue(thrown is CancellationException)
+    }
+
+    @Test
+    fun unfrozenUnlike_pendsAndWritesWithoutTakingAFreeze() = runTest {
+        // The artist liked-songs drill-down (spec D25): a live list that removes rows
+        // immediately. A freeze taken there would leak into the next Favourites visit, because
+        // closeFavourites() is driven by a tab change and the drill-down stays on Library.
+        songs.songs.value = listOf(song("a"), song("b"))
+        val vm = viewModel()
+        users.liked.value = listOf(likedSong("a"), likedSong("b"))
+        advanceUntilIdle()
+
+        val ok = vm.toggleFavourite("a", freeze = false)
+        advanceUntilIdle()
+
+        assertTrue(ok)
+        assertNull(vm.contentState.value.favourites)
+        assertTrue("a" in vm.contentState.value.pendingUnlikes)
+        assertEquals(1, users.unlikeCallCount)
+    }
+
+    @Test
+    fun userSwitch_clearsTheFreezeAndPendingUnlikes() = runTest {
+        songs.songs.value = listOf(song("a"), song("b"))
+        val vm = viewModel()
+        users.liked.value = listOf(likedSong("a"), likedSong("b"))
+        advanceUntilIdle()
+        vm.openFavourites()
+        vm.toggleFavourite("a", freeze = true)
+        advanceUntilIdle()
+
+        // Sign out, sign a different account in on the same head unit. Without the clear in
+        // reloadUserContent(), user B sees user A's frozen list and A's hollow heart.
+        auth.currentUserId = "other-user"
+        vm.reloadUserContent()
+        advanceUntilIdle()
+
+        assertNull(vm.contentState.value.favourites)
+        assertTrue(vm.contentState.value.pendingUnlikes.isEmpty())
     }
 }

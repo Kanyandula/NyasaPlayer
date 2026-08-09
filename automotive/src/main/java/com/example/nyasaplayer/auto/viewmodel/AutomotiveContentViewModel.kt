@@ -49,7 +49,6 @@ private const val AlbumMissingError = "This album is no longer available."
 private const val PlaylistMissingError = "This playlist is no longer available."
 
 @HiltViewModel
-@Suppress("TooManyFunctions") // One view model backs all three tabs plus detail loading.
 class AutomotiveContentViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val genreRepository: GenreRepository,
@@ -344,19 +343,27 @@ class AutomotiveContentViewModel @Inject constructor(
     /**
      * Toggles one song's liked state, optimistically.
      *
-     * The first unlike of a visit freezes the list as it stands *before* the removal lands, so the
-     * row cannot move under the driver (spec D19). Returns false when the write failed, having
-     * already reverted the optimistic change; the caller surfaces the error.
+     * [freeze] is the caller's screen contract, not a preference. `CarFavouritesScreen` passes
+     * true: the first unlike of a visit freezes the list as it stands *before* the removal lands,
+     * so the row cannot move under the driver (spec D19). `CarArtistLikedSongsScreen` passes
+     * false: its list is deliberately live and removes rows immediately (spec D25), and a freeze
+     * taken there would otherwise leak into the next Favourites visit — the effect that calls
+     * [closeFavourites] is keyed on the tab, and the drill-down never leaves the Library tab.
+     * A `freeze = false` call still records the pending unlike and still performs the write.
+     *
+     * Returns false when the write failed, having already reverted the optimistic change; the
+     * caller surfaces the error. A freeze already taken is deliberately *not* released on
+     * failure — the list still must not reflow under the driver's finger.
      */
     @Suppress("TooGenericExceptionCaught")
-    suspend fun toggleFavourite(mediaId: String): Boolean {
+    suspend fun toggleFavourite(mediaId: String, freeze: Boolean): Boolean {
         val userId = authRepository.currentUserId ?: return false
         val wasPending = mediaId in _contentState.value.pendingUnlikes
         _contentState.update { state ->
             state.copy(
                 // Freeze on the first unlike only. Never re-freeze: a second call must not
                 // recapture a list the live flow has already changed.
-                favourites = state.favourites ?: state.likedSongs,
+                favourites = if (freeze) state.favourites ?: state.likedSongs else state.favourites,
                 pendingUnlikes = if (wasPending) {
                     state.pendingUnlikes - mediaId
                 } else {
