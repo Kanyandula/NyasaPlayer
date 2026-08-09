@@ -195,6 +195,7 @@ private fun AuthenticatedApp(
                     showFullPlayer = true
                 },
                 onRetry = contentViewModel::retryLoad,
+                onRetryDetail = { drillDown?.let(contentViewModel::openDetail) },
                 onAlbumClick = { album -> drillDown = CarDestination.Album(album.id) },
                 onPlaylistClick = { playlist -> drillDown = CarDestination.Playlist(playlist.id) },
                 onArtistClick = { favoriteArtist ->
@@ -313,6 +314,7 @@ private fun BrowseShell(
     onSkipPrevious: () -> Unit,
     onSongClick: (List<Song>, Song) -> Unit,
     onRetry: () -> Unit,
+    onRetryDetail: () -> Unit,
     onAlbumClick: (Album) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
     onArtistClick: (FavoriteArtist) -> Unit,
@@ -403,7 +405,7 @@ private fun BrowseShell(
                             onSongClick = onSongClick,
                             currentlyPlayingMediaId = currentlyPlayingMediaId,
                             isPlaying = isPlaying,
-                            onRetry = onRetry,
+                            onRetry = onRetryDetail,
                         )
 
                         null -> CarLibraryScreen(

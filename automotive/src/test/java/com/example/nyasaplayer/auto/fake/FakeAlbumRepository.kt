@@ -9,10 +9,16 @@ class FakeAlbumRepository : AlbumRepository {
 
     val albums = MutableStateFlow<List<Album>>(emptyList())
 
+    /** Counts [getAlbumById] calls so a test can assert a repeated load did not re-fetch. */
+    var getAlbumByIdCallCount = 0
+        private set
+
     override fun getAlbums(): Flow<List<Album>> = albums
 
-    override suspend fun getAlbumById(albumId: String): Album? =
-        albums.value.firstOrNull { it.id == albumId }
+    override suspend fun getAlbumById(albumId: String): Album? {
+        getAlbumByIdCallCount++
+        return albums.value.firstOrNull { it.id == albumId }
+    }
 
     override fun getAlbumsByArtist(artistId: String): Flow<List<Album>> = albums
 

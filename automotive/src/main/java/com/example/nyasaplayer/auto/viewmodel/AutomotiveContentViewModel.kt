@@ -272,8 +272,23 @@ class AutomotiveContentViewModel @Inject constructor(
      * per destination and never re-runs when data arrives later. Everything it reads therefore
      * comes from a repository call, not from `_contentState` — including the call that follows
      * process death, when the observed flows have not emitted yet (D17).
+     *
+     * Guarded against redundant reloads: `drillDown` survives activity recreation (a night-mode
+     * `uiMode` flip, say) via `rememberSaveable`, and `LaunchedEffect(drillDown)` fires again on
+     * every fresh composition — including recreation. Without this guard an already-settled
+     * detail would flash back to its skeleton and re-hit Room/Firestore for no reason. A
+     * mismatched destination, a still-loading state, or a settled error all fall through and
+     * reload, so retry after a failure keeps working.
      */
     fun openDetail(destination: CarDestination) {
+        val settled = _contentState.value.detail
+        val isSettledForDestination = settled != null &&
+            settled.destination == destination &&
+            !settled.isLoading &&
+            settled.errorMessage == null
+        if (isSettledForDestination) {
+            return
+        }
         detailJob?.cancel()
         val token = ++detailToken
         if (destination is CarDestination.Artist) {
@@ -319,7 +334,10 @@ class AutomotiveContentViewModel @Inject constructor(
     private suspend fun loadAlbumDetail(destination: CarDestination.Album): CarDetailState {
         val album = albumRepository.getAlbumById(destination.albumId)
             ?: return CarDetailState(destination, isLoading = false, errorMessage = AlbumMissingError)
-        val tracks = songRepository.getSongsByIds(album.songIds)
+        // Album songIds come straight from synced Firestore data with no dedupe guarantee,
+        // unlike PlaylistRepository which already guards against duplicates. A duplicated id
+        // would otherwise crash CarDetailScreen's LazyColumn, keyed on mediaId.
+        val tracks = songRepository.getSongsByIds(album.songIds).distinctBy { it.mediaId }
         return CarDetailState(
             destination = destination,
             title = album.name,

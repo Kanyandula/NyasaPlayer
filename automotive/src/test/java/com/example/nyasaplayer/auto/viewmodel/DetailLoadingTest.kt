@@ -221,6 +221,28 @@ class DetailLoadingTest {
     }
 
     @Test
+    fun openDetail_repeatCallForSettledDestination_doesNotReloadOrFlash() = runTest {
+        // Simulates activity recreation (e.g. a night-mode uiMode flip): drillDown survives via
+        // rememberSaveable and LaunchedEffect(drillDown) re-fires openDetail for the same,
+        // already-loaded destination. Without the guard this re-hits the repository and flashes
+        // the loaded screen back to its skeleton mid-drive.
+        songs.songs.value = listOf(song("a"))
+        albums.albums.value = listOf(album("al1", listOf("a")))
+        val vm = viewModel()
+
+        vm.openDetail(CarDestination.Album("al1"))
+        advanceUntilIdle()
+        assertFalse(requireNotNull(vm.contentState.value.detail).isLoading)
+        assertEquals(1, albums.getAlbumByIdCallCount)
+
+        vm.openDetail(CarDestination.Album("al1"))
+
+        val detail = requireNotNull(vm.contentState.value.detail)
+        assertFalse(detail.isLoading)
+        assertEquals(1, albums.getAlbumByIdCallCount)
+    }
+
+    @Test
     fun openDetail_unknownAlbum_setsError() = runTest {
         val vm = viewModel()
 
