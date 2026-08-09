@@ -232,10 +232,6 @@ private fun AuthenticatedApp(
                     }
                 },
                 onLikeClick = playerViewModel::toggleLike,
-                onLikedSongClick = { song ->
-                    playerViewModel.playSong(contentState.likedSongs, song)
-                    showFullPlayer = true
-                },
                 onLikeToggle = { song ->
                     scope.launch {
                         if (!contentViewModel.toggleFavourite(song.mediaId, freeze = true)) {
@@ -334,7 +330,6 @@ private fun BrowseShell(
     onPlayTracks: (List<Song>) -> Unit,
     onLikeClick: () -> Unit,
     onGenreClick: (Genre) -> Unit,
-    onLikedSongClick: (Song) -> Unit,
     onLikeToggle: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -447,7 +442,7 @@ private fun BrowseShell(
                         CarFavouriteMusicScreen(
                             songs = favouriteSongs,
                             pendingUnlikes = contentState.pendingUnlikes,
-                            onSongClick = onLikedSongClick,
+                            onSongClick = { song -> onSongClick(favouriteSongs, song) },
                             onPlayAll = { onPlayTracks(favouriteSongs) },
                             onShuffle = { onShuffleTracks(favouriteSongs) },
                             onLikeToggle = onLikeToggle,
