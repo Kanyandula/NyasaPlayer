@@ -51,7 +51,7 @@ class AutomotivePlayerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AutomotiveUiState())
     val uiState: StateFlow<AutomotiveUiState> = _uiState.asStateFlow()
 
-    private val userId get() = authRepository.currentUser?.uid
+    private val userId get() = authRepository.currentUserId
     private var likeObserverJob: Job? = null
 
     private val stateCollector = object : BasePlayerStateCollector(

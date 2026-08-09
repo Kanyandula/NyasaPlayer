@@ -17,6 +17,10 @@ class FakeAuthRepository : AuthRepository {
 
     override val currentUser: FirebaseUser? get() = user.value
 
+    var userId: String? = null
+
+    override val currentUserId: String? get() = userId ?: user.value?.uid
+
     override val isAuthenticated: Boolean get() = user.value != null
 
     override suspend fun signInWithEmail(email: String, password: String): AuthResult = signInResult

@@ -5,10 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.data.api.AlbumRepository
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.GenreRepository
+import com.example.nyasaplayer.core.data.api.PlaylistRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,6 +40,7 @@ class AutomotiveContentViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val genreRepository: GenreRepository,
     private val albumRepository: AlbumRepository,
+    private val playlistRepository: PlaylistRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
 ) : ViewModel() {
@@ -50,6 +53,7 @@ class AutomotiveContentViewModel @Inject constructor(
     private var likedSongsJob: Job? = null
     private var genresJob: Job? = null
     private var albumsJob: Job? = null
+    private var playlistsJob: Job? = null
     private var popularSongsJob: Job? = null
     private var currentUserId: String? = null
 
@@ -78,19 +82,27 @@ class AutomotiveContentViewModel @Inject constructor(
         popularSongsJob?.cancel()
         recentlyPlayedJob?.cancel()
         likedSongsJob?.cancel()
+        playlistsJob?.cancel()
     }
 
     fun reloadUserContent() {
-        val newUserId = authRepository.currentUser?.uid
+        val newUserId = authRepository.currentUserId
         if (newUserId == currentUserId) return
         currentUserId = newUserId
         recentlyPlayedJob?.cancel()
         likedSongsJob?.cancel()
+        playlistsJob?.cancel()
         _contentState.update {
-            it.copy(recentlyPlayed = emptyList(), likedSongs = emptyList(), favoriteArtists = emptyList())
+            it.copy(
+                recentlyPlayed = emptyList(),
+                likedSongs = emptyList(),
+                favoriteArtists = emptyList(),
+                playlists = emptyList(),
+            )
         }
         loadRecentlyPlayed()
         observeLikedSongs()
+        observePlaylists()
     }
 
     private fun loadContent() {
@@ -105,6 +117,7 @@ class AutomotiveContentViewModel @Inject constructor(
         loadRecentlyPlayed()
         loadPopularSongs()
         observeLikedSongs()
+        observePlaylists()
     }
 
     private fun observeGenres() {
@@ -127,7 +140,7 @@ class AutomotiveContentViewModel @Inject constructor(
 
     @Suppress("TooGenericExceptionCaught")
     private fun loadRecentlyPlayed() {
-        val userId = authRepository.currentUser?.uid ?: return
+        val userId = authRepository.currentUserId ?: return
         currentUserId = userId
         recentlyPlayedJob = userRepository.getRecentlyPlayed(userId, RecentlyPlayedLimit).onEach { entries ->
             try {
@@ -147,7 +160,7 @@ class AutomotiveContentViewModel @Inject constructor(
 
     @Suppress("TooGenericExceptionCaught")
     private fun observeLikedSongs() {
-        val userId = authRepository.currentUser?.uid ?: return
+        val userId = authRepository.currentUserId ?: return
         likedSongsJob = userRepository.getLikedSongs(userId).onEach { likedEntries ->
             try {
                 val songIds = likedEntries.map { it.mediaId }.distinct()
@@ -167,6 +180,15 @@ class AutomotiveContentViewModel @Inject constructor(
             }
         }.catch { e ->
             Log.e(TAG, "Error observing liked songs", e)
+        }.launchIn(viewModelScope)
+    }
+
+    private fun observePlaylists() {
+        val userId = authRepository.currentUserId ?: return
+        playlistsJob = playlistRepository.getPlaylists(userId).onEach { playlists ->
+            _contentState.update { it.copy(playlists = playlists) }
+        }.catch { e ->
+            Log.e(TAG, "Error observing playlists", e)
         }.launchIn(viewModelScope)
     }
 
@@ -261,6 +283,7 @@ data class AutomotiveContentState(
     val albums: List<Album> = emptyList(),
     val popularSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
+    val playlists: List<Playlist> = emptyList(),
     val searchQuery: String = "",
     val searchResults: List<Song> = emptyList(),
     val isLoading: Boolean = true,
