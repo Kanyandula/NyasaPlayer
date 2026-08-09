@@ -80,7 +80,7 @@ private fun ErrorModalCard(
         Spacer(modifier = Modifier.height(32.dp))
         ErrorText(title = error.title, message = error.message)
         Spacer(modifier = Modifier.height(32.dp))
-        ErrorActions(onDismiss = onDismiss, onRetry = onRetry)
+        ErrorActions(isRetryable = error.isRetryable, onDismiss = onDismiss, onRetry = onRetry)
     }
 }
 
@@ -129,8 +129,15 @@ private fun ErrorText(
     }
 }
 
+/**
+ * Retry only renders for [isRetryable] errors — ones where re-attempting means resuming the
+ * same thing that failed. Everything else (a dead controller connection, a failed like sync,
+ * an unresolved genre) offers Dismiss alone, so Retry never ends up acting on unrelated
+ * playback.
+ */
 @Composable
 private fun ErrorActions(
+    isRetryable: Boolean,
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
@@ -156,26 +163,28 @@ private fun ErrorActions(
             )
         }
 
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(NyasaGold)
-                .clickable(onClick = onRetry)
-                .padding(vertical = 20.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
+        if (isRetryable) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(NyasaGold)
+                    .clickable(onClick = onRetry)
+                    .padding(vertical = 20.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(RefreshIcon, null, tint = NyasaOnGold, modifier = Modifier.size(24.dp))
-                Text(
-                    text = "Retry",
-                    color = NyasaOnGold,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(RefreshIcon, null, tint = NyasaOnGold, modifier = Modifier.size(24.dp))
+                    Text(
+                        text = "Retry",
+                        color = NyasaOnGold,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
         }
     }
