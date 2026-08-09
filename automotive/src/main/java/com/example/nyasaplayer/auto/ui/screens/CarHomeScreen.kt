@@ -76,12 +76,18 @@ fun CarHomeScreen(
     errorMessage: String?,
     onSongClick: (List<Song>, Song) -> Unit,
     onRetry: () -> Unit,
+    onBrowseClick: () -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
     isPlaying: Boolean = false,
 ) {
+    val hasContent = recentlyPlayed.isNotEmpty() || popularSongs.isNotEmpty()
+
     when {
-        errorMessage != null -> CarEmptyState(
+        // Error only when there is nothing to show. errorMessage is shared with the
+        // genre/album load, which Home does not render — a Browse-only failure must not
+        // blank out content Home already has.
+        errorMessage != null && !hasContent -> CarEmptyState(
             title = "Something went wrong",
             body = errorMessage,
             modifier = modifier,
@@ -91,12 +97,12 @@ fun CarHomeScreen(
 
         isLoading -> HomeSkeleton(modifier = modifier)
 
-        recentlyPlayed.isEmpty() && popularSongs.isEmpty() -> CarEmptyState(
+        !hasContent -> CarEmptyState(
             title = "Nothing to play yet",
             body = "Your music will appear here once it has synced.",
             modifier = modifier,
-            actionLabel = "Retry",
-            onAction = onRetry,
+            actionLabel = "Browse Music",
+            onAction = onBrowseClick,
         )
 
         else -> HomeContent(
@@ -132,9 +138,10 @@ private fun HomeContent(
             }
         }
 
-        if (recentlyPlayed.isNotEmpty()) {
+        if (recentlyPlayed.size > 1) {
             item { CarSectionHeader(title = "Continue Listening") }
-            items(recentlyPlayed, key = { "recent_${it.mediaId}" }) { song ->
+            // drop(1): the first track is already the resume hero above.
+            items(recentlyPlayed.drop(1), key = { "recent_${it.mediaId}" }) { song ->
                 HomeTrack(
                     song = song,
                     section = recentlyPlayed,

@@ -1,14 +1,14 @@
 package com.example.nyasaplayer.auto.ui.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -18,7 +18,7 @@ import com.example.nyasaplayer.auto.ui.theme.CarAmbientBlue
 import com.example.nyasaplayer.auto.ui.theme.CarAmbientPurple
 
 private const val DriftDurationMs = 24_000
-private const val FrozenDriftFraction = 0.5f
+private const val StartDriftFraction = 0f
 private const val GradientRadiusFactor = 0.9f
 private const val DriftTravelFactor = 0.25f
 
@@ -43,30 +43,36 @@ fun CarAmbientBackground(
     animate: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val transition = rememberInfiniteTransition(label = "ambient")
-    val driven by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = DriftDurationMs),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "ambientDrift",
-    )
-    val drift = if (animate) driven else FrozenDriftFraction
+    // An Animatable driven by a LaunchedEffect, not an InfiniteTransition. Two reasons:
+    // cancelling the effect actually stops the animation clock, where an InfiniteTransition
+    // keeps requesting frames even if its value is ignored; and the Animatable holds its
+    // current value on cancellation, so the layer freezes exactly where it was rather than
+    // snapping to some fixed frame the instant the vehicle starts moving.
+    val drift = remember { Animatable(StartDriftFraction) }
+    LaunchedEffect(animate) {
+        if (!animate) return@LaunchedEffect
+        drift.animateTo(
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = DriftDurationMs),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        )
+    }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val travel = size.height * DriftTravelFactor
+        val phase = drift.value
         val radius = size.minDimension * GradientRadiusFactor
 
         drawCircleTint(
             color = CarAmbientBlue,
-            center = Offset(x = size.width * 0.15f, y = travel * drift),
+            center = Offset(x = size.width * 0.15f, y = travel * phase),
             radius = radius,
         )
         drawCircleTint(
             color = CarAmbientPurple,
-            center = Offset(x = size.width * 0.85f, y = size.height - travel * drift),
+            center = Offset(x = size.width * 0.85f, y = size.height - travel * phase),
             radius = radius,
         )
     }

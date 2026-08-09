@@ -84,6 +84,7 @@ private fun HomeScreenPreview() {
             errorMessage = null,
             onSongClick = { _, _ -> },
             onRetry = {},
+            onBrowseClick = {},
             currentlyPlayingMediaId = "1",
             isPlaying = true,
         )

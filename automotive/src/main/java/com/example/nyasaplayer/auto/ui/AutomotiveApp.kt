@@ -348,6 +348,7 @@ private fun BrowseShell(
                         errorMessage = contentState.errorMessage,
                         onSongClick = onSongClick,
                         onRetry = onRetry,
+                        onBrowseClick = { onSelectTab(CarScreen.Browse) },
                         currentlyPlayingMediaId = currentlyPlayingMediaId,
                         isPlaying = isPlaying,
                     )

@@ -2,14 +2,14 @@ package com.example.nyasaplayer.auto.ui.motion
 
 import android.content.ContentResolver
 import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 
@@ -41,20 +41,22 @@ fun decorativeMotionEnabled(isDistractionOptimized: Boolean, animatorScale: Floa
 fun rememberAnimatorDurationScale(): State<Float> {
     val resolver = LocalContext.current.contentResolver
     val scale = remember { mutableFloatStateOf(readAnimatorScale(resolver)) }
-    val currentResolver by rememberUpdatedState(resolver)
 
-    DisposableEffect(currentResolver) {
-        val observer = object : ContentObserver(null) {
+    DisposableEffect(resolver) {
+        // Main-thread callback rather than the binder thread. Snapshot state is safe to write
+        // from any thread, but the rest of the codebase marshals callback-driven updates onto
+        // a known thread and there is no reason to be the exception.
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
-                scale.floatValue = readAnimatorScale(currentResolver)
+                scale.floatValue = readAnimatorScale(resolver)
             }
         }
-        currentResolver.registerContentObserver(
+        resolver.registerContentObserver(
             Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE),
             false,
             observer,
         )
-        onDispose { currentResolver.unregisterContentObserver(observer) }
+        onDispose { resolver.unregisterContentObserver(observer) }
     }
     return scale
 }
