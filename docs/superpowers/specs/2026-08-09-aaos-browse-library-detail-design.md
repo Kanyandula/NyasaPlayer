@@ -175,9 +175,42 @@ filter over `likedSongs`, which is a live Firestore-backed flow; snapshotting it
 `CarDetailState` would freeze the screen against unlikes performed on it. One entry point with
 one documented early return costs less than a second call site that exists to skip a branch.
 
-This replaces the two suspend one-shots the shell calls today. `getSongsByAlbum(albumId)` is
-folded into `openDetail`; `getSongsByGenre(genreId)` stays, because Browse plays a genre
-without opening anything (D9).
+This replaces the two suspend one-shots the shell calls today. `getSongsByGenre(genreId)` stays,
+because Browse plays a genre without opening anything (D9). `getSongsByAlbum(albumId)` is
+**deleted, not reused**: it fetches the `Album` and then discards it, and the hero needs the
+album's name, artist and artwork. `openDetail` calls `albumRepository.getAlbumById(albumId)`
+itself and maps the result into `CarDetailState` in one pass.
+
+#### How each destination resolves
+
+`LaunchedEffect(drillDown)` fires **once per destination** and never re-runs when data lands
+later. Anything `openDetail` reads must therefore be available on the first call, including the
+call that follows process death — the same restore gap D16 is written for. The two loaded
+destinations resolve differently and neither reads `contentState`:
+
+| Destination | Header + track ids from | Available at restore? |
+|---|---|---|
+| `Album` | `albumRepository.getAlbumById(albumId)` — a `suspend` one-shot | Yes. A direct repository read, independent of `observeAlbums()` |
+| `Playlist` | `playlistRepository.getPlaylists(userId).first()` | Yes. Suspends until Firestore's first emission, then resolves |
+
+`PlaylistRepository` has **no `getPlaylistById`** — `getPlaylists(userId): Flow<List<Playlist>>`
+is the whole read surface. Resolving the playlist out of `contentState.playlists` would be the
+bug D16 describes: `rememberSaveable` restores `drillDown` synchronously while `observePlaylists()`
+has not emitted, the one-shot `openDetail` finds nothing, and the screen stays empty forever
+because the effect is keyed on `drillDown` alone. Taking `first()` from the repository flow
+instead makes `openDetail` wait for the emission rather than race it, and costs one momentary
+snapshot listener. It also needs no new method on a `:core:data` interface shared with `:app`.
+
+```kotlin
+val userId = authRepository.currentUser?.uid ?: return   // same guard as observeLikedSongs()
+val playlist = playlistRepository.getPlaylists(userId).first()
+    .firstOrNull { it.id == destination.playlistId }
+```
+
+A null result here is a **genuinely missing playlist** — a stale id restored after the playlist
+was deleted elsewhere — not a timing gap, because the emission has already arrived. It sets
+`errorMessage` with `isLoading = false`. `first()` terminates in every case, including the
+signed-in-user-with-zero-playlists one, so no path leaves a permanent spinner.
 
 ### 3.3 Ordering
 
@@ -364,17 +397,36 @@ logic in A3 that can be silently wrong rather than visibly wrong. Cases:
 5. `openDetail(Artist)` leaves `detail` null.
 6. An album whose `songIds` resolve to nothing yields `isLoading = false` with empty tracks —
    the empty state — not a permanent spinner.
+7. `openDetail(Playlist)` called **before the playlists flow has emitted** resolves once the
+   emission arrives, rather than settling on empty. This is the restore path in §3.2; a fake
+   whose flow emits on demand is what makes it testable.
+8. `openDetail(Playlist)` for an id absent from an emission that *has* arrived yields
+   `errorMessage` with `isLoading = false`, not a spinner.
+9. `openDetail(Album)` where `getAlbumById` returns null does the same.
 
 Cases 3 and 4 are the ones that justify the test; they are the guard described in §3.2, and a
-regression there shows the wrong album's tracks under the right album's title.
+regression there shows the wrong album's tracks under the right album's title. Case 7 is the
+one the review found missing, and it is the only one of the nine that a passing implementation
+can fail silently forever.
 
-Needs a fake `SongRepository`, `AlbumRepository` and `PlaylistRepository` in
-`automotive/src/test`. `:core:data`'s fakes are not visible from `:automotive` — and
-`FakeSongRepository` would be the wrong model to copy anyway, per §3.3.
+**Fakes.** `AutomotiveContentViewModel`'s constructor takes five repositories today and six
+after §3.1, so `DetailLoadingTest` needs a fake for **all** of them in `automotive/src/test`:
+`SongRepository`, `GenreRepository`, `AlbumRepository`, `UserRepository`, `AuthRepository` and
+`PlaylistRepository`. `:core:data`'s fakes are not visible from `:automotive` — and
+`FakeSongRepository` would be the wrong model to copy anyway, per §3.3. Only the song, album and
+playlist fakes carry behaviour; the other three return empty flows and a fixed uid, but they
+still have to exist or the ViewModel cannot be constructed.
 
-Also needs `testImplementation(libs.kotlinx.coroutines.test)` added to
-`automotive/build.gradle.kts`, which currently declares `libs.junit` alone. The catalog already
-has the alias, so this is one line and no version decision.
+**Test infrastructure.** This is `:automotive`'s **first ViewModel test** — `UxFlagsTest`,
+`CarRestrictionGateTest` and `DecorativeMotionTest` are all pure-function tests over a module
+that currently declares `testImplementation(libs.junit)` alone. So it needs both:
+
+- `testImplementation(libs.kotlinx.coroutines.test)` in `automotive/build.gradle.kts`. The
+  catalog already has the alias, so no version decision.
+- A `MainDispatcherRule` in `automotive/src/test`, because `openDetail` runs in `viewModelScope`
+  and there is no `Dispatchers.setMain` rule in this module to inherit. `init { loadContent() }`
+  means every construction of the ViewModel touches the main dispatcher, so the rule is a
+  prerequisite for the test existing at all, not a detail of one case.
 
 `CarRestrictionGateTest` already covers depth-1 refusal and eviction to `tabRoot()`. A3 adds no
 gate cases, because it adds no gate rules.
@@ -395,9 +447,13 @@ On the emulator, per `docs/AAOS_DRIVING_STATE_TESTING.md`:
 5. Drive transition *while inside* a detail screen evicts to Library with the dialog shown.
 6. Driving: track lists truncate at `maxCumulativeContentItems`.
 7. Sign out and back in: playlists reload for the new user, and do not leak across the switch.
-8. **Process death inside artist detail** — background the app, `adb shell am kill`, resume.
-   The artist screen must come back on the artist, not on Library. This is the check D16 exists
-   for, and it is the one failure the unit tests cannot see.
+8. **Process death inside a detail screen** — background the app, `adb shell am kill`, resume.
+   Run it three times, once per destination:
+   - *Artist*: comes back on the artist, not on Library. The check D16 exists for.
+   - *Playlist*: comes back on the playlist **with its tracks**, not empty and not errored. The
+     check D17 exists for, and the one the unit tests model but cannot prove against real
+     Firestore latency.
+   - *Album*: same, via `getAlbumById`.
 9. Library with no data loaded yet shows placeholders, not an empty screen; forced offline
    shows the error state with a working retry.
 10. Screenshot all four screens parked and driving.
@@ -425,6 +481,7 @@ A2's D1–D7.
 | D14 | **Sign-out stays on `CarLibraryScreen`** with its confirmation overlay, marked for deletion in A7. | It belongs on screen 14. Removing it in A3 leaves no way to sign out of the vehicle at all, since the system bar's avatar is disabled until A7. Keeping ~50 lines for two slices beats shipping an app a user cannot sign out of. |
 | D15 | `CarPlaylistScreen` wires **read-only** playlist access. The four `PlaylistRepository` write methods stay unused. | Creating and editing playlists is not in any PRD phase, and playlist mutation is a parked-only, keyboard-bound interaction the restriction layer would refuse anyway. |
 | D16 | `CarDestination.Artist` carries **`artistName` alongside `artistId`**, and the artist screen never resolves against `favoriteArtists` nor clears itself when the artist is absent. | `rememberSaveable` restores `drillDown` synchronously after process death, while `likedSongs` — and therefore `favoriteArtists`, which is derived from it — is still empty pending Firestore's first emission. Any "resolve the artist or clear the destination" rule fires during that gap and drops the user back to Library on every restore. Today's code sidesteps this by saving the whole `FavoriteArtist`; carrying one display string preserves that property without storing a domain object. The track list is a live filter over `likedSongs` and is correctly empty until it loads. |
+| D17 | `openDetail` resolves a playlist with `playlistRepository.getPlaylists(userId).first()`, **not** by looking it up in `contentState.playlists`, and no `getPlaylistById` is added to `PlaylistRepository`. | `LaunchedEffect(drillDown)` fires once and never re-runs when data arrives, so anything `openDetail` reads must be available on the first call — including the call after process death. `Album` already satisfies that through the one-shot `getAlbumById`; `PlaylistRepository` has no equivalent, and reading `contentState.playlists` would resolve against an empty list during exactly the gap D16 describes — leaving the screen permanently empty rather than briefly so, because nothing re-triggers the load. Taking `first()` from the flow suspends until the emission instead of racing it, and terminates in every case. Adding a read method to a `:core:data` interface shared with `:app`, to solve a problem the existing method already solves, is the larger change rather than the smaller one. |
 
 ## 9. Risks
 
@@ -435,6 +492,7 @@ A2's D1–D7.
 | Browse and Library rebuilds are large deletions in 548- and 525-line files | Losing behaviour that was not written down, e.g. the scrollbar | Enumerate deletions per screen in the plan (§4.1, §4.2 list them) and screenshot before and after |
 | Replacing a saved domain object with a saved id changes what survives process death | A drill-down that silently drops the user back to a tab root on every restore | D16 removes the resolution step that would cause it; §7.2 check 8 is the only way to see it |
 | An empty Firestore `genres` collection makes Browse blank | Browse looks broken rather than empty | Explicit empty state with a Library action, not a bare `LazyColumn` |
+| `openDetail` is one-shot but two of its three destinations need data that may not have arrived | A detail screen that is empty or errored forever, only after process death — invisible in normal use | D17 resolves both loaded destinations from a repository read rather than from `contentState`, so neither races the restore. §7.1 case 7 is the regression test and §7.2 check 8 extends to playlist detail |
 | Playlist artwork derives from the first track | A playlist whose first track has no cover shows a placeholder while later tracks have art | Accepted. The alternative is scanning tracks for the first non-blank cover, which is more code for a case a real catalogue rarely hits |
 
 ## 10. Definition of done
@@ -453,8 +511,11 @@ A2's D1–D7.
 7. `CarContentCard` exists and replaces the four private card composables.
 8. All three detail destinations are refused at depth while driving, and an in-progress one is
    evicted on the drive transition.
-9. Artist detail survives process death (§7.2 check 8).
-10. Detail loading is tested, including the two out-of-order cases in §7.1.
+9. All three detail destinations survive process death (§7.2 check 8) — the artist screen keeps
+   its artist, and album and playlist detail come back with their tracks.
+10. Detail loading is tested, including the two out-of-order cases and the
+    playlist-before-first-emission case in §7.1. `:automotive` has a `MainDispatcherRule` and
+    `kotlinx.coroutines.test` on its test classpath.
 11. D11, D12 and D14 recorded in `docs/aaos-DESIGN.md` beside A2's D6 and D7, with D12
     carrying the module blocker.
 12. Both flavors green; Detekt zero; the §7.2 checklist executed and its outcome recorded.
