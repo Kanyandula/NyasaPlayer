@@ -441,20 +441,24 @@ private fun BrowseShell(
                         )
                     }
 
-                    CarScreen.Favourites -> CarFavouriteMusicScreen(
-                        songs = (contentState.favourites ?: contentState.likedSongs).take(maxItems),
-                        pendingUnlikes = contentState.pendingUnlikes,
-                        onSongClick = onLikedSongClick,
-                        onPlayAll = { onPlayTracks(contentState.favourites ?: contentState.likedSongs) },
-                        onShuffle = { onShuffleTracks(contentState.favourites ?: contentState.likedSongs) },
-                        onLikeToggle = onLikeToggle,
-                        onBrowseClick = { onSelectTab(CarScreen.Browse) },
-                        currentlyPlayingMediaId = currentlyPlayingMediaId,
-                        isPlaying = isPlaying,
-                        isLoading = contentState.isLoading,
-                        errorMessage = contentState.errorMessage,
-                        onRetry = onRetry,
-                    )
+                    CarScreen.Favourites -> {
+                        val favouriteSongs = (contentState.favourites ?: contentState.likedSongs)
+                            .take(maxItems)
+                        CarFavouriteMusicScreen(
+                            songs = favouriteSongs,
+                            pendingUnlikes = contentState.pendingUnlikes,
+                            onSongClick = onLikedSongClick,
+                            onPlayAll = { onPlayTracks(favouriteSongs) },
+                            onShuffle = { onShuffleTracks(favouriteSongs) },
+                            onLikeToggle = onLikeToggle,
+                            onBrowseClick = { onSelectTab(CarScreen.Browse) },
+                            currentlyPlayingMediaId = currentlyPlayingMediaId,
+                            isPlaying = isPlaying,
+                            isLoading = contentState.isLoading,
+                            errorMessage = contentState.errorMessage,
+                            onRetry = onRetry,
+                        )
+                    }
                 }
             }
         }
