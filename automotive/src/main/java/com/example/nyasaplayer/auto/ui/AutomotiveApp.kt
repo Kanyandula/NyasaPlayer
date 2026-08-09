@@ -49,6 +49,7 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
@@ -181,6 +182,7 @@ private fun AuthenticatedApp(
                 },
                 onRetry = contentViewModel::retryLoad,
                 onAlbumClick = { album -> drillDown = CarDestination.Album(album.id) },
+                onPlaylistClick = { playlist -> drillDown = CarDestination.Playlist(playlist.id) },
                 onArtistClick = { favoriteArtist ->
                     drillDown = CarDestination.Artist(
                         artistId = favoriteArtist.artistId,
@@ -207,7 +209,6 @@ private fun AuthenticatedApp(
                     }
                 },
                 onLikeClick = playerViewModel::toggleLike,
-                onShuffleLikedSongs = { playerViewModel.shufflePlay(contentState.likedSongs) },
                 onLikedSongClick = { song ->
                     playerViewModel.playSong(contentState.likedSongs, song)
                     showFullPlayer = true
@@ -293,13 +294,13 @@ private fun BrowseShell(
     onSongClick: (List<Song>, Song) -> Unit,
     onRetry: () -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onPlaylistClick: (Playlist) -> Unit,
     onArtistClick: (FavoriteArtist) -> Unit,
     drillDown: CarDestination?,
     onBackFromDetail: () -> Unit,
     onArtistSongClick: (List<Song>, Song) -> Unit,
     onShuffleArtistSongs: (List<Song>) -> Unit,
     onLikeClick: () -> Unit,
-    onShuffleLikedSongs: () -> Unit,
     onGenreClick: (Genre) -> Unit,
     onLikedSongClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
@@ -372,17 +373,24 @@ private fun BrowseShell(
                             )
                         } else {
                             CarLibraryScreen(
-                                favoriteArtists = contentState.favoriteArtists.take(maxItems),
+                                recentlyPlayed = contentState.recentlyPlayed.take(maxItems),
+                                playlists = contentState.playlists.take(maxItems),
                                 albums = contentState.albums.take(maxItems),
-                                onArtistClick = onArtistClick,
+                                favoriteArtists = contentState.favoriteArtists.take(maxItems),
+                                likedSongCount = contentState.likedSongs.size,
+                                onSongClick = onSongClick,
+                                onPlaylistClick = onPlaylistClick,
                                 onAlbumClick = onAlbumClick,
-                                likedSongs = contentState.likedSongs.take(maxItems),
-                                currentlyPlayingMediaId = currentlyPlayingMediaId,
-                                isPlaying = isPlaying,
-                                onShuffleLikedSongs = onShuffleLikedSongs,
-                                onLikedSongClick = onLikedSongClick,
+                                onArtistClick = onArtistClick,
+                                onFavouritesClick = { onSelectTab(CarScreen.Favourites) },
+                                onBrowseClick = { onSelectTab(CarScreen.Browse) },
                                 onSignOut = onSignOut,
                                 userDisplayName = userDisplayName,
+                                currentlyPlayingMediaId = currentlyPlayingMediaId,
+                                isPlaying = isPlaying,
+                                isLoading = contentState.isLoading,
+                                errorMessage = contentState.errorMessage,
+                                onRetry = onRetry,
                             )
                         }
                     }

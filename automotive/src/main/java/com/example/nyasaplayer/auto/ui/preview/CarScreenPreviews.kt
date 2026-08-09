@@ -16,6 +16,7 @@ import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
+import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
@@ -64,6 +65,12 @@ private val PreviewGenres = listOf(
     Genre(id = "g2", name = "Hip Hop", imageUrl = ""),
     Genre(id = "g3", name = "Jazz", imageUrl = ""),
     Genre(id = "g4", name = "Pop", imageUrl = ""),
+)
+
+private val PreviewPlaylists = listOf(
+    Playlist(id = "p1", name = "Road Trip", songIds = List(12) { "s$it" }),
+    Playlist(id = "p2", name = "Late Night", songIds = List(8) { "s$it" }),
+    Playlist(id = "p3", name = "Workout", songIds = List(20) { "s$it" }),
 )
 
 private val PreviewFavoriteArtists = listOf(
@@ -152,17 +159,21 @@ private fun BrowseScreenPreview() {
 private fun LibraryScreenPreview() {
     AppTheme {
         CarLibraryScreen(
-            favoriteArtists = PreviewFavoriteArtists,
+            recentlyPlayed = PreviewSongs,
+            playlists = PreviewPlaylists,
             albums = PreviewAlbums,
-            onArtistClick = {},
+            favoriteArtists = PreviewFavoriteArtists,
+            likedSongCount = PreviewSongs.size,
+            onSongClick = { _, _ -> },
+            onPlaylistClick = {},
             onAlbumClick = {},
-            likedSongs = PreviewSongs,
-            currentlyPlayingMediaId = "1",
-            isPlaying = true,
-            onShuffleLikedSongs = {},
-            onLikedSongClick = {},
+            onArtistClick = {},
+            onFavouritesClick = {},
+            onBrowseClick = {},
             onSignOut = {},
             userDisplayName = "John Doe",
+            currentlyPlayingMediaId = "1",
+            isPlaying = true,
         )
     }
 }
