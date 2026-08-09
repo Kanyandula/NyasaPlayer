@@ -53,7 +53,6 @@ private val HeartGlyphSize = 32.dp
  *
  * The currently playing row carries a gold bar on its left edge and a gold title.
  */
-@Suppress("LongMethod")
 @Composable
 fun CarTrackRow(
     title: String,
@@ -71,24 +70,7 @@ fun CarTrackRow(
             .fillMaxWidth()
             .height(CarListRowHeight)
             .clickable(onClick = onClick)
-            .then(
-                if (onLikeToggle == null) {
-                    Modifier
-                } else {
-                    Modifier.semantics {
-                        stateDescription = if (isLiked) "Liked" else "Not liked"
-                        customActions = listOf(
-                            CustomAccessibilityAction(
-                                label = if (isLiked) "Unlike" else "Like",
-                                action = {
-                                    onLikeToggle()
-                                    true
-                                },
-                            ),
-                        )
-                    }
-                },
-            ),
+            .likeAccessibility(onLikeToggle, isLiked),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(RowSpacing),
     ) {
@@ -131,19 +113,54 @@ fun CarTrackRow(
             fontSize = DurationSize,
         )
         if (onLikeToggle != null) {
-            Box(
-                modifier = Modifier
-                    .carTouchTarget()
-                    .clickable(onClick = onLikeToggle),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (isLiked) "Unlike" else "Like",
-                    tint = if (isLiked) NyasaGold else CarTextSecondary,
-                    modifier = Modifier.size(HeartGlyphSize),
-                )
-            }
+            LikeHeart(isLiked = isLiked, onLikeToggle = onLikeToggle)
         }
+    }
+}
+
+/**
+ * Row-level accessibility for the like affordance: a rotary or screen-reader user must be able
+ * to reach the heart without hunting for a nested target, so the row itself announces the liked
+ * state and exposes the toggle as a [CustomAccessibilityAction]. No-op when there is no heart.
+ */
+private fun Modifier.likeAccessibility(onLikeToggle: (() -> Unit)?, isLiked: Boolean): Modifier =
+    if (onLikeToggle == null) {
+        this
+    } else {
+        this.semantics {
+            stateDescription = if (isLiked) "Liked" else "Not liked"
+            customActions = listOf(
+                CustomAccessibilityAction(
+                    label = if (isLiked) "Unlike" else "Like",
+                    action = {
+                        onLikeToggle()
+                        true
+                    },
+                ),
+            )
+        }
+    }
+
+/**
+ * The like/unlike heart rendered at the end of [CarTrackRow].
+ *
+ * `contentDescription` is null: the row's `stateDescription` and `customActions` (set on the
+ * enclosing `Row` in [CarTrackRow]) already carry the liked state and the toggle action, and
+ * `Icon` is not a merge boundary — a non-null description here would double-read on TalkBack.
+ */
+@Composable
+private fun LikeHeart(isLiked: Boolean, onLikeToggle: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .carTouchTarget()
+            .clickable(onClick = onLikeToggle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            contentDescription = null,
+            tint = if (isLiked) NyasaGold else CarTextSecondary,
+            modifier = Modifier.size(HeartGlyphSize),
+        )
     }
 }
