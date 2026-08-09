@@ -2,8 +2,10 @@ package com.example.nyasaplayer.auto.fake
 
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.data.api.SongRepository
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withContext
 
 class FakeSongRepository : SongRepository {
 
@@ -15,7 +17,11 @@ class FakeSongRepository : SongRepository {
     override fun getSongs(): Flow<List<Song>> = songs
 
     override suspend fun getSongsByIds(ids: List<String>): List<Song> {
-        gate?.await()
+        // NonCancellable so a gated call resumes and runs on to its caller's state write even
+        // after that caller's job was cancelled. A plain await() is a cancellable suspension
+        // point, which would make cancel() alone discard the stale result and leave
+        // openDetail's guard — the thing these tests exist to cover — untested.
+        withContext(NonCancellable) { gate?.await() }
         val byId = songs.value.associateBy { it.mediaId }
         // Request order, matching OfflineSongRepository's contract.
         return ids.mapNotNull { byId[it] }

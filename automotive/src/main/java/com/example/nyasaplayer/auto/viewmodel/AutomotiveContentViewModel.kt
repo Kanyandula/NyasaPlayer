@@ -61,6 +61,7 @@ class AutomotiveContentViewModel @Inject constructor(
     private var albumsJob: Job? = null
     private var playlistsJob: Job? = null
     private var detailJob: Job? = null
+    private var detailToken = 0
     private var popularSongsJob: Job? = null
     private var currentUserId: String? = null
 
@@ -274,6 +275,7 @@ class AutomotiveContentViewModel @Inject constructor(
      */
     fun openDetail(destination: CarDestination) {
         detailJob?.cancel()
+        val token = ++detailToken
         if (destination is CarDestination.Artist) {
             _contentState.update { it.copy(detail = null) }
             return
@@ -282,17 +284,20 @@ class AutomotiveContentViewModel @Inject constructor(
         detailJob = viewModelScope.launch(exceptionHandler) {
             val loaded = loadDetail(destination)
             _contentState.update { state ->
-                // The guard belongs inside the atomic update, not in a pre-read: a
-                // check-then-write pair is a race in exactly the scenario it exists to prevent.
-                // Cancellation alone is not enough — a coroutine suspended in a repository call
-                // resumes and can reach here before the cancellation is observed.
-                if (state.detail?.destination == destination) state.copy(detail = loaded) else state
+                // Rejects the result of a stale coroutine that resumed anyway. cancel() is not
+                // enough: a continuation parked in a Firestore or Room callback can be resumed
+                // by that callback without ever observing the cancellation, and then run on to
+                // here. [token] is what actually decides it — [destination] alone would let a
+                // stale load of album A overwrite a later, successful load of the same album A.
+                val isCurrent = token == detailToken && state.detail?.destination == destination
+                if (isCurrent) state.copy(detail = loaded) else state
             }
         }
     }
 
     fun closeDetail() {
         detailJob?.cancel()
+        detailToken++
         _contentState.update { it.copy(detail = null) }
     }
 

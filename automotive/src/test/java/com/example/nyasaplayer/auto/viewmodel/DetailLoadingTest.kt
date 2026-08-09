@@ -104,14 +104,21 @@ class DetailLoadingTest {
             album("first", listOf("a")),
             album("second", listOf("b")),
         )
-        val gate = CompletableDeferred<Unit>()
-        songs.gate = gate
         val vm = viewModel()
+        val firstGate = CompletableDeferred<Unit>()
+        val secondGate = CompletableDeferred<Unit>()
 
+        songs.gate = firstGate
         vm.openDetail(CarDestination.Album("first"))
+        songs.gate = secondGate
         vm.openDetail(CarDestination.Album("second"))
-        songs.gate = null
-        gate.complete(Unit)
+
+        // Two gates so the FIRST load finishes LAST. The first job is cancelled but resumes
+        // non-cancellably, exactly like a Firestore callback that fires anyway, and tries to
+        // write its stale result over the second's. Only the guard in openDetail stops it.
+        secondGate.complete(Unit)
+        advanceUntilIdle()
+        firstGate.complete(Unit)
         advanceUntilIdle()
 
         val detail = requireNotNull(vm.contentState.value.detail)
@@ -134,6 +141,31 @@ class DetailLoadingTest {
         advanceUntilIdle()
 
         assertNull(vm.contentState.value.detail)
+    }
+
+    @Test
+    fun openDetail_staleLoadOfSameAlbum_doesNotOverwriteFresherResult() = runTest {
+        songs.songs.value = listOf(song("a"), song("b"))
+        albums.albums.value = listOf(album("al1", listOf("a")))
+        val vm = viewModel()
+        val staleGate = CompletableDeferred<Unit>()
+
+        songs.gate = staleGate
+        vm.openDetail(CarDestination.Album("al1"))
+        vm.closeDetail()
+
+        // The same album, reopened once the data caught up. Destination equality cannot tell the
+        // two loads apart, so only the token stops the parked first one from winning.
+        albums.albums.value = listOf(album("al1", listOf("a", "b")))
+        songs.gate = null
+        vm.openDetail(CarDestination.Album("al1"))
+        advanceUntilIdle()
+
+        staleGate.complete(Unit)
+        advanceUntilIdle()
+
+        val detail = requireNotNull(vm.contentState.value.detail)
+        assertEquals(listOf("a", "b"), detail.tracks.map { it.mediaId })
     }
 
     @Test
