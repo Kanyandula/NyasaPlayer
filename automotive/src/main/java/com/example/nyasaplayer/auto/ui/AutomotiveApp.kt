@@ -26,6 +26,7 @@ import com.example.nyasaplayer.auto.ui.components.CarRestrictionDialog
 import com.example.nyasaplayer.auto.ui.components.CarSystemBar
 import com.example.nyasaplayer.auto.ui.motion.decorativeMotionEnabled
 import com.example.nyasaplayer.auto.ui.motion.rememberAnimatorDurationScale
+import com.example.nyasaplayer.auto.ui.navigation.CarDestination
 import com.example.nyasaplayer.auto.ui.navigation.CarOverlay
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
 import com.example.nyasaplayer.auto.ui.navigation.CarUiLocation
@@ -103,7 +104,7 @@ private fun AuthenticatedApp(
     var currentScreen by rememberSaveable { mutableStateOf(CarScreen.Home) }
     var showFullPlayer by rememberSaveable { mutableStateOf(false) }
     var showQueue by rememberSaveable { mutableStateOf(false) }
-    var selectedArtist by rememberSaveable { mutableStateOf<FavoriteArtist?>(null) }
+    var drillDown by rememberSaveable { mutableStateOf<CarDestination?>(null) }
     var denialReason by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -111,7 +112,7 @@ private fun AuthenticatedApp(
         tab = currentScreen,
         showFullPlayer = showFullPlayer,
         showQueue = showQueue,
-        selectedArtist = selectedArtist,
+        drillDown = drillDown,
         searchQuery = contentState.searchQuery,
     )
 
@@ -124,7 +125,7 @@ private fun AuthenticatedApp(
             is GateResult.Denied -> {
                 showFullPlayer = false
                 showQueue = false
-                selectedArtist = null
+                drillDown = null
                 currentScreen = result.evictTo.tab
                 denialReason = result.reason
             }
@@ -164,7 +165,7 @@ private fun AuthenticatedApp(
                 onSignOut = onSignOut,
                 userDisplayName = userDisplayName,
                 onSelectTab = {
-                    selectedArtist = null
+                    drillDown = null
                     currentScreen = it
                 },
                 onExpandPlayer = { showFullPlayer = true },
@@ -187,9 +188,14 @@ private fun AuthenticatedApp(
                         }
                     }
                 },
-                onArtistClick = { favoriteArtist -> selectedArtist = favoriteArtist },
-                selectedArtist = selectedArtist,
-                onBackFromArtist = { selectedArtist = null },
+                onArtistClick = { favoriteArtist ->
+                    drillDown = CarDestination.Artist(
+                        artistId = favoriteArtist.artistId,
+                        artistName = favoriteArtist.artistName,
+                    )
+                },
+                drillDown = drillDown,
+                onBackFromDetail = { drillDown = null },
                 onArtistSongClick = { songs, song ->
                     playerViewModel.playSong(songs, song)
                     showFullPlayer = true
@@ -268,7 +274,7 @@ private fun carUiLocation(
     tab: CarScreen,
     showFullPlayer: Boolean,
     showQueue: Boolean,
-    selectedArtist: FavoriteArtist?,
+    drillDown: CarDestination?,
     searchQuery: String,
 ): CarUiLocation = CarUiLocation(
     tab = tab,
@@ -277,7 +283,8 @@ private fun carUiLocation(
         showQueue -> CarOverlay.Queue
         else -> null
     },
-    drillDepth = if (selectedArtist != null) 1 else 0,
+    // All three destinations are one step from a tab root (D8). There is no depth 2 in A3.
+    drillDepth = if (drillDown != null) 1 else 0,
     // Settings and Profile are later slices, and Search is not yet a distinct sheet in this
     // app. The field exists so those slices have nothing to retrofit.
     sheet = null,
@@ -303,8 +310,8 @@ private fun BrowseShell(
     onRetry: () -> Unit,
     onAlbumClick: (Album) -> Unit,
     onArtistClick: (FavoriteArtist) -> Unit,
-    selectedArtist: FavoriteArtist?,
-    onBackFromArtist: () -> Unit,
+    drillDown: CarDestination?,
+    onBackFromDetail: () -> Unit,
     onArtistSongClick: (List<Song>, Song) -> Unit,
     onShuffleArtistSongs: (List<Song>) -> Unit,
     onLikeClick: () -> Unit,
@@ -371,39 +378,42 @@ private fun BrowseShell(
                         )
                     }
 
-                    CarScreen.Library -> if (selectedArtist != null) {
-                        val artistLikedSongs = remember(
-                            contentState.likedSongs,
-                            selectedArtist.artistId,
-                            maxItems,
-                        ) {
-                            contentState.likedSongs
-                                .filter { it.artistId == selectedArtist.artistId }
-                                .take(maxItems)
+                    CarScreen.Library -> {
+                        val artist = drillDown as? CarDestination.Artist
+                        if (artist != null) {
+                            val artistLikedSongs = remember(
+                                contentState.likedSongs,
+                                artist.artistId,
+                                maxItems,
+                            ) {
+                                contentState.likedSongs
+                                    .filter { it.artistId == artist.artistId }
+                                    .take(maxItems)
+                            }
+                            CarArtistLikedSongsScreen(
+                                artistName = artist.artistName,
+                                likedSongs = artistLikedSongs,
+                                onBackClick = onBackFromDetail,
+                                onSongClick = { song -> onArtistSongClick(artistLikedSongs, song) },
+                                onShufflePlay = { onShuffleArtistSongs(artistLikedSongs) },
+                                currentlyPlayingMediaId = currentlyPlayingMediaId,
+                                isPlaying = isPlaying,
+                            )
+                        } else {
+                            CarLibraryScreen(
+                                favoriteArtists = contentState.favoriteArtists.take(maxItems),
+                                albums = contentState.albums.take(maxItems),
+                                onArtistClick = onArtistClick,
+                                onAlbumClick = onAlbumClick,
+                                likedSongs = contentState.likedSongs.take(maxItems),
+                                currentlyPlayingMediaId = currentlyPlayingMediaId,
+                                isPlaying = isPlaying,
+                                onShuffleLikedSongs = onShuffleLikedSongs,
+                                onLikedSongClick = onLikedSongClick,
+                                onSignOut = onSignOut,
+                                userDisplayName = userDisplayName,
+                            )
                         }
-                        CarArtistLikedSongsScreen(
-                            artistName = selectedArtist.artistName,
-                            likedSongs = artistLikedSongs,
-                            onBackClick = onBackFromArtist,
-                            onSongClick = { song -> onArtistSongClick(artistLikedSongs, song) },
-                            onShufflePlay = { onShuffleArtistSongs(artistLikedSongs) },
-                            currentlyPlayingMediaId = currentlyPlayingMediaId,
-                            isPlaying = isPlaying,
-                        )
-                    } else {
-                        CarLibraryScreen(
-                            favoriteArtists = contentState.favoriteArtists.take(maxItems),
-                            albums = contentState.albums.take(maxItems),
-                            onArtistClick = onArtistClick,
-                            onAlbumClick = onAlbumClick,
-                            likedSongs = contentState.likedSongs.take(maxItems),
-                            currentlyPlayingMediaId = currentlyPlayingMediaId,
-                            isPlaying = isPlaying,
-                            onShuffleLikedSongs = onShuffleLikedSongs,
-                            onLikedSongClick = onLikedSongClick,
-                            onSignOut = onSignOut,
-                            userDisplayName = userDisplayName,
-                        )
                     }
 
                     CarScreen.Favourites -> CarFavouriteMusicScreen(
