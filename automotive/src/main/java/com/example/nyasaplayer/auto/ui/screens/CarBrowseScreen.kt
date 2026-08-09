@@ -124,6 +124,7 @@ private fun BrowseGrid(
                             title = genre.name,
                             onClick = { onGenreClick(genre) },
                             artworkUrl = genre.imageUrl,
+                            enabled = genre.songIds.isNotEmpty(),
                             modifier = Modifier.weight(1f),
                         )
                     }

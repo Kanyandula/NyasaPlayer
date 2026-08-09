@@ -61,10 +61,10 @@ private val PreviewAlbums = listOf(
 )
 
 private val PreviewGenres = listOf(
-    Genre(id = "g1", name = "Electronic", imageUrl = ""),
-    Genre(id = "g2", name = "Hip Hop", imageUrl = ""),
-    Genre(id = "g3", name = "Jazz", imageUrl = ""),
-    Genre(id = "g4", name = "Pop", imageUrl = ""),
+    Genre(id = "g1", name = "Electronic", imageUrl = "", songIds = List(30) { "s$it" }),
+    Genre(id = "g2", name = "Hip Hop", imageUrl = "", songIds = List(25) { "s$it" }),
+    Genre(id = "g3", name = "Jazz", imageUrl = "", songIds = List(15) { "s$it" }),
+    Genre(id = "g4", name = "Pop", imageUrl = "", songIds = emptyList()),
 )
 
 private val PreviewPlaylists = listOf(

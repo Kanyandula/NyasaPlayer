@@ -307,6 +307,23 @@ class AutomotivePlayerViewModel @Inject constructor(
         _uiState.update { it.copy(error = null) }
     }
 
+    /**
+     * Surfaces the case where a genre's `songIds` resolved to zero actual songs — distinct from
+     * an empty genre, which the Browse screen disables before it can be tapped at all. Routed
+     * through the same error overlay as playback errors rather than a new channel: this is a
+     * failure to start playback, same as any other.
+     */
+    fun reportEmptyGenrePlayback() {
+        _uiState.update {
+            it.copy(
+                error = PlayerError(
+                    title = "Nothing to Play",
+                    message = "This genre doesn't have any songs available yet.",
+                ),
+            )
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         stateCollector.releaseController()

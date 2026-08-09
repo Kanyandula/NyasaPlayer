@@ -226,6 +226,8 @@ private fun AuthenticatedApp(
                         if (songs.isNotEmpty()) {
                             playerViewModel.shufflePlay(songs)
                             showFullPlayer = true
+                        } else {
+                            playerViewModel.reportEmptyGenrePlayback()
                         }
                     }
                 },
