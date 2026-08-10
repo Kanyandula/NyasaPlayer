@@ -243,16 +243,9 @@ private fun AuthenticatedApp(
                     }
                 },
                 onLikeClick = playerViewModel::toggleLike,
-                onLikeToggle = { song ->
+                onLikeToggle = { song, freeze ->
                     scope.launch {
-                        if (!contentViewModel.toggleFavourite(song.mediaId, freeze = true)) {
-                            playerViewModel.reportUnlikeFailed()
-                        }
-                    }
-                },
-                onArtistLikeToggle = { song ->
-                    scope.launch {
-                        if (!contentViewModel.toggleFavourite(song.mediaId, freeze = false)) {
+                        if (!contentViewModel.toggleFavourite(song.mediaId, freeze = freeze)) {
                             playerViewModel.reportUnlikeFailed()
                         }
                     }
@@ -348,8 +341,7 @@ private fun BrowseShell(
     onPlayTracks: (List<Song>) -> Unit,
     onLikeClick: () -> Unit,
     onGenreClick: (Genre) -> Unit,
-    onLikeToggle: (Song) -> Unit,
-    onArtistLikeToggle: (Song) -> Unit,
+    onLikeToggle: (Song, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId
@@ -409,14 +401,26 @@ private fun BrowseShell(
                                     .filter { it.artistId == destination.artistId }
                                     .take(maxItems)
                             }
+                            val artistCoverUrl = remember(
+                                contentState.favoriteArtists,
+                                destination.artistId,
+                            ) {
+                                contentState.favoriteArtists
+                                    .firstOrNull { it.artistId == destination.artistId }
+                                    ?.coverUrl
+                                    .orEmpty()
+                            }
                             CarArtistLikedSongsScreen(
                                 artistName = destination.artistName,
+                                artistCoverUrl = artistCoverUrl,
                                 likedSongs = artistLikedSongs,
+                                pendingUnlikes = contentState.pendingUnlikes,
                                 onBackClick = onBackFromDetail,
                                 onSongClick = { song -> onArtistSongClick(artistLikedSongs, song) },
                                 onPlayAll = { onPlayTracks(artistLikedSongs) },
                                 onShufflePlay = { onShuffleTracks(artistLikedSongs) },
-                                onLikeToggle = onArtistLikeToggle,
+                                // Live list: the row leaves on the next emission (D25).
+                                onLikeToggle = likeToggle(onLikeToggle, freeze = false),
                                 currentlyPlayingMediaId = currentlyPlayingMediaId,
                                 isPlaying = isPlaying,
                             )
@@ -466,11 +470,14 @@ private fun BrowseShell(
                             onSongClick = { song -> onSongClick(favouriteSongs, song) },
                             onPlayAll = { onPlayTracks(favouriteSongs) },
                             onShuffle = { onShuffleTracks(favouriteSongs) },
-                            onLikeToggle = onLikeToggle,
+                            // Frozen list: the row holds its place until the visit ends (D19).
+                            onLikeToggle = likeToggle(onLikeToggle, freeze = true),
                             onBrowseClick = { onSelectTab(CarScreen.Browse) },
                             currentlyPlayingMediaId = currentlyPlayingMediaId,
                             isPlaying = isPlaying,
-                            isLoading = contentState.isLoading,
+                            // Not contentState.isLoading: that is flipped false by the first
+                            // genres or albums emission, well before liked songs arrive.
+                            isLoading = !contentState.likedSongsLoaded,
                             errorMessage = contentState.errorMessage,
                             onRetry = onRetry,
                         )
@@ -493,6 +500,17 @@ private fun BrowseShell(
         }
     }
 }
+
+/**
+ * Binds one screen's freeze contract onto the shared like callback.
+ *
+ * The flag is the difference between Favourites (freeze, spec D19) and the artist drill-down
+ * (live, spec D25), and swapping the two reverts the slice while every unit test stays green —
+ * they all call the ViewModel directly. It is a named argument at both call sites for that
+ * reason; a Kotlin function type cannot take one at its own invocation.
+ */
+private fun likeToggle(onLikeToggle: (Song, Boolean) -> Unit, freeze: Boolean): (Song) -> Unit =
+    { song -> onLikeToggle(song, freeze) }
 
 /**
  * Applies the driving item cap to a loaded detail and picks the screen.

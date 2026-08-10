@@ -111,6 +111,7 @@ class AutomotiveContentViewModel @Inject constructor(
             it.copy(
                 recentlyPlayed = emptyList(),
                 likedSongs = emptyList(),
+                likedSongsLoaded = false,
                 favoriteArtists = emptyList(),
                 playlists = emptyList(),
                 // A previous account's freeze must not survive a sign-out.
@@ -189,15 +190,23 @@ class AutomotiveContentViewModel @Inject constructor(
                 }
                 val ordered = songIds.mapNotNull { songMap[it] }
                 _contentState.update {
-                    it.copy(likedSongs = ordered, favoriteArtists = deriveFavoriteArtists(ordered))
+                    it.copy(
+                        likedSongs = ordered,
+                        favoriteArtists = deriveFavoriteArtists(ordered),
+                        likedSongsLoaded = true,
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading liked songs", e)
+                // The load is over either way. Leaving the flag false would strand Favourites
+                // on its skeleton for the rest of the session.
+                _contentState.update { it.copy(likedSongsLoaded = true) }
             }
         }.catch { e ->
             Log.e(TAG, "Error observing liked songs", e)
+            _contentState.update { it.copy(likedSongsLoaded = true) }
         }.launchIn(viewModelScope)
     }
 
@@ -462,6 +471,11 @@ data class AutomotiveContentState(
     val albums: List<Album> = emptyList(),
     val popularSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
+    // Liked songs alone: [isLoading] is flipped false by the first genres or albums emission,
+    // both from Room, while liked songs still need a Firestore round trip plus a song resolve.
+    // Favourites reads this instead, or it offers "No favourites yet" — and a CTA off the tab —
+    // to a driver who does have favourites, which §4.1 of the spec rules out.
+    val likedSongsLoaded: Boolean = false,
     val playlists: List<Playlist> = emptyList(),
     val favourites: List<Song>? = null,
     val pendingUnlikes: Set<String> = emptySet(),

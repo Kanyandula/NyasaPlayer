@@ -64,6 +64,29 @@ class FavouritesSnapshotTest {
         assertNull(vm.contentState.value.favourites)
     }
 
+    /**
+     * The Favourites empty state must mean "nothing is liked", never "the load has not arrived".
+     * `isLoading` is the shared content flag and is flipped false by the first genres or albums
+     * emission — both Room-backed and fast — while liked songs still need Firestore plus a song
+     * resolve, so the screen reads this flag instead.
+     */
+    @Test
+    fun likedSongsLoaded_isFalseUntilTheFirstEmission() = runTest {
+        songs.songs.value = listOf(song("a"))
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        // Genres and albums have settled, so the shared isLoading is already false here — the
+        // window in which the screen used to offer "No favourites yet" to a driver who has some.
+        assertFalse(vm.contentState.value.isLoading)
+        assertFalse(vm.contentState.value.likedSongsLoaded)
+
+        users.liked.value = listOf(likedSong("a"))
+        advanceUntilIdle()
+
+        assertTrue(vm.contentState.value.likedSongsLoaded)
+    }
+
     @Test
     fun firstUnlike_freezesThePreRemovalList() = runTest {
         songs.songs.value = listOf(song("a"), song("b"))

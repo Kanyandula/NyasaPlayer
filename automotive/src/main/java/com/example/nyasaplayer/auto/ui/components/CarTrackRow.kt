@@ -144,9 +144,11 @@ private fun Modifier.likeAccessibility(onLikeToggle: (() -> Unit)?, isLiked: Boo
 /**
  * The like/unlike heart rendered at the end of [CarTrackRow].
  *
- * `contentDescription` is null: the row's `stateDescription` and `customActions` (set on the
- * enclosing `Row` in [CarTrackRow]) already carry the liked state and the toggle action, and
- * `Icon` is not a merge boundary — a non-null description here would double-read on TalkBack.
+ * The heart carries its own `contentDescription`: the `Box` below is `clickable`, which merges
+ * its descendants and makes the heart a semantics node of its own, outside the row's merge. The
+ * row's `customActions` only make it *reachable* by rotary — without a description here that
+ * second focus stop announces nothing but "double-tap to activate", and activating it silently
+ * unlikes a song. Matches the mini player's like control.
  */
 @Composable
 private fun LikeHeart(isLiked: Boolean, onLikeToggle: () -> Unit, modifier: Modifier = Modifier) {
@@ -158,7 +160,7 @@ private fun LikeHeart(isLiked: Boolean, onLikeToggle: () -> Unit, modifier: Modi
     ) {
         Icon(
             imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = null,
+            contentDescription = if (isLiked) "Unlike" else "Like",
             tint = if (isLiked) NyasaGold else CarTextSecondary,
             modifier = Modifier.size(HeartGlyphSize),
         )

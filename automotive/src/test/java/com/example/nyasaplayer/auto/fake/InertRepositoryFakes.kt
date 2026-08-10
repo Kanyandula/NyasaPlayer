@@ -13,6 +13,7 @@ import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOf
 
 class FakeGenreRepository : GenreRepository {
@@ -22,7 +23,13 @@ class FakeGenreRepository : GenreRepository {
 }
 
 class FakeUserRepository : UserRepository {
-    val liked = MutableStateFlow<List<LikedSong>>(emptyList())
+    /**
+     * Null means "Firestore has not delivered a snapshot yet", which is the state the real
+     * `callbackFlow` is in before its first `onSnapshot`. An initial `emptyList()` would emit
+     * "nothing is liked" the instant a collector attaches, and no test could then observe the
+     * window between opening Favourites and the liked songs arriving.
+     */
+    val liked = MutableStateFlow<List<LikedSong>?>(null)
 
     /** Set to make the next likeSong/unlikeSong throw, so the revert path can be tested. */
     var failNextWrite: Boolean = false
@@ -37,7 +44,7 @@ class FakeUserRepository : UserRepository {
     var likeCallCount = 0
     var unlikeCallCount = 0
 
-    override fun getLikedSongs(userId: String): Flow<List<LikedSong>> = liked
+    override fun getLikedSongs(userId: String): Flow<List<LikedSong>> = liked.filterNotNull()
 
     override suspend fun likeSong(userId: String, mediaId: String) {
         likeCallCount++

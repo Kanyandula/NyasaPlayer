@@ -191,7 +191,9 @@ private fun ArtistLikedSongsPreview() {
     AppTheme {
         CarArtistLikedSongsScreen(
             artistName = "The Weeknd",
+            artistCoverUrl = "",
             likedSongs = PreviewSongs,
+            pendingUnlikes = setOf("2"),
             onBackClick = {},
             onSongClick = {},
             onPlayAll = {},
