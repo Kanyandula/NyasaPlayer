@@ -148,6 +148,17 @@ private fun AuthenticatedApp(
         }
     }
 
+    // Symmetric with the detail effect. openFavourites() does not freeze — the freeze happens at
+    // the first unlike (spec D19) — but closeFavourites() must run on leaving, or the next visit
+    // inherits the previous visit's held-back rows.
+    LaunchedEffect(currentScreen) {
+        if (currentScreen == CarScreen.Favourites) {
+            contentViewModel.openFavourites()
+        } else {
+            contentViewModel.closeFavourites()
+        }
+    }
+
     val animatorScale by rememberAnimatorDurationScale()
     val motionEnabled = decorativeMotionEnabled(
         isDistractionOptimized = playerState.restrictions.isDistractionOptimized,
