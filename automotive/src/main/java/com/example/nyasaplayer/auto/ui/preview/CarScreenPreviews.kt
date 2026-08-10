@@ -194,7 +194,9 @@ private fun ArtistLikedSongsPreview() {
             likedSongs = PreviewSongs,
             onBackClick = {},
             onSongClick = {},
+            onPlayAll = {},
             onShufflePlay = {},
+            onLikeToggle = {},
             currentlyPlayingMediaId = "1",
             isPlaying = true,
         )

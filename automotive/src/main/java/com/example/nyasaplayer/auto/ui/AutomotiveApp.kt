@@ -239,6 +239,13 @@ private fun AuthenticatedApp(
                         }
                     }
                 },
+                onArtistLikeToggle = { song ->
+                    scope.launch {
+                        if (!contentViewModel.toggleFavourite(song.mediaId, freeze = false)) {
+                            playerViewModel.reportUnlikeFailed()
+                        }
+                    }
+                },
             )
         }
 
@@ -331,6 +338,7 @@ private fun BrowseShell(
     onLikeClick: () -> Unit,
     onGenreClick: (Genre) -> Unit,
     onLikeToggle: (Song) -> Unit,
+    onArtistLikeToggle: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId
@@ -395,7 +403,9 @@ private fun BrowseShell(
                                 likedSongs = artistLikedSongs,
                                 onBackClick = onBackFromDetail,
                                 onSongClick = { song -> onArtistSongClick(artistLikedSongs, song) },
+                                onPlayAll = { onPlayTracks(artistLikedSongs) },
                                 onShufflePlay = { onShuffleTracks(artistLikedSongs) },
+                                onLikeToggle = onArtistLikeToggle,
                                 currentlyPlayingMediaId = currentlyPlayingMediaId,
                                 isPlaying = isPlaying,
                             )

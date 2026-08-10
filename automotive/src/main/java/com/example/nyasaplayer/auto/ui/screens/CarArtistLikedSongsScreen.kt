@@ -19,14 +19,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.nyasaplayer.auto.ui.components.CarPillButton
+import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Song
-import com.example.nyasaplayer.core.common.ui.components.ShufflePlayButton
-import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
-import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
-import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
+import com.example.nyasaplayer.core.common.util.formatDuration
 
+private val ButtonRowSpacing = 12.dp
+
+/**
+ * Screen 9 — an artist's liked songs, reached by drilling down from Library.
+ *
+ * Unlike screen 8, this list is a live filter over the caller's liked songs, not a freeze:
+ * unliking a row here removes it immediately. `isLiked` is hardcoded true on every row for the
+ * same reason — this list *is* that artist's liked songs, so there is no hollow-heart state to
+ * render (spec D25).
+ */
 @Suppress("LongParameterList")
 @Composable
 fun CarArtistLikedSongsScreen(
@@ -34,7 +43,9 @@ fun CarArtistLikedSongsScreen(
     likedSongs: List<Song>,
     onBackClick: () -> Unit,
     onSongClick: (Song) -> Unit,
+    onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
+    onLikeToggle: (Song) -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
     isPlaying: Boolean = false,
@@ -53,19 +64,21 @@ fun CarArtistLikedSongsScreen(
         }
         if (likedSongs.isNotEmpty()) {
             item {
-                ShufflePlayButton(
-                    onClick = onShufflePlay,
-                    fillColors = listOf(NyasaGoldDim, NyasaGold),
-                    contentColor = NyasaOnGold,
-                    height = CarTouchTargetSize,
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(ButtonRowSpacing)) {
+                    CarPillButton(label = "Play all", onClick = onPlayAll)
+                    CarPillButton(label = "Shuffle", onClick = onShufflePlay, filled = false)
+                }
             }
             items(likedSongs, key = { it.mediaId }) { song ->
-                LikedSongItem(
-                    song = song,
-                    isCurrentTrack = song.mediaId == currentlyPlayingMediaId,
-                    isPlaying = isPlaying,
+                CarTrackRow(
+                    title = song.title,
+                    artist = song.resolvedArtistName,
+                    duration = formatDuration(song.durationMs),
+                    isPlaying = isPlaying && song.mediaId == currentlyPlayingMediaId,
                     onClick = { onSongClick(song) },
+                    coverUrl = song.resolvedCoverUrl,
+                    onLikeToggle = { onLikeToggle(song) },
+                    isLiked = true,
                 )
             }
         }
