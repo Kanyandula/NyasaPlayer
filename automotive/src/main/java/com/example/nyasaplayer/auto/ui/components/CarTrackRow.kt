@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,6 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,6 +46,7 @@ private val RowSpacing = 16.dp
 private val TitleSize = 18.sp
 private val ArtistSize = 15.sp
 private val DurationSize = 16.sp
+private val HeartGlyphSize = 32.dp
 
 /**
  * One track in a list.
@@ -53,12 +62,15 @@ fun CarTrackRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     coverUrl: String = "",
+    onLikeToggle: (() -> Unit)? = null,
+    isLiked: Boolean = true,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(CarListRowHeight)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .likeAccessibility(onLikeToggle, isLiked),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(RowSpacing),
     ) {
@@ -99,6 +111,58 @@ fun CarTrackRow(
             text = duration,
             color = CarTextSecondary,
             fontSize = DurationSize,
+        )
+        if (onLikeToggle != null) {
+            LikeHeart(isLiked = isLiked, onLikeToggle = onLikeToggle)
+        }
+    }
+}
+
+/**
+ * Row-level accessibility for the like affordance: a rotary or screen-reader user must be able
+ * to reach the heart without hunting for a nested target, so the row itself announces the liked
+ * state and exposes the toggle as a [CustomAccessibilityAction]. No-op when there is no heart.
+ */
+private fun Modifier.likeAccessibility(onLikeToggle: (() -> Unit)?, isLiked: Boolean): Modifier =
+    if (onLikeToggle == null) {
+        this
+    } else {
+        this.semantics {
+            stateDescription = if (isLiked) "Liked" else "Not liked"
+            customActions = listOf(
+                CustomAccessibilityAction(
+                    label = if (isLiked) "Unlike" else "Like",
+                    action = {
+                        onLikeToggle()
+                        true
+                    },
+                ),
+            )
+        }
+    }
+
+/**
+ * The like/unlike heart rendered at the end of [CarTrackRow].
+ *
+ * The heart carries its own `contentDescription`: the `Box` below is `clickable`, which merges
+ * its descendants and makes the heart a semantics node of its own, outside the row's merge. The
+ * row's `customActions` only make it *reachable* by rotary — without a description here that
+ * second focus stop announces nothing but "double-tap to activate", and activating it silently
+ * unlikes a song. Matches the mini player's like control.
+ */
+@Composable
+private fun LikeHeart(isLiked: Boolean, onLikeToggle: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .carTouchTarget()
+            .clickable(onClick = onLikeToggle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            contentDescription = if (isLiked) "Unlike" else "Like",
+            tint = if (isLiked) NyasaGold else CarTextSecondary,
+            modifier = Modifier.size(HeartGlyphSize),
         )
     }
 }

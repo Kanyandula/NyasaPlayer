@@ -68,6 +68,13 @@ android {
         compose = true
         buildConfig = true
     }
+    // Matches :app, :core:data and :core:playback. Without it any unit test reaching an
+    // android.util.Log call throws "Method e in android.util.Log not mocked".
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {

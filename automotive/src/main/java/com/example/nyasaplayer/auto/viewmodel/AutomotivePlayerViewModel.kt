@@ -327,6 +327,22 @@ class AutomotivePlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Surfaces a failed like/unlike write. Non-retryable: Retry would act on the transport, not on
+     * the write that failed — see the PlayerError.isRetryable KDoc.
+     */
+    fun reportUnlikeFailed() {
+        _uiState.update {
+            it.copy(
+                error = PlayerError(
+                    title = "Couldn't Save",
+                    message = "Your change to this song wasn't saved. Check your connection.",
+                    isPlaybackError = false,
+                ),
+            )
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         stateCollector.releaseController()

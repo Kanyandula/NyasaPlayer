@@ -1,3 +1,11 @@
+@file:Suppress(
+    // 19 functions before A4, against detekt's thresholdInFiles of 20. The class-level suppression
+    // does not cover the file threshold. This class now owns search, genres, albums, playlists,
+    // recently-played, liked songs, popular, detail and favourites — the next slice to touch it
+    // should split it rather than suppress again. See spec D23.
+    "TooManyFunctions",
+)
+
 package com.example.nyasaplayer.auto.viewmodel
 
 import android.util.Log
@@ -41,7 +49,6 @@ private const val AlbumMissingError = "This album is no longer available."
 private const val PlaylistMissingError = "This playlist is no longer available."
 
 @HiltViewModel
-@Suppress("TooManyFunctions") // One view model backs all three tabs plus detail loading.
 class AutomotiveContentViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val genreRepository: GenreRepository,
@@ -104,8 +111,12 @@ class AutomotiveContentViewModel @Inject constructor(
             it.copy(
                 recentlyPlayed = emptyList(),
                 likedSongs = emptyList(),
+                likedSongsLoaded = false,
                 favoriteArtists = emptyList(),
                 playlists = emptyList(),
+                // A previous account's freeze must not survive a sign-out.
+                favourites = null,
+                pendingUnlikes = emptySet(),
             )
         }
         loadRecentlyPlayed()
@@ -179,15 +190,23 @@ class AutomotiveContentViewModel @Inject constructor(
                 }
                 val ordered = songIds.mapNotNull { songMap[it] }
                 _contentState.update {
-                    it.copy(likedSongs = ordered, favoriteArtists = deriveFavoriteArtists(ordered))
+                    it.copy(
+                        likedSongs = ordered,
+                        favoriteArtists = deriveFavoriteArtists(ordered),
+                        likedSongsLoaded = true,
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading liked songs", e)
+                // The load is over either way. Leaving the flag false would strand Favourites
+                // on its skeleton for the rest of the session.
+                _contentState.update { it.copy(likedSongsLoaded = true) }
             }
         }.catch { e ->
             Log.e(TAG, "Error observing liked songs", e)
+            _contentState.update { it.copy(likedSongsLoaded = true) }
         }.launchIn(viewModelScope)
     }
 
@@ -316,6 +335,75 @@ class AutomotiveContentViewModel @Inject constructor(
         _contentState.update { it.copy(detail = null) }
     }
 
+    /**
+     * Marks a visit to the Favourites tab.
+     *
+     * Deliberately does not freeze (spec D19) and deliberately clears nothing (spec D20). The
+     * effect that calls this re-runs on every Activity recreation — a night-mode flip mid-drive —
+     * and anything cleared here would silently reconcile the driver's held-back rows.
+     */
+    fun openFavourites() = Unit
+
+    /** Ends the visit. The next unlike starts a new freeze. */
+    fun closeFavourites() {
+        _contentState.update { it.copy(favourites = null, pendingUnlikes = emptySet()) }
+    }
+
+    /**
+     * Toggles one song's liked state, optimistically.
+     *
+     * [freeze] is the caller's screen contract, not a preference. `CarFavouritesScreen` passes
+     * true: the first unlike of a visit freezes the list as it stands *before* the removal lands,
+     * so the row cannot move under the driver (spec D19). `CarArtistLikedSongsScreen` passes
+     * false: its list is deliberately live and removes rows immediately (spec D25), and a freeze
+     * taken there would otherwise leak into the next Favourites visit — the effect that calls
+     * [closeFavourites] is keyed on the tab, and the drill-down never leaves the Library tab.
+     * A `freeze = false` call still records the pending unlike and still performs the write.
+     *
+     * Returns false when the write failed, having already reverted the optimistic change; the
+     * caller surfaces the error. A freeze already taken is deliberately *not* released on
+     * failure — the list still must not reflow under the driver's finger.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    suspend fun toggleFavourite(mediaId: String, freeze: Boolean): Boolean {
+        val userId = authRepository.currentUserId ?: return false
+        val wasPending = mediaId in _contentState.value.pendingUnlikes
+        _contentState.update { state ->
+            state.copy(
+                // Freeze on the first unlike only. Never re-freeze: a second call must not
+                // recapture a list the live flow has already changed.
+                favourites = if (freeze) state.favourites ?: state.likedSongs else state.favourites,
+                pendingUnlikes = if (wasPending) {
+                    state.pendingUnlikes - mediaId
+                } else {
+                    state.pendingUnlikes + mediaId
+                },
+            )
+        }
+        return try {
+            if (wasPending) {
+                userRepository.likeSong(userId, mediaId)
+            } else {
+                userRepository.unlikeSong(userId, mediaId)
+            }
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Error toggling favourite $mediaId", e)
+            _contentState.update { state ->
+                state.copy(
+                    pendingUnlikes = if (wasPending) {
+                        state.pendingUnlikes + mediaId
+                    } else {
+                        state.pendingUnlikes - mediaId
+                    },
+                )
+            }
+            false
+        }
+    }
+
     @Suppress("TooGenericExceptionCaught")
     private suspend fun loadDetail(destination: CarDestination): CarDetailState = try {
         when (destination) {
@@ -383,7 +471,14 @@ data class AutomotiveContentState(
     val albums: List<Album> = emptyList(),
     val popularSongs: List<Song> = emptyList(),
     val likedSongs: List<Song> = emptyList(),
+    // Liked songs alone: [isLoading] is flipped false by the first genres or albums emission,
+    // both from Room, while liked songs still need a Firestore round trip plus a song resolve.
+    // Favourites reads this instead, or it offers "No favourites yet" — and a CTA off the tab —
+    // to a driver who does have favourites, which §4.1 of the spec rules out.
+    val likedSongsLoaded: Boolean = false,
     val playlists: List<Playlist> = emptyList(),
+    val favourites: List<Song>? = null,
+    val pendingUnlikes: Set<String> = emptySet(),
     val detail: CarDetailState? = null,
     val searchQuery: String = "",
     val searchResults: List<Song> = emptyList(),
