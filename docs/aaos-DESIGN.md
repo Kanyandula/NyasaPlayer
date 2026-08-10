@@ -316,20 +316,21 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   depth 1, where `maxContentDepth` can refuse it — meaning a driver with nothing liked would be
   blocked from a screen whose only content is "you have nothing yet". Rendering in place keeps it
   reachable under every restriction state.
-- **D22 — The unlike affordance goes inside `CarTrackRow`, behind an optional `onLikeToggle`,**
-  rather than into a new row variant or each call site. The 76dp touch target is then enforced
+- **D22 — The unlike affordance goes inside `CarTrackRow`, behind an optional `onLikeToggle`,
+  rather than into a new row variant or each call site.** The 76dp touch target is then enforced
   once, in the component, rather than depended upon at three call sites. Gating on a nullable
   callback leaves `CarHomeScreen` and `CarDetailScreen` untouched by their defaults. A separate
   `CarLikedTrackRow` would duplicate a row the screen contract explicitly names as shared.
 - **D23 — A4 adds `@file:Suppress("TooManyFunctions")` to `AutomotiveContentViewModel.kt` and
   records the class's growth as debt for a later slice, rather than splitting it now.** The
   file is at 19 functions against detekt's `thresholdInFiles: 20`, and the class-level suppression
-  added in A3 does not cover the file threshold, so A4's two methods break the build without
+  added in A3 does not cover the file threshold, so A4's three methods break the build without
   action. Splitting a ViewModel that four screens depend on is a refactor, not a screen slice; doing
-  it inside A4 would make three screens the smaller half of the work. **This is the fourth
-  suppression of this rule across `:automotive` and `:app` view models — the class now owns search,
-  genres, albums, playlists, recently-played, liked songs, popular, detail and favourites, and the
-  next slice to touch it should split it rather than suppress again.**
+  it inside A4 would make three screens the smaller half of the work. **This is the third
+  `TooManyFunctions` suppression currently live across `:automotive` and `:app` view models, and
+  the second time this file has needed one — the class now owns search, genres, albums, playlists,
+  recently-played, liked songs, popular, detail and favourites, and the next slice to touch it
+  should split it rather than suppress again.**
 - **D24 — `CarArtistLikedSongsScreen` keeps its Shuffle control, which the contract does not
   list for screen 9.** The control exists and works today. Removing it to match the contract would
   be a visible capability regression for no user benefit. Recorded as an additive deviation rather
