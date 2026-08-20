@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -32,6 +33,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,6 +61,7 @@ import com.example.nyasaplayer.core.playback.RepeatMode
 private val FullPlayerAlbumArtSize = 400.dp
 private val PlayButtonSize = 112.dp
 private val SkipButtonSize = 80.dp
+private val BufferingRingStroke = 5.dp
 
 @Suppress("LongParameterList")
 @Composable
@@ -301,7 +305,12 @@ private fun MainControls(
             onClick = onSkipPreviousClick,
         )
         Spacer(modifier = Modifier.width(16.dp))
-        PlayPauseButton(isPlaying = playback.isPlaying, onClick = onPlayPauseClick)
+        Box(contentAlignment = Alignment.Center) {
+            PlayPauseButton(isPlaying = playback.isPlaying, onClick = onPlayPauseClick)
+            if (playback.isBuffering) {
+                BufferingRing()
+            }
+        }
         Spacer(modifier = Modifier.width(16.dp))
         CircleIconButton(
             icon = SkipNextIcon,
@@ -344,6 +353,21 @@ private fun PlayPauseButton(
             modifier = Modifier.size(48.dp),
         )
     }
+}
+
+/**
+ * Ring around play/pause while the player buffers. It has no pointer input, so the button
+ * underneath stays tappable.
+ */
+@Composable
+private fun BufferingRing(modifier: Modifier = Modifier) {
+    CircularProgressIndicator(
+        modifier = modifier
+            .size(PlayButtonSize)
+            .semantics { contentDescription = "Buffering" },
+        color = NyasaOnGold,
+        strokeWidth = BufferingRingStroke,
+    )
 }
 
 @Composable

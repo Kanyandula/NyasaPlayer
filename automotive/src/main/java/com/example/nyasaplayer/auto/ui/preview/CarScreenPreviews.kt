@@ -53,6 +53,8 @@ private val PreviewPlayback = PlaybackSnapshot(
     repeatMode = RepeatMode.Off,
 )
 
+private val PreviewBufferingPlayback = PreviewPlayback.copy(isBuffering = true)
+
 private val PreviewAlbums = listOf(
     Album(id = "a1", name = "Electronic Vibes", artistName = "Various", songIds = List(50) { "s$it" }),
     Album(id = "a2", name = "Hip Hop Essentials", artistName = "Various", songIds = List(42) { "s$it" }),
@@ -118,6 +120,31 @@ private fun FullPlayerPreview() {
     AppTheme {
         CarFullPlayerScreen(
             playback = PreviewPlayback,
+            onCollapseClick = {},
+            onPlayPauseClick = {},
+            onSkipNextClick = {},
+            onSkipPreviousClick = {},
+            onShuffleClick = {},
+            onRepeatClick = {},
+            onSeek = {},
+            isLiked = true,
+            onLikeClick = {},
+        )
+    }
+}
+
+@Preview(
+    name = "Full Player - Buffering",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun FullPlayerBufferingPreview() {
+    AppTheme {
+        CarFullPlayerScreen(
+            playback = PreviewBufferingPlayback,
             onCollapseClick = {},
             onPlayPauseClick = {},
             onSkipNextClick = {},
