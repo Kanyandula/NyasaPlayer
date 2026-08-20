@@ -19,13 +19,11 @@ internal fun queueDisplayItems(
     maxItems: Int,
     isDriving: Boolean,
 ): List<QueueDisplayItem> {
-    val items = queue.mapIndexed { index, song -> QueueDisplayItem(song, index) }
-    if (!isDriving) return items
-    val cap = maxItems.coerceAtLeast(0)
-    if (cap == 0 || items.size <= cap) return items.take(cap)
+    if (!isDriving) return queue.mapIndexed { index, song -> QueueDisplayItem(song, index) }
+    val cap = maxItems.coerceAtLeast(0).coerceAtMost(queue.size)
     // Keep the first page unless the current item falls past it.
-    val start = if (currentIndex in cap until items.size) minOf(currentIndex, items.size - cap) else 0
-    return items.subList(start, start + cap)
+    val start = if (currentIndex in cap until queue.size) minOf(currentIndex, queue.size - cap) else 0
+    return List(cap) { QueueDisplayItem(queue[start + it], start + it) }
 }
 
 /** Clearing the queue is a parked-only action, and pointless for a queue of one. */

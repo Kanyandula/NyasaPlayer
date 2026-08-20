@@ -108,6 +108,22 @@ private fun HomeScreenPreview() {
     }
 }
 
+@Composable
+private fun FullPlayer(playback: PlaybackSnapshot) {
+    CarFullPlayerScreen(
+        playback = playback,
+        onCollapseClick = {},
+        onPlayPauseClick = {},
+        onSkipNextClick = {},
+        onSkipPreviousClick = {},
+        onShuffleClick = {},
+        onRepeatClick = {},
+        onSeek = {},
+        isLiked = true,
+        onLikeClick = {},
+    )
+}
+
 @Preview(
     name = "Full Player",
     device = Devices.AUTOMOTIVE_1024p,
@@ -118,18 +134,7 @@ private fun HomeScreenPreview() {
 @Composable
 private fun FullPlayerPreview() {
     AppTheme {
-        CarFullPlayerScreen(
-            playback = PreviewPlayback,
-            onCollapseClick = {},
-            onPlayPauseClick = {},
-            onSkipNextClick = {},
-            onSkipPreviousClick = {},
-            onShuffleClick = {},
-            onRepeatClick = {},
-            onSeek = {},
-            isLiked = true,
-            onLikeClick = {},
-        )
+        FullPlayer(playback = PreviewPlayback)
     }
 }
 
@@ -143,18 +148,7 @@ private fun FullPlayerPreview() {
 @Composable
 private fun FullPlayerBufferingPreview() {
     AppTheme {
-        CarFullPlayerScreen(
-            playback = PreviewBufferingPlayback,
-            onCollapseClick = {},
-            onPlayPauseClick = {},
-            onSkipNextClick = {},
-            onSkipPreviousClick = {},
-            onShuffleClick = {},
-            onRepeatClick = {},
-            onSeek = {},
-            isLiked = true,
-            onLikeClick = {},
-        )
+        FullPlayer(playback = PreviewBufferingPlayback)
     }
 }
 
