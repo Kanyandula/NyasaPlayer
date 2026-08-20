@@ -259,6 +259,7 @@ private fun AuthenticatedApp(
                 currentIndex = playerState.playback.currentQueueIndex,
                 isPlaying = playerState.playback.isPlaying,
                 isDriving = playerState.restrictions.isDistractionOptimized,
+                maxItems = playerState.restrictions.maxCumulativeContentItems,
                 onCloseClick = { showQueue = false },
                 onSkipTo = playerViewModel::skipToQueueItem,
                 onRemove = playerViewModel::removeFromQueue,

@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -72,6 +72,7 @@ fun CarQueueScreen(
     queue: List<Song>,
     currentIndex: Int,
     isDriving: Boolean,
+    maxItems: Int,
     onCloseClick: () -> Unit,
     onSkipTo: (Int) -> Unit,
     onRemove: (Int) -> Unit,
@@ -82,6 +83,9 @@ fun CarQueueScreen(
     val upcomingCount = (queue.size - (currentIndex + 1)).coerceAtLeast(0)
     val upcomingDurationMs = remember(queue, currentIndex) {
         queue.drop((currentIndex + 1).coerceAtLeast(0)).sumOf { it.durationMs }
+    }
+    val displayItems = remember(queue, currentIndex, maxItems, isDriving) {
+        queueDisplayItems(queue, currentIndex, maxItems, isDriving)
     }
 
     Column(
@@ -95,7 +99,7 @@ fun CarQueueScreen(
             upcomingCount = upcomingCount,
             upcomingDurationMs = upcomingDurationMs,
             isDriving = isDriving,
-            canClear = !isDriving && queue.size > 1,
+            canClear = canClearQueue(queue.size, isDriving),
             onCloseClick = onCloseClick,
             onClearClick = onClearQueue,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
@@ -117,17 +121,18 @@ fun CarQueueScreen(
             contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            itemsIndexed(
-                items = queue,
-                key = { _, song -> song.mediaId },
-            ) { index, song ->
+            items(
+                items = displayItems,
+                key = { it.song.mediaId },
+            ) { item ->
                 QueueRow(
-                    song = song,
-                    isCurrentTrack = index == currentIndex,
+                    song = item.song,
+                    isCurrentTrack = item.queueIndex == currentIndex,
                     isPlaying = isPlaying,
                     isDriving = isDriving,
-                    onClick = { onSkipTo(index) },
-                    onRemove = { onRemove(index) },
+                    // Callbacks address the real queue, not the capped display window.
+                    onClick = { onSkipTo(item.queueIndex) },
+                    onRemove = { onRemove(item.queueIndex) },
                 )
             }
         }
@@ -241,7 +246,7 @@ private fun DrivingHelperChip(modifier: Modifier = Modifier) {
             modifier = Modifier.size(20.dp),
         )
         Text(
-            text = "Park the car to reorder or clear your queue.",
+            text = "Park the car to remove or clear your queue.",
             color = NyasaGold,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
