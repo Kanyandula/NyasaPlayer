@@ -121,20 +121,20 @@ fixtures; A6 must not carry the older pre-PR #26 shape forward.
 - `automotive/src/main/java/com/example/nyasaplayer/auto/viewmodel/AutomotiveContentViewModel.kt`
 - `automotive/src/main/java/com/example/nyasaplayer/auto/ui/AutomotiveApp.kt`
 
-- [ ] Rebase or merge current `main` into the A6 branch.
-- [ ] Re-apply A6 Task 1 changes on top of current `main`, not by accepting the old A6 side for
+- [x] Rebase or merge current `main` into the A6 branch.
+- [x] Re-apply A6 Task 1 changes on top of current `main`, not by accepting the old A6 side for
       conflict hunks.
-- [ ] Keep the three Favourites suites and `FavouritesTestCase`; do not delete or inline them.
-- [ ] Keep `DefaultUserId`, `FakeGenreRepository.genres`, `genresError`,
+- [x] Keep the three Favourites suites and `FavouritesTestCase`; do not delete or inline them.
+- [x] Keep `DefaultUserId`, `FakeGenreRepository.genres`, `genresError`,
       `FakeUserRepository.likedFor()`, `likedSongsFlowError`, `throwOnNextWrite`, and
       per-account liked-song flows.
-- [ ] Extend `FakeSongRepository` for search tests without removing `gate` or
+- [x] Extend `FakeSongRepository` for search tests without removing `gate` or
       `throwOnceOnGetSongsByIds`.
-- [ ] In `AutomotiveContentViewModel`, remove only search-owned state/methods; preserve the
+- [x] In `AutomotiveContentViewModel`, remove only search-owned state/methods; preserve the
       current Favourites error/loading code named in the baseline section above.
-- [ ] In `AutomotiveApp`, preserve the current Favourites binding to `contentState.favouritesLoading`
+- [x] In `AutomotiveApp`, preserve the current Favourites binding to `contentState.favouritesLoading`
       and `contentState.favouritesError`.
-- [ ] Confirm `git diff --name-status main..HEAD` shows no deletion of
+- [x] Confirm `git diff --name-status main..HEAD` shows no deletion of
       `automotive/src/test/java/com/example/nyasaplayer/auto/viewmodel/Favourites*`.
 
 **Verify:**

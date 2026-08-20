@@ -476,10 +476,10 @@ private fun BrowseShell(
                             onBrowseClick = { onSelectTab(CarScreen.Browse) },
                             currentlyPlayingMediaId = currentlyPlayingMediaId,
                             isPlaying = isPlaying,
-                            // Not contentState.isLoading: that is flipped false by the first
-                            // genres or albums emission, well before liked songs arrive.
-                            isLoading = !contentState.likedSongsLoaded,
-                            errorMessage = contentState.errorMessage,
+                            // Not contentState.isLoading/errorMessage: those belong to the
+                            // catalogue. Screen 8 reads its own pair.
+                            isLoading = contentState.favouritesLoading,
+                            errorMessage = contentState.favouritesError,
                             onRetry = onRetry,
                         )
                     }

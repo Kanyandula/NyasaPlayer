@@ -341,6 +341,35 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   taken in that gap drops the user back to the tab root on every process-death restore. Preserving
   D16 is worth more than making the two screens' unlike behaviour identical. The inconsistency is
   real and is recorded here rather than discovered later.
+- **D32 — Favourites freezes on entry once liked songs have loaded, refining D19's first-unlike
+  freeze.** D19 chose the first unlike because an entry freeze taken before Firestore's first
+  emission would snapshot an empty list and strand the driver on "no favourites yet". That
+  objection was about *timing*, and `likedSongsLoaded` — added later, for the skeleton — now
+  answers it: `openFavourites()` freezes only when the list has actually arrived, and takes no
+  freeze at all before that, so the cold-start cache-then-server sequence still lands. The
+  first-unlike freeze alone left two holes, because unlike is the common cause of a row moving,
+  not the only one: a like or an unlike from another device re-emits the whole ordered list
+  (`likedAt DESC`) and shifts or drops rows under the driver mid-visit. D20 still holds — an
+  entry that finds a freeze already held disturbs neither it nor the pends behind it.
+- **D33 — `openFavourites()` clears pending unlikes when it is not holding a freeze, and a null
+  user id is not a user switch.** The pend set has two writers across two screens: leaving the
+  artist drill-down does not leave the Library tab, so the tab-keyed effect never fires and a
+  pend taken there paints a still-liked song with a hollow heart on the next Favourites visit.
+  Clearing on entry is safe only when no freeze is being held, which is why the guard and not
+  D20's blanket rule. Separately, `reloadUserContent()` now ignores a null `currentUserId`:
+  on Activity recreation auth has not restored yet, and treating that as a switch to nobody
+  reflowed the list under a driver who never left the screen. A real sign-out tears the session
+  down through `AutomotiveAuthViewModel`.
+- **D34 — Favourites reads its own loading and error state, not the catalogue's.** A failed
+  liked-songs load left `errorMessage` untouched — its only writers are the genres and albums
+  collectors — so screen 8 fell through to `CarEmptyFavouritesScreen` and told a driver with a
+  full library "No favourites yet", with no error and no Retry. `AutomotiveContentState` now
+  carries `favouritesError` beside the shared field and derives `favouritesLoading` from
+  `likedSongsLoaded`, and `AutomotiveApp` binds those. The two stay separate deliberately: a
+  catalogue failure is the process's and a liked-songs failure is the account's, so a user
+  switch clears one and not the other. `loadContent()` also resets `likedSongsLoaded`, or Retry
+  leaves Favourites on the false empty state for the whole reload, and it only tears down the
+  user-scoped collectors when there is a user to restart them for.
 - **D26 — Queue reorder is deferred, and every doc that promised it now says remove or clear.**
   Reorder has no `PlaybackQueueManager` API, no ViewModel method, and no mobile contract behind it;
   it is also parked-only convenience, while buffering, error surfacing and driving truncation are

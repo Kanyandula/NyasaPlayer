@@ -13,11 +13,27 @@ import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 
+/** The id [FakeAuthRepository] signs in with by default. */
+const val DefaultUserId = "test-user"
+
 class FakeGenreRepository : GenreRepository {
-    override fun getGenres(): Flow<List<Genre>> = flowOf(emptyList())
+
+    val genres = MutableStateFlow<List<Genre>>(emptyList())
+
+    /** When set, the genres flow fails instead of emitting — the catalogue-error path. */
+    var genresError: Throwable? = null
+
+    // Read at collection time, not at construction, so a retry after clearing the error
+    // collects a working flow.
+    override fun getGenres(): Flow<List<Genre>> = flow {
+        genresError?.let { throw it }
+        emitAll(genres)
+    }
     override suspend fun getGenreById(genreId: String): Genre? = null
     override suspend fun getGenresByPopularity(limit: Int): List<Genre> = emptyList()
 }
@@ -29,7 +45,17 @@ class FakeUserRepository : UserRepository {
      * "nothing is liked" the instant a collector attaches, and no test could then observe the
      * window between opening Favourites and the liked songs arriving.
      */
-    val liked = MutableStateFlow<List<LikedSong>?>(null)
+    private val likedByUser = mutableMapOf<String, MutableStateFlow<List<LikedSong>?>>()
+
+    /** The default user's liked songs. Same flow as [likedFor] with [DefaultUserId]. */
+    val liked: MutableStateFlow<List<LikedSong>?> get() = likedFor(DefaultUserId)
+
+    /** Per-account liked songs, so a user switch can be given a different list. */
+    fun likedFor(userId: String): MutableStateFlow<List<LikedSong>?> =
+        likedByUser.getOrPut(userId) { MutableStateFlow(null) }
+
+    /** When set, the liked-songs flow fails instead of emitting. */
+    var likedSongsFlowError: Throwable? = null
 
     /** Set to make the next likeSong/unlikeSong throw, so the revert path can be tested. */
     var failNextWrite: Boolean = false
@@ -44,7 +70,10 @@ class FakeUserRepository : UserRepository {
     var likeCallCount = 0
     var unlikeCallCount = 0
 
-    override fun getLikedSongs(userId: String): Flow<List<LikedSong>> = liked.filterNotNull()
+    override fun getLikedSongs(userId: String): Flow<List<LikedSong>> = flow {
+        likedSongsFlowError?.let { throw it }
+        emitAll(likedFor(userId).filterNotNull())
+    }
 
     override suspend fun likeSong(userId: String, mediaId: String) {
         likeCallCount++
