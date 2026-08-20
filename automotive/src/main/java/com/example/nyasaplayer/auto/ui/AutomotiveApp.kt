@@ -6,6 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -15,7 +21,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import com.example.nyasaplayer.auto.ui.components.CarAmbientBackground
@@ -29,6 +40,7 @@ import com.example.nyasaplayer.auto.ui.motion.rememberAnimatorDurationScale
 import com.example.nyasaplayer.auto.ui.navigation.CarDestination
 import com.example.nyasaplayer.auto.ui.navigation.CarOverlay
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
+import com.example.nyasaplayer.auto.ui.navigation.CarSheet
 import com.example.nyasaplayer.auto.ui.navigation.CarUiLocation
 import com.example.nyasaplayer.auto.ui.navigation.GateResult
 import com.example.nyasaplayer.auto.ui.navigation.gate
@@ -43,10 +55,12 @@ import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.ui.screens.CarPlaylistScreen
 import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
+import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
+import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
 import com.example.nyasaplayer.auto.viewmodel.CarDetailState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
@@ -98,9 +112,11 @@ private fun AuthenticatedApp(
     modifier: Modifier = Modifier,
     playerViewModel: AutomotivePlayerViewModel = hiltViewModel(),
     contentViewModel: AutomotiveContentViewModel = hiltViewModel(),
+    searchViewModel: AutomotiveSearchViewModel = hiltViewModel(),
 ) {
     val playerState by playerViewModel.uiState.collectAsState()
     val contentState by contentViewModel.contentState.collectAsState()
+    val searchState by searchViewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
         contentViewModel.reloadUserContent()
@@ -110,14 +126,24 @@ private fun AuthenticatedApp(
     var showFullPlayer by rememberSaveable { mutableStateOf(false) }
     var showQueue by rememberSaveable { mutableStateOf(false) }
     var drillDown by rememberSaveable { mutableStateOf<CarDestination?>(null) }
+    var showSearch by rememberSaveable { mutableStateOf(false) }
     var denialReason by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    // Leaving search always drops the editing flag too. The flag is what the gate reads, so a
+    // sheet that closes while it is still set would leave the app claiming text entry is active.
+    val closeSearch = {
+        showSearch = false
+        searchViewModel.setEditing(false)
+    }
 
     val location = carUiLocation(
         tab = currentScreen,
         showFullPlayer = showFullPlayer,
         showQueue = showQueue,
         drillDown = drillDown,
+        showSearch = showSearch,
+        searchTextEntryActive = searchState.isEditing,
     )
 
     // Keyed on both the restrictions and the location so it fires when the vehicle starts
@@ -130,6 +156,7 @@ private fun AuthenticatedApp(
                 showFullPlayer = false
                 showQueue = false
                 drillDown = null
+                closeSearch()
                 currentScreen = result.evictTo.tab
                 denialReason = result.reason
             }
@@ -190,12 +217,22 @@ private fun AuthenticatedApp(
                 contentState = contentState,
                 onSignOut = onSignOut,
                 userDisplayName = userDisplayName,
+                onSearchClick = { showSearch = true },
+                // Also the browse-by shortcuts' exit: the search sheet routes Genres to Browse
+                // and Albums/Artists/Playlists to Library through this same callback.
                 onSelectTab = {
                     drillDown = null
+                    closeSearch()
                     currentScreen = it
                 },
-                onExpandPlayer = { showFullPlayer = true },
-                onQueueClick = { showQueue = true },
+                onExpandPlayer = {
+                    closeSearch()
+                    showFullPlayer = true
+                },
+                onQueueClick = {
+                    closeSearch()
+                    showQueue = true
+                },
                 decorativeMotionEnabled = motionEnabled,
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
@@ -252,6 +289,10 @@ private fun AuthenticatedApp(
             )
         }
 
+        if (showSearch) {
+            SearchSheetPlaceholder(onClose = closeSearch)
+        }
+
         if (showQueue) {
             CarQueueScreen(
                 queue = playerState.playback.queue,
@@ -289,14 +330,19 @@ private fun AuthenticatedApp(
 }
 
 /**
- * Collapses the five scattered pieces of navigation state into the one value [gate] decides
- * on. Derived, not authoritative — the individual values stay where the screens read them.
+ * Collapses the scattered pieces of navigation state into the one value [gate] decides on.
+ * Derived, not authoritative — the individual values stay where the screens read them.
+ *
+ * Internal rather than private so CarUiLocationTest can exercise the mapping directly; there
+ * is no Compose test tooling in this module yet (ticket T1).
  */
-private fun carUiLocation(
+internal fun carUiLocation(
     tab: CarScreen,
     showFullPlayer: Boolean,
     showQueue: Boolean,
     drillDown: CarDestination?,
+    showSearch: Boolean,
+    searchTextEntryActive: Boolean,
 ): CarUiLocation = CarUiLocation(
     tab = tab,
     overlay = when {
@@ -306,12 +352,12 @@ private fun carUiLocation(
     },
     // All three destinations are one step from a tab root (D8). There is no depth 2 in A3.
     drillDepth = if (drillDown != null) 1 else 0,
-    // Settings and Profile are later slices, and Search is not yet a distinct sheet in this
-    // app. The field exists so those slices have nothing to retrofit.
-    sheet = null,
-    // A6 Task 2 wires this to the search sheet's editing state. Until the sheet exists there is
-    // no editable field in the app, so no location has text entry active.
-    textEntryActive = false,
+    // Settings and Profile are A7. The field exists so that slice has nothing to retrofit.
+    sheet = if (showSearch) CarSheet.Search else null,
+    // Open-but-idle search is browsing, not typing, and stays allowed while driving. Only an
+    // active editable field is text entry, which is why this is the ViewModel's explicit flag
+    // and not "the query is non-empty" — a query left over from a parked search is not typing.
+    textEntryActive = showSearch && searchTextEntryActive,
 )
 
 @Suppress("LongParameterList", "LongMethod")
@@ -322,6 +368,7 @@ private fun BrowseShell(
     contentState: AutomotiveContentState,
     onSignOut: () -> Unit,
     userDisplayName: String,
+    onSearchClick: () -> Unit,
     onSelectTab: (CarScreen) -> Unit,
     onExpandPlayer: () -> Unit,
     onQueueClick: () -> Unit,
@@ -350,9 +397,12 @@ private fun BrowseShell(
     val maxItems = playerState.restrictions.maxCumulativeContentItems
 
     Column(modifier = modifier.fillMaxSize()) {
-        // The callbacks are no-ops until A6/A7 give search, settings and profile somewhere
-        // to go; the controls render disabled in the meantime.
-        CarSystemBar(onSearchClick = {}, onSettingsClick = {}, onAvatarClick = {})
+        // Settings and profile are still no-ops and render disabled until A7.
+        CarSystemBar(
+            onSearchClick = onSearchClick,
+            onSettingsClick = {},
+            onAvatarClick = {},
+        )
 
         // Above the rail: an app-level condition, not screen content.
         OfflineBanner(isOffline = playerState.isOffline)
@@ -498,6 +548,43 @@ private fun BrowseShell(
                 onLikeClick = onLikeClick,
                 onQueueClick = onQueueClick,
             )
+        }
+    }
+}
+
+/**
+ * ponytail: stand-in so A6 Task 2's location model is reachable and closable on device.
+ * A6 Task 3 replaces this call site with `CarSearchScreen`, which owns the field, the recent
+ * queries and the browse-by shortcuts. Nothing else should be added here in the meantime.
+ */
+@Composable
+private fun SearchSheetPlaceholder(
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        // Opaque for the same reason as CarQueueScreen: it occludes the shell behind it.
+        modifier = modifier
+            .fillMaxSize()
+            .background(NyasaBackground)
+            .padding(CarScreenMargin),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Search",
+                color = Color.White,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onClose, modifier = Modifier.size(CarTouchTargetSize)) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Close search",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
         }
     }
 }

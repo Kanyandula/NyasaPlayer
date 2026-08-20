@@ -9,9 +9,9 @@ enum class CarSheet { Settings, Profile, Search }
 /**
  * Where the user is, as a single value.
  *
- * Derived from state that lives in three different owners: local rememberSaveable
- * values in AutomotiveApp and the search query in AutomotiveContentViewModel.
- * Derived rather than authoritative, so existing screens keep working unchanged.
+ * Derived from state that lives in two different owners: local rememberSaveable values in
+ * AutomotiveApp and the editing flag in AutomotiveSearchViewModel. Derived rather than
+ * authoritative, so existing screens keep working unchanged.
  */
 data class CarUiLocation(
     val tab: CarScreen,

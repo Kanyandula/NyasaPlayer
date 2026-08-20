@@ -234,20 +234,20 @@ model correct.
 - Modify: `automotive/src/main/java/com/example/nyasaplayer/auto/ui/navigation/GateResult.kt`
 - Modify: `automotive/src/test/java/com/example/nyasaplayer/auto/ui/navigation/CarRestrictionGateTest.kt` only if comments/assertions need renaming
 
-- [ ] Add `searchViewModel: AutomotiveSearchViewModel = hiltViewModel()` to `AuthenticatedApp`.
-- [ ] Collect `searchState` beside `contentState` and `playerState`.
-- [ ] Add `var showSearch by rememberSaveable { mutableStateOf(false) }`.
-- [ ] Update `carUiLocation()` to take `showSearch: Boolean` and
+- [x] Add `searchViewModel: AutomotiveSearchViewModel = hiltViewModel()` to `AuthenticatedApp`.
+- [x] Collect `searchState` beside `contentState` and `playerState`.
+- [x] Add `var showSearch by rememberSaveable { mutableStateOf(false) }`.
+- [x] Update `carUiLocation()` to take `showSearch: Boolean` and
       `searchTextEntryActive: Boolean`.
-- [ ] Set `sheet = if (showSearch) CarSheet.Search else null`.
-- [ ] Set `textEntryActive = showSearch && searchState.isEditing`.
-- [ ] In the gate's `Denied` branch, close search and call `searchViewModel.setEditing(false)`
+- [x] Set `sheet = if (showSearch) CarSheet.Search else null`.
+- [x] Set `textEntryActive = showSearch && searchState.isEditing`.
+- [x] In the gate's `Denied` branch, close search and call `searchViewModel.setEditing(false)`
       before showing the refusal reason.
-- [ ] Clear `showSearch` when switching tabs, opening full player/queue, or following a browse-by
+- [x] Clear `showSearch` when switching tabs, opening full player/queue, or following a browse-by
       shortcut.
-- [ ] Enable only the search control in `CarSystemBar`. Settings and profile stay disabled and
+- [x] Enable only the search control in `CarSystemBar`. Settings and profile stay disabled and
       visibly unavailable until A7.
-- [ ] Update comments in `CarUiLocation.kt` and `GateResult.kt` so they no longer say Search is
+- [x] Update comments in `CarUiLocation.kt` and `GateResult.kt` so they no longer say Search is
       unreachable or owned by `AutomotiveContentViewModel`.
 
 **Verify:**
