@@ -19,6 +19,32 @@ driving.
 **Tech stack:** Kotlin, Jetpack Compose, Media3 search path unchanged, Hilt, JUnit 4,
 kotlinx-coroutines-test, Gradle Kotlin DSL, Detekt, Lint.
 
+## Current main baseline
+
+This plan was first written against the A5 merge baseline (`9dab4f7`, PR #24). `main` now includes
+PR #25 and PR #26, ending at `6637508`, which changed the Favourites ViewModel tests and fixtures.
+A6 must be rebased or merged onto that baseline before any remaining work continues.
+
+The current A6 branch is **not up to date** until that happens. A diff from current `main` to the
+A6 branch must not:
+
+- delete `FavouritesBoundaryTest.kt`
+- delete `FavouritesJourneyTest.kt`
+- delete `FavouritesTestCase.kt`
+- inline the shared Favourites fixture back into `FavouritesSnapshotTest.kt`
+- simplify `FakeGenreRepository` or `FakeUserRepository` in a way that removes PR #26's error,
+  per-user, or cancellation hooks
+- remove `FakeSongRepository.throwOnceOnGetSongsByIds`
+- revert `AutomotiveContentViewModel`'s Favourites error/loading channel
+
+When Task 1 removes search ownership from `AutomotiveContentViewModel`, start from current `main`
+and delete only the search-owned pieces: `searchJob`, `SearchLimit`, `SearchDebounceMs`,
+`searchQuery`, `searchResults`, `onSearchQueryChange()`, `clearSearch()`, and imports made unused
+by that deletion. Preserve `FavouritesLoadError`, `cancelCatalogueJobs()`, `cancelUserJobs()`,
+`reportLikedSongsFailure()`, `favouritesError`, `favouritesLoading`, the null-user-id guard in
+`reloadUserContent()`, the guarded user-collector restart in `loadContent()`, and
+`openFavourites()`'s current freeze behavior.
+
 ## Global constraints
 
 - **Max line length 120.** Trailing commas required on call and declaration sites. No wildcard
@@ -40,7 +66,8 @@ kotlinx-coroutines-test, Gradle Kotlin DSL, Detekt, Lint.
 
 ## Sequencing
 
-Task 1 is the data/search-state split and lands with JVM tests before UI consumes it. Task 2 wires
+Task 0 brings the branch up to current `main` and protects the PR #26 Favourites fixtures. Task 1
+is the data/search-state split and lands with JVM tests before UI consumes it. Task 2 wires
 navigation and gate semantics. Task 3 builds the screens. Task 4 connects playback, caps and
 shortcuts. Task 5 records the contract changes. Task 6 runs the full gate and device checklist.
 
@@ -64,6 +91,7 @@ shortcuts. Task 5 records the contract changes. Task 6 runs the full gate and de
 | `core/data/src/test/.../fake/FakeSongDao.kt` | Match DAO search semantics |
 | `core/data/src/test/.../offline/OfflineSongRepositoryTest.kt` | Test title, artist and album-name search |
 | `automotive/src/test/.../fake/FakeSongRepository.kt` | Return configurable search results and call counts |
+| `automotive/src/test/.../fake/InertRepositoryFakes.kt` | Preserve current-main Favourites helpers if conflicts touch this file |
 | `automotive/.../viewmodel/AutomotiveContentViewModel.kt` | Remove search state/methods/job from the content ViewModel |
 | `automotive/.../ui/AutomotiveApp.kt` | Add search ViewModel, sheet state, gate integration and screen routing |
 | `automotive/.../ui/navigation/CarUiLocation.kt` | Update comment: text entry is editing state, not query presence |
@@ -78,10 +106,50 @@ shortcuts. Task 5 records the contract changes. Task 6 runs the full gate and de
 
 ---
 
+## Task 0: Bring A6 onto current `main`
+
+Required before continuing implementation. PR #26 changed tracked Favourites tests and their shared
+fixtures; A6 must not carry the older pre-PR #26 shape forward.
+
+**Files to preserve from current `main`:**
+- `automotive/src/test/java/com/example/nyasaplayer/auto/viewmodel/FavouritesBoundaryTest.kt`
+- `automotive/src/test/java/com/example/nyasaplayer/auto/viewmodel/FavouritesJourneyTest.kt`
+- `automotive/src/test/java/com/example/nyasaplayer/auto/viewmodel/FavouritesSnapshotTest.kt`
+- `automotive/src/test/java/com/example/nyasaplayer/auto/viewmodel/FavouritesTestCase.kt`
+- `automotive/src/test/java/com/example/nyasaplayer/auto/fake/InertRepositoryFakes.kt`
+- `automotive/src/test/java/com/example/nyasaplayer/auto/fake/FakeSongRepository.kt`
+- `automotive/src/main/java/com/example/nyasaplayer/auto/viewmodel/AutomotiveContentViewModel.kt`
+- `automotive/src/main/java/com/example/nyasaplayer/auto/ui/AutomotiveApp.kt`
+
+- [ ] Rebase or merge current `main` into the A6 branch.
+- [ ] Re-apply A6 Task 1 changes on top of current `main`, not by accepting the old A6 side for
+      conflict hunks.
+- [ ] Keep the three Favourites suites and `FavouritesTestCase`; do not delete or inline them.
+- [ ] Keep `DefaultUserId`, `FakeGenreRepository.genres`, `genresError`,
+      `FakeUserRepository.likedFor()`, `likedSongsFlowError`, `throwOnNextWrite`, and
+      per-account liked-song flows.
+- [ ] Extend `FakeSongRepository` for search tests without removing `gate` or
+      `throwOnceOnGetSongsByIds`.
+- [ ] In `AutomotiveContentViewModel`, remove only search-owned state/methods; preserve the
+      current Favourites error/loading code named in the baseline section above.
+- [ ] In `AutomotiveApp`, preserve the current Favourites binding to `contentState.favouritesLoading`
+      and `contentState.favouritesError`.
+- [ ] Confirm `git diff --name-status main..HEAD` shows no deletion of
+      `automotive/src/test/java/com/example/nyasaplayer/auto/viewmodel/Favourites*`.
+
+**Verify:**
+
+```bash
+./gradlew :automotive:testOemDebugUnitTest
+```
+
+---
+
 ## Task 1: Search ViewModel and song-search parity
 
 The UI should consume one focused search state owner, not the already overloaded content
-ViewModel. Add the new ViewModel and tests first.
+ViewModel. Add the new ViewModel and tests first, after Task 0 has brought the branch onto
+current `main`.
 
 **Files:**
 - Create: `automotive/src/main/java/com/example/nyasaplayer/auto/viewmodel/AutomotiveSearchViewModel.kt`
@@ -131,8 +199,17 @@ class AutomotiveSearchViewModel @Inject constructor(
 - [ ] Add session recent queries: max five, newest first, case-insensitive de-dupe.
 - [ ] Make `FakeSongRepository.searchSongs()` return matching songs from its `songs` flow and
       expose a call count/failure hook for tests.
+- [ ] Preserve `FakeSongRepository.gate` and `throwOnceOnGetSongsByIds`; Favourites and detail
+      tests still depend on those hooks.
+- [ ] Do not simplify `InertRepositoryFakes.kt` to support search tests. Search tests should need
+      `FakeSongRepository`; the Favourites fake hooks from current `main` must remain intact.
 - [ ] Remove `searchJob`, `SearchLimit`, `SearchDebounceMs`, `searchQuery`, `searchResults`,
       `onSearchQueryChange()` and `clearSearch()` from `AutomotiveContentViewModel`.
+- [ ] Preserve `FavouritesLoadError`, `reportLikedSongsFailure()`, `favouritesError`,
+      `favouritesLoading`, and the current `openFavourites()` freeze behavior while removing
+      search-owned code.
+- [ ] Keep `FavouritesBoundaryTest`, `FavouritesJourneyTest`, `FavouritesSnapshotTest`, and
+      `FavouritesTestCase` compiling; do not delete them as part of A6.
 - [ ] Update `SongDao.search()` and `FakeSongDao.search()` so album names match too.
 - [ ] Add `OfflineSongRepositoryTest` cases for title, artist and album-name matching.
 
