@@ -341,6 +341,38 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   taken in that gap drops the user back to the tab root on every process-death restore. Preserving
   D16 is worth more than making the two screens' unlike behaviour identical. The inconsistency is
   real and is recorded here rather than discovered later.
+- **D26 — Queue reorder is deferred, and every doc that promised it now says remove or clear.**
+  Reorder has no `PlaybackQueueManager` API, no ViewModel method, and no mobile contract behind it;
+  it is also parked-only convenience, while buffering, error surfacing and driving truncation are
+  correctness and compliance work. Shipping copy that offers it — `CarQueueScreen`'s driving chip
+  read "Park the car to reorder or clear your queue" — promises a control the screen does not have.
+  The chip now reads "Park the car to remove or clear your queue," and the contract, PRD and
+  restriction tables here name remove and clear only. **Cost to close:** a move API on
+  `PlaybackQueueManager`, a ViewModel method, and a drag affordance that clears 76dp; a queue-core
+  feature, not the completion of an overlay.
+- **D27 — Screen 12's error state is the existing global `CarErrorOverlay`, not a new screen-19
+  destination.** `AutomotivePlayerViewModel` already routes playback failures into `PlayerError`,
+  and `AutomotiveApp` already composes the overlay after both player overlays, so it draws above
+  them. Adding a destination would put a failure message behind `gate()` and `maxContentDepth`,
+  which can refuse it — the same reasoning as D21. A8 owns the dedicated playback-error visual.
+- **D28 — Driving truncation is a display window over the queue, never a mutation of it.**
+  `maxCumulativeContentItems` restricts what the driver may *see*; changing Media3's queue or the
+  persisted playback order to achieve that would corrupt state the driver never asked to change,
+  and would outlive the drive. `queueDisplayItems()` therefore returns rows paired with their
+  original queue index, and `CarQueueScreen` passes that index — not the row's position — to
+  `onSkipTo`/`onRemove`. The window also keeps the current track visible when it sits past the
+  first capped page, which a plain `take(cap)` would hide. This is the one piece of A5 with real
+  index arithmetic, so it landed as a pure function with unit tests before any Compose consumed it.
+- **D29 — A5 did not split `AutomotivePlayerViewModel`, because it added no player API.** The
+  slice consumed state that already existed: `isBuffering` on `PlaybackSnapshot`, `PlayerError`
+  for failures, and the existing skip/remove/clear methods. D23's warning stands for the next
+  slice that does need a new public method there — split rather than suppress again.
+- **D30 — Queue truncation keys off the same distraction-optimization state as every other
+  restriction.** `CarQueueScreen` receives `restrictions.isDistractionOptimized` and
+  `restrictions.maxCumulativeContentItems` from the one `CarUxRestrictionsHandler` flow that
+  already gates edit actions, so the list and the buttons can never disagree about whether the
+  vehicle is moving. A4 verified that injected moving state reaches the app as `DO: true UxR: 255`,
+  so the same signal is known to arrive.
 
 ## Components
 
@@ -442,7 +474,7 @@ is moving* that is restricted.
 | `getMaxContentDepth()` = 1 | Drill-down into a playlist or album is refused |
 | `getMaxCumulativeContentItems()` = 21 | Content lists truncate to 21 items |
 | Decorative motion | Ambient gradients freeze |
-| Queue edits | Queue remains viewable and skip-to remains available; reorder, remove and clear are refused |
+| Queue edits | Queue remains viewable and skip-to remains available; remove and clear are refused, and the list truncates to the reported cap |
 | Downloads edits | Downloads remain viewable; delete/remove actions are refused |
 
 Entering a restricted screen is refused with an explanatory panel rather than a silent
@@ -450,8 +482,8 @@ no-op. Starting to drive while already inside a restricted screen **evicts** you
 gating entry alone is not sufficient, since the vehicle can start moving at any time.
 
 Tab switching, playback transport, seeking, queue view/skip-to, and download viewing stay
-available while driving. Setup, typed search, deletion, removal, reorder and clear actions do
-not.
+available while driving. Setup, typed search, deletion, removal and clear actions do not.
+Queue reorder ships in no state (D26).
 
 Not yet enforced: no cumulative item count is carried *across* a browse session, and
 `getMaxRestrictedStringLength()` (120 chars) is unchecked. Neither currently binds, because

@@ -64,7 +64,7 @@ Run these against the merged `oem` APK manifest and emulator behavior.
 | OG-6 | Entering a restricted location while driving is refused with an explanation |
 | OG-7 | Transitioning to driving while already in a restricted location evicts to the current tab root |
 | OG-8 | Playback transport, seek, tab switch and queue skip-to remain available while driving |
-| OG-9 | Queue remove/reorder/clear and download delete/remove actions are parked-only |
+| OG-9 | Queue remove/clear and download delete/remove actions are parked-only, and the queue list truncates to the reported item cap while driving (reorder does not ship, D26) |
 | OG-10 | The app does not request `RECORD_AUDIO` and does not implement an in-app audio recorder for voice search |
 | OG-11 | Decorative animation freezes while driving and is disabled when platform animator duration scale is `0` |
 
