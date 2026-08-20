@@ -1,7 +1,8 @@
 # AAOS Slice A6 - Search & Search Results Implementation Plan
 
 > **For agentic workers:** Implement task-by-task. Steps use checkbox (`- [ ]`) syntax for
-> tracking. Do not skip the verification gates at the end.
+> tracking. Use `compose-skill` for the Compose UI/navigation tasks, especially Tasks 2-4. Do not
+> skip the verification gates at the end.
 
 **Goal:** Enable system-bar search in the `oem` custom launcher, resolve Q2 with system IME vs
 `NO_KEYBOARD` behaviour, and ship song-only submitted search results that remain compliant while
