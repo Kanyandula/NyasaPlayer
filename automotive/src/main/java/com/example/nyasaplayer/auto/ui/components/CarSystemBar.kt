@@ -14,11 +14,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,8 +37,9 @@ import com.example.nyasaplayer.core.common.ui.icons.SettingsIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val LogoSize = 40.dp
@@ -166,20 +165,27 @@ private fun SystemBarControl(
     }
 }
 
-private const val ClockUpdateIntervalMs = 60_000L
+private const val MinuteMs = 60_000L
 
 @Composable
 private fun ClockDisplay(modifier: Modifier = Modifier) {
-    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
+    // Aligned to the minute boundary rather than to composition: a flat 60s delay leaves the
+    // displayed minute stale by however far into a minute the bar happened to first compose,
+    // and stays that far off for the life of the Activity.
+    val now by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
-            delay(ClockUpdateIntervalMs)
-            currentTime = System.currentTimeMillis()
+            val millis = System.currentTimeMillis()
+            value = millis
+            delay(MinuteMs - millis % MinuteMs)
         }
     }
-    val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+    val locale = Locale.getDefault()
+    val formatter = remember(locale) { DateTimeFormatter.ofPattern("h:mm a", locale) }
     Text(
-        text = timeFormat.format(Date(currentTime)),
+        // The zone is resolved per tick. A remembered SimpleDateFormat caches the timezone it
+        // was built with, so a vehicle crossing one would show the wrong hour until the
+        // Activity was recreated.
+        text = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).format(formatter),
         color = CarTextSecondary,
         fontSize = 16.sp,
         modifier = modifier,
