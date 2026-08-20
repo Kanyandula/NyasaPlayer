@@ -373,6 +373,24 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   already gates edit actions, so the list and the buttons can never disagree about whether the
   vehicle is moving. A4 verified that injected moving state reaches the app as `DO: true UxR: 255`,
   so the same signal is known to arrive.
+- **D31 — Q2 is resolved by using system IME when `NO_KEYBOARD` is absent and a voice-search
+  prompt when it is present.** The custom launcher reacts to the platform restriction instead of
+  inferring driving state or drawing a custom keyboard. It also keeps the existing voice-search
+  boundary intact: system/Assistant voice search reaches `PlaybackService.onSearch` /
+  `onGetSearchResult`; the app records no audio and requests no `RECORD_AUDIO`.
+- **D32 — A6 searches on explicit submit, not on every keypress.** A head-unit search field should
+  not create repository work while the driver is still editing. Screen 6 exists only after a
+  committed query, so the ViewModel stores draft `query` separately from `submittedQuery`.
+- **D33 — A6 ships song-only results; album, artist and playlist result cards are deferred to
+  T4.** `SongRepository.searchSongs()` and `MediaBrowseTree.search()` are song-search contracts
+  today. The original album/artist card wording needs a typed result model, repository search APIs
+  and a valid artist destination before the UI can be honest.
+- **D34 — Recent searches are session-only in the automotive search ViewModel.** The PRD asks for
+  recent searches but not durable history. Persisting query history adds privacy/storage questions
+  that are not needed to make screen 5 useful; losing recents on process death is acceptable.
+- **D35 — Search leaves `AutomotiveContentViewModel` instead of adding another suppression.** A4's
+  D23 recorded that the class already owns too many unrelated domains. A6 depends only on
+  `SongRepository.searchSongs()`, so a small `AutomotiveSearchViewModel` is the cleaner boundary.
 
 ## Components
 
