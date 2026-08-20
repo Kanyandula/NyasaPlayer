@@ -365,12 +365,12 @@ The scope decision must be visible in the source docs, not just in this plan.
 - Modify: `docs/tickets/A6-search.md`
 - Modify: `docs/tickets/T4-automotive-multi-entity-search.md` only if implementation changes the follow-up
 
-- [ ] Confirm D31-D35 in `docs/aaos-DESIGN.md` still match the shipped implementation.
-- [ ] Keep Q2 closed in `docs/AAOS_PRD.md`; do not reintroduce "blocked by Q2" wording.
-- [ ] Move A6 status from "spec/plan ready" only after implementation and verification land.
-- [ ] Keep screen 6 wording scoped to top song result and song rows, not album/artist cards.
-- [ ] Confirm T4 still tracks album/artist/playlist result cards and the required data model.
-- [ ] Keep the A6 ticket in sync with the implemented status and verification record path.
+- [x] Confirm D31-D35 in `docs/aaos-DESIGN.md` still match the shipped implementation.
+- [x] Keep Q2 closed in `docs/AAOS_PRD.md`; do not reintroduce "blocked by Q2" wording.
+- [x] Move A6 status from "spec/plan ready" only after implementation and verification land.
+- [x] Keep screen 6 wording scoped to top song result and song rows, not album/artist cards.
+- [x] Confirm T4 still tracks album/artist/playlist result cards and the required data model.
+- [x] Keep the A6 ticket in sync with the implemented status and verification record path.
 
 **Verify:** docs diff review.
 

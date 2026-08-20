@@ -79,7 +79,7 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | `CarMiniPlayer` | Re-theme existing component; artwork/title is one target; add queue button | playing, paused, buffering, error, no item |
 | `CarPillButton` | Shared gold/ghost/destructive-safe button primitive | enabled, focused, disabled, loading |
 | `CarIconButton` | Shared circular/square icon target wrapper | enabled, focused, selected, disabled |
-| `CarChip` | Shared filter / browse-by / segmented chip | selected, unselected, focused, disabled |
+| `CarChip` | Shared filter / browse-by / segmented chip — not built; A6 browse-by uses the ghost `CarPillButton` (D39) | selected, unselected, focused, disabled |
 | `CarContentCard` | Album, playlist, mix, genre, recommendation card | normal, focused, playing, unavailable |
 | `CarTrackRow` | Track list row for songs, queue, albums, playlists, search | normal, focused, current, playing, disabled action |
 | `CarPlaybackControls` | Full-player control cluster | play, pause, loading, shuffle on/off, repeat mode |

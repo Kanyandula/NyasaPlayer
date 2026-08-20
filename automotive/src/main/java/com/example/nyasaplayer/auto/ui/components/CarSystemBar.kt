@@ -41,6 +41,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 private val LogoSize = 40.dp
 private val ControlIconSize = 24.dp
@@ -176,7 +177,7 @@ private fun ClockDisplay(modifier: Modifier = Modifier) {
         while (true) {
             val millis = System.currentTimeMillis()
             value = millis
-            delay(MinuteMs - millis % MinuteMs)
+            delay((MinuteMs - millis % MinuteMs).milliseconds)
         }
     }
     val locale = Locale.getDefault()
