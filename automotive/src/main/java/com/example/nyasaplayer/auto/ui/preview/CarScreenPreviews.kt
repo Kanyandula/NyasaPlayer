@@ -13,6 +13,8 @@ import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
+import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
+import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchUiState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
@@ -264,4 +266,66 @@ private fun ErrorOverlayPreview() {
             onRetry = {},
         )
     }
+}
+
+private val PreviewRecentQueries = listOf("hendrix", "midnight drive", "jazz classics")
+
+@Composable
+private fun Search(state: AutomotiveSearchUiState, canType: Boolean) {
+    AppTheme {
+        CarSearchScreen(
+            state = state,
+            canType = canType,
+            onQueryChange = {},
+            onSubmit = {},
+            onClearQuery = {},
+            onEditingChange = {},
+            onRecentClick = {},
+            onBrowseGenres = {},
+            onBrowseLibrary = {},
+            onClose = {},
+        )
+    }
+}
+
+@Preview(
+    name = "Search Screen - recent-empty",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchScreenEmptyPreview() {
+    Search(state = AutomotiveSearchUiState(), canType = true)
+}
+
+@Preview(
+    name = "Search Screen - draft query and recents",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchScreenTypingPreview() {
+    Search(
+        state = AutomotiveSearchUiState(query = "hendrix", recentQueries = PreviewRecentQueries),
+        canType = true,
+    )
+}
+
+@Preview(
+    name = "Search Screen - NO_KEYBOARD voice prompt",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchScreenVoicePromptPreview() {
+    Search(
+        state = AutomotiveSearchUiState(recentQueries = PreviewRecentQueries),
+        canType = false,
+    )
 }

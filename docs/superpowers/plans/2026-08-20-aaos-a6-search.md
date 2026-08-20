@@ -286,15 +286,15 @@ fun CarSearchScreen(
 )
 ```
 
-- [ ] Render a full-screen sheet body, not a dialog/card inside the shell.
-- [ ] Add close/back and clear controls with 76dp hit areas.
-- [ ] Use a Compose text field with IME Search action when `canType` is true.
-- [ ] Do not focus or show a keyboard when `canType` is false.
-- [ ] Render the voice-search prompt when `canType` is false. It must not be a clickable no-op.
-- [ ] Render recent queries when present and a recent-empty state otherwise.
-- [ ] Render browse-by shortcuts: `Songs`, `Genres`, `Albums`, `Artists`, `Playlists`.
-- [ ] Route `Genres` to Browse and `Albums`/`Artists`/`Playlists` to Library via callbacks.
-- [ ] Keep all text inside fixed/reasonable bounds on 1024x720 and 1920x1080.
+- [x] Render a full-screen sheet body, not a dialog/card inside the shell.
+- [x] Add close/back and clear controls with 76dp hit areas.
+- [x] Use a Compose text field with IME Search action when `canType` is true.
+- [x] Do not focus or show a keyboard when `canType` is false.
+- [x] Render the voice-search prompt when `canType` is false. It must not be a clickable no-op.
+- [x] Render recent queries when present and a recent-empty state otherwise.
+- [x] Render browse-by shortcuts: `Songs`, `Genres`, `Albums`, `Artists`, `Playlists`.
+- [x] Route `Genres` to Browse and `Albums`/`Artists`/`Playlists` to Library via callbacks.
+- [x] Keep all text inside fixed/reasonable bounds on 1024x720 and 1920x1080.
 
 **Verify:**
 

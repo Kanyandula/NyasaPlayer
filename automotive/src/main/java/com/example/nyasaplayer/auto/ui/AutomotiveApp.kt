@@ -7,11 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -21,12 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import com.example.nyasaplayer.auto.ui.components.CarAmbientBackground
@@ -54,8 +44,8 @@ import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.ui.screens.CarPlaylistScreen
 import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
+import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
-import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
@@ -135,6 +125,24 @@ private fun AuthenticatedApp(
     val closeSearch = {
         showSearch = false
         searchViewModel.setEditing(false)
+    }
+
+    // The platform's own NO_KEYBOARD answer, not a driving guess (spec D31).
+    val canType = !playerState.restrictions.noTextEntry
+
+    // No field means nothing is being edited. Without this, a restriction that takes the keyboard
+    // away without also requiring distraction optimization would leave the editing flag set, and
+    // the gate would later evict the driver from an idle sheet citing text entry.
+    LaunchedEffect(canType) {
+        if (!canType) searchViewModel.setEditing(false)
+    }
+
+    // One tab-selection path for the rail and for the search sheet's browse-by shortcuts, so
+    // "leaving for a tab" always means the same thing.
+    val selectTab = { screen: CarScreen ->
+        drillDown = null
+        closeSearch()
+        currentScreen = screen
     }
 
     val location = carUiLocation(
@@ -218,13 +226,7 @@ private fun AuthenticatedApp(
                 onSignOut = onSignOut,
                 userDisplayName = userDisplayName,
                 onSearchClick = { showSearch = true },
-                // Also the browse-by shortcuts' exit: the search sheet routes Genres to Browse
-                // and Albums/Artists/Playlists to Library through this same callback.
-                onSelectTab = {
-                    drillDown = null
-                    closeSearch()
-                    currentScreen = it
-                },
+                onSelectTab = selectTab,
                 onExpandPlayer = {
                     closeSearch()
                     showFullPlayer = true
@@ -290,7 +292,18 @@ private fun AuthenticatedApp(
         }
 
         if (showSearch) {
-            SearchSheetPlaceholder(onClose = closeSearch)
+            CarSearchScreen(
+                state = searchState,
+                canType = canType,
+                onQueryChange = searchViewModel::onQueryChange,
+                onSubmit = searchViewModel::submitSearch,
+                onClearQuery = searchViewModel::clearQuery,
+                onEditingChange = searchViewModel::setEditing,
+                onRecentClick = searchViewModel::selectRecentQuery,
+                onBrowseGenres = { selectTab(CarScreen.Browse) },
+                onBrowseLibrary = { selectTab(CarScreen.Library) },
+                onClose = closeSearch,
+            )
         }
 
         if (showQueue) {
@@ -548,43 +561,6 @@ private fun BrowseShell(
                 onLikeClick = onLikeClick,
                 onQueueClick = onQueueClick,
             )
-        }
-    }
-}
-
-/**
- * ponytail: stand-in so A6 Task 2's location model is reachable and closable on device.
- * A6 Task 3 replaces this call site with `CarSearchScreen`, which owns the field, the recent
- * queries and the browse-by shortcuts. Nothing else should be added here in the meantime.
- */
-@Composable
-private fun SearchSheetPlaceholder(
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        // Opaque for the same reason as CarQueueScreen: it occludes the shell behind it.
-        modifier = modifier
-            .fillMaxSize()
-            .background(NyasaBackground)
-            .padding(CarScreenMargin),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "Search",
-                color = Color.White,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onClose, modifier = Modifier.size(CarTouchTargetSize)) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Close search",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
         }
     }
 }
