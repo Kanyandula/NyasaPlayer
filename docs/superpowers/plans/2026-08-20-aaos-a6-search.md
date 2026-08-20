@@ -190,28 +190,28 @@ class AutomotiveSearchViewModel @Inject constructor(
 }
 ```
 
-- [ ] Implement explicit-submit search. `onQueryChange()` updates draft text only.
-- [ ] Trim submitted queries; blank submits clear loading/error and do not call the repository.
-- [ ] Store `submittedQuery` separately from `query` so Retry can run the last committed query.
-- [ ] Use a monotonically increasing token or equivalent guard so stale results cannot overwrite
+- [x] Implement explicit-submit search. `onQueryChange()` updates draft text only.
+- [x] Trim submitted queries; blank submits clear loading/error and do not call the repository.
+- [x] Store `submittedQuery` separately from `query` so Retry can run the last committed query.
+- [x] Use a monotonically increasing token or equivalent guard so stale results cannot overwrite
       newer results after rapid submits.
-- [ ] Cancel in-flight search from `clearQuery()`.
-- [ ] Add session recent queries: max five, newest first, case-insensitive de-dupe.
-- [ ] Make `FakeSongRepository.searchSongs()` return matching songs from its `songs` flow and
+- [x] Cancel in-flight search from `clearQuery()`.
+- [x] Add session recent queries: max five, newest first, case-insensitive de-dupe.
+- [x] Make `FakeSongRepository.searchSongs()` return matching songs from its `songs` flow and
       expose a call count/failure hook for tests.
-- [ ] Preserve `FakeSongRepository.gate` and `throwOnceOnGetSongsByIds`; Favourites and detail
+- [x] Preserve `FakeSongRepository.gate` and `throwOnceOnGetSongsByIds`; Favourites and detail
       tests still depend on those hooks.
-- [ ] Do not simplify `InertRepositoryFakes.kt` to support search tests. Search tests should need
+- [x] Do not simplify `InertRepositoryFakes.kt` to support search tests. Search tests should need
       `FakeSongRepository`; the Favourites fake hooks from current `main` must remain intact.
-- [ ] Remove `searchJob`, `SearchLimit`, `SearchDebounceMs`, `searchQuery`, `searchResults`,
+- [x] Remove `searchJob`, `SearchLimit`, `SearchDebounceMs`, `searchQuery`, `searchResults`,
       `onSearchQueryChange()` and `clearSearch()` from `AutomotiveContentViewModel`.
-- [ ] Preserve `FavouritesLoadError`, `reportLikedSongsFailure()`, `favouritesError`,
+- [x] Preserve `FavouritesLoadError`, `reportLikedSongsFailure()`, `favouritesError`,
       `favouritesLoading`, and the current `openFavourites()` freeze behavior while removing
       search-owned code.
-- [ ] Keep `FavouritesBoundaryTest`, `FavouritesJourneyTest`, `FavouritesSnapshotTest`, and
+- [x] Keep `FavouritesBoundaryTest`, `FavouritesJourneyTest`, `FavouritesSnapshotTest`, and
       `FavouritesTestCase` compiling; do not delete them as part of A6.
-- [ ] Update `SongDao.search()` and `FakeSongDao.search()` so album names match too.
-- [ ] Add `OfflineSongRepositoryTest` cases for title, artist and album-name matching.
+- [x] Update `SongDao.search()` and `FakeSongDao.search()` so album names match too.
+- [x] Add `OfflineSongRepositoryTest` cases for title, artist and album-name matching.
 
 **Verify:**
 
