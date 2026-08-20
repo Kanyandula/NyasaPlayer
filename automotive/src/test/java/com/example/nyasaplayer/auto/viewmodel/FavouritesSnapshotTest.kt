@@ -181,9 +181,13 @@ class FavouritesSnapshotTest {
         vm.closeFavourites()
         vm.openFavourites()
 
-        assertNull(vm.contentState.value.favourites)
-        assertTrue(vm.contentState.value.pendingUnlikes.isEmpty())
-        assertEquals(listOf("b"), vm.contentState.value.likedSongs.map { it.mediaId })
+        // Re-entry now takes a fresh freeze of the reconciled list rather than leaving none,
+        // so this asserts what the screen renders. The outcome is unchanged: the unliked row is
+        // gone on the next visit.
+        val state = vm.contentState.value
+        assertEquals(listOf("b"), (state.favourites ?: state.likedSongs).map { it.mediaId })
+        assertTrue(state.pendingUnlikes.isEmpty())
+        assertEquals(listOf("b"), state.likedSongs.map { it.mediaId })
     }
 
     @Test
