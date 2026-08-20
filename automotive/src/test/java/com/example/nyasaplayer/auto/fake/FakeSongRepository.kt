@@ -16,7 +16,14 @@ class FakeSongRepository : SongRepository {
 
     override fun getSongs(): Flow<List<Song>> = songs
 
+    /** Fails the next [getSongsByIds] only, then clears — a transient failure to recover from. */
+    var throwOnceOnGetSongsByIds: Throwable? = null
+
     override suspend fun getSongsByIds(ids: List<String>): List<Song> {
+        throwOnceOnGetSongsByIds?.let {
+            throwOnceOnGetSongsByIds = null
+            throw it
+        }
         // NonCancellable so a gated call resumes and runs on to its caller's state write even
         // after that caller's job was cancelled. A plain await() is a cancellable suspension
         // point, which would make cancel() alone discard the stale result and leave

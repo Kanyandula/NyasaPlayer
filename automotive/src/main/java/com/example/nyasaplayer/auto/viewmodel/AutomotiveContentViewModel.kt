@@ -43,6 +43,7 @@ private const val RecentlyPlayedLimit = 12
 private const val PopularLimit = 8
 private const val SearchLimit = 50
 private const val SearchDebounceMs = 300L
+private const val FavouritesLoadError = "Couldn't load your favourites."
 private const val TAG = "AutoContentVM"
 private const val DetailLoadError = "Could not load this. Check your connection and try again."
 private const val AlbumMissingError = "This album is no longer available."
@@ -91,10 +92,13 @@ class AutomotiveContentViewModel @Inject constructor(
         loadContent()
     }
 
-    private fun cancelContentJobs() {
+    private fun cancelCatalogueJobs() {
         genresJob?.cancel()
         albumsJob?.cancel()
         popularSongsJob?.cancel()
+    }
+
+    private fun cancelUserJobs() {
         recentlyPlayedJob?.cancel()
         likedSongsJob?.cancel()
         playlistsJob?.cancel()
@@ -103,6 +107,10 @@ class AutomotiveContentViewModel @Inject constructor(
     fun reloadUserContent() {
         val newUserId = authRepository.currentUserId
         if (newUserId == currentUserId) return
+        // A null id on recreation is auth not having restored yet, not a switch to nobody.
+        // Acting on it would reflow Favourites under a driver who never left the screen; the
+        // real sign-out path tears the session down through AutomotiveAuthViewModel.
+        if (newUserId == null) return
         currentUserId = newUserId
         recentlyPlayedJob?.cancel()
         likedSongsJob?.cancel()
@@ -117,6 +125,10 @@ class AutomotiveContentViewModel @Inject constructor(
                 // A previous account's freeze must not survive a sign-out.
                 favourites = null,
                 pendingUnlikes = emptySet(),
+                // Account-scoped, so it goes with the account. The shared errorMessage does
+                // not: a catalogue failure belongs to the process, and switching user is no
+                // evidence it recovered.
+                favouritesError = null,
             )
         }
         loadRecentlyPlayed()
@@ -129,14 +141,34 @@ class AutomotiveContentViewModel @Inject constructor(
         // this was latent; retryLoad() puts it behind a button a driver may tap repeatedly,
         // and each call otherwise leaks a Room collector and a Firestore snapshot listener
         // for the life of the ViewModel.
-        cancelContentJobs()
-        _contentState.update { it.copy(isLoading = true, errorMessage = null) }
+        cancelCatalogueJobs()
+        _contentState.update {
+            // likedSongsLoaded too: without it Favourites keeps whatever it was showing —
+            // including a false "no favourites yet" — for the whole reload.
+            it.copy(
+                isLoading = true,
+                errorMessage = null,
+                favouritesError = null,
+                likedSongsLoaded = false,
+            )
+        }
         observeGenres()
         observeAlbums()
-        loadRecentlyPlayed()
         loadPopularSongs()
-        observeLikedSongs()
-        observePlaylists()
+
+        // The user-scoped collectors are only torn down when there is a user to restart them
+        // for. Retrying while signed out would otherwise kill three working collectors and
+        // leave the screens they feed with no source and no error to retry from.
+        if (authRepository.currentUserId != null) {
+            cancelUserJobs()
+            loadRecentlyPlayed()
+            observeLikedSongs()
+            observePlaylists()
+        } else {
+            _contentState.update {
+                it.copy(likedSongsLoaded = true, favouritesError = FavouritesLoadError)
+            }
+        }
     }
 
     private fun observeGenres() {
@@ -179,7 +211,14 @@ class AutomotiveContentViewModel @Inject constructor(
 
     @Suppress("TooGenericExceptionCaught")
     private fun observeLikedSongs() {
-        val userId = authRepository.currentUserId ?: return
+        // No user means no collector will ever run, so the load has to be declared over here or
+        // Favourites keeps its skeleton for the session — with no error, and so no Retry.
+        val userId = authRepository.currentUserId ?: run {
+            _contentState.update {
+                it.copy(likedSongsLoaded = true, favouritesError = FavouritesLoadError)
+            }
+            return
+        }
         likedSongsJob = userRepository.getLikedSongs(userId).onEach { likedEntries ->
             try {
                 val songIds = likedEntries.map { it.mediaId }.distinct()
@@ -194,6 +233,9 @@ class AutomotiveContentViewModel @Inject constructor(
                         likedSongs = ordered,
                         favoriteArtists = deriveFavoriteArtists(ordered),
                         likedSongsLoaded = true,
+                        // A good emission retires the previous failure; otherwise the message
+                        // outlives its cause and Favourites shows an error over real songs.
+                        favouritesError = null,
                     )
                 }
             } catch (e: CancellationException) {
@@ -201,12 +243,18 @@ class AutomotiveContentViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading liked songs", e)
                 // The load is over either way. Leaving the flag false would strand Favourites
-                // on its skeleton for the rest of the session.
-                _contentState.update { it.copy(likedSongsLoaded = true) }
+                // on its skeleton for the rest of the session. The failure goes on the
+                // dedicated channel: Home, Browse and Library read the shared field, and a
+                // liked-songs failure is not evidence that the catalogue failed.
+                _contentState.update {
+                    it.copy(likedSongsLoaded = true, favouritesError = FavouritesLoadError)
+                }
             }
         }.catch { e ->
             Log.e(TAG, "Error observing liked songs", e)
-            _contentState.update { it.copy(likedSongsLoaded = true) }
+            _contentState.update {
+                it.copy(likedSongsLoaded = true, favouritesError = FavouritesLoadError)
+            }
         }.launchIn(viewModelScope)
     }
 
@@ -342,7 +390,21 @@ class AutomotiveContentViewModel @Inject constructor(
      * effect that calls this re-runs on every Activity recreation — a night-mode flip mid-drive —
      * and anything cleared here would silently reconcile the driver's held-back rows.
      */
-    fun openFavourites() = Unit
+    fun openFavourites() {
+        _contentState.update {
+            when {
+                // D20: a freeze already being held is never disturbed, nor the pends behind it.
+                it.favourites != null -> it
+                // Nothing loaded yet, so there is nothing honest to freeze — an entry freeze
+                // taken here would snapshot Firestore's empty cached snapshot, which is the
+                // objection D19 chose the first-unlike freeze to avoid.
+                !it.likedSongsLoaded -> it.copy(pendingUnlikes = emptySet())
+                // Loaded: freeze on entry, so another device's like or unlike cannot move rows
+                // under the driver mid-visit. Unlike is the common cause, not the only one.
+                else -> it.copy(favourites = it.likedSongs, pendingUnlikes = emptySet())
+            }
+        }
+    }
 
     /** Ends the visit. The next unlike starts a new freeze. */
     fun closeFavourites() {
@@ -484,7 +546,12 @@ data class AutomotiveContentState(
     val searchResults: List<Song> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
-)
+    /** Liked-songs failures only. Kept off [errorMessage], which Home/Browse/Library render. */
+    val favouritesError: String? = null,
+) {
+    /** What screen 8 binds, so the screen and its tests read one derivation rather than two. */
+    val favouritesLoading: Boolean get() = !likedSongsLoaded
+}
 
 /**
  * One loaded detail screen — album or playlist.
