@@ -38,7 +38,7 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 - Driving mode is based on `CarUxRestrictions`, not a local "driving" boolean.
 - **Location gating and action gating are different mechanisms.** Whether a screen may be
   shown is decided by `gate(location, state)`. Whether an action on a permitted screen may
-  run — queue remove/reorder/clear, download delete — is decided by the screen reading
+  run — queue remove/clear, download delete — is decided by the screen reading
   `UxRestrictionState` directly. Do not look for action rules inside `gate()`.
 - Every refusal shows a reason and gives a safe dismiss/back action.
 
@@ -105,7 +105,7 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | 10 | `CarPlaylistScreen` | Playlist hero, Play, Shuffle, track rows, save/offline if supported | loading, empty, error | Refused when beyond depth cap | A3 |
 | 11 | `CarAlbumScreen` | Album hero, Play, Download, track rows | loading, empty, error, download progress | Refused when beyond depth cap; download mutation parked-only | A3 |
 | 12 | `CarFullPlayerScreen` | Large artwork, title/artist, play/pause, prev/next, seek, like, shuffle, repeat, queue | buffering, paused, playing, error overlay | Allowed; playback control remains available | A5 |
-| 13 | `CarQueueScreen` | Up Next, skip-to row tap, close, clear, remove/reorder controls while parked | empty, current track, playing indicator | View/skip-to allowed; remove/reorder/clear refused | A5 |
+| 13 | `CarQueueScreen` | Up Next, skip-to row tap, close, clear, remove controls while parked | empty, current track, playing indicator | View/skip-to allowed; remove/clear refused, list truncated | A5 |
 | 14 | `CarSettingsScreen` | Parked badge, account, audio quality, about, sign out | loading, error | Refused by `NO_SETUP`; standalone activity, if created, omits `distractionOptimized` | A7 |
 | 15 | `CarDownloadsScreen` | Downloaded content rows, storage bar, remove one, remove all, retry failed | empty, in-progress, failed, offline | View allowed; delete/remove refused | A8 |
 | 16 | `CarNoConnectionScreen` | Offline illustration/state, Retry, Browse Downloads | no network, retrying | Allowed; Browse Downloads remains available | A8 |

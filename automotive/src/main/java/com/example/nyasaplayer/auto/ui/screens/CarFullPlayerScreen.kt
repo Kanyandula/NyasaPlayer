@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -32,6 +34,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,6 +62,8 @@ import com.example.nyasaplayer.core.playback.RepeatMode
 private val FullPlayerAlbumArtSize = 400.dp
 private val PlayButtonSize = 112.dp
 private val SkipButtonSize = 80.dp
+private val BufferingRingStroke = 5.dp
+private val BufferingRingInset = 16.dp
 
 @Suppress("LongParameterList")
 @Composable
@@ -301,7 +307,16 @@ private fun MainControls(
             onClick = onSkipPreviousClick,
         )
         Spacer(modifier = Modifier.width(16.dp))
-        PlayPauseButton(isPlaying = playback.isPlaying, onClick = onPlayPauseClick)
+        Box(
+            // Fixed at the button's size so the ring appearing never shifts the skip buttons.
+            modifier = Modifier.size(PlayButtonSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            PlayPauseButton(isPlaying = playback.isPlaying, onClick = onPlayPauseClick)
+            if (playback.isBuffering) {
+                BufferingRing()
+            }
+        }
         Spacer(modifier = Modifier.width(16.dp))
         CircleIconButton(
             icon = SkipNextIcon,
@@ -344,6 +359,23 @@ private fun PlayPauseButton(
             modifier = Modifier.size(48.dp),
         )
     }
+}
+
+/**
+ * Ring around play/pause while the player buffers. It has no pointer input, so the button
+ * underneath stays tappable.
+ */
+@Composable
+private fun BufferingRing(modifier: Modifier = Modifier) {
+    CircularProgressIndicator(
+        // Outside the button, not on it: NyasaOnGold on a gold fill reads as a smudge rather
+        // than a ring — seen on the emulator during A5 verification.
+        modifier = modifier
+            .requiredSize(PlayButtonSize + BufferingRingInset)
+            .semantics { contentDescription = "Buffering" },
+        color = NyasaGold,
+        strokeWidth = BufferingRingStroke,
+    )
 }
 
 @Composable

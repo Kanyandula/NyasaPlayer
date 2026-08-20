@@ -23,8 +23,6 @@ import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.RepeatMode
 
-// ── Preview Data ──
-
 private val PreviewSong = Song(
     mediaId = "1",
     title = "Purple Haze",
@@ -52,6 +50,8 @@ private val PreviewPlayback = PlaybackSnapshot(
     hasNext = true,
     repeatMode = RepeatMode.Off,
 )
+
+private val PreviewBufferingPlayback = PreviewPlayback.copy(isBuffering = true)
 
 private val PreviewAlbums = listOf(
     Album(id = "a1", name = "Electronic Vibes", artistName = "Various", songIds = List(50) { "s$it" }),
@@ -106,6 +106,22 @@ private fun HomeScreenPreview() {
     }
 }
 
+@Composable
+private fun FullPlayer(playback: PlaybackSnapshot) {
+    CarFullPlayerScreen(
+        playback = playback,
+        onCollapseClick = {},
+        onPlayPauseClick = {},
+        onSkipNextClick = {},
+        onSkipPreviousClick = {},
+        onShuffleClick = {},
+        onRepeatClick = {},
+        onSeek = {},
+        isLiked = true,
+        onLikeClick = {},
+    )
+}
+
 @Preview(
     name = "Full Player",
     device = Devices.AUTOMOTIVE_1024p,
@@ -116,18 +132,21 @@ private fun HomeScreenPreview() {
 @Composable
 private fun FullPlayerPreview() {
     AppTheme {
-        CarFullPlayerScreen(
-            playback = PreviewPlayback,
-            onCollapseClick = {},
-            onPlayPauseClick = {},
-            onSkipNextClick = {},
-            onSkipPreviousClick = {},
-            onShuffleClick = {},
-            onRepeatClick = {},
-            onSeek = {},
-            isLiked = true,
-            onLikeClick = {},
-        )
+        FullPlayer(playback = PreviewPlayback)
+    }
+}
+
+@Preview(
+    name = "Full Player - Buffering",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun FullPlayerBufferingPreview() {
+    AppTheme {
+        FullPlayer(playback = PreviewBufferingPlayback)
     }
 }
 

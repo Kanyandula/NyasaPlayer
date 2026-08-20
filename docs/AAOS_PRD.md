@@ -30,8 +30,10 @@ primitives, build variants, and the restriction layer. Phases A2–A8 deliver th
 Project B is tracked separately; the AAOS release does not wait for the mobile brand migration.
 
 **Current state:** design complete and measured **except for A6 search text entry**, which is an
-unresolved design problem rather than an unbuilt screen (see Q2). A1 is specced, planned, and
-externally reviewed. No implementation code written.
+unresolved design problem rather than an unbuilt screen (see Q2). A1-A4 are merged on `main`.
+A5 is implemented and device-verified on `ek/aaos-a5-t1-queue-window`, with two recorded
+carve-outs: retryable playback error could not be forced on the emulator, and process-death
+playback restore is tracked as a follow-up. A6 remains blocked by Q2.
 
 ---
 
@@ -167,8 +169,8 @@ each and the pair is where most requirements actually come from. **P** = parked,
 | US-11 | play, pause, skip and seek | P/D | Always available — never restricted |
 | US-12 | see what is playing without leaving my screen | P/D | Persistent mini-player |
 | US-13 | open the full player | P/D | Available in both states |
-| US-14 | see and reorder what is coming next | P | Queue available; reorder, remove and clear all permitted |
-| US-14b | see what is coming next | D | Queue viewable and skip-to permitted; **reorder, remove and clear are refused** |
+| US-14 | see what is coming next and edit it | P | Queue available; remove and clear permitted (reorder deferred, D26) |
+| US-14b | see what is coming next | D | Queue viewable and skip-to permitted; **remove and clear are refused**, list truncated |
 | US-15 | like the current track | P/D | Available in both states |
 
 ### Settings and edge cases
@@ -247,7 +249,7 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 | 10 | CarPlaylistScreen | Library → playlist | Play, shuffle, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
 | 11 | CarAlbumScreen | Library → album, or search result | Play, download, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
 | 12 | CarFullPlayerScreen | Mini-player artwork/title | Play/pause, skip, seek, shuffle, repeat, like, queue | buffering, error → 19 | **Allowed** — playback control | Player VM | A5 |
-| 13 | CarQueueScreen | Mini-player queue icon, or full player | **P:** skip to, remove, reorder, clear · **D:** skip to only | empty queue | Viewable; edit actions refused, list truncated | Player VM | A5 |
+| 13 | CarQueueScreen | Mini-player queue icon, or full player | **P:** skip to, remove, clear · **D:** skip to only | empty queue | Viewable; edit actions refused, list truncated | Player VM | A5 |
 | 14 | CarSettingsScreen | System bar: settings | Toggle prefs, sign out | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
 | 15 | CarDownloadsScreen | Library → Downloads chip | **P:** remove one, remove all · **D:** view only | empty, in-progress | Viewable; delete actions refused | Content VM | A8 |
 | 16 | CarNoConnectionScreen | Network loss | Retry, go to downloads | — | Allowed | NetworkMonitor | A8 |
@@ -417,11 +419,11 @@ option, not an actively shipped artifact.
 
 | Phase | Delivers | Depends on | Status |
 |---|---|---|---|
-| **A1** | Tokens, touch-target primitive, 5 components, `oem`/`playstore` flavors, restriction layer + gate + eviction, re-theme of 10 existing files | — | Specced, planned, reviewed |
-| **A2** | Chrome contract, Home, ambient motion | A1 | Not started |
-| **A3** | Browse, Library, Playlist, Album | A2 | Not started |
-| **A4** | Favourites, ArtistLikedSongs, EmptyFavourites | A2 | Not started |
-| **A5** | FullPlayer, Queue | A2 | Not started |
+| **A1** | Tokens, touch-target primitive, 5 components, `oem`/`playstore` flavors, restriction layer + gate + eviction, re-theme of 10 existing files | — | Merged — PR #14 |
+| **A2** | Chrome contract, Home, ambient motion | A1 | Merged — PR #16 |
+| **A3** | Browse, Library, Playlist, Album | A2 | Merged and device-verified — PRs #18-#20 |
+| **A4** | Favourites, ArtistLikedSongs, EmptyFavourites | A2 | Merged and device-verified — PRs #21-#23 |
+| **A5** | FullPlayer, Queue | A2 | Implemented and device-verified on `ek/aaos-a5-t1-queue-window`; retryable-error and restore follow-ups recorded |
 | **A6** | Search, SearchResults | A2 + design work | Blocked, see §11 |
 | **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Not started |
 | **A8** | NoConnection, Loading, Downloads, PlaybackError | A2 | Not started |
