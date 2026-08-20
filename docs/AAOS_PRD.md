@@ -31,7 +31,9 @@ Project B is tracked separately; the AAOS release does not wait for the mobile b
 
 **Current state:** design complete and measured **except for A6 search text entry**, which is an
 unresolved design problem rather than an unbuilt screen (see Q2). A1-A4 are merged on `main`.
-A5 is implemented on a branch and awaits device verification; A6 remains blocked by Q2.
+A5 is implemented and device-verified on `ek/aaos-a5-t1-queue-window`, with two recorded
+carve-outs: retryable playback error could not be forced on the emulator, and process-death
+playback restore is tracked as a follow-up. A6 remains blocked by Q2.
 
 ---
 
@@ -421,7 +423,7 @@ option, not an actively shipped artifact.
 | **A2** | Chrome contract, Home, ambient motion | A1 | Merged — PR #16 |
 | **A3** | Browse, Library, Playlist, Album | A2 | Merged and device-verified — PRs #18-#20 |
 | **A4** | Favourites, ArtistLikedSongs, EmptyFavourites | A2 | Merged and device-verified — PRs #21-#23 |
-| **A5** | FullPlayer, Queue | A2 | Implemented on `ek/aaos-a5-t1-queue-window`; device verification pending |
+| **A5** | FullPlayer, Queue | A2 | Implemented and device-verified on `ek/aaos-a5-t1-queue-window`; retryable-error and restore follow-ups recorded |
 | **A6** | Search, SearchResults | A2 + design work | Blocked, see §11 |
 | **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Not started |
 | **A8** | NoConnection, Loading, Downloads, PlaybackError | A2 | Not started |

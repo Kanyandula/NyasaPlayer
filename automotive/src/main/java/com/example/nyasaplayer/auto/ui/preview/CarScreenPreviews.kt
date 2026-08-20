@@ -23,8 +23,6 @@ import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.RepeatMode
 
-// ── Preview Data ──
-
 private val PreviewSong = Song(
     mediaId = "1",
     title = "Purple Haze",
