@@ -333,18 +333,18 @@ fun CarSearchResultsScreen(
 )
 ```
 
-- [ ] In `AutomotiveApp`, derive `visibleResults` from `searchState.results`.
-- [ ] When `restrictions.isDistractionOptimized` is true, cap `visibleResults` with
+- [x] In `AutomotiveApp`, derive `visibleResults` from `searchState.results`.
+- [x] When `restrictions.isDistractionOptimized` is true, cap `visibleResults` with
       `maxCumulativeContentItems`.
-- [ ] Render a top-result section from `visibleResults.firstOrNull()`.
-- [ ] Render remaining songs with `CarTrackRow`, preserving currently-playing indicators.
-- [ ] Tapping any visible song calls the existing playback callback with `visibleResults` and the
+- [x] Render a top-result section from `visibleResults.firstOrNull()`.
+- [x] Render remaining songs with `CarTrackRow`, preserving currently-playing indicators.
+- [x] Tapping any visible song calls the existing playback callback with `visibleResults` and the
       tapped song.
-- [ ] Back returns to `CarSearchScreen` with the current query preserved and editing false until
+- [x] Back returns to `CarSearchScreen` with the current query preserved and editing false until
       the field is focused again.
-- [ ] Clear closes results, empties query/results/error, and returns to idle search.
-- [ ] Loading, no-results and error states must be visible and recoverable.
-- [ ] Do not add album/artist result cards in A6.
+- [x] Clear closes results, empties query/results/error, and returns to idle search.
+- [x] Loading, no-results and error states must be visible and recoverable.
+- [x] Do not add album/artist result cards in A6.
 
 **Verify:**
 

@@ -13,6 +13,7 @@ import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
+import com.example.nyasaplayer.auto.ui.screens.CarSearchResultsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchUiState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
@@ -327,5 +328,63 @@ private fun SearchScreenVoicePromptPreview() {
     Search(
         state = AutomotiveSearchUiState(recentQueries = PreviewRecentQueries),
         canType = false,
+    )
+}
+
+@Composable
+private fun SearchResults(results: List<Song>, isLoading: Boolean, errorMessage: String?) {
+    AppTheme {
+        CarSearchResultsScreen(
+            query = "midnight",
+            results = results,
+            isLoading = isLoading,
+            errorMessage = errorMessage,
+            onBackToSearch = {},
+            onClear = {},
+            onRetry = {},
+            onSongClick = { _, _ -> },
+            currentlyPlayingMediaId = "2",
+            isPlaying = true,
+        )
+    }
+}
+
+@Preview(
+    name = "Search Results - top result and rows",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchResultsPreview() {
+    SearchResults(results = PreviewSongs, isLoading = false, errorMessage = null)
+}
+
+@Preview(
+    name = "Search Results - no results",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchResultsEmptyPreview() {
+    SearchResults(results = emptyList(), isLoading = false, errorMessage = null)
+}
+
+@Preview(
+    name = "Search Results - error",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchResultsErrorPreview() {
+    SearchResults(
+        results = emptyList(),
+        isLoading = false,
+        errorMessage = "Couldn't search right now. Check your connection.",
     )
 }

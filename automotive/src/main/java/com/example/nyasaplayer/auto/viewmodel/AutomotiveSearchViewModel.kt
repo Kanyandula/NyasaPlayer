@@ -54,6 +54,26 @@ class AutomotiveSearchViewModel @Inject constructor(
     /** Re-runs the last committed query, which survives a failure so Retry has something to run. */
     fun retrySearch() = runSearch(_uiState.value.submittedQuery)
 
+    /**
+     * Leaves the results view for the search view without losing the draft query.
+     *
+     * Distinct from [clearQuery], which throws the query away too. Dropping `submittedQuery` is
+     * what closes results — the sheet has no separate "showing results" flag to fall out of sync
+     * with — so an in-flight search is cancelled here for the same reason it is there.
+     */
+    fun backToSearch() {
+        searchJob?.cancel()
+        latestToken++
+        _uiState.update {
+            it.copy(
+                submittedQuery = "",
+                results = emptyList(),
+                isLoading = false,
+                errorMessage = null,
+            )
+        }
+    }
+
     fun clearQuery() {
         searchJob?.cancel()
         latestToken++
@@ -79,7 +99,20 @@ class AutomotiveSearchViewModel @Inject constructor(
         }
 
         _uiState.update {
-            it.copy(query = query, submittedQuery = query, isLoading = true, errorMessage = null)
+            it.copy(
+                query = query,
+                submittedQuery = query,
+                isLoading = true,
+                errorMessage = null,
+                // Not kept as "previous content during refresh": the header names the new query,
+                // so the old query's songs sitting under it would be a wrong answer, not a stale
+                // one. It also keeps the failure state honest — an error never shows rows.
+                results = emptyList(),
+                // Committing the search closes the editor. Results are allowed while driving;
+                // an active field is not, so a stale flag here would have the gate evict the
+                // driver from a results list they are allowed to be looking at.
+                isEditing = false,
+            )
         }
         searchJob = viewModelScope.launch {
             try {

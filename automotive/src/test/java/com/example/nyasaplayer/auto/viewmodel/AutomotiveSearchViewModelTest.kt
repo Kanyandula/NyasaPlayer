@@ -192,6 +192,118 @@ class AutomotiveSearchViewModelTest {
     }
 
     @Test
+    fun `a new submit drops the previous query's results rather than showing them under it`() =
+        runTest {
+            songs.songs.value = listOf(song("Worship Medley"), song("Banjo Song"))
+            val gate = CompletableDeferred<Unit>()
+            val vm = viewModel()
+            vm.onQueryChange("worship")
+            vm.submitSearch()
+            assertEquals(listOf("Worship Medley"), vm.uiState.value.results.map { it.title })
+
+            songs.searchGates["banjo"] = gate
+            vm.onQueryChange("banjo")
+            vm.submitSearch()
+
+            assertTrue(vm.uiState.value.results.isEmpty())
+            assertTrue(vm.uiState.value.isLoading)
+            gate.complete(Unit)
+            assertEquals(listOf("Banjo Song"), vm.uiState.value.results.map { it.title })
+        }
+
+    @Test
+    fun `a failed search shows no rows under the query that failed`() = runTest {
+        songs.songs.value = listOf(song("Worship Medley"))
+        val vm = viewModel()
+        vm.onQueryChange("worship")
+        vm.submitSearch()
+
+        songs.searchFailure = IllegalStateException("offline")
+        vm.onQueryChange("banjo")
+        vm.submitSearch()
+
+        assertNotNull(vm.uiState.value.errorMessage)
+        assertTrue(vm.uiState.value.results.isEmpty())
+    }
+
+    @Test
+    fun `back keeps the draft query but closes results`() = runTest {
+        songs.songs.value = listOf(song("Worship Medley"))
+        val vm = viewModel()
+        vm.onQueryChange("worship")
+        vm.submitSearch()
+
+        vm.backToSearch()
+
+        assertEquals("worship", vm.uiState.value.query)
+        assertEquals("", vm.uiState.value.submittedQuery)
+        assertTrue(vm.uiState.value.results.isEmpty())
+    }
+
+    @Test
+    fun `back keeps the session's recent queries`() = runTest {
+        val vm = viewModel()
+        vm.onQueryChange("worship")
+        vm.submitSearch()
+
+        vm.backToSearch()
+
+        assertEquals(listOf("worship"), vm.uiState.value.recentQueries)
+    }
+
+    @Test
+    fun `back cancels an in-flight search so it cannot reopen results`() = runTest {
+        songs.songs.value = listOf(song("Worship Medley"))
+        val gate = CompletableDeferred<Unit>()
+        songs.searchGates["worship"] = gate
+        val vm = viewModel()
+        vm.onQueryChange("worship")
+        vm.submitSearch()
+
+        vm.backToSearch()
+        gate.complete(Unit)
+
+        assertEquals("", vm.uiState.value.submittedQuery)
+        assertTrue(vm.uiState.value.results.isEmpty())
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `back leaves a failed search recoverable from the field`() = runTest {
+        songs.searchFailure = IllegalStateException("offline")
+        val vm = viewModel()
+        vm.onQueryChange("worship")
+        vm.submitSearch()
+
+        vm.backToSearch()
+
+        assertNull(vm.uiState.value.errorMessage)
+        assertEquals("worship", vm.uiState.value.query)
+    }
+
+    @Test
+    fun `submitting closes the editor so results are not read as text entry`() = runTest {
+        val vm = viewModel()
+        vm.setEditing(true)
+        vm.onQueryChange("worship")
+
+        vm.submitSearch()
+
+        assertFalse(vm.uiState.value.isEditing)
+    }
+
+    @Test
+    fun `a blank submit leaves the editor open`() = runTest {
+        val vm = viewModel()
+        vm.setEditing(true)
+
+        vm.onQueryChange("   ")
+        vm.submitSearch()
+
+        assertTrue(vm.uiState.value.isEditing)
+    }
+
+    @Test
     fun `editing state is explicit, not derived from the query text`() = runTest {
         val vm = viewModel()
 

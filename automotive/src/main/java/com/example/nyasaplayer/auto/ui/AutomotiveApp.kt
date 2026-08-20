@@ -44,16 +44,19 @@ import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.ui.screens.CarPlaylistScreen
 import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
+import com.example.nyasaplayer.auto.ui.screens.CarSearchResultsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
+import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchUiState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
 import com.example.nyasaplayer.auto.viewmodel.CarDetailState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
+import com.example.nyasaplayer.auto.viewmodel.UxRestrictionState
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Playlist
@@ -145,6 +148,10 @@ private fun AuthenticatedApp(
         currentScreen = screen
     }
 
+    val visibleResults = remember(searchState.results, playerState.restrictions) {
+        visibleSearchResults(searchState.results, playerState.restrictions)
+    }
+
     val location = carUiLocation(
         tab = currentScreen,
         showFullPlayer = showFullPlayer,
@@ -225,7 +232,13 @@ private fun AuthenticatedApp(
                 contentState = contentState,
                 onSignOut = onSignOut,
                 userDisplayName = userDisplayName,
-                onSearchClick = { showSearch = true },
+                // The search control opens the search view, not whatever results were left
+                // over from an earlier trip. The draft query survives, so re-running it is one
+                // press away.
+                onSearchClick = {
+                    searchViewModel.backToSearch()
+                    showSearch = true
+                },
                 onSelectTab = selectTab,
                 onExpandPlayer = {
                     closeSearch()
@@ -292,17 +305,27 @@ private fun AuthenticatedApp(
         }
 
         if (showSearch) {
-            CarSearchScreen(
+            SearchSheet(
                 state = searchState,
                 canType = canType,
+                visibleResults = visibleResults,
+                currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId,
+                isPlaying = playerState.playback.isPlaying,
                 onQueryChange = searchViewModel::onQueryChange,
                 onSubmit = searchViewModel::submitSearch,
                 onClearQuery = searchViewModel::clearQuery,
                 onEditingChange = searchViewModel::setEditing,
                 onRecentClick = searchViewModel::selectRecentQuery,
+                onBackToSearch = searchViewModel::backToSearch,
+                onRetry = searchViewModel::retrySearch,
                 onBrowseGenres = { selectTab(CarScreen.Browse) },
                 onBrowseLibrary = { selectTab(CarScreen.Library) },
                 onClose = closeSearch,
+                onPlay = { songs, song ->
+                    playerViewModel.playSong(songs, song)
+                    closeSearch()
+                    showFullPlayer = true
+                },
             )
         }
 
@@ -372,6 +395,84 @@ internal fun carUiLocation(
     // and not "the query is non-empty" — a query left over from a parked search is not typing.
     textEntryActive = showSearch && searchTextEntryActive,
 )
+
+/**
+ * The search sheet's two views.
+ *
+ * A committed query is what "showing results" means. Deriving the view from it beats a second
+ * boolean that can disagree with the ViewModel about which one is open — Back is `backToSearch()`
+ * dropping the submitted query, not a flag flip the state knows nothing about.
+ */
+@Suppress("LongParameterList")
+@Composable
+private fun SearchSheet(
+    state: AutomotiveSearchUiState,
+    canType: Boolean,
+    visibleResults: List<Song>,
+    currentlyPlayingMediaId: String?,
+    isPlaying: Boolean,
+    onQueryChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onClearQuery: () -> Unit,
+    onEditingChange: (Boolean) -> Unit,
+    onRecentClick: (String) -> Unit,
+    onBackToSearch: () -> Unit,
+    onRetry: () -> Unit,
+    onBrowseGenres: () -> Unit,
+    onBrowseLibrary: () -> Unit,
+    onClose: () -> Unit,
+    onPlay: (List<Song>, Song) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (state.submittedQuery.isNotEmpty()) {
+        CarSearchResultsScreen(
+            query = state.submittedQuery,
+            results = visibleResults,
+            isLoading = state.isLoading,
+            errorMessage = state.errorMessage,
+            onBackToSearch = onBackToSearch,
+            onClear = onClearQuery,
+            onRetry = onRetry,
+            onSongClick = onPlay,
+            modifier = modifier,
+            currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isPlaying = isPlaying,
+        )
+    } else {
+        CarSearchScreen(
+            state = state,
+            canType = canType,
+            onQueryChange = onQueryChange,
+            onSubmit = onSubmit,
+            onClearQuery = onClearQuery,
+            onEditingChange = onEditingChange,
+            onRecentClick = onRecentClick,
+            onBrowseGenres = onBrowseGenres,
+            onBrowseLibrary = onBrowseLibrary,
+            onClose = onClose,
+            modifier = modifier,
+        )
+    }
+}
+
+/**
+ * The results the driver can actually see, which is also the list a tap plays.
+ *
+ * Parked search may show everything the repository returned; a moving vehicle sees only the
+ * platform's cap. Capping unconditionally would trust a `maxCumulativeContentItems` the platform
+ * also reports when parked, which is not a restriction — it is the unrestricted baseline.
+ *
+ * Internal rather than private so VisibleSearchResultsTest can exercise it; there is no Compose
+ * test tooling in this module yet (ticket T1).
+ */
+internal fun visibleSearchResults(
+    results: List<Song>,
+    restrictions: UxRestrictionState,
+): List<Song> = if (restrictions.isDistractionOptimized) {
+    results.take(restrictions.maxCumulativeContentItems)
+} else {
+    results
+}
 
 @Suppress("LongParameterList", "LongMethod")
 @Composable
