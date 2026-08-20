@@ -1,15 +1,6 @@
 package com.example.nyasaplayer.auto.viewmodel
 
-import com.example.nyasaplayer.auto.MainDispatcherRule
-import com.example.nyasaplayer.auto.fake.FakeAlbumRepository
-import com.example.nyasaplayer.auto.fake.FakeAuthRepository
-import com.example.nyasaplayer.auto.fake.FakeGenreRepository
-import com.example.nyasaplayer.auto.fake.FakePlaylistRepository
-import com.example.nyasaplayer.auto.fake.FakeSongRepository
-import com.example.nyasaplayer.auto.fake.FakeUserRepository
 import com.example.nyasaplayer.core.common.models.Genre
-import com.example.nyasaplayer.core.common.models.LikedSong
-import com.example.nyasaplayer.core.common.models.Song
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -18,7 +9,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -29,36 +19,7 @@ import org.junit.Test
  * mutation-verified. These cover the outside, which nothing did — see ledger rows #1, #2 and #3.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class FavouritesBoundaryTest {
-
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
-
-    private val songs = FakeSongRepository()
-    private val users = FakeUserRepository()
-    private val auth = FakeAuthRepository()
-    private val genres = FakeGenreRepository()
-
-    private fun viewModel() = AutomotiveContentViewModel(
-        songRepository = songs,
-        genreRepository = genres,
-        albumRepository = FakeAlbumRepository(),
-        playlistRepository = FakePlaylistRepository(),
-        userRepository = users,
-        authRepository = auth,
-    )
-
-    private fun song(id: String) = Song(mediaId = id, title = "Title $id", artistName = "Artist $id")
-
-    private fun likedSong(id: String) = LikedSong(mediaId = id, likedAt = 1L)
-
-    /**
-     * Exactly what screen 8 draws, mirroring AutomotiveApp.kt:465. Asserting on `likedSongs`
-     * alone would prove nothing about the screen; asserting on `favourites` alone would skip
-     * the case this file is about, which is the one where no freeze was ever taken.
-     */
-    private fun AutomotiveContentState.rendered(): List<String> =
-        (favourites ?: likedSongs).map { it.mediaId }
+class FavouritesBoundaryTest : FavouritesTestCase() {
 
     /**
      * Row #1, removal half. Screen 8 defers row removal until refresh. The deferral is
@@ -202,12 +163,6 @@ class FavouritesBoundaryTest {
         )
     }
 
-    /**
-     * The error value screen 8 actually renders from, mirroring what `AutomotiveApp.kt` passes
-     * into `CarFavouriteMusicScreen`. Kept as one helper because that binding is about to move
-     * from the shared `errorMessage` to a dedicated field — re-point this and both error rows
-     * keep asserting on what the screen reads, rather than on a field it no longer looks at.
-     */
     // ponytail: no local helper — these assert on AutomotiveContentState.favouritesError /
     // .favouritesLoading, the same derivations AutomotiveApp binds into the screen. A hand-mirror
     // here is what let mutation Q3 survive: two copies of one decision drift silently.

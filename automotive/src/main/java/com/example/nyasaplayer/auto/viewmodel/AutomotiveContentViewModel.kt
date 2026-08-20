@@ -105,16 +105,13 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     fun reloadUserContent() {
-        val newUserId = authRepository.currentUserId
-        if (newUserId == currentUserId) return
         // A null id on recreation is auth not having restored yet, not a switch to nobody.
         // Acting on it would reflow Favourites under a driver who never left the screen; the
         // real sign-out path tears the session down through AutomotiveAuthViewModel.
-        if (newUserId == null) return
+        val newUserId = authRepository.currentUserId ?: return
+        if (newUserId == currentUserId) return
         currentUserId = newUserId
-        recentlyPlayedJob?.cancel()
-        likedSongsJob?.cancel()
-        playlistsJob?.cancel()
+        cancelUserJobs()
         _contentState.update {
             it.copy(
                 recentlyPlayed = emptyList(),
@@ -165,9 +162,7 @@ class AutomotiveContentViewModel @Inject constructor(
             observeLikedSongs()
             observePlaylists()
         } else {
-            _contentState.update {
-                it.copy(likedSongsLoaded = true, favouritesError = FavouritesLoadError)
-            }
+            reportLikedSongsFailure()
         }
     }
 
@@ -209,14 +204,24 @@ class AutomotiveContentViewModel @Inject constructor(
         }.launchIn(viewModelScope)
     }
 
+    /**
+     * Ends the liked-songs load and gives Favourites something to retry from.
+     *
+     * The load is over either way — leaving the flag false strands Favourites on its skeleton
+     * for the rest of the session. The failure goes on the dedicated channel: Home, Browse and
+     * Library read the shared [AutomotiveContentState.errorMessage], and a liked-songs failure
+     * is not evidence that the catalogue failed.
+     */
+    private fun reportLikedSongsFailure() {
+        _contentState.update { it.copy(likedSongsLoaded = true, favouritesError = FavouritesLoadError) }
+    }
+
     @Suppress("TooGenericExceptionCaught")
     private fun observeLikedSongs() {
         // No user means no collector will ever run, so the load has to be declared over here or
         // Favourites keeps its skeleton for the session — with no error, and so no Retry.
         val userId = authRepository.currentUserId ?: run {
-            _contentState.update {
-                it.copy(likedSongsLoaded = true, favouritesError = FavouritesLoadError)
-            }
+            reportLikedSongsFailure()
             return
         }
         likedSongsJob = userRepository.getLikedSongs(userId).onEach { likedEntries ->
@@ -242,19 +247,11 @@ class AutomotiveContentViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading liked songs", e)
-                // The load is over either way. Leaving the flag false would strand Favourites
-                // on its skeleton for the rest of the session. The failure goes on the
-                // dedicated channel: Home, Browse and Library read the shared field, and a
-                // liked-songs failure is not evidence that the catalogue failed.
-                _contentState.update {
-                    it.copy(likedSongsLoaded = true, favouritesError = FavouritesLoadError)
-                }
+                reportLikedSongsFailure()
             }
         }.catch { e ->
             Log.e(TAG, "Error observing liked songs", e)
-            _contentState.update {
-                it.copy(likedSongsLoaded = true, favouritesError = FavouritesLoadError)
-            }
+            reportLikedSongsFailure()
         }.launchIn(viewModelScope)
     }
 
@@ -384,11 +381,11 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     /**
-     * Marks a visit to the Favourites tab.
+     * Starts a visit to the Favourites tab.
      *
-     * Deliberately does not freeze (spec D19) and deliberately clears nothing (spec D20). The
-     * effect that calls this re-runs on every Activity recreation — a night-mode flip mid-drive —
-     * and anything cleared here would silently reconcile the driver's held-back rows.
+     * The effect that calls this re-runs on every Activity recreation — a night-mode flip
+     * mid-drive — so a visit already in progress must survive it untouched: a freeze that exists
+     * is never re-taken and never released here, nor are the pends behind it (spec D20).
      */
     fun openFavourites() {
         _contentState.update {

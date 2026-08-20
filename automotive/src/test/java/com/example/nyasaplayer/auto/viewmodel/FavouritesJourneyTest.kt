@@ -1,14 +1,5 @@
 package com.example.nyasaplayer.auto.viewmodel
 
-import com.example.nyasaplayer.auto.MainDispatcherRule
-import com.example.nyasaplayer.auto.fake.FakeAlbumRepository
-import com.example.nyasaplayer.auto.fake.FakeAuthRepository
-import com.example.nyasaplayer.auto.fake.FakeGenreRepository
-import com.example.nyasaplayer.auto.fake.FakePlaylistRepository
-import com.example.nyasaplayer.auto.fake.FakeSongRepository
-import com.example.nyasaplayer.auto.fake.FakeUserRepository
-import com.example.nyasaplayer.core.common.models.LikedSong
-import com.example.nyasaplayer.core.common.models.Song
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -16,7 +7,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -28,28 +18,7 @@ import org.junit.Test
  * actually performs still hold end to end.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class FavouritesJourneyTest {
-
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
-
-    private val songs = FakeSongRepository()
-    private val users = FakeUserRepository()
-    private val auth = FakeAuthRepository()
-    private val genres = FakeGenreRepository()
-
-    private fun viewModel() = AutomotiveContentViewModel(
-        songRepository = songs,
-        genreRepository = genres,
-        albumRepository = FakeAlbumRepository(),
-        playlistRepository = FakePlaylistRepository(),
-        userRepository = users,
-        authRepository = auth,
-    )
-
-    private fun song(id: String) = Song(mediaId = id, title = "Title $id", artistName = "Artist $id")
-    private fun likedSong(id: String) = LikedSong(mediaId = id, likedAt = 1L)
-    private fun AutomotiveContentState.rendered() = (favourites ?: likedSongs).map { it.mediaId }
+class FavouritesJourneyTest : FavouritesTestCase() {
 
     /** Enter Favourites, unlike, leave, return. Rows #1, #2, #19-freeze, #20-guard. */
     @Test

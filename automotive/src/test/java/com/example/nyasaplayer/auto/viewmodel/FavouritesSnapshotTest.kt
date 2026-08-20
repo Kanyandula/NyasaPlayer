@@ -1,14 +1,5 @@
 package com.example.nyasaplayer.auto.viewmodel
 
-import com.example.nyasaplayer.auto.MainDispatcherRule
-import com.example.nyasaplayer.auto.fake.FakeAlbumRepository
-import com.example.nyasaplayer.auto.fake.FakeAuthRepository
-import com.example.nyasaplayer.auto.fake.FakeGenreRepository
-import com.example.nyasaplayer.auto.fake.FakePlaylistRepository
-import com.example.nyasaplayer.auto.fake.FakeSongRepository
-import com.example.nyasaplayer.auto.fake.FakeUserRepository
-import com.example.nyasaplayer.core.common.models.LikedSong
-import com.example.nyasaplayer.core.common.models.Song
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -16,32 +7,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class FavouritesSnapshotTest {
-
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
-
-    private val songs = FakeSongRepository()
-    private val users = FakeUserRepository()
-    private val auth = FakeAuthRepository()
-
-    private fun viewModel() = AutomotiveContentViewModel(
-        songRepository = songs,
-        genreRepository = FakeGenreRepository(),
-        albumRepository = FakeAlbumRepository(),
-        playlistRepository = FakePlaylistRepository(),
-        userRepository = users,
-        authRepository = auth,
-    )
-
-    private fun song(id: String) = Song(mediaId = id, title = "Title $id", artistName = "Artist $id")
-
-    private fun likedSong(id: String) = LikedSong(mediaId = id, likedAt = 1L)
+class FavouritesSnapshotTest : FavouritesTestCase() {
 
     @Test
     fun openFavourites_aloneDoesNotFreeze() = runTest {
@@ -185,7 +155,7 @@ class FavouritesSnapshotTest {
         // so this asserts what the screen renders. The outcome is unchanged: the unliked row is
         // gone on the next visit.
         val state = vm.contentState.value
-        assertEquals(listOf("b"), (state.favourites ?: state.likedSongs).map { it.mediaId })
+        assertEquals(listOf("b"), state.rendered())
         assertTrue(state.pendingUnlikes.isEmpty())
         assertEquals(listOf("b"), state.likedSongs.map { it.mediaId })
     }
