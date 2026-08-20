@@ -30,7 +30,8 @@ class FakeSongDao : SongDao {
         val lowerQuery = query.lowercase()
         return songs.value.filter { entity ->
             entity.title.lowercase().contains(lowerQuery) ||
-                entity.artistName.lowercase().contains(lowerQuery)
+                entity.artistName.lowercase().contains(lowerQuery) ||
+                entity.albumName.lowercase().contains(lowerQuery)
         }.sortedByDescending { it.popularity }.take(limit)
     }
 

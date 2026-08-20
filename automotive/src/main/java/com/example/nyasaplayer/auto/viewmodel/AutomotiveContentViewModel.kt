@@ -25,7 +25,6 @@ import com.example.nyasaplayer.core.data.api.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,8 +40,6 @@ import kotlin.coroutines.cancellation.CancellationException
 
 private const val RecentlyPlayedLimit = 12
 private const val PopularLimit = 8
-private const val SearchLimit = 50
-private const val SearchDebounceMs = 300L
 private const val TAG = "AutoContentVM"
 private const val DetailLoadError = "Could not load this. Check your connection and try again."
 private const val AlbumMissingError = "This album is no longer available."
@@ -61,7 +58,6 @@ class AutomotiveContentViewModel @Inject constructor(
     private val _contentState = MutableStateFlow(AutomotiveContentState())
     val contentState: StateFlow<AutomotiveContentState> = _contentState.asStateFlow()
 
-    private var searchJob: Job? = null
     private var recentlyPlayedJob: Job? = null
     private var likedSongsJob: Job? = null
     private var genresJob: Job? = null
@@ -245,33 +241,6 @@ class AutomotiveContentViewModel @Inject constructor(
                 Log.e(TAG, "Error loading popular songs", e)
             }
         }
-    }
-
-    fun onSearchQueryChange(query: String) {
-        _contentState.update { it.copy(searchQuery = query) }
-        searchJob?.cancel()
-        if (query.isBlank()) {
-            _contentState.update { it.copy(searchResults = emptyList()) }
-            return
-        }
-        searchJob = viewModelScope.launch(exceptionHandler) {
-            delay(SearchDebounceMs)
-            @Suppress("TooGenericExceptionCaught")
-            try {
-                val results = songRepository.searchSongs(query, SearchLimit)
-                _contentState.update { it.copy(searchResults = results) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "Error searching songs", e)
-                _contentState.update { it.copy(searchResults = emptyList()) }
-            }
-        }
-    }
-
-    fun clearSearch() {
-        searchJob?.cancel()
-        _contentState.update { it.copy(searchQuery = "", searchResults = emptyList()) }
     }
 
     @Suppress("TooGenericExceptionCaught")
@@ -480,8 +449,6 @@ data class AutomotiveContentState(
     val favourites: List<Song>? = null,
     val pendingUnlikes: Set<String> = emptySet(),
     val detail: CarDetailState? = null,
-    val searchQuery: String = "",
-    val searchResults: List<Song> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 )

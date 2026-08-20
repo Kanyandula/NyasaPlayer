@@ -118,7 +118,6 @@ private fun AuthenticatedApp(
         showFullPlayer = showFullPlayer,
         showQueue = showQueue,
         drillDown = drillDown,
-        searchQuery = contentState.searchQuery,
     )
 
     // Keyed on both the restrictions and the location so it fires when the vehicle starts
@@ -298,7 +297,6 @@ private fun carUiLocation(
     showFullPlayer: Boolean,
     showQueue: Boolean,
     drillDown: CarDestination?,
-    searchQuery: String,
 ): CarUiLocation = CarUiLocation(
     tab = tab,
     overlay = when {
@@ -311,7 +309,9 @@ private fun carUiLocation(
     // Settings and Profile are later slices, and Search is not yet a distinct sheet in this
     // app. The field exists so those slices have nothing to retrofit.
     sheet = null,
-    textEntryActive = searchQuery.isNotEmpty(),
+    // A6 Task 2 wires this to the search sheet's editing state. Until the sheet exists there is
+    // no editable field in the app, so no location has text entry active.
+    textEntryActive = false,
 )
 
 @Suppress("LongParameterList", "LongMethod")
