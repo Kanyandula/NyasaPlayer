@@ -2,11 +2,62 @@
 
 - **Slice:** performance follow-up after A6
 - **Depends on:** A6 search implementation
-- **Status:** Ready to spec
+- **Status:** Deferred — mechanism confirmed, cost not reproducible on available hardware
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
 - **Design Reference:** `docs/AAOS_A6_VERIFICATION.md` (typing frame measurements) · `docs/aaos-DESIGN.md` D32
 - **Risk Tags:** text-entry latency · ViewModel API change · test surface
 - **Affected Modules:** `:automotive`
+
+## Measured 2026-08-21, before implementing: the mechanism is real, the cost is not
+
+The ticket's own first step was to settle the stability reasoning with a compiler report rather
+than documented defaults, and then to re-measure. Both were done. **The refactor was not started**,
+because the evidence does not currently justify it.
+
+**Compose compiler report** (`composeCompiler { reportsDestination }` on `:automotive`, temporary,
+reverted):
+
+- All **109** composables in the module are `restartable skippable`. None are restartable-but-not-
+  skippable, including `AuthenticatedApp`, `BrowseShell`, `SearchSheet` and `CarSearchScreen`.
+- `AutomotiveUiState`, `AutomotiveContentState` and `AutomotiveSearchUiState` are **unstable**;
+  `UxRestrictionState` is **stable**. This confirms the reasoning below, and also confirms that
+  T5's `remember(items, restrictions)` keys are sound.
+
+Skippability does not save `AuthenticatedApp` here: it *reads* `searchState`, so a keystroke
+invalidates its body regardless. The mechanism this ticket describes is real.
+
+**Device measurement on a healthy emulator** (673MB available, load 0.00), same build, typing seven
+characters at one per second into the search field:
+
+| Interaction | Dropped frames |
+|---|---|
+| Four tab switches | **0** |
+| Seven keystrokes | **0** |
+
+Zero ANRs. Every character landed.
+
+The 240-dropped-frame figure in `docs/AAOS_A6_VERIFICATION.md` came from an emulator instance at
+1878MB of 2012MB used, whose car stack later crashed outright. It measured the emulator, not the
+app. A6 already said the gap "was not reproduced on the healthy instance" — that sentence was
+written before anyone checked, and this is the check.
+
+**Recommendation: leave this deferred.** Moving the draft query changes the ViewModel's public
+state shape and rewrites roughly a dozen tests, to fix something that costs zero measurable frames
+on the only hardware available. Reopen if typing lag is reported on a real head unit, or if a
+release-build measurement on real hardware shows a cost. The scope below stays accurate for
+whoever does.
+
+To reproduce the compiler report, add to `automotive/build.gradle.kts` above the `android` block:
+
+```kotlin
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_reports")
+    metricsDestination = layout.buildDirectory.dir("compose_metrics")
+}
+```
+
+then `./gradlew :automotive:compileOemDebugKotlin --rerun-tasks` — an ordinary build is
+up-to-date and emits nothing.
 
 ## Problem
 

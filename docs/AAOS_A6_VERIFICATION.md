@@ -155,8 +155,10 @@ After the cold boot, the full driving-state session ran with **zero** ANRs.
 **Text entry is measurably heavier than the app's other interactions.** On the degraded instance,
 typing seven characters at 1/second cost up to 240 dropped frames, against 33–47 for tab
 switching on the same build and boot. The renderer is `ro.hardware.egl=emulation` and the build is
-a debug build, so neither number transfers to a real head unit, and the gap was not reproduced on
-the healthy instance. Recorded as something to measure on real hardware rather than as a defect.
+a debug build, so neither number transfers to a real head unit. **Measured on the healthy instance
+on 2026-08-21 (ticket T8): zero dropped frames for the same seven keystrokes, and zero for tab
+switching.** The figure above measured the emulator, not the app. The sentence originally here
+claimed the gap did not reproduce before anyone had checked; it now rests on that measurement.
 
 **Taps are swallowed far more often than on A3–A5.** Several checklist steps needed two or three
 attempts at the same coordinate, and one apparent "playback started from the wrong song" turned
