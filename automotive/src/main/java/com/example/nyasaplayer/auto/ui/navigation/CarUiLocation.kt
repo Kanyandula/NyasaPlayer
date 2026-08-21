@@ -26,6 +26,12 @@ data class CarUiLocation(
      * This is the eviction target. Chosen over evicting to Home, which moves the
      * user somewhere they did not choose, and over evicting to the previous
      * location, which can land on another restricted location and loop.
+     *
+     * **[CarUiLocation] is a lossy projection, so a caller cannot restore itself from one.**
+     * `drillDepth` is an `Int`: it records *that* the user was one level down, not which
+     * `CarDestination` they were in. `GateResult.Denied.evictTo` is typed as a whole location and
+     * reads like somewhere you can navigate to, but only [tab] is usable — read that field and
+     * clear the rest yourself.
      */
     fun tabRoot(): CarUiLocation = CarUiLocation(tab = tab)
 }
