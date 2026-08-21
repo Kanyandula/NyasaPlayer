@@ -136,7 +136,11 @@ private fun SystemBarControls(onSearchClick: () -> Unit, modifier: Modifier = Mo
     }
 }
 
-/** A null [onClick] is the disabled control: no click target, and the disabled tint. */
+/**
+ * A null [onClick] is the disabled control: the disabled tint, and `clickable(enabled = false)`
+ * so it also announces as disabled. Attaching no clickable at all would leave it looking inert
+ * while reading as a live control to TalkBack — the one channel where the grey tint says nothing.
+ */
 @Composable
 private fun SystemBarControl(
     icon: ImageVector,
@@ -148,13 +152,7 @@ private fun SystemBarControl(
     Box(
         modifier = modifier
             .carTouchTarget()
-            .then(
-                if (onClick == null) {
-                    Modifier
-                } else {
-                    Modifier.clickable(role = Role.Button, onClick = onClick)
-                },
-            ),
+            .clickable(enabled = onClick != null, role = Role.Button) { onClick?.invoke() },
         contentAlignment = Alignment.Center,
     ) {
         Icon(

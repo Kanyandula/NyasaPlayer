@@ -56,7 +56,6 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
 import com.example.nyasaplayer.auto.viewmodel.CarDetailState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
-import com.example.nyasaplayer.auto.viewmodel.UxRestrictionState
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Playlist
@@ -123,22 +122,12 @@ private fun AuthenticatedApp(
     var denialReason by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    // Leaving search always drops the editing flag too. The flag is what the gate reads, so a
-    // sheet that closes while it is still set would leave the app claiming text entry is active.
-    val closeSearch = {
-        showSearch = false
-        searchViewModel.setEditing(false)
-    }
+    // The editing flag clears itself when the field leaves composition (see CarSearchScreen), so
+    // closing the sheet is all this has to do.
+    val closeSearch = { showSearch = false }
 
     // The platform's own NO_KEYBOARD answer, not a driving guess (spec D31).
     val canType = !playerState.restrictions.noTextEntry
-
-    // No field means nothing is being edited. Without this, a restriction that takes the keyboard
-    // away without also requiring distraction optimization would leave the editing flag set, and
-    // the gate would later evict the driver from an idle sheet citing text entry.
-    LaunchedEffect(canType) {
-        if (!canType) searchViewModel.setEditing(false)
-    }
 
     // One tab-selection path for the rail and for the search sheet's browse-by shortcuts, so
     // "leaving for a tab" always means the same thing.
@@ -148,8 +137,9 @@ private fun AuthenticatedApp(
         currentScreen = screen
     }
 
+    // The results the driver can see, which is also the list a tap plays.
     val visibleResults = remember(searchState.results, playerState.restrictions) {
-        visibleSearchResults(searchState.results, playerState.restrictions)
+        playerState.restrictions.cap(searchState.results)
     }
 
     val location = carUiLocation(
@@ -453,25 +443,6 @@ private fun SearchSheet(
             modifier = modifier,
         )
     }
-}
-
-/**
- * The results the driver can actually see, which is also the list a tap plays.
- *
- * Parked search may show everything the repository returned; a moving vehicle sees only the
- * platform's cap. Capping unconditionally would trust a `maxCumulativeContentItems` the platform
- * also reports when parked, which is not a restriction — it is the unrestricted baseline.
- *
- * Internal rather than private so VisibleSearchResultsTest can exercise it; there is no Compose
- * test tooling in this module yet (ticket T1).
- */
-internal fun visibleSearchResults(
-    results: List<Song>,
-    restrictions: UxRestrictionState,
-): List<Song> = if (restrictions.isDistractionOptimized) {
-    results.take(restrictions.maxCumulativeContentItems)
-} else {
-    results
 }
 
 @Suppress("LongParameterList", "LongMethod")

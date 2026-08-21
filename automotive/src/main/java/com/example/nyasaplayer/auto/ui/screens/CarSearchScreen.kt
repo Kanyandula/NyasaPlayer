@@ -26,7 +26,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -200,6 +203,15 @@ private fun SearchField(
     onEditingChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Compose does not deliver isFocused = false when a focused node leaves composition, so the
+    // flag has to be cleared where the field is owned. Disposal covers every way the field can
+    // go away — sheet closed, query submitted, NO_KEYBOARD arrived, tab switched, gate eviction
+    // — which is why none of those need to remember to clear it themselves.
+    val editingChange by rememberUpdatedState(onEditingChange)
+    DisposableEffect(Unit) {
+        onDispose { editingChange(false) }
+    }
+
     Row(
         modifier = modifier
             .height(CarPillButtonHeight)

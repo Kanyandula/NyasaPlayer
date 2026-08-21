@@ -420,12 +420,16 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
 - **D35 — Search leaves `AutomotiveContentViewModel` instead of adding another suppression.** A4's
   D23 recorded that the class already owns too many unrelated domains. A6 depends only on
   `SongRepository.searchSongs()`, so a small `AutomotiveSearchViewModel` is the cleaner boundary.
-- **D36 — Search results are capped only while distraction optimization is required.** Every other
-  screen calls `.take(maxCumulativeContentItems)` unconditionally. The platform reports that value
-  when parked too, where it is the unrestricted baseline rather than a restriction, so applying it
-  unconditionally would silently truncate a parked search. `visibleSearchResults()` is the tested
-  boundary, and it produces both what the driver sees and the list a tap plays — a divergence
+- **D36 — Content is capped only while distraction optimization is required.** The platform
+  reports `maxCumulativeContentItems` when parked too, where it is the unrestricted baseline
+  rather than a restriction, so applying it unconditionally silently truncates a parked list.
+  A5's `queueDisplayItems()` already followed this rule; A6 first re-derived it as a second
+  implementation and now shares one — `UxRestrictionState.cap()`, tested and mutation-checked.
+  For search it produces both what the driver sees and the list a tap plays, and a divergence
   between those two is how a "play this" starts a track that was never on screen.
+  **`BrowseShell`'s ten `.take(maxItems)` calls do not follow this rule and are wrong by it** —
+  a parked driver's Home, Library and Favourites are being trimmed to a driving cap today.
+  Correcting them touches every A3/A4 call site and is tracked by T5, not by A6.
 - **D37 — A committed search drops the previous query's results.** The usual rule is to keep
   previous content during a refresh rather than blanking the screen, but here the header names the
   new query, so the previous query's songs underneath it would be a wrong answer rather than a
