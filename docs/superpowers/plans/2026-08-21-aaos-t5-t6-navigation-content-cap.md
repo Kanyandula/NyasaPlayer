@@ -55,7 +55,13 @@ aligned with current GitHub docs when executing.
 
 Use one of these equivalent creation paths:
 
-- GitHub CLI (`gh stack` is built in; verified present on gh 2.92.0, no extension needed):
+- GitHub CLI. `gh stack` is an official extension and is **not** installed here — install it first:
+  - `gh extension install github/gh-stack`
+  - Do not probe with `gh stack --help`: when the extension is missing it prints "available as an
+    official extension" and still **exits 0**, so a `&&` check reports success. Use
+    `gh extension list | grep gh-stack`.
+  - Plain branches are an equivalent fallback and need no setup — `git checkout -b <branch>` from
+    the layer below, then `gh pr create --base <lower branch>`.
   - `gh stack init ek/aaos-t6-navigation-state`
   - commit Task 1.
   - `gh stack add ek/aaos-t5-content-cap`
