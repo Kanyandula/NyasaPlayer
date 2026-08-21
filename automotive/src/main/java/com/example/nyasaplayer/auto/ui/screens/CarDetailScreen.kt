@@ -110,6 +110,39 @@ fun CarPlaylistScreen(
     )
 }
 
+/**
+ * Catalogue artist detail, reached from a search result.
+ *
+ * Not `CarArtistLikedSongsScreen`: that one is scoped to the driver's likes and renders hearts
+ * that remove rows on tap. This is every song the catalogue has by the artist, so it reuses the
+ * album/playlist body, which has no like affordance (spec 3.4).
+ */
+@Composable
+fun CarArtistScreen(
+    detail: CarDetailState,
+    onBackClick: () -> Unit,
+    onPlay: (List<Song>) -> Unit,
+    onShuffle: (List<Song>) -> Unit,
+    onSongClick: (List<Song>, Song) -> Unit,
+    modifier: Modifier = Modifier,
+    currentlyPlayingMediaId: String? = null,
+    isPlaying: Boolean = false,
+    onRetry: () -> Unit = {},
+) {
+    CarDetailBody(
+        detail = detail,
+        emptyBody = "This artist has no playable tracks.",
+        onBackClick = onBackClick,
+        onPlay = onPlay,
+        onShuffle = onShuffle,
+        onSongClick = onSongClick,
+        modifier = modifier,
+        currentlyPlayingMediaId = currentlyPlayingMediaId,
+        isPlaying = isPlaying,
+        onRetry = onRetry,
+    )
+}
+
 @Suppress("LongParameterList")
 @Composable
 private fun CarDetailBody(

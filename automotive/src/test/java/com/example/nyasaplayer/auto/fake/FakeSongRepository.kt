@@ -6,6 +6,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class FakeSongRepository : SongRepository {
@@ -35,7 +36,9 @@ class FakeSongRepository : SongRepository {
         return ids.mapNotNull { byId[it] }
     }
 
-    override fun getSongsByArtist(artistId: String): Flow<List<Song>> = songs
+    // Filters like SongDao's artist_id query; catalogue artist detail depends on it.
+    override fun getSongsByArtist(artistId: String): Flow<List<Song>> =
+        songs.map { list -> list.filter { it.artistId == artistId } }
     override fun getSongsByGenre(genreId: String): Flow<List<Song>> = songs
     override suspend fun getSongsByPopularity(limit: Int): List<Song> = songs.value.take(limit)
     /** Every query [searchSongs] was called with, in order. */

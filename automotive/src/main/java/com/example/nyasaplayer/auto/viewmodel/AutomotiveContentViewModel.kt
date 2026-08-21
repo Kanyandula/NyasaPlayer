@@ -17,6 +17,7 @@ import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.data.api.AlbumRepository
+import com.example.nyasaplayer.core.data.api.ArtistRepository
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.PlaylistRepository
@@ -45,12 +46,14 @@ private const val TAG = "AutoContentVM"
 private const val DetailLoadError = "Could not load this. Check your connection and try again."
 private const val AlbumMissingError = "This album is no longer available."
 private const val PlaylistMissingError = "This playlist is no longer available."
+private const val ArtistMissingError = "This artist is no longer available."
 
 @HiltViewModel
 class AutomotiveContentViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val genreRepository: GenreRepository,
     private val albumRepository: AlbumRepository,
+    private val artistRepository: ArtistRepository,
     private val playlistRepository: PlaylistRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
@@ -437,6 +440,7 @@ class AutomotiveContentViewModel @Inject constructor(
         when (destination) {
             is CarDestination.Album -> loadAlbumDetail(destination)
             is CarDestination.Playlist -> loadPlaylistDetail(destination)
+            is CarDestination.CatalogArtist -> loadCatalogArtistDetail(destination)
             // Filtered out by openDetail; a when over a sealed interface must be exhaustive.
             is CarDestination.Artist -> CarDetailState(destination, isLoading = false)
         }
@@ -459,6 +463,24 @@ class AutomotiveContentViewModel @Inject constructor(
             title = album.name,
             subtitle = album.artistName,
             artworkUrl = album.imageUrl,
+            tracks = tracks,
+            isLoading = false,
+        )
+    }
+
+    private suspend fun loadCatalogArtistDetail(
+        destination: CarDestination.CatalogArtist,
+    ): CarDetailState {
+        val artist = artistRepository.getArtistById(destination.artistId)
+            ?: return CarDetailState(destination, isLoading = false, errorMessage = ArtistMissingError)
+        // first(), not contentState: nothing collects catalogue artist songs, and a search result
+        // can be opened before any tab has loaded (D17).
+        val tracks = songRepository.getSongsByArtist(destination.artistId).first()
+        return CarDetailState(
+            destination = destination,
+            title = artist.name,
+            subtitle = "${tracks.size} songs",
+            artworkUrl = artist.imageUrl,
             tracks = tracks,
             isLoading = false,
         )
@@ -518,10 +540,11 @@ data class AutomotiveContentState(
 }
 
 /**
- * One loaded detail screen — album or playlist.
+ * One loaded detail screen — album, playlist or catalogue artist.
  *
- * Artist detail is deliberately absent: its track list is a live filter over `likedSongs`, and
- * snapshotting it here would freeze the screen against unlikes performed on it (D16).
+ * The *liked-songs* artist screen is deliberately absent: its track list is a live filter over
+ * `likedSongs`, and snapshotting it here would freeze the screen against unlikes performed on it
+ * (D16). A catalogue artist has no such live list, so it loads like an album.
  */
 data class CarDetailState(
     val destination: CarDestination,

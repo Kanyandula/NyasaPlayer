@@ -37,6 +37,7 @@ import com.example.nyasaplayer.auto.ui.navigation.GateResult
 import com.example.nyasaplayer.auto.ui.navigation.gate
 import com.example.nyasaplayer.auto.ui.screens.CarAlbumScreen
 import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
+import com.example.nyasaplayer.auto.ui.screens.CarArtistScreen
 import com.example.nyasaplayer.auto.ui.screens.CarAuthScreen
 import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFavouriteMusicScreen
@@ -380,7 +381,7 @@ internal fun carUiLocation(
 ): CarUiLocation = CarUiLocation(
     tab = tab,
     overlay = overlay,
-    // All three destinations are one step from a tab root (D8). There is no depth 2 in A3.
+    // Every destination is one step from a tab root (D8). There is no depth 2 in A3.
     drillDepth = if (drillDown != null) 1 else 0,
     // Settings and Profile are A7. The field exists so that slice has nothing to retrofit.
     sheet = sheet,
@@ -611,7 +612,10 @@ private fun BrowseShell(
                             )
                         }
 
-                        is CarDestination.Album, is CarDestination.Playlist -> DetailRoute(
+                        is CarDestination.Album,
+                        is CarDestination.Playlist,
+                        is CarDestination.CatalogArtist,
+                        -> DetailRoute(
                             destination = destination,
                             detail = contentState.detail,
                             restrictions = restrictions,
@@ -790,7 +794,20 @@ private fun DetailRoute(
             onRetry = onRetry,
         )
 
-        // Routed by the caller's own branch; a when over a sealed interface must be exhaustive.
+        is CarDestination.CatalogArtist -> CarArtistScreen(
+            detail = capped,
+            onBackClick = onBackClick,
+            onPlay = onPlayTracks,
+            onShuffle = onShuffleTracks,
+            onSongClick = onSongClick,
+            modifier = modifier,
+            currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isPlaying = isPlaying,
+            onRetry = onRetry,
+        )
+
+        // The liked-songs artist screen, routed by the caller's own branch; a when over a sealed
+        // interface must be exhaustive.
         is CarDestination.Artist -> Unit
     }
 }
