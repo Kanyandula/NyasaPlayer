@@ -2,17 +2,21 @@
 
 - **Slice:** tooling — not a feature slice
 - **Depends on:** nothing
-- **Status:** Ready to spec
+- **Status:** Implemented
+- **Spec:** `docs/superpowers/specs/2026-08-21-aaos-compose-test-tooling-design.md`
+- **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t1-compose-test-tooling.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
-- **Design Reference:** `docs/superpowers/specs/2026-08-09-aaos-favourites-design.md` §9 items 7–10 · `.claude/loop/ledger.md` row #11
+- **Design Reference:** `docs/superpowers/specs/2026-08-09-aaos-favourites-design.md` §9
+  items 7–10 · `.claude/loop/ledger.md` row #11
 - **Risk Tags:** test infrastructure · build configuration
 - **Affected Modules:** `:automotive` · `gradle/libs.versions.toml`
 
 ## Problem
 
-**Nothing in `:automotive` executes a Composable.** The module has 74 passing unit tests and none
-of them render anything, so every assertion about what a screen *shows* is really an assertion
-about what a ViewModel *holds*.
+**Nothing in `:automotive` executes a Composable.** The module's JVM suite is now much larger than
+when this ticket was first written, but none of those tests render anything. Every assertion about
+what a screen *shows* is still really an assertion about what a ViewModel *holds* or a device
+operator inspected by hand.
 
 This was found by mutation, not by reasoning. Row #8 of the A4 post-merge review fixed Favourites
 reading a shared `errorMessage` field that genres and albums also write, so a genres failure
@@ -25,7 +29,7 @@ errorMessage = contentState.errorMessage,      // the defect
 errorMessage = contentState.favouritesError,   // the fix
 ```
 
-— **reintroduces row #8's exact defect and passes all 74 tests.**
+— **reintroduces row #8's exact defect and still has no rendering test to catch it.**
 
 The immediate cause was that the tests mirrored the screen's binding by hand: a private helper in
 `FavouritesBoundaryTest.kt` returned the same field the Composable read, so the two copies could
@@ -35,12 +39,12 @@ tests), which converted two mutations from surviving to killed. **The residual s
 Composable can still bypass those derivations entirely and nothing notices.
 
 Collapsing the copies was all that could be done without tooling. Closing it needs a test that
-renders `CarFavouriteMusicScreen` and asserts what appears.
+renders the Favourites route that supplies `CarFavouriteMusicScreen` and asserts what appears.
 
 ## This runs headless on the JVM
 
 **No `androidTest` source set. No device. No emulator.** `createComposeRule` runs under
-Robolectric in the existing `automotive/src/test/` source set, the same place the current 74 tests
+Robolectric in the existing `automotive/src/test/` source set, the same place the current JVM tests
 already run, on the same `./gradlew :automotive:testOemDebugUnitTest` command.
 
 This is stated emphatically because the review loop spent a round believing the opposite, and the
@@ -119,7 +123,10 @@ None of these are known to be wrong. All four are currently defended by someone 
 - **Build:** `gradle/libs.versions.toml`, `automotive/build.gradle.kts`
 - **Tests:** `automotive/src/test/` — new rendering test alongside the existing seven files
 - **Storage:** none
-- **Production code:** none. This ticket adds no production change and should not.
+- **Production code:** one test seam. `BrowseShell`'s Favourites branch moved verbatim into an
+  `internal CarFavouritesRoute`, because the binding under test is exactly what the branch does
+  and the shell around it needs Hilt. No behaviour change; two stale "no Compose test tooling"
+  comments went with it.
 
 ## Risk Areas
 
@@ -132,6 +139,32 @@ None of these are known to be wrong. All four are currently defended by someone 
   `android.car`. Render the screen with restriction values passed in as plain parameters, which is
   how `CarFavouriteMusicScreen` already takes them.
 - **Data migration:** none.
+
+## Outcome
+
+Landed as `CarFavouritesRouteTest` (2) and `CarSearchScreenTest` (2). Four mutations were run
+against them and all four failed by name:
+`favouritesError` → `errorMessage`, `favouritesLoading` → `isLoading`, the `NO_KEYBOARD` guard
+around the Songs chip, and dropping `carConsumeTouches()` from `CarSearchScreen`.
+
+Two things worth knowing before adding more:
+
+- **Consumption itself is not observable here.** The touch-blocker test renders the real
+  `CarSearchScreen` over a stand-in shell rather than a synthetic layout, because a synthetic one
+  survives replacing `carConsumeTouches()` with an inert `pointerInput` — either version makes the
+  sheet a hit-test candidate, which alone stops the sibling below it from being hit. What the test
+  defends is the caller's contract, which is the regression T6 actually saw.
+- **Nothing rendering `AsyncImage` has been tried.** The two Favourites tests cover the error and
+  empty states, neither of which reaches the hero or a `CarTrackRow`. Whoever first renders a
+  populated list should expect to deal with Coil under Robolectric.
+
+`debugImplementation(libs.androidx.ui.test.manifest)` puts an exported
+`androidx.activity.ComponentActivity` into the merged manifest of **both** debug variants — the
+builds that get installed on head units for verification — so any app on the device can launch it
+there. Accepted rather than suppressed: `debugImplementation(libs.androidx.ui.tooling)` already
+puts an exported `PreviewActivity` in the same manifests, so this is another instance of a risk
+the module has taken, not a new one. Confirmed absent from `playstoreRelease`, which is the
+manifest Play's AAOS media review reads.
 
 ## Notes
 

@@ -368,8 +368,7 @@ private fun AuthenticatedApp(
  * Collapses the scattered pieces of navigation state into the one value [gate] decides on.
  * Derived, not authoritative — the individual values stay where the screens read them.
  *
- * Internal rather than private so CarUiLocationTest can exercise the mapping directly; there
- * is no Compose test tooling in this module yet (ticket T1).
+ * Internal rather than private so CarUiLocationTest can exercise the mapping directly.
  */
 internal fun carUiLocation(
     tab: CarScreen,
@@ -407,7 +406,7 @@ private fun <T> rememberVisible(items: List<T>, restrictions: UxRestrictionState
  *
  * The full player replaces whatever was there; the queue pushes onto it, because the queue is
  * shown *above* the player and closing it must reveal the player again. Pure so the push and pop
- * rules are testable — there is no Compose test tooling in this module yet (ticket T1).
+ * rules are testable without rendering the shell.
  */
 internal fun overlaysWith(current: List<CarOverlay>, opening: CarOverlay): List<CarOverlay> =
     when (opening) {
@@ -649,29 +648,18 @@ private fun BrowseShell(
                         )
                     }
 
-                    CarScreen.Favourites -> {
-                        val favouriteSongs = rememberVisible(
-                            contentState.favourites ?: contentState.likedSongs,
-                            restrictions,
-                        )
-                        CarFavouriteMusicScreen(
-                            songs = favouriteSongs,
-                            pendingUnlikes = contentState.pendingUnlikes,
-                            onSongClick = { song -> onSongClick(favouriteSongs, song) },
-                            onPlayAll = { onPlayTracks(favouriteSongs) },
-                            onShuffle = { onShuffleTracks(favouriteSongs) },
-                            // Frozen list: the row holds its place until the visit ends (D19).
-                            onLikeToggle = likeToggle(onLikeToggle, freeze = true),
-                            onBrowseClick = { onSelectTab(CarScreen.Browse) },
-                            currentlyPlayingMediaId = currentlyPlayingMediaId,
-                            isPlaying = isPlaying,
-                            // Not contentState.isLoading/errorMessage: those belong to the
-                            // catalogue. Screen 8 reads its own pair.
-                            isLoading = contentState.favouritesLoading,
-                            errorMessage = contentState.favouritesError,
-                            onRetry = onRetry,
-                        )
-                    }
+                    CarScreen.Favourites -> CarFavouritesRoute(
+                        contentState = contentState,
+                        restrictions = restrictions,
+                        onSongClick = onSongClick,
+                        onPlayTracks = onPlayTracks,
+                        onShuffleTracks = onShuffleTracks,
+                        onLikeToggle = onLikeToggle,
+                        onBrowseClick = { onSelectTab(CarScreen.Browse) },
+                        onRetry = onRetry,
+                        currentlyPlayingMediaId = currentlyPlayingMediaId,
+                        isPlaying = isPlaying,
+                    )
                 }
             }
         }
@@ -689,6 +677,51 @@ private fun BrowseShell(
             )
         }
     }
+}
+
+/**
+ * Screen 8's binding to [AutomotiveContentState], lifted out of [BrowseShell] so a Compose test
+ * can render it without Hilt or a car.
+ *
+ * Which fields it reads *is* the behaviour: pointing [CarFavouriteMusicScreen] at the catalogue's
+ * `isLoading`/`errorMessage` instead of the favourites pair puts a genres failure over screen 17
+ * (A4 review row #8). CarFavouritesRouteTest fails when that happens.
+ */
+@Suppress("LongParameterList")
+@Composable
+internal fun CarFavouritesRoute(
+    contentState: AutomotiveContentState,
+    restrictions: UxRestrictionState,
+    onSongClick: (List<Song>, Song) -> Unit,
+    onPlayTracks: (List<Song>) -> Unit,
+    onShuffleTracks: (List<Song>) -> Unit,
+    onLikeToggle: (Song, Boolean) -> Unit,
+    onBrowseClick: () -> Unit,
+    onRetry: () -> Unit,
+    currentlyPlayingMediaId: String? = null,
+    isPlaying: Boolean = false,
+) {
+    val favouriteSongs = rememberVisible(
+        contentState.favourites ?: contentState.likedSongs,
+        restrictions,
+    )
+    CarFavouriteMusicScreen(
+        songs = favouriteSongs,
+        pendingUnlikes = contentState.pendingUnlikes,
+        onSongClick = { song -> onSongClick(favouriteSongs, song) },
+        onPlayAll = { onPlayTracks(favouriteSongs) },
+        onShuffle = { onShuffleTracks(favouriteSongs) },
+        // Frozen list: the row holds its place until the visit ends (D19).
+        onLikeToggle = likeToggle(onLikeToggle, freeze = true),
+        onBrowseClick = onBrowseClick,
+        currentlyPlayingMediaId = currentlyPlayingMediaId,
+        isPlaying = isPlaying,
+        // Not contentState.isLoading/errorMessage: those belong to the catalogue. Screen 8
+        // reads its own pair.
+        isLoading = contentState.favouritesLoading,
+        errorMessage = contentState.favouritesError,
+        onRetry = onRetry,
+    )
 }
 
 /**

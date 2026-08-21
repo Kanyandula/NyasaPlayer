@@ -69,7 +69,7 @@ private val FieldTextSize = 22.sp
 private val BodySize = 20.sp
 
 private const val FieldPlaceholder = "Search songs, artists, albums"
-private const val VoicePromptText =
+internal const val VoicePromptText =
     "Typing is off while the vehicle is moving. Ask your assistant to play something instead."
 private const val RecentEmptyText = "Searches you make on this trip show up here."
 private val LibraryShortcuts = listOf("Albums", "Artists", "Playlists")
