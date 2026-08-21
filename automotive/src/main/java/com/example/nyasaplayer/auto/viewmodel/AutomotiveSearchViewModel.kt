@@ -61,24 +61,20 @@ class AutomotiveSearchViewModel @Inject constructor(
      * what closes results — the sheet has no separate "showing results" flag to fall out of sync
      * with — so an in-flight search is cancelled here for the same reason it is there.
      */
-    fun backToSearch() {
-        searchJob?.cancel()
-        latestToken++
-        _uiState.update {
-            it.copy(
-                submittedQuery = "",
-                results = emptyList(),
-                isLoading = false,
-                errorMessage = null,
-            )
-        }
-    }
+    fun backToSearch() = reset(keepQuery = true)
 
-    fun clearQuery() {
+    fun clearQuery() = reset(keepQuery = false)
+
+    /** Recent queries and the editing flag are the session; everything else is one search. */
+    private fun reset(keepQuery: Boolean) {
         searchJob?.cancel()
         latestToken++
         _uiState.update {
-            AutomotiveSearchUiState(recentQueries = it.recentQueries, isEditing = it.isEditing)
+            AutomotiveSearchUiState(
+                query = if (keepQuery) it.query else "",
+                recentQueries = it.recentQueries,
+                isEditing = it.isEditing,
+            )
         }
     }
 

@@ -2,6 +2,7 @@ package com.example.nyasaplayer.auto.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,8 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -38,12 +38,12 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.components.CarPillButton
+import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarOutline
@@ -51,7 +51,6 @@ import com.example.nyasaplayer.auto.ui.theme.CarPillButtonHeight
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
-import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchUiState
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
@@ -66,7 +65,6 @@ private val IconSize = 28.dp
 private val SearchCtaWidth = 176.dp
 private val FieldShape = RoundedCornerShape(CarCardCornerRadius)
 private val FieldTextSize = 22.sp
-private val LabelSize = 22.sp
 private val BodySize = 20.sp
 
 private const val FieldPlaceholder = "Search songs, artists, albums"
@@ -88,7 +86,8 @@ private val LibraryShortcuts = listOf("Albums", "Artists", "Playlists")
  */
 @Composable
 fun CarSearchScreen(
-    state: AutomotiveSearchUiState,
+    query: String,
+    recentQueries: List<String>,
     canType: Boolean,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -114,7 +113,7 @@ fun CarSearchScreen(
         verticalArrangement = Arrangement.spacedBy(SectionSpacing),
     ) {
         SearchHeader(
-            query = state.query,
+            query = query,
             canType = canType,
             fieldFocus = fieldFocus,
             onQueryChange = onQueryChange,
@@ -124,7 +123,7 @@ fun CarSearchScreen(
             onClose = onClose,
         )
 
-        RecentQueries(queries = state.recentQueries, onRecentClick = onRecentClick)
+        RecentQueries(queries = recentQueries, onRecentClick = onRecentClick)
 
         BrowseByShortcuts(
             canType = canType,
@@ -305,13 +304,17 @@ private fun RecentQueries(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(LabelSpacing),
     ) {
-        SectionLabel(text = "Recent searches")
+        CarSectionHeader(title = "Recent searches")
         if (queries.isEmpty()) {
             Text(text = RecentEmptyText, color = CarTextSecondary, fontSize = BodySize)
         } else {
-            // Capped at five by the ViewModel, so the row scrolls only when the queries are long.
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(ChipSpacing)) {
-                items(items = queries, key = { it }) { query ->
+            // Capped at five by the ViewModel, so this scrolls only when the queries are long —
+            // too few items for lazy machinery to buy anything.
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(ChipSpacing),
+            ) {
+                queries.forEach { query ->
                     CarPillButton(
                         label = query,
                         onClick = { onRecentClick(query) },
@@ -342,32 +345,20 @@ private fun BrowseByShortcuts(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(LabelSpacing),
     ) {
-        SectionLabel(text = "Browse by")
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(ChipSpacing)) {
+        CarSectionHeader(title = "Browse by")
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(ChipSpacing),
+        ) {
             // Songs' only action is focusing the field, so it ships only when there is a field
             // to focus. Under NO_KEYBOARD it would be the clickable no-op FR-2.6 prohibits.
             if (canType) {
-                item {
-                    CarPillButton(label = "Songs", onClick = onFocusField, filled = false)
-                }
+                CarPillButton(label = "Songs", onClick = onFocusField, filled = false)
             }
-            item {
-                CarPillButton(label = "Genres", onClick = onBrowseGenres, filled = false)
-            }
-            items(items = LibraryShortcuts) { label ->
+            CarPillButton(label = "Genres", onClick = onBrowseGenres, filled = false)
+            LibraryShortcuts.forEach { label ->
                 CarPillButton(label = label, onClick = onBrowseLibrary, filled = false)
             }
         }
     }
-}
-
-@Composable
-private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text,
-        color = Color.White,
-        fontSize = LabelSize,
-        fontWeight = FontWeight.SemiBold,
-        modifier = modifier,
-    )
 }

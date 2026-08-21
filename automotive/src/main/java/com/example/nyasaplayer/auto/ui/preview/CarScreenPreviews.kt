@@ -15,7 +15,6 @@ import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchResultsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
-import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchUiState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
@@ -272,10 +271,11 @@ private fun ErrorOverlayPreview() {
 private val PreviewRecentQueries = listOf("hendrix", "midnight drive", "jazz classics")
 
 @Composable
-private fun Search(state: AutomotiveSearchUiState, canType: Boolean) {
+private fun Search(query: String, recentQueries: List<String>, canType: Boolean) {
     AppTheme {
         CarSearchScreen(
-            state = state,
+            query = query,
+            recentQueries = recentQueries,
             canType = canType,
             onQueryChange = {},
             onSubmit = {},
@@ -298,7 +298,7 @@ private fun Search(state: AutomotiveSearchUiState, canType: Boolean) {
 )
 @Composable
 private fun SearchScreenEmptyPreview() {
-    Search(state = AutomotiveSearchUiState(), canType = true)
+    Search(query = "", recentQueries = emptyList(), canType = true)
 }
 
 @Preview(
@@ -310,10 +310,7 @@ private fun SearchScreenEmptyPreview() {
 )
 @Composable
 private fun SearchScreenTypingPreview() {
-    Search(
-        state = AutomotiveSearchUiState(query = "hendrix", recentQueries = PreviewRecentQueries),
-        canType = true,
-    )
+    Search(query = "hendrix", recentQueries = PreviewRecentQueries, canType = true)
 }
 
 @Preview(
@@ -325,10 +322,7 @@ private fun SearchScreenTypingPreview() {
 )
 @Composable
 private fun SearchScreenVoicePromptPreview() {
-    Search(
-        state = AutomotiveSearchUiState(recentQueries = PreviewRecentQueries),
-        canType = false,
-    )
+    Search(query = "", recentQueries = PreviewRecentQueries, canType = false)
 }
 
 @Composable

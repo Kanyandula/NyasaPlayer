@@ -36,6 +36,11 @@ missed call is a sheet left open behind the new screen.
   though `evictTo`'s type suggests it.
 - Keep `SearchSheet`-style per-sheet composables. Two sheets do not justify a sheet host, and A7
   should not build one.
+- Settle whether a full-screen sheet needs a click-consuming root. `CarSearchScreen` and
+  `CarQueueScreen` both draw over `BrowseShell` without consuming pointer input, so a touch on an
+  empty area of either may reach the rail or mini-player underneath. `closeSearch()` is called
+  from `onExpandPlayer` and `onQueueClick` partly as insurance against that; if the sheets consume
+  their own touches, those calls are dead and can go with the rest of the teardown.
 
 ## Out Of Scope
 

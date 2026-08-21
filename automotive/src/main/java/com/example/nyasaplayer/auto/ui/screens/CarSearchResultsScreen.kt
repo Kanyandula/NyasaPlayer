@@ -35,6 +35,7 @@ import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarPillButton
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
+import com.example.nyasaplayer.auto.ui.theme.CarListRowHeight
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
@@ -45,11 +46,9 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.util.formatDuration
 
 private val SectionSpacing = 24.dp
-private val HeaderSpacing = 24.dp
 private val RowSpacing = 12.dp
 private val TopResultArtSize = 120.dp
 private val TopResultSpacing = 20.dp
-private val SkeletonRowHeight = 80.dp
 private val IconSize = 28.dp
 private val QuerySize = 26.sp
 private val TopResultTitleSize = 26.sp
@@ -129,7 +128,7 @@ private fun ResultsHeader(
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(HeaderSpacing),
+        horizontalArrangement = Arrangement.spacedBy(SectionSpacing),
     ) {
         IconButton(onClick = onBackToSearch, modifier = Modifier.size(CarTouchTargetSize)) {
             Icon(
@@ -252,7 +251,7 @@ private fun ResultsSkeleton(modifier: Modifier = Modifier) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(SkeletonRowHeight)
+                    .height(CarListRowHeight)
                     .clip(RoundedCornerShape(CarCardCornerRadius))
                     .background(CarRaised),
             )

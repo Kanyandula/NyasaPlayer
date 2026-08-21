@@ -430,7 +430,8 @@ private fun SearchSheet(
         )
     } else {
         CarSearchScreen(
-            state = state,
+            query = state.query,
+            recentQueries = state.recentQueries,
             canType = canType,
             onQueryChange = onQueryChange,
             onSubmit = onSubmit,
