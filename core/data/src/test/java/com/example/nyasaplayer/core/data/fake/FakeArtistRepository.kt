@@ -16,4 +16,7 @@ class FakeArtistRepository : ArtistRepository {
 
     override suspend fun getArtistsByPopularity(limit: Int): List<Artist> =
         artists.value.sortedByDescending { it.popularity }.take(limit)
+
+    override suspend fun searchArtists(query: String, limit: Int): List<Artist> =
+        artists.value.searchByName(query, limit)
 }

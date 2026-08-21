@@ -23,6 +23,9 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // Robolectric reads the merged resources/manifest to stand up the in-memory Room
+            // database CatalogSearchDaoTest runs the search SQL against.
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -57,4 +60,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.org.json)
+    // Runs the DAO search queries against real SQLite instead of a Kotlin re-implementation.
+    testImplementation(libs.robolectric)
 }

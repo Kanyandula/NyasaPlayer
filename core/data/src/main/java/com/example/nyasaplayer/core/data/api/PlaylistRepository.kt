@@ -9,4 +9,7 @@ interface PlaylistRepository {
     suspend fun addSongToPlaylist(userId: String, playlistId: String, mediaId: String)
     suspend fun removeSongFromPlaylist(userId: String, playlistId: String, mediaId: String)
     suspend fun deletePlaylist(userId: String, playlistId: String)
+
+    /** [userId]'s playlists matching [query] on name, best match first. */
+    suspend fun searchPlaylists(userId: String, query: String, limit: Int): List<Playlist>
 }

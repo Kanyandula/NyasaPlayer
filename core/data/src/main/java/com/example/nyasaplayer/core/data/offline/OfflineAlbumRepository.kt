@@ -22,4 +22,7 @@ class OfflineAlbumRepository @Inject constructor(
 
     override suspend fun getAlbumsByPopularity(limit: Int): List<Album> =
         albumDao.getByPopularity(limit).map { it.toDomain() }
+
+    override suspend fun searchAlbums(query: String, limit: Int): List<Album> =
+        albumDao.search(escapeLikeArgument(query), limit).map { it.toDomain() }
 }

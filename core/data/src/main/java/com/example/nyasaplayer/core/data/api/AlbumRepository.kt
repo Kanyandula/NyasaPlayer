@@ -8,4 +8,7 @@ interface AlbumRepository {
     suspend fun getAlbumById(albumId: String): Album?
     fun getAlbumsByArtist(artistId: String): Flow<List<Album>>
     suspend fun getAlbumsByPopularity(limit: Int): List<Album>
+
+    /** Albums matching [query] on name, or secondarily on artist name, best match first. */
+    suspend fun searchAlbums(query: String, limit: Int): List<Album>
 }

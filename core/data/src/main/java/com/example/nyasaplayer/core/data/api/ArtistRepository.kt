@@ -10,4 +10,7 @@ interface ArtistRepository {
 
     // Used by AAOS browse tree
     suspend fun getArtistsByPopularity(limit: Int): List<Artist>
+
+    /** Artists matching [query] on name, best match first. */
+    suspend fun searchArtists(query: String, limit: Int): List<Artist>
 }

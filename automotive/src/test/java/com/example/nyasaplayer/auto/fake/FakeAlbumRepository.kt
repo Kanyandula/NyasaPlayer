@@ -23,4 +23,11 @@ class FakeAlbumRepository : AlbumRepository {
     override fun getAlbumsByArtist(artistId: String): Flow<List<Album>> = albums
 
     override suspend fun getAlbumsByPopularity(limit: Int): List<Album> = albums.value.take(limit)
+
+    override suspend fun searchAlbums(query: String, limit: Int): List<Album> {
+        val needle = query.lowercase()
+        return albums.value.filter {
+            it.name.lowercase().contains(needle) || it.artistName.lowercase().contains(needle)
+        }.take(limit)
+    }
 }

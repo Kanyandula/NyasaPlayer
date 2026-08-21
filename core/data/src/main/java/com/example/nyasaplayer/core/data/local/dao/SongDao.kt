@@ -25,12 +25,17 @@ interface SongDao {
     @Query("SELECT * FROM songs ORDER BY popularity DESC LIMIT :limit")
     suspend fun getByPopularity(limit: Int): List<SongEntity>
 
+    /**
+     * Popularity order, not match quality: this is the ordering `MediaBrowseTree.search()` serves
+     * to Assistant, and T4 keeps the two paths identical (spec 5). [query] must already be
+     * LIKE-escaped — see `escapeLikeArgument`.
+     */
     @Query(
         """
         SELECT * FROM songs
-        WHERE title LIKE '%' || :query || '%'
-           OR artist_name LIKE '%' || :query || '%'
-           OR album_name LIKE '%' || :query || '%'
+        WHERE title LIKE '%' || :query || '%' ESCAPE '\'
+           OR artist_name LIKE '%' || :query || '%' ESCAPE '\'
+           OR album_name LIKE '%' || :query || '%' ESCAPE '\'
         ORDER BY popularity DESC
         LIMIT :limit
         """,

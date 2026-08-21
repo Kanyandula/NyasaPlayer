@@ -79,4 +79,32 @@ class FirebasePlaylistRepository @Inject constructor(
     override suspend fun deletePlaylist(userId: String, playlistId: String) {
         playlistsCollection(userId).document(playlistId).delete().await()
     }
+
+    /**
+     * Firestore indexes prefixes, not substrings, so the name filter runs in memory over one
+     * one-shot read of the user's own playlists — a collection this app already loads whole for
+     * the library screen. It stays here rather than in a UI collector so a search cannot depend
+     * on whether some screen happened to have emitted yet.
+     */
+    override suspend fun searchPlaylists(userId: String, query: String, limit: Int): List<Playlist> {
+        val needle = query.trim().lowercase()
+        if (needle.isEmpty()) return emptyList()
+        return playlistsCollection(userId).get().await().documents
+            .mapNotNull { doc -> doc.toObject<FirestorePlaylistDto>()?.toDomain(doc.id) }
+            .filter { it.name.lowercase().contains(needle) }
+            .sortedWith(
+                compareBy({ nameMatchTier(it.name, needle) }, { it.name.lowercase() }, { it.id }),
+            )
+            .take(limit)
+    }
+}
+
+/** Exact name, then prefix, then substring — the spec's match-quality order (3.2). */
+private fun nameMatchTier(name: String, lowercaseNeedle: String): Int {
+    val lowercaseName = name.lowercase()
+    return when {
+        lowercaseName == lowercaseNeedle -> 0
+        lowercaseName.startsWith(lowercaseNeedle) -> 1
+        else -> 2
+    }
 }

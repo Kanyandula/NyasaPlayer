@@ -20,4 +20,7 @@ class FakeAlbumRepository : AlbumRepository {
 
     override suspend fun getAlbumsByPopularity(limit: Int): List<Album> =
         albums.value.sortedByDescending { it.popularity }.take(limit)
+
+    override suspend fun searchAlbums(query: String, limit: Int): List<Album> =
+        albums.value.searchByName(query, limit, secondary = { it.artistName })
 }

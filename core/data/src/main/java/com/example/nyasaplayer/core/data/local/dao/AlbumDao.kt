@@ -22,6 +22,33 @@ interface AlbumDao {
     @Query("SELECT * FROM albums ORDER BY popularity DESC LIMIT :limit")
     suspend fun getByPopularity(limit: Int): List<AlbumEntity>
 
+    /**
+     * Albums matching [query] on name, or secondarily on artist name, best match first.
+     *
+     * [query] must already be LIKE-escaped — see `escapeLikeArgument`. The ordering is in SQL
+     * rather than in the repository because LIMIT has to keep the *best* rows, not the first
+     * ones the table happens to yield.
+     */
+    @Query(
+        """
+        SELECT * FROM albums
+        WHERE name LIKE '%' || :query || '%' ESCAPE '\'
+           OR artist_name LIKE '%' || :query || '%' ESCAPE '\'
+        ORDER BY
+            CASE
+                WHEN name LIKE :query ESCAPE '\' THEN 0
+                WHEN name LIKE :query || '%' ESCAPE '\' THEN 1
+                WHEN name LIKE '%' || :query || '%' ESCAPE '\' THEN 2
+                ELSE 3
+            END,
+            popularity DESC,
+            name COLLATE NOCASE,
+            id
+        LIMIT :limit
+        """,
+    )
+    suspend fun search(query: String, limit: Int): List<AlbumEntity>
+
     @Upsert
     suspend fun upsertAll(albums: List<AlbumEntity>)
 

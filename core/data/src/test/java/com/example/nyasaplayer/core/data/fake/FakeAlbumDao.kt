@@ -21,6 +21,15 @@ class FakeAlbumDao : AlbumDao {
     override suspend fun getByPopularity(limit: Int): List<AlbumEntity> =
         albums.value.sortedByDescending { it.popularity }.take(limit)
 
+    // Receives an already-escaped query, like the real DAO; tests here use plain words, so the
+    // escape sequences never reach this contains().
+    override suspend fun search(query: String, limit: Int): List<AlbumEntity> {
+        val needle = query.lowercase()
+        return albums.value.filter {
+            it.name.lowercase().contains(needle) || it.artistName.lowercase().contains(needle)
+        }.sortedByDescending { it.popularity }.take(limit)
+    }
+
     override suspend fun upsertAll(albums: List<AlbumEntity>) {
         val incoming = albums.associateBy { it.id }
         val current = this.albums.value.associateBy { it.id }

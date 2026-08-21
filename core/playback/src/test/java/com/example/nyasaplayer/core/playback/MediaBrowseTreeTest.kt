@@ -358,6 +358,10 @@ private class TestArtistRepository : ArtistRepository {
 
     override suspend fun getArtistsByPopularity(limit: Int): List<Artist> =
         artists.value.sortedByDescending { it.popularity }.take(limit)
+
+    // T4 adds artist search for the custom launcher; the browse tree stays song-only (spec 5).
+    override suspend fun searchArtists(query: String, limit: Int): List<Artist> =
+        error("MediaBrowseTree does not search artists")
 }
 
 private class TestGenreRepository : GenreRepository {
@@ -403,6 +407,7 @@ private class TestAuthRepository : AuthRepository {
     var user: FirebaseUser? = null
 
     override val currentUser: FirebaseUser? get() = user
+    override val currentUserId: String? get() = user?.uid
     override val isAuthenticated: Boolean get() = user != null
 
     override suspend fun signInWithEmail(email: String, password: String): AuthResult =
