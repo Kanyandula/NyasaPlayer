@@ -407,9 +407,10 @@ internal fun overlaysWith(current: List<CarOverlay>, opening: CarOverlay): List<
  * Enum names, and a restore that tolerates names this build no longer has.
  *
  * Not needed to store the list: Compose's `canBeSavedToBundle` accepts anything `Serializable`,
- * which every list produced here is. It is needed for the restore side. Saved instance state can outlive an app
- * update, so a removed or renamed `CarOverlay` would otherwise throw out of `valueOf` while the
- * Activity is being restored — a crash on launch, for a transient surface not worth one. Landing
+ * which every list produced here is. It is needed for the restore side. Saved instance state can
+ * outlive an app update, so a removed or renamed `CarOverlay` would otherwise throw out of
+ * `valueOf` while the Activity is being restored — a crash on launch, for a transient surface not
+ * worth one. Landing
  * on the tab root is the right answer for state we cannot honour. The plain `rememberSaveable`
  * enums here (`currentScreen`, `sheet`) carry the same risk through the autoSaver and are not
  * hardened; this is simply the first place it is explicit enough to handle.
