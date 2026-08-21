@@ -15,8 +15,9 @@ import org.robolectric.annotation.Config
 /**
  * Screen 8 reads the favourites loading/error pair, not the catalogue's.
  *
- * Point [CarFavouritesRoute] at `contentState.errorMessage` or `contentState.isLoading` and both
- * tests here fail — the A4 review row #8 defect, which until T1 nothing executable could catch.
+ * Point [CarFavouritesRoute] at `contentState.errorMessage` and the first test fails; at
+ * `contentState.isLoading` and the second does. That is the A4 review row #8 defect, which until
+ * T1 nothing executable could catch.
  *
  * Plain [Application]: the module's real one is `@HiltAndroidApp`, and none of the DI it stands
  * up is reachable from a route rendered with its state passed in.
