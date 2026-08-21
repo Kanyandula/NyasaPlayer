@@ -53,9 +53,10 @@ those comments where it touches the surrounding code.
 
 | File | Responsibility |
 |---|---|
-| `automotive/src/test/.../ui/screens/CarFavouritesRouteTest.kt` | Binding regression tests |
-| `automotive/src/test/.../ui/screens/CarSearchScreenTest.kt` | `NO_KEYBOARD` visibility test |
-| `automotive/src/test/.../ui/components/CarConsumeTouchesTest.kt` | Pointer-consumption helper test |
+| `automotive/src/test/.../ui/CarFavouritesRouteTest.kt` | Binding regression tests (landed under `ui/`, beside the route it renders) |
+| `automotive/src/test/.../ui/screens/CarSearchScreenTest.kt` | `NO_KEYBOARD` visibility test, and the touch-blocker test that replaced the one below |
+| ~~`automotive/src/test/.../ui/components/CarConsumeTouchesTest.kt`~~ | Not created — see Task 3 |
+| `automotive/src/test/resources/robolectric.properties` | Canvas size and plain `Application` for every test in the module |
 
 If `CarConsumeTouchesTest` is unstable under Robolectric, replace it with a verification note in
 the ticket and do not keep a weak test.

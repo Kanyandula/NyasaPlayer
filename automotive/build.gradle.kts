@@ -73,8 +73,8 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
-            // Robolectric needs the merged resources/manifest to inflate the Compose host
-            // activity; without it createComposeRule() fails before the first frame.
+            // Robolectric reads the merged resources/manifest; createComposeRule() fails
+            // without it.
             isIncludeAndroidResources = true
         }
     }
@@ -124,13 +124,12 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-
     // Headless Compose rendering on the JVM — no emulator, no androidTest source set (T1).
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.ui.test.junit4)
-    testImplementation(libs.robolectric)
-    // Supplies the debug manifest entry for the ComponentActivity createComposeRule() hosts.
+    // debug, not test: ui-test-manifest is an AAR whose ComponentActivity entry must be merged.
     debugImplementation(libs.androidx.ui.test.manifest)
+    testImplementation(libs.robolectric)
 
     // Coil
     implementation(libs.coil.compose)

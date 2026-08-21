@@ -1,6 +1,5 @@
 package com.example.nyasaplayer.auto.ui.screens
 
-import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,20 +10,14 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import com.example.nyasaplayer.auto.ui.CarScreenQualifiers
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-
-private const val VoicePrompt =
-    "Typing is off while the vehicle is moving. Ask your assistant to play something instead."
 
 /** Screen 5 — the search sheet. */
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, qualifiers = CarScreenQualifiers)
 class CarSearchScreenTest {
 
     @get:Rule
@@ -43,7 +36,7 @@ class CarSearchScreenTest {
         // once the field showing it is gone.
         renderSheet(query = "worship", canType = false)
 
-        composeRule.onNodeWithText(VoicePrompt).assertIsDisplayed()
+        composeRule.onNodeWithText(VoicePromptText).assertIsDisplayed()
         composeRule.onNodeWithText("Search").assertDoesNotExist()
         composeRule.onNodeWithText("Songs").assertDoesNotExist()
         composeRule.onNodeWithText("Search songs, artists, albums").assertDoesNotExist()

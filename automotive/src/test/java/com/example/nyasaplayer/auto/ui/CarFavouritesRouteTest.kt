@@ -1,6 +1,5 @@
 package com.example.nyasaplayer.auto.ui
 
-import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -10,7 +9,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /**
  * Screen 8 reads the favourites loading/error pair, not the catalogue's.
@@ -18,12 +16,8 @@ import org.robolectric.annotation.Config
  * Point [CarFavouritesRoute] at `contentState.errorMessage` and the first test fails; at
  * `contentState.isLoading` and the second does. That is the A4 review row #8 defect, which until
  * T1 nothing executable could catch.
- *
- * Plain [Application]: the module's real one is `@HiltAndroidApp`, and none of the DI it stands
- * up is reachable from a route rendered with its state passed in.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, qualifiers = CarScreenQualifiers)
 class CarFavouritesRouteTest {
 
     @get:Rule

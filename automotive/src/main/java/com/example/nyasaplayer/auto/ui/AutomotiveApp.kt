@@ -698,7 +698,6 @@ internal fun CarFavouritesRoute(
     onLikeToggle: (Song, Boolean) -> Unit,
     onBrowseClick: () -> Unit,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
     isPlaying: Boolean = false,
 ) {
@@ -715,7 +714,6 @@ internal fun CarFavouritesRoute(
         // Frozen list: the row holds its place until the visit ends (D19).
         onLikeToggle = likeToggle(onLikeToggle, freeze = true),
         onBrowseClick = onBrowseClick,
-        modifier = modifier,
         currentlyPlayingMediaId = currentlyPlayingMediaId,
         isPlaying = isPlaying,
         // Not contentState.isLoading/errorMessage: those belong to the catalogue. Screen 8

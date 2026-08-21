@@ -2,7 +2,7 @@
 
 - **Slice:** tooling — not a feature slice
 - **Depends on:** nothing
-- **Status:** Implemented on `ek/aaos-t1-compose-test-tooling`
+- **Status:** Implemented
 - **Spec:** `docs/superpowers/specs/2026-08-21-aaos-compose-test-tooling-design.md`
 - **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t1-compose-test-tooling.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
@@ -142,8 +142,8 @@ None of these are known to be wrong. All four are currently defended by someone 
 
 ## Outcome
 
-Landed as `CarFavouritesRouteTest` (2) and `CarSearchScreenTest` (2), taking `:automotive` from
-124 to 128 JVM tests. Four mutations were run against them and all four failed by name:
+Landed as `CarFavouritesRouteTest` (2) and `CarSearchScreenTest` (2). Four mutations were run
+against them and all four failed by name:
 `favouritesError` → `errorMessage`, `favouritesLoading` → `isLoading`, the `NO_KEYBOARD` guard
 around the Songs chip, and dropping `carConsumeTouches()` from `CarSearchScreen`.
 
@@ -158,9 +158,13 @@ Two things worth knowing before adding more:
   empty states, neither of which reaches the hero or a `CarTrackRow`. Whoever first renders a
   populated list should expect to deal with Coil under Robolectric.
 
-`debugImplementation(libs.androidx.ui.test.manifest)` puts `androidx.activity.ComponentActivity`
-into the debug merged manifest. Verified absent from `playstoreRelease`, which is the manifest
-Play's AAOS media review reads.
+`debugImplementation(libs.androidx.ui.test.manifest)` puts an exported
+`androidx.activity.ComponentActivity` into the merged manifest of **both** debug variants — the
+builds that get installed on head units for verification — so any app on the device can launch it
+there. Accepted rather than suppressed: `debugImplementation(libs.androidx.ui.tooling)` already
+puts an exported `PreviewActivity` in the same manifests, so this is another instance of a risk
+the module has taken, not a new one. Confirmed absent from `playstoreRelease`, which is the
+manifest Play's AAOS media review reads.
 
 ## Notes
 
