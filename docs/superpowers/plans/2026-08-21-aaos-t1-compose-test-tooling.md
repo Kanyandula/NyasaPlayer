@@ -161,8 +161,8 @@ covered or honestly documented as still manual-only.
   :automotive:assemblePlaystoreDebug
 ```
 
-- [ ] Run code review before creating the PR.
-- [ ] Create one PR from `ek/aaos-t1-compose-test-tooling` to `main`.
+- [x] Run code review before creating the PR. (correctness, quality, code-simplifier)
+- [x] Create one PR from `ek/aaos-t1-compose-test-tooling` to `main`. (#37)
 - [ ] Do not start T4 implementation from a branch that lacks T1 unless T1 is explicitly blocked.
 
 ## Definition of done
