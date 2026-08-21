@@ -151,18 +151,19 @@ automotive UI state.
 **Purpose:** Give `AutomotiveSearchViewModel` one typed search dependency instead of four
 repositories and ranking code.
 
-- [ ] Create the typed result model and `AutomotiveSearchResults` container.
-- [ ] Create `AutomotiveCatalogSearch` or equivalent.
-- [ ] Inject `SongRepository`, `AlbumRepository`, `ArtistRepository`, `PlaylistRepository` and
+- [x] Create the typed result model and `AutomotiveSearchResults` container.
+- [x] Create `AutomotiveCatalogSearch` or equivalent.
+- [x] Inject `SongRepository`, `AlbumRepository`, `ArtistRepository`, `PlaylistRepository` and
       `AuthRepository`.
-- [ ] Trim and normalize committed queries once in the coordinator.
-- [ ] Run song, album, artist and playlist searches with per-type limits.
-- [ ] Treat missing signed-in user id as an empty playlist section, not as a whole-search failure.
-- [ ] Rank results according to the spec.
-- [ ] Pick `featured` from the ranked union and remove it from its own section.
-- [ ] Return empty typed sections for no results.
-- [ ] Add tests for multi-type matches, featured de-duplication, exact-vs-secondary ranking, no
+- [x] Trim and normalize committed queries once in the coordinator.
+- [x] Run song, album, artist and playlist searches with per-type limits.
+- [x] Treat missing signed-in user id as an empty playlist section, not as a whole-search failure.
+- [x] Rank results according to the spec.
+- [x] Pick `featured` from the ranked union and remove it from its own section.
+- [x] Return empty typed sections for no results.
+- [x] Add tests for multi-type matches, featured de-duplication, exact-vs-secondary ranking, no
       user id playlist behavior, repository failure behavior and stable ordering.
+      `AutomotiveCatalogSearchTest`, 8 tests; four mutations run against them, all killed by name.
 
 **Acceptance criteria:** a query can return all four result types with stable type preservation and
 deterministic ordering.
