@@ -32,7 +32,7 @@ Favourites suites A5 had to set aside are now the merged versions from PR #26 (p
 | 1 | Parked: search icon enabled; settings/profile visibly disabled | Pass — search renders in `CarTextSecondary` and opens the sheet; settings and profile stay `CarTextDisabled` and inert |
 | 2 | Parked: opening search focuses the field and the platform keyboard appears | **Partly** — the platform IME appears (`mInputShown=true`) with a Search action key, but search does **not** auto-focus on open. Deliberate, recorded as D40 |
 | 3 | Parked: submitting a query shows loading and then results | Pass — IME Search action submitted `worship`; results rendered with top result and rows |
-| 4 | Parked: tapping the top result and a later row starts playback from the visible result list | **Partly** — a later row passed: tapping row 2 gave `active item id=2` against `queueTitle=null, size=21`, i.e. the tapped song inside the visible list. The top-result card was not tapped successfully; it routes through the same `onSongClick(results, top)` call one line away |
+| 4 | Parked: tapping the top result and a later row starts playback from the visible result list | **Not verified parked** — corrected 2026-08-21, see "A correction to row 4" below. The row tap was observed while **driving**, and that single observation is the one reported under "The cap proof". The top-result card was not tapped successfully either; it routes through the same `onSongClick(results, top)` call one line away |
 | 5 | Parked: no-results and error states readable and recoverable | **Partly** — no-results passed: "No results / Nothing in your library matches …" with an "Edit search" CTA. A search **error** could not be forced on this image, same limitation A5 recorded for playback errors |
 | 6 | Parked: recent queries de-duplicate and cap at five | **Not on device** — population verified (a submitted query appears as a recent chip and survives into the driving sheet). De-dupe and the cap of five are covered by unit tests, one of them mutation-checked |
 | 7 | Driving at `DO: true UxR: 255`: search shows the voice prompt and no keyboard | Pass — field replaced by the non-clickable prompt, `mInputShown=false`, and the `Songs` shortcut is absent |
@@ -96,8 +96,33 @@ typed into was gone. The CTA is now gated on `canType` as well, for the same rea
 shortcut is (D39). Re-verified on device: no CTA beside the prompt, including with `worship` still
 held in state.
 
+## A correction to row 4
+
+Recorded 2026-08-21, while fact-checking the T5/T6 verification record.
+
+Row 4 was written as a parked check but reports `queueTitle=null, size=21` with
+`active item id=2` — the identical observation reported under "The cap proof", which was taken
+**while driving**. `visibleSearchResults()`/`cap()` was already conditional on
+`isDistractionOptimized` at A6, so a genuinely parked run would have queued all 41 matches, not
+21. The row reuses the driving observation and its parked framing is wrong.
+
+What this changes:
+
+- The **driving** evidence is unaffected. Repository 41 → visible/queued 21 at the tapped index
+  still holds, and it remains the strongest device proof of the cap.
+- The **parked** direction of that row was never observed. Playing from a result while parked is
+  covered by unit tests only.
+- More broadly, **no device run in A6 or T5/T6 has shown a parked list going uncapped.** That is
+  the direction D36 changed, so it is worth stating plainly rather than leaving implied.
+
+The lesson is narrower than "check the numbers": two rows of the same record carried one
+observation, and the duplicate reading is what exposed it. When a table row and a prose proof
+report the same figures, one of them is probably not a separate run.
+
 ## Not verified
 
+- **Parked playback from a search result.** See "A correction to row 4" — the recorded
+  observation was made while driving.
 - **Search error state.** No way to force `searchSongs()` to fail on this image. A5 recorded the
   same limitation for retryable playback errors: `network speed gsm`, `network delay gprs` and
   `iptables -j REJECT` all failed to break the data path. The path is covered by unit tests
