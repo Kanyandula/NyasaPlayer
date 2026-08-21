@@ -2,7 +2,8 @@
 
 - **Slice:** cleanup follow-up after A6
 - **Depends on:** `UxRestrictionState.cap()` (A6)
-- **Status:** Ready to spec
+- **Status:** Planned with T6; ready to implement as a stacked PR sequence
+- **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t5-t6-navigation-content-cap.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
 - **Design Reference:** `docs/aaos-DESIGN.md` D36
 - **Risk Tags:** driver distraction compliance · content truncation · A3/A4 regression surface

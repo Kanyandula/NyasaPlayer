@@ -2,7 +2,8 @@
 
 - **Slice:** structural follow-up after A6, wanted before A7
 - **Depends on:** A6 search sheet
-- **Status:** Ready to spec
+- **Status:** Planned with T5; ready to implement as a stacked PR sequence
+- **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t5-t6-navigation-content-cap.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
 - **Design Reference:** `docs/aaos-DESIGN.md` D36-D40 · `automotive/.../navigation/CarUiLocation.kt`
 - **Risk Tags:** navigation correctness · driver distraction compliance · A7 copy-paste surface
