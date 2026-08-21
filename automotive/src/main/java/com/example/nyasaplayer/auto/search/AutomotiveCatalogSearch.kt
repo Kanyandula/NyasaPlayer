@@ -150,6 +150,13 @@ private fun rankOf(
     )
 }
 
-/** Ranked, minus the featured card, which is rendered above the sections rather than in one. */
+/**
+ * Minus the featured card, which renders above the sections rather than inside one.
+ *
+ * Deliberately not re-sorted: each repository already returns its own type in a deterministic
+ * match order, and re-ranking songs here would order them differently from
+ * `MediaBrowseTree.search()`, which serves Assistant the repository's order (spec 3.5). The
+ * cross-type comparator is only for choosing which card is featured.
+ */
 private fun <T : AutomotiveSearchResult> List<T>.ranked(featured: AutomotiveSearchResult?): List<T> =
-    sortedWith(ResultOrder).filterNot { it.stableId == featured?.stableId }
+    filterNot { it.stableId == featured?.stableId }

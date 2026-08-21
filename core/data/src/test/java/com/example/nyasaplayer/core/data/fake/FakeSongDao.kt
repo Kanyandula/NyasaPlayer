@@ -27,7 +27,7 @@ class FakeSongDao : SongDao {
         songs.value.sortedByDescending { it.popularity }.take(limit)
 
     override suspend fun search(query: String, limit: Int): List<SongEntity> {
-        val lowerQuery = query.lowercase()
+        val lowerQuery = query.trim().lowercase()
         return songs.value.filter { entity ->
             entity.title.lowercase().contains(lowerQuery) ||
                 entity.artistName.lowercase().contains(lowerQuery) ||

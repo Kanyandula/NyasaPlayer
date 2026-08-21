@@ -25,7 +25,7 @@ class FakeAlbumRepository : AlbumRepository {
     override suspend fun getAlbumsByPopularity(limit: Int): List<Album> = albums.value.take(limit)
 
     override suspend fun searchAlbums(query: String, limit: Int): List<Album> {
-        val needle = query.lowercase()
+        val needle = query.trim().lowercase()
         return albums.value.filter {
             it.name.lowercase().contains(needle) || it.artistName.lowercase().contains(needle)
         }.take(limit)

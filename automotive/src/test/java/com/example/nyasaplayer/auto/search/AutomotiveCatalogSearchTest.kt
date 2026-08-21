@@ -66,8 +66,12 @@ class AutomotiveCatalogSearchTest {
         assertEquals(listOf("other"), results.songs.map { it.song.mediaId })
     }
 
+    /**
+     * Featured is picked with the cross-type comparator; the section below it stays in the order
+     * the repository returned, which is what Assistant is served (spec 3.5).
+     */
     @Test
-    fun `equal matches fall back to popularity then title then id`() = runTest {
+    fun `the featured pick ranks across types while the section keeps repository order`() = runTest {
         songs.songs.value = listOf(
             song(id = "b", title = "Grace Rising", popularity = 5),
             song(id = "a", title = "Grace Rising", popularity = 5),
@@ -77,7 +81,7 @@ class AutomotiveCatalogSearchTest {
         val results = search.search("grace")
 
         assertEquals("song:loud", results.featured?.stableId)
-        assertEquals(listOf("a", "b"), results.songs.map { it.song.mediaId })
+        assertEquals(listOf("b", "a"), results.songs.map { it.song.mediaId })
     }
 
     @Test

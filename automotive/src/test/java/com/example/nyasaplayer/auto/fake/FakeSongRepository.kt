@@ -52,15 +52,18 @@ class FakeSongRepository : SongRepository {
 
     override suspend fun searchSongs(query: String, limit: Int): List<Song> {
         searchQueries += query
+        // Trimmed like the real repository: parity between the launcher and Assistant depends on
+        // neither path bringing its own normalization (spec 3.5).
+        val needle = query.trim()
         // NonCancellable for the same reason as [getSongsByIds]: a plain await() would let
         // cancellation alone discard a stale search, leaving the ViewModel's token guard untested.
         withContext(NonCancellable) { searchGates[query]?.await() }
         searchFailure?.let { throw it }
         return songs.value
             .filter {
-                it.title.contains(query, ignoreCase = true) ||
-                    it.resolvedArtistName.contains(query, ignoreCase = true) ||
-                    it.albumName.contains(query, ignoreCase = true)
+                it.title.contains(needle, ignoreCase = true) ||
+                    it.resolvedArtistName.contains(needle, ignoreCase = true) ||
+                    it.albumName.contains(needle, ignoreCase = true)
             }
             .take(limit)
     }

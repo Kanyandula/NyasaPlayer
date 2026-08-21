@@ -23,6 +23,6 @@ class FakeArtistRepository : ArtistRepository {
     // Name only, like the DAO query. Ordering is the coordinator's job, so this does not rank.
     override suspend fun searchArtists(query: String, limit: Int): List<Artist> {
         searchFailure?.let { throw it }
-        return artists.value.filter { it.name.contains(query, ignoreCase = true) }.take(limit)
+        return artists.value.filter { it.name.contains(query.trim(), ignoreCase = true) }.take(limit)
     }
 }

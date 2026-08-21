@@ -27,7 +27,7 @@ private fun <T> List<T>.searchRanked(
     popularity: (T) -> Int,
     id: (T) -> String,
 ): List<T> {
-    val needle = query.lowercase()
+    val needle = query.trim().lowercase()
     if (needle.isEmpty()) return emptyList()
     return filter {
         name(it).lowercase().contains(needle) || secondary(it).lowercase().contains(needle)

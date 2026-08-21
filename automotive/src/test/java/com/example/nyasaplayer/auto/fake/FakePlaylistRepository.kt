@@ -30,7 +30,7 @@ class FakePlaylistRepository : PlaylistRepository {
 
     /** Searches the last emission, which is what a one-shot repository read would have seen. */
     override suspend fun searchPlaylists(userId: String, query: String, limit: Int): List<Playlist> {
-        val needle = query.lowercase()
+        val needle = query.trim().lowercase()
         return emissions.replayCache.lastOrNull()
             .orEmpty()
             .filter { it.name.lowercase().contains(needle) }
