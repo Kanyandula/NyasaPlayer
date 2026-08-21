@@ -1,5 +1,6 @@
 package com.example.nyasaplayer.auto.search
 
+import com.example.nyasaplayer.auto.viewmodel.UxRestrictionState
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Playlist
@@ -108,4 +109,26 @@ data class AutomotiveSearchResults(
             albums.isEmpty() &&
             artists.isEmpty() &&
             playlists.isEmpty()
+}
+
+/**
+ * The same results, trimmed to what the driver is allowed to see right now.
+ *
+ * The cap is cumulative across the whole screen, not per section: flatten in rendered order —
+ * featured, songs, albums, artists, playlists — cap that, then re-section what survived. Capping
+ * each section on its own would let four sections of `maxCumulativeContentItems` render four
+ * times the platform's allowance (spec 3.6).
+ */
+fun AutomotiveSearchResults.capped(restrictions: UxRestrictionState): AutomotiveSearchResults {
+    if (!restrictions.isDistractionOptimized) return this
+    val visible = restrictions.cap(
+        listOfNotNull(featured) + songs + albums + artists + playlists,
+    ).toSet()
+    return copy(
+        featured = featured?.takeIf { it in visible },
+        songs = songs.filter { it in visible },
+        albums = albums.filter { it in visible },
+        artists = artists.filter { it in visible },
+        playlists = playlists.filter { it in visible },
+    )
 }

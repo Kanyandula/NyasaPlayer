@@ -2,6 +2,7 @@ package com.example.nyasaplayer.auto.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,13 +29,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.search.AutomotiveSearchResult
+import com.example.nyasaplayer.auto.search.AutomotiveSearchResults
+import com.example.nyasaplayer.auto.ui.components.CarCardShape
+import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarPillButton
+import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.components.carConsumeTouches
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
@@ -41,7 +50,6 @@ import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
-import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.util.formatDuration
@@ -57,27 +65,30 @@ private val LabelSize = 18.sp
 private val BodySize = 20.sp
 private const val SkeletonRowCount = 4
 
+/** Test seam: the vertical result list, so a test can scroll to a section below the fold. */
+internal const val SearchResultsListTag = "searchResults"
+
 /**
  * Screen 6 — results for a submitted query.
  *
- * [results] is the list the driver can actually see, already capped for the current restrictions
- * by the caller. Every tap hands that same list back through [onSongClick], so the queue the
- * driver gets is the list they were looking at — playing a song that is off the bottom of a cap
- * is how a "play this" turns into a different track.
+ * [results] is what the driver can actually see: the caller has already applied the cumulative
+ * driving cap, so nothing here can render a card the platform disallowed. Taps carry the typed
+ * result back out, because each type goes somewhere different (spec 3.6).
  *
- * Album and artist result cards are deferred to T4 (spec D33); results are songs only.
+ * Sections keep a fixed order — songs, albums, artists, playlists — so the screen does not
+ * reorder itself as different types come back for different queries. Empty ones are omitted.
  */
 @Suppress("LongParameterList")
 @Composable
 fun CarSearchResultsScreen(
     query: String,
-    results: List<Song>,
+    results: AutomotiveSearchResults,
     isLoading: Boolean,
     errorMessage: String?,
     onBackToSearch: () -> Unit,
     onClear: () -> Unit,
     onRetry: () -> Unit,
-    onSongClick: (List<Song>, Song) -> Unit,
+    onResultClick: (AutomotiveSearchResult) -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
     isPlaying: Boolean = false,
@@ -103,7 +114,7 @@ fun CarSearchResultsScreen(
                 onAction = onRetry,
             )
 
-            results.isEmpty() -> CarEmptyState(
+            results.isEmpty -> CarEmptyState(
                 title = "No results",
                 body = "Nothing in your library matches \"$query\".",
                 actionLabel = "Edit search",
@@ -112,7 +123,7 @@ fun CarSearchResultsScreen(
 
             else -> ResultsList(
                 results = results,
-                onSongClick = onSongClick,
+                onResultClick = onResultClick,
                 currentlyPlayingMediaId = currentlyPlayingMediaId,
                 isPlaying = isPlaying,
             )
@@ -157,47 +168,106 @@ private fun ResultsHeader(
 
 @Composable
 private fun ResultsList(
-    results: List<Song>,
-    onSongClick: (List<Song>, Song) -> Unit,
+    results: AutomotiveSearchResults,
+    onResultClick: (AutomotiveSearchResult) -> Unit,
     currentlyPlayingMediaId: String?,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(SearchResultsListTag),
         contentPadding = PaddingValues(bottom = SectionSpacing),
         verticalArrangement = Arrangement.spacedBy(RowSpacing),
     ) {
-        val top = results.first()
-        item(key = top.mediaId) {
-            TopResult(
-                song = top,
-                isPlaying = isPlaying && top.mediaId == currentlyPlayingMediaId,
-                onClick = { onSongClick(results, top) },
-            )
+        val featured = results.featured
+        if (featured != null) {
+            item(key = featured.stableId) {
+                TopResult(
+                    result = featured,
+                    isPlaying = isPlaying && featured.isCurrent(currentlyPlayingMediaId),
+                    onClick = { onResultClick(featured) },
+                )
+            }
         }
-        // Indexed rather than results.drop(1): the drop copies the whole list every time the
-        // lazy content runs, and this list is up to the repository's search limit.
-        items(count = results.size - 1, key = { results[it + 1].mediaId }) { index ->
-            val song = results[index + 1]
-            CarTrackRow(
-                title = song.title,
-                artist = song.resolvedArtistName,
-                duration = formatDuration(song.durationMs),
-                isPlaying = isPlaying && song.mediaId == currentlyPlayingMediaId,
-                // The whole visible list, not just this row — the driver is choosing a
-                // starting point in what they can see.
-                onClick = { onSongClick(results, song) },
-                coverUrl = song.resolvedCoverUrl,
-            )
+
+        if (results.songs.isNotEmpty()) {
+            item(key = "songs-header") { CarSectionHeader(title = "Songs") }
+            items(results.songs, key = { it.stableId }) { result ->
+                val song = result.song
+                CarTrackRow(
+                    title = song.title,
+                    artist = song.resolvedArtistName,
+                    duration = formatDuration(song.durationMs),
+                    isPlaying = isPlaying && song.mediaId == currentlyPlayingMediaId,
+                    onClick = { onResultClick(result) },
+                    coverUrl = song.resolvedCoverUrl,
+                )
+            }
+        }
+
+        cardSection(
+            title = "Albums",
+            results = results.albums,
+            shape = CarCardShape.Square,
+            onResultClick = onResultClick,
+        )
+        cardSection(
+            title = "Artists",
+            results = results.artists,
+            shape = CarCardShape.Circle,
+            onResultClick = onResultClick,
+        )
+        cardSection(
+            title = "Playlists",
+            results = results.playlists,
+            shape = CarCardShape.Square,
+            onResultClick = onResultClick,
+        )
+    }
+}
+
+/**
+ * One carousel of cards, the same shape Library and Home already use for these three types.
+ *
+ * A row rather than a vertical list because the cards are the app's existing artwork tiles; the
+ * count is already bounded by the caller's cap, so the row is short by construction.
+ */
+private fun LazyListScope.cardSection(
+    title: String,
+    results: List<AutomotiveSearchResult>,
+    shape: CarCardShape,
+    onResultClick: (AutomotiveSearchResult) -> Unit,
+) {
+    if (results.isEmpty()) return
+    item(key = "$title-header") { CarSectionHeader(title = title) }
+    item(key = "$title-row") {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(RowSpacing),
+        ) {
+            results.forEach { result ->
+                CarContentCard(
+                    title = result.title,
+                    onClick = { onResultClick(result) },
+                    subtitle = result.subtitle,
+                    artworkUrl = result.artworkUrl,
+                    shape = shape,
+                )
+            }
         }
     }
 }
 
-/** The first visible result, given more weight because it is the answer most taps want. */
+/** Only a song can be the thing currently playing; the other card types are destinations. */
+private fun AutomotiveSearchResult.isCurrent(currentlyPlayingMediaId: String?): Boolean =
+    this is AutomotiveSearchResult.SongResult && song.mediaId == currentlyPlayingMediaId
+
+/** The best result across every type, given more weight because it is the answer most taps want. */
 @Composable
 private fun TopResult(
-    song: Song,
+    result: AutomotiveSearchResult,
     isPlaying: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -213,7 +283,7 @@ private fun TopResult(
         horizontalArrangement = Arrangement.spacedBy(TopResultSpacing),
     ) {
         AsyncImage(
-            model = song.resolvedCoverUrl,
+            model = result.artworkUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -223,7 +293,7 @@ private fun TopResult(
         Column(modifier = Modifier.weight(1f)) {
             Text(text = "Top result", color = NyasaGold, fontSize = LabelSize)
             Text(
-                text = song.title,
+                text = result.title,
                 color = if (isPlaying) NyasaGold else Color.White,
                 fontSize = TopResultTitleSize,
                 fontWeight = FontWeight.Bold,
@@ -231,14 +301,23 @@ private fun TopResult(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = song.resolvedArtistName,
+                text = result.subtitle,
                 color = CarTextSecondary,
                 fontSize = BodySize,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        CarPillButton(label = if (isPlaying) "Playing" else "Play", onClick = onClick)
+        // A song plays from here; everything else opens a screen, and a "Play" button that
+        // navigated instead would be lying about what the tap does.
+        CarPillButton(
+            label = when {
+                result !is AutomotiveSearchResult.SongResult -> "Open"
+                isPlaying -> "Playing"
+                else -> "Play"
+            },
+            onClick = onClick,
+        )
     }
 }
 

@@ -6,6 +6,9 @@ package com.example.nyasaplayer.auto.ui.preview
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.nyasaplayer.auto.search.AutomotiveSearchResult
+import com.example.nyasaplayer.auto.search.AutomotiveSearchResults
+import com.example.nyasaplayer.auto.search.SearchRank
 import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
 import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
@@ -17,6 +20,7 @@ import com.example.nyasaplayer.auto.ui.screens.CarSearchResultsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
+import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
@@ -39,6 +43,35 @@ private val PreviewSongs = listOf(
     Song(mediaId = "2", title = "Midnight Drive", artistName = "The Weeknd", durationMs = 245_000L),
     Song(mediaId = "3", title = "Thunder Road", artistName = "Bruce Springsteen", durationMs = 298_000L),
     Song(mediaId = "4", title = "Blue Notes", artistName = "Miles Davis", durationMs = 412_000L),
+)
+
+private fun previewRank(typePriority: Int, sortTitle: String) =
+    SearchRank(matchQuality = 0, typePriority = typePriority, popularity = 0, sortTitle = sortTitle)
+
+private val PreviewSearchResults = AutomotiveSearchResults(
+    query = "midnight",
+    featured = AutomotiveSearchResult.SongResult(PreviewSongs[1], previewRank(0, "midnight drive")),
+    songs = PreviewSongs.filterNot { it.mediaId == "2" }.map {
+        AutomotiveSearchResult.SongResult(it, previewRank(0, it.title.lowercase()))
+    },
+    albums = listOf(
+        AutomotiveSearchResult.AlbumResult(
+            Album(id = "al1", name = "Midnight Sessions", artistName = "The Weeknd"),
+            previewRank(1, "midnight sessions"),
+        ),
+    ),
+    artists = listOf(
+        AutomotiveSearchResult.ArtistResult(
+            Artist(id = "ar1", name = "Midnight Choir", songCount = 12),
+            previewRank(2, "midnight choir"),
+        ),
+    ),
+    playlists = listOf(
+        AutomotiveSearchResult.PlaylistResult(
+            Playlist(id = "p1", name = "Midnight Drive", songIds = listOf("1", "2")),
+            previewRank(3, "midnight drive"),
+        ),
+    ),
 )
 
 private const val PreviewPositionMs = 154_000L
@@ -326,7 +359,11 @@ private fun SearchScreenVoicePromptPreview() {
 }
 
 @Composable
-private fun SearchResults(results: List<Song>, isLoading: Boolean, errorMessage: String?) {
+private fun SearchResults(
+    results: AutomotiveSearchResults,
+    isLoading: Boolean,
+    errorMessage: String?,
+) {
     AppTheme {
         CarSearchResultsScreen(
             query = "midnight",
@@ -336,7 +373,7 @@ private fun SearchResults(results: List<Song>, isLoading: Boolean, errorMessage:
             onBackToSearch = {},
             onClear = {},
             onRetry = {},
-            onSongClick = { _, _ -> },
+            onResultClick = {},
             currentlyPlayingMediaId = "2",
             isPlaying = true,
         )
@@ -352,7 +389,7 @@ private fun SearchResults(results: List<Song>, isLoading: Boolean, errorMessage:
 )
 @Composable
 private fun SearchResultsPreview() {
-    SearchResults(results = PreviewSongs, isLoading = false, errorMessage = null)
+    SearchResults(results = PreviewSearchResults, isLoading = false, errorMessage = null)
 }
 
 @Preview(
@@ -364,7 +401,7 @@ private fun SearchResultsPreview() {
 )
 @Composable
 private fun SearchResultsEmptyPreview() {
-    SearchResults(results = emptyList(), isLoading = false, errorMessage = null)
+    SearchResults(results = AutomotiveSearchResults(), isLoading = false, errorMessage = null)
 }
 
 @Preview(
@@ -377,7 +414,7 @@ private fun SearchResultsEmptyPreview() {
 @Composable
 private fun SearchResultsErrorPreview() {
     SearchResults(
-        results = emptyList(),
+        results = AutomotiveSearchResults(),
         isLoading = false,
         errorMessage = "Couldn't search right now. Check your connection.",
     )

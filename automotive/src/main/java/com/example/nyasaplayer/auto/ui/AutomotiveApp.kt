@@ -20,6 +20,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
+import com.example.nyasaplayer.auto.search.AutomotiveSearchResult
+import com.example.nyasaplayer.auto.search.AutomotiveSearchResults
+import com.example.nyasaplayer.auto.search.capped
 import com.example.nyasaplayer.auto.ui.components.CarAmbientBackground
 import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
@@ -154,9 +157,20 @@ private fun AuthenticatedApp(
         currentScreen = screen
     }
 
-    // The results the driver can see, which is also the list a tap plays. Songs only until
-    // Task 5 renders the album, artist and playlist sections.
-    val visibleResults = rememberVisible(searchState.results.songQueue, playerState.restrictions)
+    // A non-song result closes search and lands on its detail screen. Library is where drill-down
+    // destinations render, so the tab moves with it rather than leaving the detail unreachable.
+    val openFromSearch = { destination: CarDestination ->
+        clearTransientSurfaces()
+        currentScreen = CarScreen.Library
+        drillDown = destination
+    }
+
+    // What the driver can see, capped cumulatively across every section (spec 3.6). Remembered
+    // for the same reason as rememberVisible: the 500ms position poller hands this composable a
+    // new AutomotiveUiState twice a second, and re-capping on each would churn the whole sheet.
+    val visibleResults = remember(searchState.results, playerState.restrictions) {
+        searchState.results.capped(playerState.restrictions)
+    }
 
     val location = carUiLocation(
         tab = currentScreen,
@@ -323,9 +337,18 @@ private fun AuthenticatedApp(
                 // The editing flag clears itself when the field leaves composition
                 // (see CarSearchScreen), so dropping the sheet is all this has to do.
                 onClose = { sheet = null },
-                onPlay = { songs, song ->
-                    playerViewModel.playSong(songs, song)
-                    openFullPlayer()
+                onResultClick = { result ->
+                    routeSearchResult(
+                        result = result,
+                        // The visible queue, not the raw results: a tap must never start a list
+                        // containing rows the cap hid.
+                        songQueue = visibleResults.songQueue,
+                        onPlay = { songs, song ->
+                            playerViewModel.playSong(songs, song)
+                            openFullPlayer()
+                        },
+                        onOpenDetail = openFromSearch,
+                    )
                 },
             )
         }
@@ -404,6 +427,35 @@ private fun <T> rememberVisible(items: List<T>, restrictions: UxRestrictionState
     remember(items, restrictions) { restrictions.cap(items) }
 
 /**
+ * Where a search result card goes.
+ *
+ * Each type has a different answer — a song plays, the rest open a detail screen — which is the
+ * whole reason the result keeps its type down to the tap (spec 3.6). Internal so the routing is
+ * testable without standing up the Hilt-backed shell.
+ */
+internal fun routeSearchResult(
+    result: AutomotiveSearchResult,
+    songQueue: List<Song>,
+    onPlay: (List<Song>, Song) -> Unit,
+    onOpenDetail: (CarDestination) -> Unit,
+) {
+    when (result) {
+        is AutomotiveSearchResult.SongResult -> onPlay(songQueue, result.song)
+
+        is AutomotiveSearchResult.AlbumResult ->
+            onOpenDetail(CarDestination.Album(result.album.id))
+
+        // Not CarDestination.Artist: that one is the driver's liked songs by this artist, which
+        // is not what a catalogue search result means (spec 3.4).
+        is AutomotiveSearchResult.ArtistResult ->
+            onOpenDetail(CarDestination.CatalogArtist(result.artist.id))
+
+        is AutomotiveSearchResult.PlaylistResult ->
+            onOpenDetail(CarDestination.Playlist(result.playlist.id))
+    }
+}
+
+/**
  * The overlay stack after opening [opening].
  *
  * The full player replaces whatever was there; the queue pushes onto it, because the queue is
@@ -445,7 +497,7 @@ private val OverlayStackSaver = listSaver<List<CarOverlay>, String>(
 private fun SearchSheet(
     state: AutomotiveSearchUiState,
     canType: Boolean,
-    visibleResults: List<Song>,
+    visibleResults: AutomotiveSearchResults,
     currentlyPlayingMediaId: String?,
     isPlaying: Boolean,
     onQueryChange: (String) -> Unit,
@@ -458,7 +510,7 @@ private fun SearchSheet(
     onBrowseGenres: () -> Unit,
     onBrowseLibrary: () -> Unit,
     onClose: () -> Unit,
-    onPlay: (List<Song>, Song) -> Unit,
+    onResultClick: (AutomotiveSearchResult) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (state.submittedQuery.isNotEmpty()) {
@@ -470,7 +522,7 @@ private fun SearchSheet(
             onBackToSearch = onBackToSearch,
             onClear = onClearQuery,
             onRetry = onRetry,
-            onSongClick = onPlay,
+            onResultClick = onResultClick,
             modifier = modifier,
             currentlyPlayingMediaId = currentlyPlayingMediaId,
             isPlaying = isPlaying,
