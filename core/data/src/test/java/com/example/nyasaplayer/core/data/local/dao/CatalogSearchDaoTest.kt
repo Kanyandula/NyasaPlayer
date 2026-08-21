@@ -130,6 +130,19 @@ class CatalogSearchDaoTest {
         assertEquals(listOf("underscore"), underscore.map { it.id })
     }
 
+    /**
+     * Trimming lives in the normalizer, not in the callers: the car launcher and Assistant reach
+     * the same DAO, and a trim in only one of them makes " grace " two different searches.
+     */
+    @Test
+    fun `surrounding whitespace does not change what a query matches`() = runTest {
+        database.albumDao().upsertAll(listOf(album(id = "al1", name = "Grace")))
+
+        val padded = database.albumDao().search(escapeLikeArgument("  grace  "), limit = 10)
+
+        assertEquals(listOf("al1"), padded.map { it.id })
+    }
+
     private fun album(
         id: String,
         name: String,

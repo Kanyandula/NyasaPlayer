@@ -228,12 +228,16 @@ list is exactly the capped rendered list.
 
 **Purpose:** Keep Android Auto / Assistant search semantics documented and tested.
 
-- [ ] Keep `PlaybackService.onSearch` and `onGetSearchResult` song-only for T4.
-- [ ] Ensure `MediaBrowseTree.search()` still uses `SongRepository.searchSongs()`.
-- [ ] If song search ordering changes in Task 1, update `MediaBrowseTreeTest` for that ordering.
-- [ ] Add a short code comment or doc note explaining that non-song cards are custom-launcher
+- [x] Keep `PlaybackService.onSearch` and `onGetSearchResult` song-only for T4.
+- [x] Ensure `MediaBrowseTree.search()` still uses `SongRepository.searchSongs()`.
+- [x] If song search ordering changes in Task 1, update `MediaBrowseTreeTest` for that ordering.
+      Song ordering never changed, so `MediaBrowseTreeTest` needed no edit. Writing the parity
+      test did find two forks the checklist did not anticipate — trimming, and the coordinator
+      re-sorting its song section — both fixed below the two callers. `SearchParityTest` now
+      guards them.
+- [x] Add a short code comment or doc note explaining that non-song cards are custom-launcher
       enrichment.
-- [ ] Do not return non-playable album, artist or playlist cards from media-session search in T4.
+- [x] Do not return non-playable album, artist or playlist cards from media-session search in T4.
 
 **Acceptance criteria:** the media-session search path and custom launcher song section have the
 same song semantics, with documented launcher-only enrichment for non-song cards.
