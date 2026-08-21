@@ -1,7 +1,7 @@
 package com.example.nyasaplayer.auto.ui.components
 
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize

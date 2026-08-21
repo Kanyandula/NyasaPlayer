@@ -2,7 +2,7 @@
 
 - **Slice:** search follow-up after A6
 - **Depends on:** A6 song-search implementation; D33 result-scope decision
-- **Status:** Implemented; device verification outstanding
+- **Status:** Implemented and device-verified
 - **Spec:** `docs/superpowers/specs/2026-08-21-aaos-t4-multi-entity-search-design.md`
 - **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t4-multi-entity-search.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest :core:data:testDebugUnitTest`
@@ -86,10 +86,26 @@ the wildcard escaping (decoys shared no prefix with the query), the query trim (
 runs on fakes that trim themselves), and nothing covered `capped()` until `SearchResultCapTest`
 existed.
 
-## Not verified
+## Device verification
 
-- **On device.** No emulator run: section rendering, the horizontal card carousels while parked,
-  and tap routing into detail have only been verified as JVM Compose tests.
+Run on `AAOS_AOSP_33_userdebug` (API 33, driver user 10) on 2026-08-21, parked.
+
+Confirmed: sectioned results render with the featured card above them; empty sections are absent;
+a song result plays and opens the full player; an artist card opens the catalogue artist detail on
+the Library tab, with Play/Shuffle/Back and no like hearts; a playlist card opens playlist detail.
+Cross-type ranking showed itself unprompted — searching "beat" made the playlist *Beats* the top
+result over two songs that matched only secondarily, with an "Open" pill rather than "Play".
+
+**It also found a defect no JVM test had:** the result list would not scroll, so everything below
+the fold was unreachable. `carConsumeTouches()` consumed every pointer change on the main pass and
+swallowed drags along with taps; `CarQueueScreen` carries the same modifier and had the same
+problem. Fixed in the helper, with a test that fails on the old implementation.
+
+**Not exercised:** the cumulative driving cap. This account's catalogue returns about five results
+for any query, well under `maxCumulativeContentItems` (21 on this image), so the cap never binds
+and there is nothing to observe. It stays covered by `SearchResultCapTest` only.
+
+## Not verified
 - **`FirebasePlaylistRepository.searchPlaylists`.** Firestore is not JVM-testable here, so the
   one-shot read and its in-memory name filter are covered only through fakes.
 - **Launcher/Assistant parity below the repository.** `SearchParityTest` proves neither caller adds
