@@ -57,6 +57,7 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
 import com.example.nyasaplayer.auto.viewmodel.CarDetailState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
+import com.example.nyasaplayer.auto.viewmodel.UxRestrictionState
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Playlist
@@ -391,6 +392,30 @@ internal fun carUiLocation(
 )
 
 /**
+ * The slice of [items] the driver may see, memoized.
+ *
+ * The `remember` is not decoration: `AutomotiveUiState` is unstable — `PlaybackSnapshot.queue` is
+ * a `List` — so the 500ms position poller hands [BrowseShell] a new identity twice a second while
+ * music plays. Deriving these lists in the body would allocate a fresh one per tick, and the
+ * children compare `List` params by identity, so every tab would recompose in full at 2 Hz.
+ */
+@Composable
+private fun <T> rememberVisible(items: List<T>, restrictions: UxRestrictionState): List<T> =
+    remember(items, restrictions) { restrictions.cap(items) }
+
+/**
+ * One artist's liked songs, capped.
+ *
+ * Filtered *then* capped. The other way round takes the cap off the whole liked-songs list first,
+ * so an artist with two songs could show one — a cap on the wrong population.
+ */
+internal fun artistLikedSongs(
+    likedSongs: List<Song>,
+    artistId: String,
+    restrictions: UxRestrictionState,
+): List<Song> = restrictions.cap(likedSongs.filter { it.artistId == artistId })
+
+/**
  * The overlay stack after opening [opening].
  *
  * The full player replaces whatever was there; the queue pushes onto it, because the queue is
@@ -514,7 +539,7 @@ private fun BrowseShell(
 ) {
     val currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId
     val isPlaying = playerState.playback.isPlaying
-    val maxItems = playerState.restrictions.maxCumulativeContentItems
+    val restrictions = playerState.restrictions
 
     Column(modifier = modifier.fillMaxSize()) {
         // Settings and profile are still no-ops and render disabled until A7.
@@ -541,8 +566,8 @@ private fun BrowseShell(
             ) {
                 when (currentScreen) {
                     CarScreen.Home -> CarHomeScreen(
-                        recentlyPlayed = contentState.recentlyPlayed.take(maxItems),
-                        popularSongs = contentState.popularSongs.take(maxItems),
+                        recentlyPlayed = rememberVisible(contentState.recentlyPlayed, restrictions),
+                        popularSongs = rememberVisible(contentState.popularSongs, restrictions),
                         isLoading = contentState.isLoading,
                         errorMessage = contentState.errorMessage,
                         onSongClick = onSongClick,
@@ -553,7 +578,7 @@ private fun BrowseShell(
                     )
 
                     CarScreen.Browse -> CarBrowseScreen(
-                        genres = contentState.genres.take(maxItems),
+                        genres = rememberVisible(contentState.genres, restrictions),
                         onGenreClick = onGenreClick,
                         onLibraryClick = { onSelectTab(CarScreen.Library) },
                         isLoading = contentState.isLoading,
@@ -566,11 +591,13 @@ private fun BrowseShell(
                             val artistLikedSongs = remember(
                                 contentState.likedSongs,
                                 destination.artistId,
-                                maxItems,
+                                restrictions,
                             ) {
-                                contentState.likedSongs
-                                    .filter { it.artistId == destination.artistId }
-                                    .take(maxItems)
+                                artistLikedSongs(
+                                    contentState.likedSongs,
+                                    destination.artistId,
+                                    restrictions,
+                                )
                             }
                             val artistCoverUrl = remember(
                                 contentState.favoriteArtists,
@@ -600,7 +627,7 @@ private fun BrowseShell(
                         is CarDestination.Album, is CarDestination.Playlist -> DetailRoute(
                             destination = destination,
                             detail = contentState.detail,
-                            maxItems = maxItems,
+                            restrictions = restrictions,
                             onBackClick = onBackFromDetail,
                             onPlayTracks = onPlayTracks,
                             onShuffleTracks = onShuffleTracks,
@@ -611,10 +638,13 @@ private fun BrowseShell(
                         )
 
                         null -> CarLibraryScreen(
-                            recentlyPlayed = contentState.recentlyPlayed.take(maxItems),
-                            playlists = contentState.playlists.take(maxItems),
-                            albums = contentState.albums.take(maxItems),
-                            favoriteArtists = contentState.favoriteArtists.take(maxItems),
+                            recentlyPlayed = rememberVisible(contentState.recentlyPlayed, restrictions),
+                            playlists = rememberVisible(contentState.playlists, restrictions),
+                            albums = rememberVisible(contentState.albums, restrictions),
+                            favoriteArtists = rememberVisible(
+                                contentState.favoriteArtists,
+                                restrictions,
+                            ),
                             likedSongCount = contentState.likedSongs.size,
                             onSongClick = onSongClick,
                             onPlaylistClick = onPlaylistClick,
@@ -633,8 +663,10 @@ private fun BrowseShell(
                     }
 
                     CarScreen.Favourites -> {
-                        val favouriteSongs = (contentState.favourites ?: contentState.likedSongs)
-                            .take(maxItems)
+                        val favouriteSongs = rememberVisible(
+                            contentState.favourites ?: contentState.likedSongs,
+                            restrictions,
+                        )
                         CarFavouriteMusicScreen(
                             songs = favouriteSongs,
                             pendingUnlikes = contentState.pendingUnlikes,
@@ -696,7 +728,7 @@ private fun likeToggle(onLikeToggle: (Song, Boolean) -> Unit, freeze: Boolean): 
 private fun DetailRoute(
     destination: CarDestination,
     detail: CarDetailState?,
-    maxItems: Int,
+    restrictions: UxRestrictionState,
     onBackClick: () -> Unit,
     onPlayTracks: (List<Song>) -> Unit,
     onShuffleTracks: (List<Song>) -> Unit,
@@ -706,9 +738,9 @@ private fun DetailRoute(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val capped = remember(detail, destination, maxItems) {
+    val capped = remember(detail, destination, restrictions) {
         detail?.takeIf { it.destination == destination }
-            ?.let { loaded -> loaded.copy(tracks = loaded.tracks.take(maxItems)) }
+            ?.let { loaded -> loaded.copy(tracks = restrictions.cap(loaded.tracks)) }
             ?: CarDetailState(destination = destination, isLoading = true)
     }
 
