@@ -79,8 +79,8 @@ rather than by reasoning about it:
 - `:core:playback`'s test suite had stopped compiling on `main` — `MediaBrowseTreeTest`'s
   `TestAuthRepository` never implemented `AuthRepository.currentUserId`.
 
-**Coverage:** `:automotive` 158 tests, `:core:data` 61, `:core:playback` 24, all green with
-`detekt`, lint and both flavour assembles. Every non-trivial behaviour was mutation-checked;
+**Coverage:** the `:automotive`, `:core:data`, `:core:playback` and `:app` suites, `detekt`, lint
+and both flavour assembles all pass. Every non-trivial behaviour was mutation-checked;
 three mutations survived their first test and were only killed after the test was strengthened —
 the wildcard escaping (decoys shared no prefix with the query), the query trim (the parity test
 runs on fakes that trim themselves), and nothing covered `capped()` until `SearchResultCapTest`
@@ -92,6 +92,10 @@ existed.
   and tap routing into detail have only been verified as JVM Compose tests.
 - **`FirebasePlaylistRepository.searchPlaylists`.** Firestore is not JVM-testable here, so the
   one-shot read and its in-memory name filter are covered only through fakes.
+- **Launcher/Assistant parity below the repository.** `SearchParityTest` proves neither caller adds
+  divergence on top of one shared repository call, which is the shape of both forks T4 found. Both
+  sides run through the same fake, so it does not exercise the DAO; the repository's own
+  normalization is covered by `CatalogSearchDaoTest`.
 - **The shell wiring for a non-song tap.** `routeSearchResult` is unit-tested, but the step it
   hands off to — close the sheet, move to the Library tab, set `drillDown` — is composable-local
   state in `AutomotiveApp` and has no test.

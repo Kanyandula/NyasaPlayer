@@ -20,7 +20,8 @@ class FakeArtistRepository : ArtistRepository {
     override suspend fun getArtistsByPopularity(limit: Int): List<Artist> =
         artists.value.sortedByDescending { it.popularity }.take(limit)
 
-    // Name only, like the DAO query. Ordering is the coordinator's job, so this does not rank.
+    // Filters but does not rank: match-quality ordering is the DAO's, and CatalogSearchDaoTest
+    // owns it against real SQLite. Nothing in :automotive asserts this section's order.
     override suspend fun searchArtists(query: String, limit: Int): List<Artist> {
         searchFailure?.let { throw it }
         return artists.value.filter { it.name.contains(query.trim(), ignoreCase = true) }.take(limit)

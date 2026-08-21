@@ -81,7 +81,7 @@ class FirebasePlaylistRepository @Inject constructor(
     }
 
     /**
-     * Firestore indexes prefixes, not substrings, so the name filter runs in memory over one
+     * Firestore indexes prefixes, not substrings, so the name filter runs in memory over a
      * one-shot read of the user's own playlists — a collection this app already loads whole for
      * the library screen. It stays here rather than in a UI collector so a search cannot depend
      * on whether some screen happened to have emitted yet.

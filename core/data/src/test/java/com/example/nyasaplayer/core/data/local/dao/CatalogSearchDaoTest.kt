@@ -4,6 +4,7 @@ import androidx.room.Room
 import com.example.nyasaplayer.core.data.local.NyasaDatabase
 import com.example.nyasaplayer.core.data.local.entity.AlbumEntity
 import com.example.nyasaplayer.core.data.local.entity.ArtistEntity
+import com.example.nyasaplayer.core.data.local.entity.SongEntity
 import com.example.nyasaplayer.core.data.offline.escapeLikeArgument
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -64,7 +65,7 @@ class CatalogSearchDaoTest {
             ),
         )
 
-        val results = database.albumDao().search("grace ", limit = 10)
+        val results = database.albumDao().search("grace", limit = 10)
 
         assertEquals(listOf("loud", "a", "b"), results.map { it.id })
     }
@@ -142,6 +143,68 @@ class CatalogSearchDaoTest {
 
         assertEquals(listOf("al1"), padded.map { it.id })
     }
+
+    /**
+     * The song query carries the same escaping as the other two, and it is the one Assistant
+     * reaches through `MediaBrowseTree`. Before T4 a driver searching `50%` matched everything.
+     */
+    @Test
+    fun `song search treats wildcards as literal characters too`() = runTest {
+        database.songDao().upsertAll(
+            listOf(
+                song(id = "percent", title = "50% Live"),
+                song(id = "percent-decoy", title = "500 Miles"),
+                song(id = "underscore", title = "Track_1"),
+                song(id = "underscore-decoy", title = "TrackA1"),
+            ),
+        )
+
+        val percent = database.songDao().search(escapeLikeArgument("50%"), limit = 10)
+        val underscore = database.songDao().search(escapeLikeArgument("track_1"), limit = 10)
+
+        assertEquals(listOf("percent"), percent.map { it.mediaId })
+        assertEquals(listOf("underscore"), underscore.map { it.mediaId })
+    }
+
+    /** Songs match on artist and album name too, and those clauses need the same escaping. */
+    @Test
+    fun `song search escapes its secondary fields as well`() = runTest {
+        database.songDao().upsertAll(
+            listOf(
+                song(id = "byArtist", title = "Untitled", artistName = "50% Choir"),
+                song(id = "byAlbum", title = "Nameless", albumName = "50% Sessions"),
+                song(id = "decoy", title = "Nothing", artistName = "500 Voices"),
+            ),
+        )
+
+        val results = database.songDao().search(escapeLikeArgument("50%"), limit = 10)
+
+        assertEquals(listOf("byAlbum", "byArtist"), results.map { it.mediaId }.sorted())
+    }
+
+    private fun song(
+        id: String,
+        title: String,
+        artistName: String = "Someone",
+        albumName: String = "Some Album",
+        popularity: Int = 0,
+    ) = SongEntity(
+        mediaId = id,
+        title = title,
+        subtitle = "",
+        imageUrl = "",
+        songUrl = "",
+        artistId = "artist-1",
+        artistName = artistName,
+        albumId = "album-1",
+        albumName = albumName,
+        durationMs = 0L,
+        genreIds = emptyList(),
+        coverUrl = "",
+        audioUrl = "",
+        popularity = popularity,
+        isExplicit = false,
+    )
 
     private fun album(
         id: String,

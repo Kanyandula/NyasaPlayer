@@ -39,6 +39,7 @@ class FakeSongRepository : SongRepository {
     // Filters like SongDao's artist_id query; catalogue artist detail depends on it.
     override fun getSongsByArtist(artistId: String): Flow<List<Song>> =
         songs.map { list -> list.filter { it.artistId == artistId } }
+
     override fun getSongsByGenre(genreId: String): Flow<List<Song>> = songs
     override suspend fun getSongsByPopularity(limit: Int): List<Song> = songs.value.take(limit)
     /** Every query [searchSongs] was called with, in order. */

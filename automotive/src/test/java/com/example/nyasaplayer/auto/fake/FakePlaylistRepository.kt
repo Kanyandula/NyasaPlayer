@@ -28,7 +28,10 @@ class FakePlaylistRepository : PlaylistRepository {
     override suspend fun deletePlaylist(userId: String, playlistId: String) =
         error("A3 wires read-only playlist access (D15)")
 
-    /** Searches the last emission, which is what a one-shot repository read would have seen. */
+    /**
+     * Searches the last emission, which is what a one-shot repository read would have seen.
+     * Filters but does not rank, for the same reason as the album and artist fakes.
+     */
     override suspend fun searchPlaylists(userId: String, query: String, limit: Int): List<Playlist> {
         val needle = query.trim().lowercase()
         return emissions.replayCache.lastOrNull()

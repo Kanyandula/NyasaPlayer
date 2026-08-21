@@ -23,6 +23,11 @@ import org.robolectric.RobolectricTestRunner
  * parity boundary T4 committed to (spec 3.5). Non-song cards are launcher-only enrichment and
  * are deliberately absent from the media-session results.
  *
+ * What this proves precisely: neither *caller* adds divergence on top of one shared repository
+ * call — which is exactly the shape of both forks T4 found. It does not exercise the DAO, since
+ * both paths run through the same fake; the repository's own normalization is covered by
+ * `CatalogSearchDaoTest`, and in production both callers reach the one `OfflineSongRepository`.
+ *
  * Robolectric because `MediaItem` metadata carries a `Bundle`.
  */
 @RunWith(RobolectricTestRunner::class)
