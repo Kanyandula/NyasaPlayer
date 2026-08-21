@@ -108,19 +108,26 @@ class CatalogSearchDaoTest {
         assertEquals(emptyList<String>(), database.artistDao().search("gospel", 10).map { it.id })
     }
 
-    /** A driver searching for a literal wildcard gets the album called "50% Live", not the table. */
+    /**
+     * A driver searching for "50%" gets the album with that name, not every album whose name
+     * starts "50". Each decoy is a row the unescaped wildcard would drag in.
+     */
     @Test
     fun `escaped wildcards match literally`() = runTest {
         database.albumDao().upsertAll(
             listOf(
-                album(id = "literal", name = "50% Live"),
-                album(id = "other", name = "Something Else"),
+                album(id = "percent", name = "50% Live"),
+                album(id = "percent-decoy", name = "500 Miles"),
+                album(id = "underscore", name = "Track_1"),
+                album(id = "underscore-decoy", name = "TrackA1"),
             ),
         )
 
-        val results = database.albumDao().search(escapeLikeArgument("50%"), limit = 10)
+        val percent = database.albumDao().search(escapeLikeArgument("50%"), limit = 10)
+        val underscore = database.albumDao().search(escapeLikeArgument("track_1"), limit = 10)
 
-        assertEquals(listOf("literal"), results.map { it.id })
+        assertEquals(listOf("percent"), percent.map { it.id })
+        assertEquals(listOf("underscore"), underscore.map { it.id })
     }
 
     private fun album(

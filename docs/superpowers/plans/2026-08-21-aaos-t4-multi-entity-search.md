@@ -106,11 +106,11 @@ If any of those are missing, stop and merge A6 first.
 
 **Purpose:** Start from the right code shape and avoid carrying a stale A6/T1 branch forward.
 
-- [ ] Confirm `main` contains A6 search and the T5/T6 navigation/cap fixes.
-- [ ] Prefer a branch that contains T1 Compose test tooling.
-- [ ] Start a fresh T4 branch from the intended baseline.
-- [ ] Run `git status --short` and identify unrelated dirty files before editing.
-- [ ] Read the T4 spec and ticket in full.
+- [x] Confirm `main` contains A6 search and the T5/T6 navigation/cap fixes.
+- [x] Prefer a branch that contains T1 Compose test tooling.
+- [x] Start a fresh T4 branch from the intended baseline.
+- [x] Run `git status --short` and identify unrelated dirty files before editing.
+- [x] Read the T4 spec and ticket in full.
 
 **Acceptance criteria:** the implementation branch starts from the current AAOS search baseline and
 does not include unrelated work.
@@ -119,19 +119,22 @@ does not include unrelated work.
 
 **Purpose:** Make albums, artists and playlists searchable from their own data sources.
 
-- [ ] Add `searchAlbums(query: String, limit: Int): List<Album>` to `AlbumRepository`.
-- [ ] Add `searchArtists(query: String, limit: Int): List<Artist>` to `ArtistRepository`.
-- [ ] Add `searchPlaylists(userId: String, query: String, limit: Int): List<Playlist>` to
+- [x] Add `searchAlbums(query: String, limit: Int): List<Album>` to `AlbumRepository`.
+- [x] Add `searchArtists(query: String, limit: Int): List<Artist>` to `ArtistRepository`.
+- [x] Add `searchPlaylists(userId: String, query: String, limit: Int): List<Playlist>` to
       `PlaylistRepository`.
-- [ ] Add Room DAO search methods for albums and artists.
-- [ ] Order DAO results by match quality, popularity, case-insensitive title/name and stable id.
-- [ ] Implement offline album and artist repository methods.
-- [ ] Implement playlist search in `FirebasePlaylistRepository` as a repository-owned one-shot
+- [x] Add Room DAO search methods for albums and artists.
+- [x] Order DAO results by match quality, popularity, case-insensitive title/name and stable id.
+- [x] Implement offline album and artist repository methods.
+- [x] Implement playlist search in `FirebasePlaylistRepository` as a repository-owned one-shot
       search, not by reading `AutomotiveContentState.playlists`.
-- [ ] Update all fakes that implement the changed interfaces.
-- [ ] Add or extend core data tests for album primary match, album artist match, artist name match,
-      ordering and limit behavior.
+- [x] Update all fakes that implement the changed interfaces.
+- [x] Add or extend core data tests for album primary match, album artist match, artist name match,
+      ordering and limit behavior. `CatalogSearchDaoTest` runs them against an in-memory Room
+      database, because a fake that re-implements the SQL would only agree with itself.
 - [ ] Add playlist fake coverage in automotive tests if Firebase cannot be tested cleanly on JVM.
+      Deferred to Task 2: the fake is updated, but nothing calls `searchPlaylists` until the
+      coordinator exists. `FirebasePlaylistRepository.searchPlaylists` itself stays JVM-untestable.
 
 **Technical notes**
 
