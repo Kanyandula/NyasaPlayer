@@ -2,7 +2,7 @@
 
 - **Slice:** defect — regression from T6
 - **Depends on:** nothing; the fix ships inside T4
-- **Status:** Fixed on `ek/aaos-t4-multi-entity-search` (PR #38); needs a post-merge device re-check
+- **Status:** Fixed and verified on `main` (merged in PR #38)
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest --tests "*CarConsumeTouchesTest*"`
 - **Design Reference:** `docs/aaos-DESIGN.md` D41 (and its T4 amendment) ·
   `docs/tickets/T6-automotive-navigation-state-encoding.md`
@@ -63,10 +63,14 @@ three review agents.
 `CarConsumeTouchesTest` now renders a list inside a blocking surface and swipes it. It fails on the
 old implementation.
 
-## Left to do
+## Post-merge check
 
-- **Post-merge device re-check** of both surfaces, since the fix reaches `main` inside T4's PR
-  rather than on its own branch.
+Done 2026-08-21 against a build of `main` at merge commit `aafaf5d`, on
+`AAOS_AOSP_33_userdebug`, driver user 10. The search results list scrolls — the featured card and
+Songs header move away and the Artists row renders whole. The 13-song queue scrolls, reaching
+"For My City" and "Guns Down", which the pre-fix build could not.
+
+## Left to do
 - **`docs/AAOS_A5_VERIFICATION.md`** records the queue as verified; that pass predates T6 and its
   row-tap check did not require scrolling, so it is not wrong — but a reader should know the queue
   was unscrollable for the whole T6-to-T4 window.
