@@ -172,15 +172,15 @@ deterministic ordering.
 
 **Purpose:** Preserve A6 state-machine behavior while replacing the song-only result list.
 
-- [ ] Inject the automotive search coordinator instead of `SongRepository`.
-- [ ] Replace `results: List<Song>` with typed `AutomotiveSearchResults` or equivalent.
-- [ ] Keep `query`, `submittedQuery`, `recentQueries`, `isLoading`, `errorMessage` and
+- [x] Inject the automotive search coordinator instead of `SongRepository`.
+- [x] Replace `results: List<Song>` with typed `AutomotiveSearchResults` or equivalent.
+- [x] Keep `query`, `submittedQuery`, `recentQueries`, `isLoading`, `errorMessage` and
       `isEditing` semantics unchanged.
-- [ ] Keep the stale-token guard.
-- [ ] Keep `clearQuery()` and `backToSearch()` cancellation semantics.
-- [ ] Keep failed search behavior all-or-error; do not show partial stale rows.
-- [ ] Update `AutomotiveSearchViewModelTest` rather than weakening it.
-- [ ] Add tests that prove typed results survive retry and stale-result rejection.
+- [x] Keep the stale-token guard.
+- [x] Keep `clearQuery()` and `backToSearch()` cancellation semantics.
+- [x] Keep failed search behavior all-or-error; do not show partial stale rows.
+- [x] Update `AutomotiveSearchViewModelTest` rather than weakening it.
+- [x] Add tests that prove typed results survive retry and stale-result rejection.
 
 **Acceptance criteria:** every A6 ViewModel behavior still passes with typed result state.
 
