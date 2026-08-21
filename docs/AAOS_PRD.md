@@ -29,10 +29,9 @@ The work is sequenced into **nine phases**. Phase A1 is foundation — tokens, t
 primitives, build variants, and the restriction layer. Phases A2–A8 deliver the AAOS screens.
 Project B is tracked separately; the AAOS release does not wait for the mobile brand migration.
 
-**Current state:** A1-A5 are merged on `main`; A5 is device-verified with two recorded carve-outs:
-retryable playback error could not be forced on the emulator, and process-death playback restore is
-tracked as a follow-up. A6 is implemented and device-verified on its branch, with search text
-entry resolved by D31; its carve-outs are recorded in `docs/AAOS_A6_VERIFICATION.md`.
+**Current state:** A1-A6 are merged on `main`. The phase table in §9 carries each slice's
+status and links its dated verification record; carve-outs live in those records rather than
+being restated here, which is what kept this paragraph stale through two slices.
 
 ---
 
@@ -423,7 +422,7 @@ option, not an actively shipped artifact.
 | **A3** | Browse, Library, Playlist, Album | A2 | Merged and device-verified — PRs #18-#20 |
 | **A4** | Favourites, ArtistLikedSongs, EmptyFavourites | A2 | Merged and device-verified — PRs #21-#23 |
 | **A5** | FullPlayer, Queue | A2 | Merged and device-verified — PR #24; retryable-error and restore follow-ups recorded |
-| **A6** | Search, SearchResults | A2 + A6 design | Implemented and device-verified on `ek/aaos-a6-t1-search-viewmodel` — `docs/AAOS_A6_VERIFICATION.md`; review-ready with recorded carve-outs |
+| **A6** | Search, SearchResults | A2 + A6 design | Merged and device-verified — PR #27; `docs/AAOS_A6_VERIFICATION.md`; T5-T8 follow-ups recorded |
 | **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Not started |
 | **A8** | NoConnection, Loading, Downloads, PlaybackError | A2 | Not started |
 | **Project B** | Mobile brand migration — **separate PRD, non-blocking** | A1 tokens | Not started |
