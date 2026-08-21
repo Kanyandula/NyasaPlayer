@@ -2,7 +2,9 @@
 
 - **Slice:** search follow-up after A6
 - **Depends on:** A6 song-search implementation; D33 result-scope decision
-- **Status:** Ready to spec
+- **Status:** Spec/plan ready — implementation not started
+- **Spec:** `docs/superpowers/specs/2026-08-21-aaos-t4-multi-entity-search-design.md`
+- **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t4-multi-entity-search.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest :core:data:testDebugUnitTest`
 - **Design Reference:** `docs/superpowers/specs/2026-08-20-aaos-search-design.md` D33;
   original `docs/AAOS_SCREEN_CONTRACT.md` screen 6 album/artist card wording
@@ -26,8 +28,8 @@ cache timing into false "no result" states.
 - Define a typed search result model for songs, albums, artists and playlists.
 - Add repository APIs or a single search service that can produce those result types
   consistently.
-- Decide the artist destination: general artist detail, artist songs, or no artist card until a
-  real screen exists.
+- Add a general catalogue artist detail destination; do not reuse the liked-songs artist screen
+  for arbitrary catalogue artist results.
 - Align custom launcher results with the media-session search path where possible.
 - Add tests that prove a query can return multiple result types without relying on incidental
   in-memory collectors.
@@ -47,8 +49,8 @@ cache timing into false "no result" states.
   type and render in the intended sections.
 - Given a result card is tapped, then it opens a destination that already exists and is valid under
   the current depth restrictions.
-- Given driving restrictions cap content, then each visible result section obeys the cap without
-  hiding the active destination behind a stale result.
+- Given driving restrictions cap content, then the total rendered result stream obeys the cap
+  without hiding the active destination behind a stale result.
 - Given system voice search uses the media-session path, then its result semantics do not diverge
   from the custom launcher without a documented reason.
 - Given unit tests run, then result typing, ordering, empty states and cache-miss behaviour are
@@ -58,3 +60,12 @@ cache timing into false "no result" states.
 
 This is the follow-up that closes the result-card part of the original screen 6 ambition. It is not
 an A6 acceptance blocker.
+
+Spec decisions settled on 2026-08-21:
+
+- Use repository search primitives plus an automotive-facing coordinator.
+- Preserve typed results through UI tap handling.
+- Render fixed sections: featured, songs, albums, artists, playlists.
+- Keep `PlaybackService` search song-only for T4, with launcher-only non-song enrichment
+  documented.
+- Apply the driving cap cumulatively across the rendered result stream.
