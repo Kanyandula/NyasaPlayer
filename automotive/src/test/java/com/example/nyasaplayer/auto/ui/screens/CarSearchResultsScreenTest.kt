@@ -1,6 +1,7 @@
 package com.example.nyasaplayer.auto.ui.screens
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -88,6 +89,33 @@ class CarSearchResultsScreenTest {
 
         composeRule.onNodeWithText("No results").assertIsDisplayed()
         composeRule.onNodeWithText("Edit search").assertIsDisplayed()
+    }
+
+    /**
+     * A list taller than the screen must actually scroll.
+     *
+     * It did not: the list filled the *whole* screen height rather than what was left under the
+     * header, so it overflowed the bottom, believed everything fit, and left every section below
+     * the fold unreachable on device. Scrolling to the last section has to move the featured card
+     * off screen.
+     */
+    @Test
+    fun `a list taller than the screen scrolls instead of overflowing it`() {
+        render(
+            everyType().copy(
+                songs = List(12) { index ->
+                    AutomotiveSearchResult.SongResult(
+                        Song(mediaId = "s$index", title = "Section Song $index"),
+                    )
+                },
+            ),
+        )
+
+        composeRule.onNodeWithText("Top result").assertIsDisplayed()
+        scrollTo("Playlists")
+
+        composeRule.onNodeWithText("Playlists").assertIsDisplayed()
+        composeRule.onNodeWithText("Top result").assertIsNotDisplayed()
     }
 
     private fun scrollTo(text: String) {
