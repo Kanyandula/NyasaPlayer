@@ -153,8 +153,9 @@ private fun AuthenticatedApp(
         currentScreen = screen
     }
 
-    // The results the driver can see, which is also the list a tap plays.
-    val visibleResults = rememberVisible(searchState.results, playerState.restrictions)
+    // The results the driver can see, which is also the list a tap plays. Songs only until
+    // Task 5 renders the album, artist and playlist sections.
+    val visibleResults = rememberVisible(searchState.results.songQueue, playerState.restrictions)
 
     val location = carUiLocation(
         tab = currentScreen,

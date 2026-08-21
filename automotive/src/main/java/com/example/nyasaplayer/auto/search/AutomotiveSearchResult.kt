@@ -93,6 +93,15 @@ data class AutomotiveSearchResults(
     val artists: List<AutomotiveSearchResult.ArtistResult> = emptyList(),
     val playlists: List<AutomotiveSearchResult.PlaylistResult> = emptyList(),
 ) {
+    /**
+     * Song results in rendered order, featured card first when it is a song.
+     *
+     * Held rather than computed on read so the identity is stable: `rememberVisible` keys on the
+     * list, and a fresh one per recomposition would re-cap twice a second while music plays.
+     */
+    val songQueue: List<Song> =
+        (listOfNotNull(featured as? AutomotiveSearchResult.SongResult) + songs).map { it.song }
+
     val isEmpty: Boolean
         get() = featured == null &&
             songs.isEmpty() &&

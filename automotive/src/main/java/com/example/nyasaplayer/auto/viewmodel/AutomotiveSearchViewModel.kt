@@ -3,8 +3,8 @@ package com.example.nyasaplayer.auto.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.nyasaplayer.core.common.models.Song
-import com.example.nyasaplayer.core.data.api.SongRepository
+import com.example.nyasaplayer.auto.search.AutomotiveCatalogSearch
+import com.example.nyasaplayer.auto.search.AutomotiveSearchResults
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +15,6 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-private const val SearchLimit = 50
 private const val MaxRecentQueries = 5
 private const val TAG = "AutoSearchVM"
 private const val SearchErrorMessage = "Couldn't search right now. Check your connection."
@@ -30,7 +29,7 @@ private const val SearchErrorMessage = "Couldn't search right now. Check your co
  */
 @HiltViewModel
 class AutomotiveSearchViewModel @Inject constructor(
-    private val songRepository: SongRepository,
+    private val catalogSearch: AutomotiveCatalogSearch,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AutomotiveSearchUiState())
@@ -103,7 +102,7 @@ class AutomotiveSearchViewModel @Inject constructor(
                 // Not kept as "previous content during refresh": the header names the new query,
                 // so the old query's songs sitting under it would be a wrong answer, not a stale
                 // one. It also keeps the failure state honest — an error never shows rows.
-                results = emptyList(),
+                results = AutomotiveSearchResults(),
                 // Committing the search closes the editor. Results are allowed while driving;
                 // an active field is not, so a stale flag here would have the gate evict the
                 // driver from a results list they are allowed to be looking at.
@@ -112,7 +111,7 @@ class AutomotiveSearchViewModel @Inject constructor(
         }
         searchJob = viewModelScope.launch {
             try {
-                val results = songRepository.searchSongs(query, SearchLimit)
+                val results = catalogSearch.search(query)
                 if (token != latestToken) return@launch
                 _uiState.update {
                     it.copy(
@@ -138,7 +137,7 @@ private fun List<String>.withRecent(query: String): List<String> =
 data class AutomotiveSearchUiState(
     val query: String = "",
     val submittedQuery: String = "",
-    val results: List<Song> = emptyList(),
+    val results: AutomotiveSearchResults = AutomotiveSearchResults(),
     val recentQueries: List<String> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,

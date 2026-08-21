@@ -1,7 +1,13 @@
 package com.example.nyasaplayer.auto.viewmodel
 
 import com.example.nyasaplayer.auto.MainDispatcherRule
+import com.example.nyasaplayer.auto.fake.FakeAlbumRepository
+import com.example.nyasaplayer.auto.fake.FakeArtistRepository
+import com.example.nyasaplayer.auto.fake.FakeAuthRepository
+import com.example.nyasaplayer.auto.fake.FakePlaylistRepository
 import com.example.nyasaplayer.auto.fake.FakeSongRepository
+import com.example.nyasaplayer.auto.search.AutomotiveCatalogSearch
+import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Song
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,8 +27,52 @@ class AutomotiveSearchViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val songs = FakeSongRepository()
+    private val albums = FakeAlbumRepository()
+    private val artists = FakeArtistRepository()
+    private val playlists = FakePlaylistRepository()
 
-    private fun viewModel() = AutomotiveSearchViewModel(songRepository = songs)
+    // The real coordinator over fake repositories: these tests are about the ViewModel's
+    // state machine, and stubbing the ranking would stop proving that typed results reach state.
+    private fun viewModel() = AutomotiveSearchViewModel(
+        catalogSearch = AutomotiveCatalogSearch(
+            songRepository = songs,
+            albumRepository = albums,
+            artistRepository = artists,
+            playlistRepository = playlists,
+            authRepository = FakeAuthRepository(),
+        ),
+    )
+
+    @Test
+    fun `results keep their type on the way into state`() = runTest {
+        songs.songs.value = listOf(song("Worship Medley"))
+        albums.albums.value = listOf(Album(id = "al1", name = "Worship Nights"))
+        val vm = viewModel()
+        vm.onQueryChange("worship")
+
+        vm.submitSearch()
+
+        assertEquals(listOf("Worship Medley"), vm.uiState.value.results.songQueue.map { it.title })
+        assertEquals(listOf("al1"), vm.uiState.value.results.albums.map { it.album.id })
+    }
+
+    @Test
+    fun `a stale search cannot deliver its non-song sections either`() = runTest {
+        songs.songs.value = listOf(song("Slow Song", album = "slow"), song("Fast Song", album = "fast"))
+        albums.albums.value = listOf(Album(id = "slow-album", name = "Slow Nights"))
+        val slow = CompletableDeferred<Unit>()
+        songs.searchGates["slow"] = slow
+        val vm = viewModel()
+
+        vm.onQueryChange("slow")
+        vm.submitSearch()
+        vm.onQueryChange("fast")
+        vm.submitSearch()
+        slow.complete(Unit)
+
+        assertEquals("fast", vm.uiState.value.submittedQuery)
+        assertEquals(emptyList<String>(), vm.uiState.value.results.albums.map { it.album.id })
+    }
 
     private fun song(title: String, artist: String = "Artist", album: String = "Album") =
         Song(mediaId = title, title = title, artistName = artist, albumName = album)
@@ -46,7 +96,7 @@ class AutomotiveSearchViewModelTest {
         vm.submitSearch()
 
         assertTrue(songs.searchQueries.isEmpty())
-        assertTrue(vm.uiState.value.results.isEmpty())
+        assertTrue(vm.uiState.value.results.isEmpty)
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.errorMessage)
     }
@@ -71,7 +121,7 @@ class AutomotiveSearchViewModelTest {
 
         vm.submitSearch()
 
-        assertEquals(listOf("Worship Medley"), vm.uiState.value.results.map { it.title })
+        assertEquals(listOf("Worship Medley"), vm.uiState.value.results.songQueue.map { it.title })
         assertEquals(listOf("worship"), vm.uiState.value.recentQueries)
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.errorMessage)
@@ -128,7 +178,7 @@ class AutomotiveSearchViewModelTest {
         vm.retrySearch()
 
         assertEquals(listOf("worship", "worship"), songs.searchQueries)
-        assertEquals(listOf("Worship Medley"), vm.uiState.value.results.map { it.title })
+        assertEquals(listOf("Worship Medley"), vm.uiState.value.results.songQueue.map { it.title })
         assertNull(vm.uiState.value.errorMessage)
     }
 
@@ -146,7 +196,7 @@ class AutomotiveSearchViewModelTest {
         slow.complete(Unit)
 
         assertEquals("fast", vm.uiState.value.submittedQuery)
-        assertEquals(listOf("Fast Song"), vm.uiState.value.results.map { it.title })
+        assertEquals(listOf("Fast Song"), vm.uiState.value.results.songQueue.map { it.title })
     }
 
     @Test
@@ -163,7 +213,7 @@ class AutomotiveSearchViewModelTest {
 
         assertEquals("", vm.uiState.value.query)
         assertEquals("", vm.uiState.value.submittedQuery)
-        assertTrue(vm.uiState.value.results.isEmpty())
+        assertTrue(vm.uiState.value.results.isEmpty)
         assertNull(vm.uiState.value.errorMessage)
         assertFalse(vm.uiState.value.isLoading)
     }
@@ -188,7 +238,7 @@ class AutomotiveSearchViewModelTest {
 
         assertEquals("worship", vm.uiState.value.query)
         assertEquals(listOf("worship"), songs.searchQueries)
-        assertEquals(listOf("Worship Medley"), vm.uiState.value.results.map { it.title })
+        assertEquals(listOf("Worship Medley"), vm.uiState.value.results.songQueue.map { it.title })
     }
 
     @Test
@@ -199,16 +249,16 @@ class AutomotiveSearchViewModelTest {
             val vm = viewModel()
             vm.onQueryChange("worship")
             vm.submitSearch()
-            assertEquals(listOf("Worship Medley"), vm.uiState.value.results.map { it.title })
+            assertEquals(listOf("Worship Medley"), vm.uiState.value.results.songQueue.map { it.title })
 
             songs.searchGates["banjo"] = gate
             vm.onQueryChange("banjo")
             vm.submitSearch()
 
-            assertTrue(vm.uiState.value.results.isEmpty())
+            assertTrue(vm.uiState.value.results.isEmpty)
             assertTrue(vm.uiState.value.isLoading)
             gate.complete(Unit)
-            assertEquals(listOf("Banjo Song"), vm.uiState.value.results.map { it.title })
+            assertEquals(listOf("Banjo Song"), vm.uiState.value.results.songQueue.map { it.title })
         }
 
     @Test
@@ -223,7 +273,7 @@ class AutomotiveSearchViewModelTest {
         vm.submitSearch()
 
         assertNotNull(vm.uiState.value.errorMessage)
-        assertTrue(vm.uiState.value.results.isEmpty())
+        assertTrue(vm.uiState.value.results.isEmpty)
     }
 
     @Test
@@ -237,7 +287,7 @@ class AutomotiveSearchViewModelTest {
 
         assertEquals("worship", vm.uiState.value.query)
         assertEquals("", vm.uiState.value.submittedQuery)
-        assertTrue(vm.uiState.value.results.isEmpty())
+        assertTrue(vm.uiState.value.results.isEmpty)
     }
 
     @Test
@@ -264,7 +314,7 @@ class AutomotiveSearchViewModelTest {
         gate.complete(Unit)
 
         assertEquals("", vm.uiState.value.submittedQuery)
-        assertTrue(vm.uiState.value.results.isEmpty())
+        assertTrue(vm.uiState.value.results.isEmpty)
         assertFalse(vm.uiState.value.isLoading)
     }
 
