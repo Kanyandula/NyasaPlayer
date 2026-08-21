@@ -232,7 +232,9 @@ private fun SearchField(
             textStyle = TextStyle(color = Color.White, fontSize = FieldTextSize),
             cursorBrush = SolidColor(NyasaGold),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSubmit() }),
+            // Remembered because KeyboardActions has no equals: a fresh one each recomposition
+            // would keep BasicTextField permanently non-skippable while the driver types.
+            keyboardActions = remember(onSubmit) { KeyboardActions(onSearch = { onSubmit() }) },
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = FieldPadding)

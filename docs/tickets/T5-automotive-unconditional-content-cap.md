@@ -23,6 +23,13 @@ ones on the wrong side of D36.
 ## Scope
 
 - Replace the ten unconditional `.take(maxItems)` calls with `restrictions.cap(...)`.
+- Memoize them while there. Seven run in `BrowseShell`'s body, and `AutomotiveUiState` is unstable
+  (`PlaybackSnapshot.queue` is a `List`), so the 500ms automotive position poller hands the shell a
+  new identity twice a second during playback. Each pass allocates seven fresh lists whose `===`
+  comparison then fails in the children, so Home, Library and Browse recompose in full at 2 Hz
+  while music plays — LazyRow item providers rebuilt, every `AsyncImage` row re-composed. Three
+  sibling call sites already wrap theirs in `remember`; these should match, or the cap should move
+  into `AutomotiveContentViewModel` so it happens once per data change.
 - Decide per screen whether an unbounded parked list needs a lazy-list check — Favourites and
   Library can be large, and these caps have been masking that since A3.
 - Add coverage that a parked screen is not truncated, for at least one list per screen.
@@ -43,6 +50,11 @@ ones on the wrong side of D36.
   AAOS emulator with a full library.
 
 ## Notes
+
+The deeper fix for the 2 Hz churn is to split the polled position out of `AutomotiveUiState`, so a
+position tick stops handing a new object to the whole shell. That is a `BasePlayerStateCollector`
+change and affects mobile too; scope it separately if the memoization above proves insufficient.
+
 
 Found by an altitude review of A6, which also established that D36's original wording wrongly
 claimed the unconditional form was the house rule.
