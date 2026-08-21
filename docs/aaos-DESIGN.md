@@ -460,7 +460,12 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   to the nav rail behind them and silently switched tabs. `carConsumeTouches()` consumes on the
   main pass, so a surface's own children still handle their touches first. Not a no-op
   `clickable`: that publishes a disabled-control semantics node on something that is not a
-  control, which is the FR-2.6 problem, and it only swallows taps rather than drags.
+  control, which is the FR-2.6 problem, and it only swallows taps rather than drags. **Amended by
+  T4:** consuming every change on the main pass also swallowed the surface's *own* drags — the
+  search sheet's result list and the queue's list could not be scrolled at all on device, which
+  hid every section below the fold. It is now `detectTapGestures`, which blocks the tap that
+  leaks and leaves drags to the content. Consuming only unconsumed changes was tried first and
+  did not restore scrolling.
 - **D42 — Overlays are a stack; the sheet is a single value.** The queue renders *above* the full
   player and closing it must reveal the player, so a single `CarOverlay?` cannot express them —
   collapsing them drops the driver onto the browse shell instead. Sheets have no such nesting.

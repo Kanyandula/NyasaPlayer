@@ -1,10 +1,11 @@
 package com.example.nyasaplayer.auto.ui.screens
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -15,6 +16,7 @@ import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -92,30 +94,25 @@ class CarSearchResultsScreenTest {
     }
 
     /**
-     * A list taller than the screen must actually scroll.
+     * The list has to fit under the header, not run off the bottom of the screen.
      *
-     * It did not: the list filled the *whole* screen height rather than what was left under the
-     * header, so it overflowed the bottom, believed everything fit, and left every section below
-     * the fold unreachable on device. Scrolling to the last section has to move the featured card
-     * off screen.
+     * It did not: a Column hands its child the *full* parent height rather than what is left
+     * under the header, so a list using `fillMaxSize()` overflowed the bottom edge. On the
+     * emulator that clipped the Artists cards in half with no way to reach them. Scrolling still
+     * "worked" in a test — the overflow is invisible to a semantics assertion — so this measures
+     * the bounds instead.
      */
     @Test
-    fun `a list taller than the screen scrolls instead of overflowing it`() {
-        render(
-            everyType().copy(
-                songs = List(12) { index ->
-                    AutomotiveSearchResult.SongResult(
-                        Song(mediaId = "s$index", title = "Section Song $index"),
-                    )
-                },
-            ),
+    fun `the results list fits under the header instead of overflowing the screen`() {
+        render(everyType())
+
+        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val list = composeRule.onNodeWithTag(SearchResultsListTag).getUnclippedBoundsInRoot()
+
+        assertTrue(
+            "list runs to ${list.bottom}, past the ${screen.bottom} screen",
+            list.bottom <= screen.bottom,
         )
-
-        composeRule.onNodeWithText("Top result").assertIsDisplayed()
-        scrollTo("Playlists")
-
-        composeRule.onNodeWithText("Playlists").assertIsDisplayed()
-        composeRule.onNodeWithText("Top result").assertIsNotDisplayed()
     }
 
     private fun scrollTo(text: String) {
