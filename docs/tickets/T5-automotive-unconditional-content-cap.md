@@ -2,7 +2,7 @@
 
 - **Slice:** cleanup follow-up after A6
 - **Depends on:** `UxRestrictionState.cap()` (A6)
-- **Status:** Implemented on `ek/aaos-t5-content-cap`; device smoke not non-vacuously verified — see the record
+- **Status:** Implemented and device-verified on `ek/aaos-t5-content-cap` — PR #32
 - **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t5-t6-navigation-content-cap.md`
 - **Verification Record:** `docs/AAOS_T5_T6_VERIFICATION.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`

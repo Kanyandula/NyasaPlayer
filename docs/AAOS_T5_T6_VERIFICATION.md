@@ -80,60 +80,56 @@ the condition the warning is about, and the changed PID is what A4 predicts. Wor
 next reader: the process was alive again seconds later, which surprised me until I compared PIDs.
 Why it restarted was not investigated; a re-bound media service is a guess, not an observation.
 
-## T5 — content cap: **not non-vacuously verified on device**
+## T5 — content cap, verified on device
 
-This is the one gap in this record, stated plainly rather than reported as a pass.
+Verified 2026-08-21 with a **temporary local clamp**, after the first attempt was abandoned as
+vacuous. Both directions of the D36 rule were observed on the same build, changing nothing but the
+vehicle state.
 
-**What was not done.** The plan asks for an emulator smoke test with "a library larger than the
-reported cap": parked lists should scroll past the cap, driving lists should stop at it.
+**Why a clamp was needed.** The lists that could be counted are all under the reported cap of 21 —
+13 liked songs, 7 genres, 0 albums, and Home's rows are capped to 12 and 8 by
+`AutomotiveContentViewModel` before the restriction cap applies at all. Playlists and
+playlist-detail tracks were not counted; they are Firestore-backed rather than in Room, so the
+sqlite check that covered the others does not reach them. Parked and driving therefore rendered
+identically and any check would have passed without demonstrating anything. `cmd car_service`
+drives restriction *state* well — `inject-vhal-event` and `inject-continuous-events` reach
+`DO: true UxR: 255` — but nothing in its help output lowers `maxCumulativeContentItems`.
 
-**Why.** The lists that could be counted are all under 21 — 13 liked songs, 7 genres, 0 albums, and
-Home's rows are capped to 12 and 8 by `AutomotiveContentViewModel` before the restriction cap
-applies at all. **Playlists and playlist-detail tracks were not counted**: they are Firestore-backed
-rather than in Room, so the sqlite check that covered the others does not reach them. T5 routes
-them too, so "nothing here is over-cap" holds for every list except those two. Parked and driving
-therefore render identically, and the check would pass without demonstrating anything.
-`cmd car_service` drives restriction *state* well — A6 reached `DO: true UxR: 255` with
-`inject-vhal-event` and `inject-continuous-events` — but nothing in its help output lowers
-`maxCumulativeContentItems`, so the cap could not be brought under the data that way.
+**Method.** `toUxState()` (`viewmodel/UxFlags.kt`) is the single pure function the value passes
+through, so one `.coerceAtMost(3)` there puts every list over-cap. Local build only, reverted
+immediately, never committed — `git status` clean afterwards and no `coerceAtMost(3)` anywhere in
+`automotive/src`. The alternative, writing synthetic liked songs into the real account, was
+declined: verification should not depend on mutating real user data.
 
-Two routes to a non-vacuous check existed and neither was taken:
+**Results,** platform reporting a cap of 3 throughout:
 
-- **Writing synthetic liked songs into the real account.** Deliberately declined: verification
-  should not depend on mutating real user data.
-- **Temporarily clamping the cap in a local debug build.** `toUxState()` (`viewmodel/UxFlags.kt`)
-  is the one pure function the value passes through, so a one-line clamp to, say, 3 would put the
-  liked songs, recently-played and genres all over-cap, exercise every newly routed list on device,
-  and touch no user data. This was not thought of at the time. **It is the check the remaining-risk
-  paragraph asks a future reader to run, and it is cheaper than waiting for an over-cap account.**
+| Surface | Parked (`DO: false UxR: 0`) | Driving (`DO: true UxR: 255`) |
+|---|---|---|
+| Browse genres | More than 3 — two rows plus an active scrollbar, consistent with all 7 | **Exactly 3**, second row gone, scrollbar full-height |
+| Favourites | Header reads **13 songs** | Header reads **3 songs** |
 
-**Evidence accepted in its place.**
+The Favourites header derives from the list actually passed to the screen, so it counts the capped
+list rather than the underlying one — a countable oracle rather than an eyeballed row count.
 
-- A6's device run proved the shared `cap()` path end to end: `searchSongs()` returned 41 rows for
-  `worship`, and while driving the media session queue was `size=21` with `active item id=2`
-  matching the tapped row. T5 routes more call sites through that same function.
-  **Caveat found while fact-checking this record:** A6's checklist row 4 is labelled *Parked* but
-  records that same `size=21` / `active item id=2` observation. `cap()` was already conditional at
-  A6, so a genuinely parked run would have queued 41 — the row is mislabelled and reuses the
-  driving observation. A6 therefore never verified the parked direction either, which means
-  **no device run has yet shown a parked list going uncapped.** Correction to the A6 record is
-  tracked separately; the driving evidence above is unaffected.
-- `RestrictionCapTest` covers parked-uncapped, driving-capped, cap-above-count and a negative cap;
-  replacing the body with a bare `take` fails three named tests across the suite.
-- `ArtistLikedSongsTest` covers the one ordering that is real logic — the artist drill-down
-  filters before capping. Reversing it fails `the cap applies to the artist's songs, not to the
-  library it filtered them from`.
+Before T5 both parked cells would have read 3. That is the direction D36 changed, and this is the
+first device run to show it.
 
-**Remaining risk.** `BrowseShell`'s newly routed lists — Home, Browse, Library root, the artist
-drill-down, album/playlist detail and Favourites — were never observed truncating or not
-truncating on device against an over-cap dataset. The rule they now call is proven; their wiring
-to it is proven only by JVM tests and by reading the diff. Re-run the smoke test on any account
-whose liked songs exceed the reported cap.
+**Still not observed:** the same behaviour at the real reported cap of 21, which needs an account
+whose lists exceed it. The rule exercised is identical — `UxRestrictionState.cap()` takes the cap
+as a parameter — so this is a data-coverage gap, not an untested path.
 
-**Also not measured:** whether removing the parked caps costs scroll performance. The plan asks
-for this to be documented rather than reverted if a screen janks; with every list under 21 there
-was no case where the parked list is larger than what was previously rendered, so there was
-nothing to observe. Same account-data limitation.
+**Supporting coverage.** A6's device run proved the same `cap()` path from the other end:
+`searchSongs()` returned 41 rows for `worship`, and while driving the media session queue was
+`size=21` with `active item id=2` matching the tapped row. `RestrictionCapTest` covers
+parked-uncapped, driving-capped, cap-above-count and a negative cap; `ArtistLikedSongsTest` covers
+the filter-then-cap ordering. Replacing `cap()`'s body with a bare `take` fails three named tests.
+
+**A caveat about A6's record, found while fact-checking this one.** A6's checklist row 4 is
+labelled *Parked* but reports the same `size=21` / `active item id=2` observation as its driving
+cap proof. `cap()` was already conditional at A6, so a genuinely parked run would have queued 41 —
+the row reuses the driving observation, and A6 never verified its parked direction. Corrected in a
+separate PR against `main`. It does not weaken A6's driving evidence, and the parked direction is
+now covered by the clamp run above.
 
 ## Observations
 
