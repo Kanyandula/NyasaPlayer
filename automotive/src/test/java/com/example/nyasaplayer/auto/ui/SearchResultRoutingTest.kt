@@ -1,7 +1,6 @@
 package com.example.nyasaplayer.auto.ui
 
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResult
-import com.example.nyasaplayer.auto.search.SearchRank
 import com.example.nyasaplayer.auto.ui.navigation.CarDestination
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Artist
@@ -21,7 +20,7 @@ class SearchResultRoutingTest {
     fun `a song plays from the visible queue`() {
         val queue = listOf(song("a"), song("b"))
 
-        route(AutomotiveSearchResult.SongResult(song("b"), rank()), songQueue = queue)
+        route(AutomotiveSearchResult.SongResult(song("b")), songQueue = queue)
 
         assertEquals(queue to song("b"), played)
         assertNull(opened)
@@ -29,7 +28,7 @@ class SearchResultRoutingTest {
 
     @Test
     fun `an album opens album detail`() {
-        route(AutomotiveSearchResult.AlbumResult(Album(id = "al1"), rank()))
+        route(AutomotiveSearchResult.AlbumResult(Album(id = "al1")))
 
         assertEquals(CarDestination.Album("al1"), opened)
         assertNull(played)
@@ -38,14 +37,14 @@ class SearchResultRoutingTest {
     /** The liked-songs artist screen is a different destination and must not be reused here. */
     @Test
     fun `an artist opens catalogue artist detail`() {
-        route(AutomotiveSearchResult.ArtistResult(Artist(id = "ar1", name = "Grace"), rank()))
+        route(AutomotiveSearchResult.ArtistResult(Artist(id = "ar1", name = "Grace")))
 
         assertEquals(CarDestination.CatalogArtist("ar1"), opened)
     }
 
     @Test
     fun `a playlist opens playlist detail`() {
-        route(AutomotiveSearchResult.PlaylistResult(Playlist(id = "p1"), rank()))
+        route(AutomotiveSearchResult.PlaylistResult(Playlist(id = "p1")))
 
         assertEquals(CarDestination.Playlist("p1"), opened)
     }
@@ -61,6 +60,4 @@ class SearchResultRoutingTest {
     )
 
     private fun song(id: String) = Song(mediaId = id, title = "Song $id")
-
-    private fun rank() = SearchRank(0, 0, 0, "grace")
 }

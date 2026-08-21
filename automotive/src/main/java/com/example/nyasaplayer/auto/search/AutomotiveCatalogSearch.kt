@@ -60,49 +60,19 @@ class AutomotiveCatalogSearch @Inject constructor(
         if (query.isEmpty()) return AutomotiveSearchResults()
         val needle = query.lowercase()
 
-        val songs = songRepository.searchSongs(query, SongLimit).map { song ->
-            SongResult(
-                song = song,
-                rank = rankOf(
-                    primary = song.title,
-                    needle = needle,
-                    typePriority = SongPriority,
-                    popularity = song.popularity,
-                ),
-            )
-        }
-        val albums = albumRepository.searchAlbums(query, SecondaryLimit).map { album ->
-            AlbumResult(
-                album = album,
-                rank = rankOf(
-                    primary = album.name,
-                    needle = needle,
-                    typePriority = AlbumPriority,
-                    popularity = album.popularity,
-                ),
-            )
-        }
-        val artists = artistRepository.searchArtists(query, SecondaryLimit).map { artist ->
-            ArtistResult(
-                artist = artist,
-                rank = rankOf(
-                    primary = artist.name,
-                    needle = needle,
-                    typePriority = ArtistPriority,
-                    popularity = artist.popularity,
-                ),
-            )
-        }
-        val playlists = searchPlaylists(query, needle)
+        val songs = songRepository.searchSongs(query, SongLimit).map(::SongResult)
+        val albums = albumRepository.searchAlbums(query, SecondaryLimit).map(::AlbumResult)
+        val artists = artistRepository.searchArtists(query, SecondaryLimit).map(::ArtistResult)
+        val playlists = searchPlaylists(query)
 
-        val featured = (songs + albums + artists + playlists).minWithOrNull(ResultOrder)
+        val featured = (songs + albums + artists + playlists).minWithOrNull(bestFirst(needle))
         return AutomotiveSearchResults(
             query = query,
             featured = featured,
-            songs = songs.ranked(featured),
-            albums = albums.ranked(featured),
-            artists = artists.ranked(featured),
-            playlists = playlists.ranked(featured),
+            songs = songs.withoutFeatured(featured),
+            albums = albums.withoutFeatured(featured),
+            artists = artists.withoutFeatured(featured),
+            playlists = playlists.withoutFeatured(featured),
         )
     }
 
@@ -110,53 +80,63 @@ class AutomotiveCatalogSearch @Inject constructor(
      * Signed out means no playlists to match, not a broken search: the other three sections are
      * catalogue-wide and still have honest answers.
      */
-    private suspend fun searchPlaylists(query: String, needle: String): List<PlaylistResult> {
+    private suspend fun searchPlaylists(query: String): List<PlaylistResult> {
         val userId = authRepository.currentUserId ?: return emptyList()
-        return playlistRepository.searchPlaylists(userId, query, SecondaryLimit).map { playlist ->
-            PlaylistResult(
-                playlist = playlist,
-                rank = rankOf(
-                    primary = playlist.name,
-                    needle = needle,
-                    typePriority = PlaylistPriority,
-                    popularity = 0,
-                ),
-            )
-        }
+        return playlistRepository.searchPlaylists(userId, query, SecondaryLimit).map(::PlaylistResult)
     }
 }
+
+/** Best first: match quality, then type, then popularity, then title, then id. */
+private fun bestFirst(needle: String): Comparator<AutomotiveSearchResult> = compareBy(
+    { it.matchQuality(needle) },
+    { it.typePriority },
+    { -it.popularity },
+    { it.title.lowercase() },
+    { it.stableId },
+)
 
 /**
  * A result whose primary field does not contain the query matched on a secondary field — the
  * repository would not have returned it otherwise — so it ranks below every primary match.
+ *
+ * [AutomotiveSearchResult.title] is that primary field for all four types.
  */
-private fun rankOf(
-    primary: String,
-    needle: String,
-    typePriority: Int,
-    popularity: Int,
-): SearchRank {
-    val lowercasePrimary = primary.lowercase()
-    return SearchRank(
-        matchQuality = when {
-            lowercasePrimary == needle -> ExactMatch
-            lowercasePrimary.startsWith(needle) -> PrefixMatch
-            lowercasePrimary.contains(needle) -> SubstringMatch
-            else -> SecondaryFieldMatch
-        },
-        typePriority = typePriority,
-        popularity = popularity,
-        sortTitle = lowercasePrimary,
-    )
+private fun AutomotiveSearchResult.matchQuality(needle: String): Int {
+    val name = title.lowercase()
+    return when {
+        name == needle -> ExactMatch
+        name.startsWith(needle) -> PrefixMatch
+        name.contains(needle) -> SubstringMatch
+        else -> SecondaryFieldMatch
+    }
 }
 
+/** Only breaks ties between equally good matches; it never outranks match quality. */
+private val AutomotiveSearchResult.typePriority: Int
+    get() = when (this) {
+        is SongResult -> SongPriority
+        is AlbumResult -> AlbumPriority
+        is ArtistResult -> ArtistPriority
+        is PlaylistResult -> PlaylistPriority
+    }
+
+private val AutomotiveSearchResult.popularity: Int
+    get() = when (this) {
+        is SongResult -> song.popularity
+        is AlbumResult -> album.popularity
+        is ArtistResult -> artist.popularity
+        // Playlists are the driver's own; the model has no popularity to rank them by.
+        is PlaylistResult -> 0
+    }
+
 /**
- * Minus the featured card, which renders above the sections rather than inside one.
+ * The section, minus the featured card that renders above it.
  *
  * Deliberately not re-sorted: each repository already returns its own type in a deterministic
  * match order, and re-ranking songs here would order them differently from
  * `MediaBrowseTree.search()`, which serves Assistant the repository's order (spec 3.5). The
- * cross-type comparator is only for choosing which card is featured.
+ * comparator above is only for choosing which single card is featured.
  */
-private fun <T : AutomotiveSearchResult> List<T>.ranked(featured: AutomotiveSearchResult?): List<T> =
-    filterNot { it.stableId == featured?.stableId }
+private fun <T : AutomotiveSearchResult> List<T>.withoutFeatured(
+    featured: AutomotiveSearchResult?,
+): List<T> = filterNot { it.stableId == featured?.stableId }

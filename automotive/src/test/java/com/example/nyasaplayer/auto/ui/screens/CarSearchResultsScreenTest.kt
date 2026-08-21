@@ -9,7 +9,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResult
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResults
-import com.example.nyasaplayer.auto.search.SearchRank
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Playlist
@@ -112,35 +111,18 @@ class CarSearchResultsScreenTest {
 
     private fun everyType() = AutomotiveSearchResults(
         query = "grace",
-        featured = AutomotiveSearchResult.SongResult(
-            song = Song(mediaId = "featured", title = "Featured Song"),
-            rank = rank(0),
-        ),
+        featured = AutomotiveSearchResult.SongResult(Song(mediaId = "featured", title = "Featured Song")),
         songs = listOf(
-            AutomotiveSearchResult.SongResult(
-                song = Song(mediaId = "s1", title = "Section Song"),
-                rank = rank(0),
-            ),
+            AutomotiveSearchResult.SongResult(Song(mediaId = "s1", title = "Section Song")),
         ),
         albums = listOf(
-            AutomotiveSearchResult.AlbumResult(
-                album = Album(id = "al1", name = "Grace Sessions"),
-                rank = rank(1),
-            ),
+            AutomotiveSearchResult.AlbumResult(Album(id = "al1", name = "Grace Sessions")),
         ),
         artists = listOf(
-            AutomotiveSearchResult.ArtistResult(
-                artist = Artist(id = "ar1", name = "Grace Choir"),
-                rank = rank(2),
-            ),
+            AutomotiveSearchResult.ArtistResult(Artist(id = "ar1", name = "Grace Choir")),
         ),
         playlists = listOf(
-            AutomotiveSearchResult.PlaylistResult(
-                playlist = Playlist(id = "p1", name = "Grace Drive"),
-                rank = rank(3),
-            ),
+            AutomotiveSearchResult.PlaylistResult(Playlist(id = "p1", name = "Grace Drive")),
         ),
     )
-
-    private fun rank(typePriority: Int) = SearchRank(0, typePriority, 0, "grace")
 }

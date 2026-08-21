@@ -63,15 +63,10 @@ class SearchResultCapTest {
         featured = songResult("featured"),
         songs = List(songCount) { songResult("s$it") },
         albums = List(albumCount) { index ->
-            AutomotiveSearchResult.AlbumResult(
-                album = Album(id = "al$index", name = "Album $index"),
-                rank = SearchRank(2, 1, 0, "album $index"),
-            )
+            AutomotiveSearchResult.AlbumResult(Album(id = "al$index", name = "Album $index"))
         },
     )
 
-    private fun songResult(id: String) = AutomotiveSearchResult.SongResult(
-        song = Song(mediaId = id, title = "Song $id"),
-        rank = SearchRank(1, 0, 0, "song $id"),
-    )
+    private fun songResult(id: String) =
+        AutomotiveSearchResult.SongResult(Song(mediaId = id, title = "Song $id"))
 }

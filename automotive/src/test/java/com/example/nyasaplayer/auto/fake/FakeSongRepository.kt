@@ -53,8 +53,8 @@ class FakeSongRepository : SongRepository {
 
     override suspend fun searchSongs(query: String, limit: Int): List<Song> {
         searchQueries += query
-        // Trimmed like the real repository: parity between the launcher and Assistant depends on
-        // neither path bringing its own normalization (spec 3.5).
+        // Trimmed like the real repository, which is what makes SearchParityTest meaningful:
+        // MediaBrowseTree hands this its query untrimmed.
         val needle = query.trim()
         // NonCancellable for the same reason as [getSongsByIds]: a plain await() would let
         // cancellation alone discard a stale search, leaving the ViewModel's token guard untested.

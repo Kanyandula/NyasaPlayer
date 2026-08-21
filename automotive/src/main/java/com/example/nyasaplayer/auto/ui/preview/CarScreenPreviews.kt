@@ -8,7 +8,6 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResult
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResults
-import com.example.nyasaplayer.auto.search.SearchRank
 import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
 import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
@@ -45,31 +44,21 @@ private val PreviewSongs = listOf(
     Song(mediaId = "4", title = "Blue Notes", artistName = "Miles Davis", durationMs = 412_000L),
 )
 
-private fun previewRank(typePriority: Int, sortTitle: String) =
-    SearchRank(matchQuality = 0, typePriority = typePriority, popularity = 0, sortTitle = sortTitle)
-
 private val PreviewSearchResults = AutomotiveSearchResults(
     query = "midnight",
-    featured = AutomotiveSearchResult.SongResult(PreviewSongs[1], previewRank(0, "midnight drive")),
-    songs = PreviewSongs.filterNot { it.mediaId == "2" }.map {
-        AutomotiveSearchResult.SongResult(it, previewRank(0, it.title.lowercase()))
-    },
+    featured = AutomotiveSearchResult.SongResult(PreviewSongs[1]),
+    songs = PreviewSongs.filterNot { it.mediaId == "2" }.map(AutomotiveSearchResult::SongResult),
     albums = listOf(
         AutomotiveSearchResult.AlbumResult(
             Album(id = "al1", name = "Midnight Sessions", artistName = "The Weeknd"),
-            previewRank(1, "midnight sessions"),
         ),
     ),
     artists = listOf(
-        AutomotiveSearchResult.ArtistResult(
-            Artist(id = "ar1", name = "Midnight Choir", songCount = 12),
-            previewRank(2, "midnight choir"),
-        ),
+        AutomotiveSearchResult.ArtistResult(Artist(id = "ar1", name = "Midnight Choir", songCount = 12)),
     ),
     playlists = listOf(
         AutomotiveSearchResult.PlaylistResult(
             Playlist(id = "p1", name = "Midnight Drive", songIds = listOf("1", "2")),
-            previewRank(3, "midnight drive"),
         ),
     ),
 )
