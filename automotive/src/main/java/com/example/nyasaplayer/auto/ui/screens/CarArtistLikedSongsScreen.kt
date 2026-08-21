@@ -31,6 +31,7 @@ import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
+import com.example.nyasaplayer.auto.viewmodel.UxRestrictionState
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.formatDuration
 
@@ -155,3 +156,15 @@ private fun ArtistHero(
         }
     }
 }
+
+/**
+ * One artist's liked songs, capped.
+ *
+ * Filtered *then* capped. The other way round takes the cap off the whole liked-songs list first,
+ * so an artist with two songs could show one — a cap on the wrong population.
+ */
+internal fun artistLikedSongs(
+    likedSongs: List<Song>,
+    artistId: String,
+    restrictions: UxRestrictionState,
+): List<Song> = restrictions.cap(likedSongs.filter { it.artistId == artistId })

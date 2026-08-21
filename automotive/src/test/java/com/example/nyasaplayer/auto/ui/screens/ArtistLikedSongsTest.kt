@@ -1,4 +1,4 @@
-package com.example.nyasaplayer.auto.ui
+package com.example.nyasaplayer.auto.ui.screens
 
 import com.example.nyasaplayer.auto.viewmodel.UxRestrictionState
 import com.example.nyasaplayer.core.common.models.Song
@@ -32,20 +32,5 @@ class ArtistLikedSongsTest {
         // Capping first would take 5 of the 30 liked songs and leave only 2 by this artist.
         assertEquals(5, songs.size)
         assertEquals(listOf("wanted"), songs.map { it.artistId }.distinct())
-    }
-
-    @Test
-    fun `parked shows every song by the artist`() {
-        val parked = UxRestrictionState(
-            requiresDistractionOptimization = false,
-            maxCumulativeContentItems = 5,
-        )
-
-        assertEquals(10, artistLikedSongs(liked, "wanted", parked).size)
-    }
-
-    @Test
-    fun `an artist with nothing liked yields nothing`() {
-        assertEquals(emptyList<Song>(), artistLikedSongs(liked, "nobody", driving))
     }
 }

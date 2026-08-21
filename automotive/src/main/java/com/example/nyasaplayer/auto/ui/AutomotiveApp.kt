@@ -47,6 +47,7 @@ import com.example.nyasaplayer.auto.ui.screens.CarPlaylistScreen
 import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchResultsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
+import com.example.nyasaplayer.auto.ui.screens.artistLikedSongs
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
@@ -153,9 +154,7 @@ private fun AuthenticatedApp(
     }
 
     // The results the driver can see, which is also the list a tap plays.
-    val visibleResults = remember(searchState.results, playerState.restrictions) {
-        playerState.restrictions.cap(searchState.results)
-    }
+    val visibleResults = rememberVisible(searchState.results, playerState.restrictions)
 
     val location = carUiLocation(
         tab = currentScreen,
@@ -404,18 +403,6 @@ private fun <T> rememberVisible(items: List<T>, restrictions: UxRestrictionState
     remember(items, restrictions) { restrictions.cap(items) }
 
 /**
- * One artist's liked songs, capped.
- *
- * Filtered *then* capped. The other way round takes the cap off the whole liked-songs list first,
- * so an artist with two songs could show one — a cap on the wrong population.
- */
-internal fun artistLikedSongs(
-    likedSongs: List<Song>,
-    artistId: String,
-    restrictions: UxRestrictionState,
-): List<Song> = restrictions.cap(likedSongs.filter { it.artistId == artistId })
-
-/**
  * The overlay stack after opening [opening].
  *
  * The full player replaces whatever was there; the queue pushes onto it, because the queue is
@@ -588,7 +575,7 @@ private fun BrowseShell(
 
                     CarScreen.Library -> when (val destination = drillDown) {
                         is CarDestination.Artist -> {
-                            val artistLikedSongs = remember(
+                            val artistSongs = remember(
                                 contentState.likedSongs,
                                 destination.artistId,
                                 restrictions,
@@ -611,12 +598,12 @@ private fun BrowseShell(
                             CarArtistLikedSongsScreen(
                                 artistName = destination.artistName,
                                 artistCoverUrl = artistCoverUrl,
-                                likedSongs = artistLikedSongs,
+                                likedSongs = artistSongs,
                                 pendingUnlikes = contentState.pendingUnlikes,
                                 onBackClick = onBackFromDetail,
-                                onSongClick = { song -> onArtistSongClick(artistLikedSongs, song) },
-                                onPlayAll = { onPlayTracks(artistLikedSongs) },
-                                onShufflePlay = { onShuffleTracks(artistLikedSongs) },
+                                onSongClick = { song -> onArtistSongClick(artistSongs, song) },
+                                onPlayAll = { onPlayTracks(artistSongs) },
+                                onShufflePlay = { onShuffleTracks(artistSongs) },
                                 // Live list: the row leaves on the next emission (D25).
                                 onLikeToggle = likeToggle(onLikeToggle, freeze = false),
                                 currentlyPlayingMediaId = currentlyPlayingMediaId,
