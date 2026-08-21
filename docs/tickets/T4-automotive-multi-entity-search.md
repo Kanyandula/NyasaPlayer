@@ -103,7 +103,9 @@ implementation.
 
 `CarQueueScreen` carries the same modifier, and rather than assume, both builds were run: on the
 pre-fix build a 13-song queue showed five rows and would not scroll; on the fixed build the same
-queue scrolls. A5's queue had been unscrollable since T6 shipped the modifier.
+queue scrolls. A5's queue had been unscrollable since T6 shipped the modifier. Recorded as
+`docs/tickets/T9-automotive-touch-blocker-swallowed-scrolling.md`, since the defect is T6's and
+outlives this slice.
 
 **Not exercised:** the cumulative driving cap. This account's catalogue returns about five results
 for any query, well under `maxCumulativeContentItems` (21 on this image), so the cap never binds

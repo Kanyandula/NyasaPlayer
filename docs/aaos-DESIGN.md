@@ -466,7 +466,7 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   hid every section below the fold. Both were reproduced on the pre-fix build: a 13-song queue
   showed five rows and refused to move. It is now `detectTapGestures`, which blocks the tap that
   leaks and leaves drags to the content. Consuming only unconsumed changes was tried first and
-  did not restore scrolling.
+  did not restore scrolling. Full defect record: ticket T9.
 - **D42 — Overlays are a stack; the sheet is a single value.** The queue renders *above* the full
   player and closing it must reveal the player, so a single `CarOverlay?` cannot express them —
   collapsing them drops the driver onto the browse shell instead. Sheets have no such nesting.
