@@ -382,16 +382,16 @@ The scope decision must be visible in the source docs, not just in this plan.
 - Create: `docs/AAOS_A6_VERIFICATION.md`
 - Modify: `docs/AAOS_PRD.md` status table after implementation lands
 
-- [ ] Run `./gradlew :automotive:testOemDebugUnitTest`.
-- [ ] Run `./gradlew :core:data:testDebugUnitTest`.
-- [ ] Run `./gradlew detekt`.
-- [ ] Run `./gradlew :automotive:lintOemDebug`.
-- [ ] Run `./gradlew :automotive:assembleOemDebug :automotive:assemblePlaystoreDebug`.
-- [ ] On `AAOS_AOSP_33_userdebug`, run the manual checklist from the spec.
-- [ ] Inject driving state with the documented VHAL recipe and verify `DO: true UxR: 255`.
-- [ ] Confirm no keyboard appears under `NO_KEYBOARD`.
-- [ ] Confirm no manifest contains `RECORD_AUDIO`.
-- [ ] Record verified, not verified and observations in `docs/AAOS_A6_VERIFICATION.md`, matching
+- [x] Run `./gradlew :automotive:testOemDebugUnitTest`.
+- [x] Run `./gradlew :core:data:testDebugUnitTest`.
+- [x] Run `./gradlew detekt`.
+- [x] Run `./gradlew :automotive:lintOemDebug`.
+- [x] Run `./gradlew :automotive:assembleOemDebug :automotive:assemblePlaystoreDebug`.
+- [x] On `AAOS_AOSP_33_userdebug`, run the manual checklist from the spec.
+- [x] Inject driving state with the documented VHAL recipe and verify `DO: true UxR: 255`.
+- [x] Confirm no keyboard appears under `NO_KEYBOARD`.
+- [x] Confirm no manifest contains `RECORD_AUDIO`.
+- [x] Record verified, not verified and observations in `docs/AAOS_A6_VERIFICATION.md`, matching
       the A3-A5 style.
 
 **Definition of done:** all A6 spec §11 items are satisfied, the multi-entity result-card gap is

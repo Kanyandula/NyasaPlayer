@@ -165,21 +165,24 @@ private fun SearchHeader(
                 onEditingChange = onEditingChange,
                 modifier = Modifier.weight(1f),
             )
-        } else {
-            VoicePrompt(modifier = Modifier.weight(1f))
-        }
 
-        // Fixed slot. The CTA only exists once there is something to submit — a Search button
-        // over a blank field would refuse every press — but the field must not resize under the
-        // driver's finger the moment the first character makes it appear.
-        Box(modifier = Modifier.width(SearchCtaWidth), contentAlignment = Alignment.Center) {
-            if (query.isNotBlank()) {
-                CarPillButton(
-                    label = "Search",
-                    onClick = onSubmit,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            // Fixed slot. The CTA only exists once there is something to submit — a Search
+            // button over a blank field would refuse every press — but the field must not
+            // resize under the driver's finger the moment the first character makes it appear.
+            Box(modifier = Modifier.width(SearchCtaWidth), contentAlignment = Alignment.Center) {
+                if (query.isNotBlank()) {
+                    CarPillButton(
+                        label = "Search",
+                        onClick = onSubmit,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
+        } else {
+            // No CTA beside the prompt. A query typed before the vehicle moved survives in
+            // state, so the button would still render — offering to run a search whose terms
+            // the driver can no longer see, because the field it was typed into is gone.
+            VoicePrompt(modifier = Modifier.weight(1f))
         }
     }
 }

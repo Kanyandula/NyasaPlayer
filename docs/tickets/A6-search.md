@@ -2,13 +2,13 @@
 
 - **Slice:** A6 (screens 5 and 6)
 - **Depends on:** A1 restrictions, A2 chrome, A3/A4 shared content components, A5 merged baseline
-- **Status:** Implemented on `ek/aaos-a6-t1-search-viewmodel`; device verification pending
+- **Status:** Implemented and device-verified on `ek/aaos-a6-t1-search-viewmodel`; review-ready with recorded carve-outs
 - **Spec:** `docs/superpowers/specs/2026-08-20-aaos-search-design.md`
 - **Plan:** `docs/superpowers/plans/2026-08-20-aaos-a6-search.md`
-- **Verification Record:** `docs/AAOS_A6_VERIFICATION.md` (written by plan Task 6)
+- **Verification Record:** `docs/AAOS_A6_VERIFICATION.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest :core:data:testDebugUnitTest`
 - **Design Reference:** `docs/AAOS_SCREEN_CONTRACT.md` rows 5-6 · `docs/AAOS_PRD.md` §7 rows 5-6
-  · `docs/aaos-DESIGN.md` D31-D39 · `docs/aaos-app.html` (prototype)
+  · `docs/aaos-DESIGN.md` D31-D40 · `docs/aaos-app.html` (prototype)
 - **Risk Tags:** driver distraction compliance · text entry · search state split · result-scope
   drift
 - **Affected Modules:** `:automotive`; `:core:data` for album-name song search parity

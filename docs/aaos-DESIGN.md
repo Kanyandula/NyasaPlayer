@@ -439,7 +439,15 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   The component table below calls for a chip; the ghost pill is already that shape at the same
   76dp target, and A6 is its only consumer. Recorded as a deviation rather than silently kept.
   `Songs` is the one shortcut whose only action is focusing the field, so it ships only alongside
-  the field — under `NO_KEYBOARD` it would be the silent no-op FR-2.6 prohibits.
+  the field — under `NO_KEYBOARD` it would be the silent no-op FR-2.6 prohibits. The submit CTA
+  is gated the same way: a query typed while parked survives in state, so without the gate a
+  moving vehicle would show a Search button offering to run terms the driver can no longer read.
+- **D40 — Opening search does not auto-focus the field.** The A6 spec's manual checklist expects
+  the keyboard on open. Auto-focusing raises the IME over `Recent searches` and `Browse by`, the
+  two fastest paths out of the sheet, on every press of a control labelled Search — and it would
+  make the `Songs` shortcut, whose entire job is focusing the field, meaningless. The field
+  focuses on tap or through `Songs`. Recorded as a deliberate deviation from the checklist
+  wording rather than silently kept.
 
 ## Components
 
