@@ -104,16 +104,12 @@ fun CarSearchResultsScreen(
     ) {
         ResultsHeader(query = query, onBackToSearch = onBackToSearch, onClear = onClear)
 
-        // weight, not fillMaxSize: a Column hands its child the *full* height rather than what
-        // is left under the header, so a filling list overflows the bottom of the screen and
-        // believes it fits — nothing scrolls and everything below the fold is unreachable.
         when {
-            isLoading -> ResultsSkeleton(modifier = Modifier.weight(1f))
+            isLoading -> ResultsSkeleton()
 
             errorMessage != null -> CarEmptyState(
                 title = "Search didn't work",
                 body = errorMessage,
-                modifier = Modifier.weight(1f),
                 actionLabel = "Try again",
                 onAction = onRetry,
             )
@@ -121,7 +117,6 @@ fun CarSearchResultsScreen(
             results.isEmpty -> CarEmptyState(
                 title = "No results",
                 body = "Nothing in your library matches \"$query\".",
-                modifier = Modifier.weight(1f),
                 actionLabel = "Edit search",
                 onAction = onBackToSearch,
             )
@@ -131,7 +126,6 @@ fun CarSearchResultsScreen(
                 onResultClick = onResultClick,
                 currentlyPlayingMediaId = currentlyPlayingMediaId,
                 isPlaying = isPlaying,
-                modifier = Modifier.weight(1f),
             )
         }
     }
