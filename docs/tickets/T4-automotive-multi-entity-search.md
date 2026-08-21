@@ -2,7 +2,7 @@
 
 - **Slice:** search follow-up after A6
 - **Depends on:** A6 song-search implementation; D33 result-scope decision
-- **Status:** Spec/plan ready — implementation not started
+- **Status:** Implemented; device verification outstanding
 - **Spec:** `docs/superpowers/specs/2026-08-21-aaos-t4-multi-entity-search-design.md`
 - **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t4-multi-entity-search.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest :core:data:testDebugUnitTest`
@@ -55,6 +55,46 @@ cache timing into false "no result" states.
   from the custom launcher without a documented reason.
 - Given unit tests run, then result typing, ordering, empty states and cache-miss behaviour are
   covered.
+
+## Outcome
+
+Shipped across seven tasks on `ek/aaos-t4-multi-entity-search`. Design records D43-D47 in
+`docs/aaos-DESIGN.md` carry the decisions; screen 6's contract row is rewritten and screen 21
+(`CarArtistScreen`) is new.
+
+**Two forks the plan did not anticipate**, both found by writing the media-session parity test
+rather than by reasoning about it:
+
+- The launcher trimmed committed queries in its ViewModel while `MediaBrowseTree` passed
+  Assistant's query through untouched, so `" grace "` was two different searches on two surfaces
+  of one feature. Normalization moved into the repository layer, below both callers (D44).
+- The coordinator re-sorted its song section by match quality, away from the popularity order
+  Assistant is served. Sections now keep their repository's order and the cross-type comparator
+  only picks the featured card (D43) — less code, and the fork is gone.
+
+**Two defects fixed on the way through**, both pre-existing and neither in T4's scope:
+
+- `SongDao.search` did not escape LIKE wildcards, so a driver searching `50%` matched the whole
+  catalogue. Fixed for all three search queries at once rather than adding two more instances.
+- `:core:playback`'s test suite had stopped compiling on `main` — `MediaBrowseTreeTest`'s
+  `TestAuthRepository` never implemented `AuthRepository.currentUserId`.
+
+**Coverage:** `:automotive` 158 tests, `:core:data` 61, `:core:playback` 24, all green with
+`detekt`, lint and both flavour assembles. Every non-trivial behaviour was mutation-checked;
+three mutations survived their first test and were only killed after the test was strengthened —
+the wildcard escaping (decoys shared no prefix with the query), the query trim (the parity test
+runs on fakes that trim themselves), and nothing covered `capped()` until `SearchResultCapTest`
+existed.
+
+## Not verified
+
+- **On device.** No emulator run: section rendering, the horizontal card carousels while parked,
+  and tap routing into detail have only been verified as JVM Compose tests.
+- **`FirebasePlaylistRepository.searchPlaylists`.** Firestore is not JVM-testable here, so the
+  one-shot read and its in-memory name filter are covered only through fakes.
+- **The shell wiring for a non-song tap.** `routeSearchResult` is unit-tested, but the step it
+  hands off to — close the sheet, move to the Library tab, set `drillDown` — is composable-local
+  state in `AutomotiveApp` and has no test.
 
 ## Notes
 

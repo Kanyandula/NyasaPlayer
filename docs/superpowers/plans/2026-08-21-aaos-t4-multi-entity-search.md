@@ -246,19 +246,19 @@ same song semantics, with documented launcher-only enrichment for non-song cards
 
 **Purpose:** Leave the repo in an implementation-complete state for review.
 
-- [ ] Update `docs/AAOS_SCREEN_CONTRACT.md` screen 6 from deferred wording to shipped
+- [x] Update `docs/AAOS_SCREEN_CONTRACT.md` screen 6 from deferred wording to shipped
       multi-entity wording.
-- [ ] Update `docs/aaos-DESIGN.md` with final T4 decisions if implementation changed any spec
+- [x] Update `docs/aaos-DESIGN.md` with final T4 decisions if implementation changed any spec
       detail.
-- [ ] Update `docs/tickets/T4-automotive-multi-entity-search.md` status after verification.
-- [ ] Run:
+- [x] Update `docs/tickets/T4-automotive-multi-entity-search.md` status after verification.
+- [x] Run:
 
 ```bash
 ./gradlew :automotive:testOemDebugUnitTest :core:data:testDebugUnitTest
 ```
 
-- [ ] Run any broader local gate the branch normally requires, such as detekt/lint/assemble.
-- [ ] Record any device-only verification carve-outs if UI behavior cannot be covered by JVM
+- [x] Run any broader local gate the branch normally requires, such as detekt/lint/assemble.
+- [x] Record any device-only verification carve-outs if UI behavior cannot be covered by JVM
       Compose tests.
 
 **Acceptance criteria:** implementation, tests and docs agree on the same T4 behavior.
