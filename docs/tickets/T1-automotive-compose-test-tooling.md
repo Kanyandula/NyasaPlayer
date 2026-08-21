@@ -2,17 +2,21 @@
 
 - **Slice:** tooling — not a feature slice
 - **Depends on:** nothing
-- **Status:** Ready to spec
+- **Status:** Spec/plan ready; keep small and land before T4
+- **Spec:** `docs/superpowers/specs/2026-08-21-aaos-compose-test-tooling-design.md`
+- **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t1-compose-test-tooling.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
-- **Design Reference:** `docs/superpowers/specs/2026-08-09-aaos-favourites-design.md` §9 items 7–10 · `.claude/loop/ledger.md` row #11
+- **Design Reference:** `docs/superpowers/specs/2026-08-09-aaos-favourites-design.md` §9
+  items 7–10 · `.claude/loop/ledger.md` row #11
 - **Risk Tags:** test infrastructure · build configuration
 - **Affected Modules:** `:automotive` · `gradle/libs.versions.toml`
 
 ## Problem
 
-**Nothing in `:automotive` executes a Composable.** The module has 74 passing unit tests and none
-of them render anything, so every assertion about what a screen *shows* is really an assertion
-about what a ViewModel *holds*.
+**Nothing in `:automotive` executes a Composable.** The module's JVM suite is now much larger than
+when this ticket was first written, but none of those tests render anything. Every assertion about
+what a screen *shows* is still really an assertion about what a ViewModel *holds* or a device
+operator inspected by hand.
 
 This was found by mutation, not by reasoning. Row #8 of the A4 post-merge review fixed Favourites
 reading a shared `errorMessage` field that genres and albums also write, so a genres failure
@@ -25,7 +29,7 @@ errorMessage = contentState.errorMessage,      // the defect
 errorMessage = contentState.favouritesError,   // the fix
 ```
 
-— **reintroduces row #8's exact defect and passes all 74 tests.**
+— **reintroduces row #8's exact defect and still has no rendering test to catch it.**
 
 The immediate cause was that the tests mirrored the screen's binding by hand: a private helper in
 `FavouritesBoundaryTest.kt` returned the same field the Composable read, so the two copies could
@@ -35,12 +39,12 @@ tests), which converted two mutations from surviving to killed. **The residual s
 Composable can still bypass those derivations entirely and nothing notices.
 
 Collapsing the copies was all that could be done without tooling. Closing it needs a test that
-renders `CarFavouriteMusicScreen` and asserts what appears.
+renders the Favourites route that supplies `CarFavouriteMusicScreen` and asserts what appears.
 
 ## This runs headless on the JVM
 
 **No `androidTest` source set. No device. No emulator.** `createComposeRule` runs under
-Robolectric in the existing `automotive/src/test/` source set, the same place the current 74 tests
+Robolectric in the existing `automotive/src/test/` source set, the same place the current JVM tests
 already run, on the same `./gradlew :automotive:testOemDebugUnitTest` command.
 
 This is stated emphatically because the review loop spent a round believing the opposite, and the
