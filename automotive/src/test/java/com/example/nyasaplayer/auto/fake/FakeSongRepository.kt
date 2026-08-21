@@ -2,6 +2,7 @@ package com.example.nyasaplayer.auto.fake
 
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.data.api.SongRepository
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +13,7 @@ class FakeSongRepository : SongRepository {
     val songs = MutableStateFlow<List<Song>>(emptyList())
 
     /** Suspends every [getSongsByIds] call until released. Lets a test hold a load in flight. */
-    var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+    var gate: CompletableDeferred<Unit>? = null
 
     override fun getSongs(): Flow<List<Song>> = songs
 
@@ -37,5 +38,27 @@ class FakeSongRepository : SongRepository {
     override fun getSongsByArtist(artistId: String): Flow<List<Song>> = songs
     override fun getSongsByGenre(genreId: String): Flow<List<Song>> = songs
     override suspend fun getSongsByPopularity(limit: Int): List<Song> = songs.value.take(limit)
-    override suspend fun searchSongs(query: String, limit: Int): List<Song> = emptyList()
+    /** Every query [searchSongs] was called with, in order. */
+    val searchQueries = mutableListOf<String>()
+
+    /** Holds a search for a given query in flight until the test completes its gate. */
+    val searchGates = mutableMapOf<String, CompletableDeferred<Unit>>()
+
+    /** When set, [searchSongs] throws it instead of returning matches. */
+    var searchFailure: Throwable? = null
+
+    override suspend fun searchSongs(query: String, limit: Int): List<Song> {
+        searchQueries += query
+        // NonCancellable for the same reason as [getSongsByIds]: a plain await() would let
+        // cancellation alone discard a stale search, leaving the ViewModel's token guard untested.
+        withContext(NonCancellable) { searchGates[query]?.await() }
+        searchFailure?.let { throw it }
+        return songs.value
+            .filter {
+                it.title.contains(query, ignoreCase = true) ||
+                    it.resolvedArtistName.contains(query, ignoreCase = true) ||
+                    it.albumName.contains(query, ignoreCase = true)
+            }
+            .take(limit)
+    }
 }

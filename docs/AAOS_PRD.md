@@ -29,11 +29,10 @@ The work is sequenced into **nine phases**. Phase A1 is foundation — tokens, t
 primitives, build variants, and the restriction layer. Phases A2–A8 deliver the AAOS screens.
 Project B is tracked separately; the AAOS release does not wait for the mobile brand migration.
 
-**Current state:** design complete and measured **except for A6 search text entry**, which is an
-unresolved design problem rather than an unbuilt screen (see Q2). A1-A4 are merged on `main`.
-A5 is implemented and device-verified on `ek/aaos-a5-t1-queue-window`, with two recorded
-carve-outs: retryable playback error could not be forced on the emulator, and process-death
-playback restore is tracked as a follow-up. A6 remains blocked by Q2.
+**Current state:** A1-A5 are merged on `main`; A5 is device-verified with two recorded carve-outs:
+retryable playback error could not be forced on the emulator, and process-death playback restore is
+tracked as a follow-up. A6 is implemented and device-verified on its branch, with search text
+entry resolved by D31; its carve-outs are recorded in `docs/AAOS_A6_VERIFICATION.md`.
 
 ---
 
@@ -158,8 +157,8 @@ each and the pair is where most requirements actually come from. **P** = parked,
 |---|---|---|---|
 | US-6 | browse my library by playlist, album or artist | P | Full depth browsing |
 | US-7 | browse my library | D | Tab roots only; drill-down refused past the depth cap, lists truncated to the item cap |
-| US-8 | search by typing | P | On-screen keyboard **(design unresolved — Q2)** |
-| US-9 | search | D | Text entry refused; voice search offered as the primary path |
+| US-8 | search by typing | P | Platform/system IME when `NO_KEYBOARD` is absent; no custom keyboard (D31) |
+| US-9 | search | D | Text entry refused under `NO_KEYBOARD`; system/Assistant voice search offered as the primary path |
 | US-10 | see what I recently played | P/D | Home surfaces it in both states |
 
 ### Playing music
@@ -241,8 +240,8 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 | 2 | CarPinOptInScreen | After first sign-in | Enter PIN, Enable, Not now | partial entry, error | **Refused** — `NO_SETUP` | Auth VM | A7 |
 | 3 | CarHomeScreen | Rail: Home (default) | Play a recent item, open a mix | loading, empty, error | Allowed; lists truncated | Content VM | A2 |
 | 4 | CarBrowseScreen | Rail: Browse | Filter by chip, open a genre | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
-| 5 | CarSearchScreen | System bar: search | Type **(Q2)**, voice, recent, browse-by | idle, no results | Text entry refused; voice offered | Content VM | A6 |
-| 6 | CarSearchResultsScreen | Submitting a search | Play result, open album/artist | empty results | Allowed; drill-down refused | Content VM | A6 |
+| 5 | CarSearchScreen | System bar: search | Type via system IME when allowed, voice prompt, recent, browse-by shortcuts | idle, recent-empty, no query | Text entry refused; voice offered | Search VM | A6 |
+| 6 | CarSearchResultsScreen | Submitting a search | Top song result, song rows, clear/back | loading, empty results, error | Results allowed; active text entry refused | Search VM | A6 |
 | 7 | CarLibraryScreen | Rail: Library | Open playlist, album or artist | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
 | 8 | CarFavouriteMusicScreen | Rail: Favourites | Play all, shuffle, play one, unlike | **empty → screen 17** | Allowed; truncated | Content VM | A4 |
 | 9 | CarArtistLikedSongsScreen | Library or Favourites → artist | Play all, play one, unlike | empty, loading | **Refused** past depth cap | Content VM | A4 |
@@ -423,8 +422,8 @@ option, not an actively shipped artifact.
 | **A2** | Chrome contract, Home, ambient motion | A1 | Merged — PR #16 |
 | **A3** | Browse, Library, Playlist, Album | A2 | Merged and device-verified — PRs #18-#20 |
 | **A4** | Favourites, ArtistLikedSongs, EmptyFavourites | A2 | Merged and device-verified — PRs #21-#23 |
-| **A5** | FullPlayer, Queue | A2 | Implemented and device-verified on `ek/aaos-a5-t1-queue-window`; retryable-error and restore follow-ups recorded |
-| **A6** | Search, SearchResults | A2 + design work | Blocked, see §11 |
+| **A5** | FullPlayer, Queue | A2 | Merged and device-verified — PR #24; retryable-error and restore follow-ups recorded |
+| **A6** | Search, SearchResults | A2 + A6 design | Implemented and device-verified on `ek/aaos-a6-t1-search-viewmodel` — `docs/AAOS_A6_VERIFICATION.md`; review-ready with recorded carve-outs |
 | **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Not started |
 | **A8** | NoConnection, Loading, Downloads, PlaybackError | A2 | Not started |
 | **Project B** | Mobile brand migration — **separate PRD, non-blocking** | A1 tokens | Not started |
@@ -460,7 +459,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 | # | Question | Owner | Blocks |
 |---|---|---|---|
 | Q1 | Can the emulator be put into a driving state, and how? | A1 Task 1 | End-to-end verification of all restriction work |
-| Q2 | How does text entry work on a head unit — on-screen keyboard when parked, voice-only when driving? The 20 screens do not solve this; the prototype only draws a disabled field. | Needs its own design cycle | **A6** |
+| ~~Q2~~ | ~~How does text entry work on a head unit — on-screen keyboard when parked, voice-only when driving? The 20 screens do not solve this; the prototype only draws a disabled field.~~ **Resolved 2026-08-20:** A6 uses the platform/system IME when `UX_RESTRICTIONS_NO_KEYBOARD` is absent and replaces editing with a system/Assistant voice-search prompt when it is present. The app draws no custom keyboard, records no audio, and ships song-only submitted results; album/artist result cards are deferred by D33/T4. | — | Closed |
 | Q3 | Is 15px acceptable for secondary text at arm's length, or should the floor rise? | Device testing | Type scale across all phases |
 | ~~Q4~~ | ~~Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted?~~ **Resolved 2026-08-02: bannered, not deleted.** §1.1 and §2 are load-bearing history — the two-surface inventory and the Play policy reasoning a future submission must still satisfy. | — | Closed |
 | ~~Q5~~ | ~~Does Downloads belong in the custom launcher, given it is content browse rather than settings?~~ **Resolved 2026-08-03:** yes for the `oem` launcher. The screen is part of A8; delete/remove actions remain parked-only, and the `playstore` path can expose offline content through the media browse tree if needed later. | — | Closed |

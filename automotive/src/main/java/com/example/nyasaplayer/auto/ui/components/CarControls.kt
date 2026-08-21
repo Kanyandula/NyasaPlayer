@@ -24,6 +24,9 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 
 private val ChipPadding = 28.dp
 private val ButtonPadding = 36.dp
+
+/** Hoisted: the shape is constant, and this button is on nearly every screen. */
+private val PillShape = RoundedCornerShape(CarPillButtonHeight / 2)
 private val UnselectedBorderWidth = 1.dp
 private val SelectedBorderWidth = 0.dp
 private val ChipLabelSize = 19.sp
@@ -90,12 +93,12 @@ fun CarPillButton(
             .height(CarPillButtonHeight)
             .background(
                 color = if (filled) NyasaGold else Color.Transparent,
-                shape = RoundedCornerShape(CarPillButtonHeight / 2),
+                shape = PillShape,
             )
             .border(
                 width = if (filled) SelectedBorderWidth else UnselectedBorderWidth,
                 color = if (filled) Color.Transparent else CarOutline,
-                shape = RoundedCornerShape(CarPillButtonHeight / 2),
+                shape = PillShape,
             )
             .clickable(onClick = onClick)
             .padding(horizontal = ButtonPadding),

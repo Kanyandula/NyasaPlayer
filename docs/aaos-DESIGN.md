@@ -402,6 +402,56 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   already gates edit actions, so the list and the buttons can never disagree about whether the
   vehicle is moving. A4 verified that injected moving state reaches the app as `DO: true UxR: 255`,
   so the same signal is known to arrive.
+- **D31 — Q2 is resolved by using system IME when `NO_KEYBOARD` is absent and a voice-search
+  prompt when it is present.** The custom launcher reacts to the platform restriction instead of
+  inferring driving state or drawing a custom keyboard. It also keeps the existing voice-search
+  boundary intact: system/Assistant voice search reaches `PlaybackService.onSearch` /
+  `onGetSearchResult`; the app records no audio and requests no `RECORD_AUDIO`.
+- **D32 — A6 searches on explicit submit, not on every keypress.** A head-unit search field should
+  not create repository work while the driver is still editing. Screen 6 exists only after a
+  committed query, so the ViewModel stores draft `query` separately from `submittedQuery`.
+- **D33 — A6 ships song-only results; album, artist and playlist result cards are deferred to
+  T4.** `SongRepository.searchSongs()` and `MediaBrowseTree.search()` are song-search contracts
+  today. The original album/artist card wording needs a typed result model, repository search APIs
+  and a valid artist destination before the UI can be honest.
+- **D34 — Recent searches are session-only in the automotive search ViewModel.** The PRD asks for
+  recent searches but not durable history. Persisting query history adds privacy/storage questions
+  that are not needed to make screen 5 useful; losing recents on process death is acceptable.
+- **D35 — Search leaves `AutomotiveContentViewModel` instead of adding another suppression.** A4's
+  D23 recorded that the class already owns too many unrelated domains. A6 depends only on
+  `SongRepository.searchSongs()`, so a small `AutomotiveSearchViewModel` is the cleaner boundary.
+- **D36 — Content is capped only while distraction optimization is required.** The platform
+  reports `maxCumulativeContentItems` when parked too, where it is the unrestricted baseline
+  rather than a restriction, so applying it unconditionally silently truncates a parked list.
+  A5's `queueDisplayItems()` already followed this rule; A6 first re-derived it as a second
+  implementation and now shares one — `UxRestrictionState.cap()`, tested and mutation-checked.
+  For search it produces both what the driver sees and the list a tap plays, and a divergence
+  between those two is how a "play this" starts a track that was never on screen.
+  **`BrowseShell`'s ten `.take(maxItems)` calls do not follow this rule and are wrong by it** —
+  a parked driver's Home, Library and Favourites are being trimmed to a driving cap today.
+  Correcting them touches every A3/A4 call site and is tracked by T5, not by A6.
+- **D37 — A committed search drops the previous query's results.** The usual rule is to keep
+  previous content during a refresh rather than blanking the screen, but here the header names the
+  new query, so the previous query's songs underneath it would be a wrong answer rather than a
+  stale one. It also keeps the failure state honest: an error never renders rows.
+- **D38 — Submitting closes the editor, and the sheet's view derives from `submittedQuery`.**
+  Results are permitted while driving and an active field is not, so an editing flag surviving a
+  submit would have the gate evict a driver from a list they are allowed to read. Back is
+  `backToSearch()` dropping the submitted query rather than a separate "showing results" boolean,
+  which cannot then disagree with the ViewModel about which view is open.
+- **D39 — Browse-by shortcuts reuse `CarPillButton`'s ghost variant instead of adding `CarChip`.**
+  The component table below calls for a chip; the ghost pill is already that shape at the same
+  76dp target, and A6 is its only consumer. Recorded as a deviation rather than silently kept.
+  `Songs` is the one shortcut whose only action is focusing the field, so it ships only alongside
+  the field — under `NO_KEYBOARD` it would be the silent no-op FR-2.6 prohibits. The submit CTA
+  is gated the same way: a query typed while parked survives in state, so without the gate a
+  moving vehicle would show a Search button offering to run terms the driver can no longer read.
+- **D40 — Opening search does not auto-focus the field.** The A6 spec's manual checklist expects
+  the keyboard on open. Auto-focusing raises the IME over `Recent searches` and `Browse by`, the
+  two fastest paths out of the sheet, on every press of a control labelled Search — and it would
+  make the `Songs` shortcut, whose entire job is focusing the field, meaningless. The field
+  focuses on tap or through `Songs`. Recorded as a deliberate deviation from the checklist
+  wording rather than silently kept.
 
 ## Components
 
@@ -417,7 +467,7 @@ rule: a one-off button is how a 76dp target or contrast rule regresses.
 | `CarNavRail` | New shared rail; every destination screen uses the same instance and active-state logic |
 | `CarMiniPlayer` | Reuse and re-theme the existing component; add the queue button and combined artwork/title target |
 | `CarPillButton` / primary CTA | New shared 76dp button primitive for gold and ghost actions |
-| `CarChip` | New shared 76dp chip for browse filters, search browse-by categories and segmented states |
+| `CarChip` | Not built. A6's browse-by shortcuts use `CarPillButton`'s ghost variant (D39); build the chip only when a second consumer needs selected/segmented states |
 | `CarContentCard` | New shared card primitive for album, playlist, mix, genre and recommendation cards |
 | `CarTrackRow` | New shared track row for favourites, album, playlist, queue and search result lists |
 | `CarPlaybackControls` | Shared full-player transport controls; mini-player may use a compact wrapper around the same semantics |

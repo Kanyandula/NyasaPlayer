@@ -124,4 +124,42 @@ class OfflineSongRepositoryTest {
         val result = repo.getSongsByGenre("g1").first()
         assertEquals(listOf("1", "3"), result.map { it.mediaId })
     }
+
+    // --- searchSongs ---
+
+    private val searchCatalogue = listOf(
+        songEntity(mediaId = "title", title = "Worship Medley", artistName = "Someone", albumName = "Live"),
+        songEntity(mediaId = "artist", title = "Untitled", artistName = "Benjamin Dube", albumName = "Live"),
+        songEntity(mediaId = "album", title = "Track 3", artistName = "Someone", albumName = "Alive in South Africa"),
+    )
+
+    @Test
+    fun searchSongs_matchesTitle() = runTest {
+        dao.setSongs(searchCatalogue)
+        assertEquals(listOf("title"), repo.searchSongs("worship", 10).map { it.mediaId })
+    }
+
+    @Test
+    fun searchSongs_matchesArtistName() = runTest {
+        dao.setSongs(searchCatalogue)
+        assertEquals(listOf("artist"), repo.searchSongs("dube", 10).map { it.mediaId })
+    }
+
+    @Test
+    fun searchSongs_matchesAlbumName() = runTest {
+        dao.setSongs(searchCatalogue)
+        assertEquals(listOf("album"), repo.searchSongs("south africa", 10).map { it.mediaId })
+    }
+
+    @Test
+    fun searchSongs_noMatch_returnsEmpty() = runTest {
+        dao.setSongs(searchCatalogue)
+        assertTrue(repo.searchSongs("nothing here", 10).isEmpty())
+    }
+
+    @Test
+    fun searchSongs_respectsLimit() = runTest {
+        dao.setSongs(searchCatalogue)
+        assertEquals(1, repo.searchSongs("live", 1).size)
+    }
 }

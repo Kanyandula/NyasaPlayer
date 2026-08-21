@@ -30,6 +30,7 @@ interface SongDao {
         SELECT * FROM songs
         WHERE title LIKE '%' || :query || '%'
            OR artist_name LIKE '%' || :query || '%'
+           OR album_name LIKE '%' || :query || '%'
         ORDER BY popularity DESC
         LIMIT :limit
         """,

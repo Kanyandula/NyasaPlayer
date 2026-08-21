@@ -79,7 +79,7 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | `CarMiniPlayer` | Re-theme existing component; artwork/title is one target; add queue button | playing, paused, buffering, error, no item |
 | `CarPillButton` | Shared gold/ghost/destructive-safe button primitive | enabled, focused, disabled, loading |
 | `CarIconButton` | Shared circular/square icon target wrapper | enabled, focused, selected, disabled |
-| `CarChip` | Shared filter / browse-by / segmented chip | selected, unselected, focused, disabled |
+| `CarChip` | Shared filter / browse-by / segmented chip — not built; A6 browse-by uses the ghost `CarPillButton` (D39) | selected, unselected, focused, disabled |
 | `CarContentCard` | Album, playlist, mix, genre, recommendation card | normal, focused, playing, unavailable |
 | `CarTrackRow` | Track list row for songs, queue, albums, playlists, search | normal, focused, current, playing, disabled action |
 | `CarPlaybackControls` | Full-player control cluster | play, pause, loading, shuffle on/off, repeat mode |
@@ -97,8 +97,8 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | 2 | `CarPinOptInScreen` | PIN dots, numeric keypad, Enable PIN, Not now, back | partial entry, validation error, loading | Refused by `NO_SETUP` | A7 |
 | 3 | `CarHomeScreen` | Continue Listening cards, Your Mixes, Recommended, Play card/item | loading, empty, error, offline banner | Allowed; lists truncated by item cap | A2 |
 | 4 | `CarBrowseScreen` | Filter chips, genre/mood/category cards, Play/open category | loading, empty, error | Allowed at root; deep drill-down refused by depth cap | A3 |
-| 5 | `CarSearchScreen` | Search field while parked, system voice CTA, recent searches, browse-by chips, clear query | idle, recent-empty, no query | Typed entry refused; system/Assistant voice offered | A6 |
-| 6 | `CarSearchResultsScreen` | Top Result play, song rows, album/artist result cards, clear/back | loading, no results, error | Results view allowed; deep drill-down refused | A6 |
+| 5 | `CarSearchScreen` | Search field when `NO_KEYBOARD` is absent, system voice prompt, recent searches, browse-by shortcuts, clear query | idle, recent-empty, no query | Typed entry refused; system/Assistant voice offered | A6 |
+| 6 | `CarSearchResultsScreen` | Top song result, song rows, clear/back; album/artist cards deferred by D33/T4 | loading, no results, error | Results view allowed; active text entry refused | A6 |
 | 7 | `CarLibraryScreen` | Category rows for Playlists, Albums, Artists, Favourites, Downloads; recently played | loading, empty, error | Allowed at root; drill-down refused past cap | A3 |
 | 8 | `CarFavouriteMusicScreen` | Hero liked songs, Play all, Shuffle, track rows, unlike | empty routes to screen 17, loading, error | Allowed; list truncated; unlike is one-tap and row removal is deferred until refresh | A4 |
 | 9 | `CarArtistLikedSongsScreen` | Artist hero, Play all, track rows, unlike | loading, empty, error | Refused when beyond depth cap | A4 |

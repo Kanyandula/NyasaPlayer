@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -29,6 +30,7 @@ import com.example.nyasaplayer.auto.ui.motion.rememberAnimatorDurationScale
 import com.example.nyasaplayer.auto.ui.navigation.CarDestination
 import com.example.nyasaplayer.auto.ui.navigation.CarOverlay
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
+import com.example.nyasaplayer.auto.ui.navigation.CarSheet
 import com.example.nyasaplayer.auto.ui.navigation.CarUiLocation
 import com.example.nyasaplayer.auto.ui.navigation.GateResult
 import com.example.nyasaplayer.auto.ui.navigation.gate
@@ -42,11 +44,15 @@ import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.ui.screens.CarPlaylistScreen
 import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
+import com.example.nyasaplayer.auto.ui.screens.CarSearchResultsScreen
+import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveContentViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
+import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchUiState
+import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
 import com.example.nyasaplayer.auto.viewmodel.CarDetailState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
@@ -98,9 +104,11 @@ private fun AuthenticatedApp(
     modifier: Modifier = Modifier,
     playerViewModel: AutomotivePlayerViewModel = hiltViewModel(),
     contentViewModel: AutomotiveContentViewModel = hiltViewModel(),
+    searchViewModel: AutomotiveSearchViewModel = hiltViewModel(),
 ) {
     val playerState by playerViewModel.uiState.collectAsState()
     val contentState by contentViewModel.contentState.collectAsState()
+    val searchState by searchViewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
         contentViewModel.reloadUserContent()
@@ -110,15 +118,37 @@ private fun AuthenticatedApp(
     var showFullPlayer by rememberSaveable { mutableStateOf(false) }
     var showQueue by rememberSaveable { mutableStateOf(false) }
     var drillDown by rememberSaveable { mutableStateOf<CarDestination?>(null) }
+    var showSearch by rememberSaveable { mutableStateOf(false) }
     var denialReason by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    // The editing flag clears itself when the field leaves composition (see CarSearchScreen), so
+    // closing the sheet is all this has to do.
+    val closeSearch = { showSearch = false }
+
+    // The platform's own NO_KEYBOARD answer, not a driving guess (spec D31).
+    val canType = !playerState.restrictions.noTextEntry
+
+    // One tab-selection path for the rail and for the search sheet's browse-by shortcuts, so
+    // "leaving for a tab" always means the same thing.
+    val selectTab = { screen: CarScreen ->
+        drillDown = null
+        closeSearch()
+        currentScreen = screen
+    }
+
+    // The results the driver can see, which is also the list a tap plays.
+    val visibleResults = remember(searchState.results, playerState.restrictions) {
+        playerState.restrictions.cap(searchState.results)
+    }
 
     val location = carUiLocation(
         tab = currentScreen,
         showFullPlayer = showFullPlayer,
         showQueue = showQueue,
         drillDown = drillDown,
-        searchQuery = contentState.searchQuery,
+        showSearch = showSearch,
+        searchTextEntryActive = searchState.isEditing,
     )
 
     // Keyed on both the restrictions and the location so it fires when the vehicle starts
@@ -131,6 +161,7 @@ private fun AuthenticatedApp(
                 showFullPlayer = false
                 showQueue = false
                 drillDown = null
+                closeSearch()
                 currentScreen = result.evictTo.tab
                 denialReason = result.reason
             }
@@ -191,12 +222,22 @@ private fun AuthenticatedApp(
                 contentState = contentState,
                 onSignOut = onSignOut,
                 userDisplayName = userDisplayName,
-                onSelectTab = {
-                    drillDown = null
-                    currentScreen = it
+                // The search control opens the search view, not whatever results were left
+                // over from an earlier trip. The draft query survives, so re-running it is one
+                // press away.
+                onSearchClick = {
+                    searchViewModel.backToSearch()
+                    showSearch = true
                 },
-                onExpandPlayer = { showFullPlayer = true },
-                onQueueClick = { showQueue = true },
+                onSelectTab = selectTab,
+                onExpandPlayer = {
+                    closeSearch()
+                    showFullPlayer = true
+                },
+                onQueueClick = {
+                    closeSearch()
+                    showQueue = true
+                },
                 decorativeMotionEnabled = motionEnabled,
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
@@ -253,6 +294,31 @@ private fun AuthenticatedApp(
             )
         }
 
+        if (showSearch) {
+            SearchSheet(
+                state = searchState,
+                canType = canType,
+                visibleResults = visibleResults,
+                currentlyPlayingMediaId = playerState.playback.currentSong?.mediaId,
+                isPlaying = playerState.playback.isPlaying,
+                onQueryChange = searchViewModel::onQueryChange,
+                onSubmit = searchViewModel::submitSearch,
+                onClearQuery = searchViewModel::clearQuery,
+                onEditingChange = searchViewModel::setEditing,
+                onRecentClick = searchViewModel::selectRecentQuery,
+                onBackToSearch = searchViewModel::backToSearch,
+                onRetry = searchViewModel::retrySearch,
+                onBrowseGenres = { selectTab(CarScreen.Browse) },
+                onBrowseLibrary = { selectTab(CarScreen.Library) },
+                onClose = closeSearch,
+                onPlay = { songs, song ->
+                    playerViewModel.playSong(songs, song)
+                    closeSearch()
+                    showFullPlayer = true
+                },
+            )
+        }
+
         if (showQueue) {
             CarQueueScreen(
                 queue = playerState.playback.queue,
@@ -290,15 +356,19 @@ private fun AuthenticatedApp(
 }
 
 /**
- * Collapses the five scattered pieces of navigation state into the one value [gate] decides
- * on. Derived, not authoritative — the individual values stay where the screens read them.
+ * Collapses the scattered pieces of navigation state into the one value [gate] decides on.
+ * Derived, not authoritative — the individual values stay where the screens read them.
+ *
+ * Internal rather than private so CarUiLocationTest can exercise the mapping directly; there
+ * is no Compose test tooling in this module yet (ticket T1).
  */
-private fun carUiLocation(
+internal fun carUiLocation(
     tab: CarScreen,
     showFullPlayer: Boolean,
     showQueue: Boolean,
     drillDown: CarDestination?,
-    searchQuery: String,
+    showSearch: Boolean,
+    searchTextEntryActive: Boolean,
 ): CarUiLocation = CarUiLocation(
     tab = tab,
     overlay = when {
@@ -308,11 +378,73 @@ private fun carUiLocation(
     },
     // All three destinations are one step from a tab root (D8). There is no depth 2 in A3.
     drillDepth = if (drillDown != null) 1 else 0,
-    // Settings and Profile are later slices, and Search is not yet a distinct sheet in this
-    // app. The field exists so those slices have nothing to retrofit.
-    sheet = null,
-    textEntryActive = searchQuery.isNotEmpty(),
+    // Settings and Profile are A7. The field exists so that slice has nothing to retrofit.
+    sheet = if (showSearch) CarSheet.Search else null,
+    // Open-but-idle search is browsing, not typing, and stays allowed while driving. Only an
+    // active editable field is text entry, which is why this is the ViewModel's explicit flag
+    // and not "the query is non-empty" — a query left over from a parked search is not typing.
+    textEntryActive = showSearch && searchTextEntryActive,
 )
+
+/**
+ * The search sheet's two views.
+ *
+ * A committed query is what "showing results" means. Deriving the view from it beats a second
+ * boolean that can disagree with the ViewModel about which one is open — Back is `backToSearch()`
+ * dropping the submitted query, not a flag flip the state knows nothing about.
+ */
+@Suppress("LongParameterList")
+@Composable
+private fun SearchSheet(
+    state: AutomotiveSearchUiState,
+    canType: Boolean,
+    visibleResults: List<Song>,
+    currentlyPlayingMediaId: String?,
+    isPlaying: Boolean,
+    onQueryChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onClearQuery: () -> Unit,
+    onEditingChange: (Boolean) -> Unit,
+    onRecentClick: (String) -> Unit,
+    onBackToSearch: () -> Unit,
+    onRetry: () -> Unit,
+    onBrowseGenres: () -> Unit,
+    onBrowseLibrary: () -> Unit,
+    onClose: () -> Unit,
+    onPlay: (List<Song>, Song) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (state.submittedQuery.isNotEmpty()) {
+        CarSearchResultsScreen(
+            query = state.submittedQuery,
+            results = visibleResults,
+            isLoading = state.isLoading,
+            errorMessage = state.errorMessage,
+            onBackToSearch = onBackToSearch,
+            onClear = onClearQuery,
+            onRetry = onRetry,
+            onSongClick = onPlay,
+            modifier = modifier,
+            currentlyPlayingMediaId = currentlyPlayingMediaId,
+            isPlaying = isPlaying,
+        )
+    } else {
+        CarSearchScreen(
+            query = state.query,
+            recentQueries = state.recentQueries,
+            canType = canType,
+            onQueryChange = onQueryChange,
+            onSubmit = onSubmit,
+            onClearQuery = onClearQuery,
+            onEditingChange = onEditingChange,
+            onRecentClick = onRecentClick,
+            onBrowseGenres = onBrowseGenres,
+            onBrowseLibrary = onBrowseLibrary,
+            onClose = onClose,
+            modifier = modifier,
+        )
+    }
+}
 
 @Suppress("LongParameterList", "LongMethod")
 @Composable
@@ -322,6 +454,7 @@ private fun BrowseShell(
     contentState: AutomotiveContentState,
     onSignOut: () -> Unit,
     userDisplayName: String,
+    onSearchClick: () -> Unit,
     onSelectTab: (CarScreen) -> Unit,
     onExpandPlayer: () -> Unit,
     onQueueClick: () -> Unit,
@@ -350,9 +483,12 @@ private fun BrowseShell(
     val maxItems = playerState.restrictions.maxCumulativeContentItems
 
     Column(modifier = modifier.fillMaxSize()) {
-        // The callbacks are no-ops until A6/A7 give search, settings and profile somewhere
-        // to go; the controls render disabled in the meantime.
-        CarSystemBar(onSearchClick = {}, onSettingsClick = {}, onAvatarClick = {})
+        // Settings and profile are still no-ops and render disabled until A7.
+        CarSystemBar(
+            onSearchClick = onSearchClick,
+            onSettingsClick = {},
+            onAvatarClick = {},
+        )
 
         // Above the rail: an app-level condition, not screen content.
         OfflineBanner(isOffline = playerState.isOffline)

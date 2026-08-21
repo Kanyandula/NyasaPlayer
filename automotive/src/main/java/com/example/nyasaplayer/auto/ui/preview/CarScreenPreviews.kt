@@ -13,6 +13,8 @@ import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
+import com.example.nyasaplayer.auto.ui.screens.CarSearchResultsScreen
+import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
@@ -264,4 +266,119 @@ private fun ErrorOverlayPreview() {
             onRetry = {},
         )
     }
+}
+
+private val PreviewRecentQueries = listOf("hendrix", "midnight drive", "jazz classics")
+
+@Composable
+private fun Search(query: String, recentQueries: List<String>, canType: Boolean) {
+    AppTheme {
+        CarSearchScreen(
+            query = query,
+            recentQueries = recentQueries,
+            canType = canType,
+            onQueryChange = {},
+            onSubmit = {},
+            onClearQuery = {},
+            onEditingChange = {},
+            onRecentClick = {},
+            onBrowseGenres = {},
+            onBrowseLibrary = {},
+            onClose = {},
+        )
+    }
+}
+
+@Preview(
+    name = "Search Screen - recent-empty",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchScreenEmptyPreview() {
+    Search(query = "", recentQueries = emptyList(), canType = true)
+}
+
+@Preview(
+    name = "Search Screen - draft query and recents",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchScreenTypingPreview() {
+    Search(query = "hendrix", recentQueries = PreviewRecentQueries, canType = true)
+}
+
+@Preview(
+    name = "Search Screen - NO_KEYBOARD voice prompt",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchScreenVoicePromptPreview() {
+    Search(query = "", recentQueries = PreviewRecentQueries, canType = false)
+}
+
+@Composable
+private fun SearchResults(results: List<Song>, isLoading: Boolean, errorMessage: String?) {
+    AppTheme {
+        CarSearchResultsScreen(
+            query = "midnight",
+            results = results,
+            isLoading = isLoading,
+            errorMessage = errorMessage,
+            onBackToSearch = {},
+            onClear = {},
+            onRetry = {},
+            onSongClick = { _, _ -> },
+            currentlyPlayingMediaId = "2",
+            isPlaying = true,
+        )
+    }
+}
+
+@Preview(
+    name = "Search Results - top result and rows",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchResultsPreview() {
+    SearchResults(results = PreviewSongs, isLoading = false, errorMessage = null)
+}
+
+@Preview(
+    name = "Search Results - no results",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchResultsEmptyPreview() {
+    SearchResults(results = emptyList(), isLoading = false, errorMessage = null)
+}
+
+@Preview(
+    name = "Search Results - error",
+    device = Devices.AUTOMOTIVE_1024p,
+    showBackground = true,
+    widthDp = 1280,
+    heightDp = 720,
+)
+@Composable
+private fun SearchResultsErrorPreview() {
+    SearchResults(
+        results = emptyList(),
+        isLoading = false,
+        errorMessage = "Couldn't search right now. Check your connection.",
+    )
 }

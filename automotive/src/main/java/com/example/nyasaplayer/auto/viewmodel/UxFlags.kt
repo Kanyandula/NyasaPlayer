@@ -16,6 +16,20 @@ data class UxRestrictionState(
     val requiresDistractionOptimization: Boolean = false,
 ) {
     val isDistractionOptimized: Boolean get() = requiresDistractionOptimization
+
+    /**
+     * [items] trimmed to what the driver is allowed to see right now.
+     *
+     * Conditional on purpose: the platform reports [maxCumulativeContentItems] when parked too,
+     * where it is the unrestricted baseline rather than a restriction, so capping unconditionally
+     * would silently truncate a parked list. A5's queue windowing already followed this rule
+     * (see queueDisplayItems); this is the same rule with one definition. See D36.
+     */
+    fun <T> cap(items: List<T>): List<T> = if (isDistractionOptimized) {
+        items.take(maxCumulativeContentItems.coerceAtLeast(0))
+    } else {
+        items
+    }
 }
 
 /**

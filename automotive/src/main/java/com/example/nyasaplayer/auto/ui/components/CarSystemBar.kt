@@ -1,6 +1,7 @@
 package com.example.nyasaplayer.auto.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -13,15 +14,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -37,9 +37,11 @@ import com.example.nyasaplayer.core.common.ui.icons.SettingsIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 private val LogoSize = 40.dp
 private val ControlIconSize = 24.dp
@@ -54,10 +56,9 @@ private val ControlSpacing = 8.dp
  * as a wordmark plus a right-hand control cluster, and having tabs in both places is how a
  * driver's muscle memory breaks between screens.
  *
- * The three callbacks are accepted but unused: the controls they belong to are disabled
- * until A6 and A7 give them destinations. They are in the signature now so the caller does
- * not need a signature change later; the disabled-state plumbing inside SystemBarControl
- * still has to be added when those slices land.
+ * [onSearchClick] opens the search sheet (A6). [onSettingsClick] and [onAvatarClick] are
+ * accepted but unused: those controls stay disabled until A7 gives them destinations. They are
+ * in the signature now so the caller does not need one more change later.
  */
 @Suppress("UnusedParameter")
 @Composable
@@ -77,7 +78,7 @@ fun CarSystemBar(
     ) {
         AppLogo()
         Spacer(modifier = Modifier.weight(1f))
-        SystemBarControls()
+        SystemBarControls(onSearchClick = onSearchClick)
         ClockDisplay(modifier = Modifier.padding(start = 16.dp))
     }
 }
@@ -115,60 +116,75 @@ private fun AppLogo(modifier: Modifier = Modifier) {
 /**
  * Search, settings and profile.
  *
- * All three are **disabled** until A6 (search) and A7 (settings, profile) give them
+ * Search is live from A6. Settings and profile stay **disabled** until A7 gives them
  * destinations. Disabled rather than silently inert: FR-2.6 prohibits a control that looks
- * live and does nothing. They keep their full hit areas so the bar does not reflow when the
- * later slices enable them.
+ * live and does nothing. All three keep their full hit areas so the bar does not reflow when
+ * that slice enables the other two.
  *
  * Wi-fi, bluetooth and battery are deliberately absent — see the A2 spec, D7.
  */
 @Composable
-private fun SystemBarControls(modifier: Modifier = Modifier) {
+private fun SystemBarControls(onSearchClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(ControlSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SystemBarControl(SearchIcon, "Search")
+        SystemBarControl(SearchIcon, "Search", onClick = onSearchClick)
         SystemBarControl(SettingsIcon, "Settings")
         SystemBarControl(ProfileIcon, "Profile", iconSize = AvatarIconSize)
     }
 }
 
+/**
+ * A null [onClick] is the disabled control: the disabled tint, and `clickable(enabled = false)`
+ * so it also announces as disabled. Attaching no clickable at all would leave it looking inert
+ * while reading as a live control to TalkBack — the one channel where the grey tint says nothing.
+ */
 @Composable
 private fun SystemBarControl(
     icon: ImageVector,
     contentDescription: String,
     modifier: Modifier = Modifier,
     iconSize: Dp = ControlIconSize,
+    onClick: (() -> Unit)? = null,
 ) {
     Box(
-        modifier = modifier.carTouchTarget(),
+        modifier = modifier
+            .carTouchTarget()
+            .clickable(enabled = onClick != null, role = Role.Button) { onClick?.invoke() },
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = CarTextDisabled,
+            tint = if (onClick == null) CarTextDisabled else CarTextSecondary,
             modifier = Modifier.size(iconSize),
         )
     }
 }
 
-private const val ClockUpdateIntervalMs = 60_000L
+private const val MinuteMs = 60_000L
 
 @Composable
 private fun ClockDisplay(modifier: Modifier = Modifier) {
-    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
+    // Aligned to the minute boundary rather than to composition: a flat 60s delay leaves the
+    // displayed minute stale by however far into a minute the bar happened to first compose,
+    // and stays that far off for the life of the Activity.
+    val now by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
-            delay(ClockUpdateIntervalMs)
-            currentTime = System.currentTimeMillis()
+            val millis = System.currentTimeMillis()
+            value = millis
+            delay((MinuteMs - millis % MinuteMs).milliseconds)
         }
     }
-    val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+    val locale = Locale.getDefault()
+    val formatter = remember(locale) { DateTimeFormatter.ofPattern("h:mm a", locale) }
     Text(
-        text = timeFormat.format(Date(currentTime)),
+        // The zone is resolved per tick. A remembered SimpleDateFormat caches the timezone it
+        // was built with, so a vehicle crossing one would show the wrong hour until the
+        // Activity was recreated.
+        text = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).format(formatter),
         color = CarTextSecondary,
         fontSize = 16.sp,
         modifier = modifier,
