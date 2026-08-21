@@ -1,8 +1,7 @@
 # AAOS Slice A6 — verification record
 
-Closes definition-of-done items 13 and 14 of
-`docs/superpowers/specs/2026-08-20-aaos-search-design.md`: the §8.2 manual checklist executed and
-its outcome recorded, plus the §8.3 gates.
+Records the §8.2 manual checklist and §8.3 gates required by
+`docs/superpowers/specs/2026-08-20-aaos-search-design.md` §11.
 
 - **Date:** 2026-08-21
 - **Branch:** `ek/aaos-a6-t1-search-viewmodel`
@@ -17,7 +16,7 @@ its outcome recorded, plus the §8.3 gates.
 
 | Command | Result |
 |---|---|
-| `./gradlew :automotive:testOemDebugUnitTest` | Pass — 117 tests, 0 failures, 0 errors |
+| `./gradlew :automotive:testOemDebugUnitTest` | Pass — 118 tests, 0 failures, 0 errors |
 | `./gradlew :core:data:testDebugUnitTest` | Pass — 54 tests, 0 failures, 0 errors |
 | `./gradlew detekt` | Pass — no new baseline entries |
 | `./gradlew :automotive:lintOemDebug` | Pass |
@@ -69,7 +68,7 @@ tapped, third in the visible list.
 
 This is the failure the plan named as A6's biggest correctness risk: the driver must play from the
 list they can see. Queue size 21 with the correct index is that property observed end to end,
-and `visibleSearchResults()` is unit-tested and mutation-checked for the same rule.
+and `UxRestrictionState.cap()` is unit-tested and mutation-checked for the same rule.
 
 ## The album-search proof
 
