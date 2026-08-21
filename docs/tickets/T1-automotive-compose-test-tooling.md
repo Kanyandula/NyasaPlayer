@@ -2,7 +2,7 @@
 
 - **Slice:** tooling — not a feature slice
 - **Depends on:** nothing
-- **Status:** Spec/plan ready; keep small and land before T4
+- **Status:** Implemented on `ek/aaos-t1-compose-test-tooling`
 - **Spec:** `docs/superpowers/specs/2026-08-21-aaos-compose-test-tooling-design.md`
 - **Plan:** `docs/superpowers/plans/2026-08-21-aaos-t1-compose-test-tooling.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
@@ -123,7 +123,10 @@ None of these are known to be wrong. All four are currently defended by someone 
 - **Build:** `gradle/libs.versions.toml`, `automotive/build.gradle.kts`
 - **Tests:** `automotive/src/test/` — new rendering test alongside the existing seven files
 - **Storage:** none
-- **Production code:** none. This ticket adds no production change and should not.
+- **Production code:** one test seam. `BrowseShell`'s Favourites branch moved verbatim into an
+  `internal CarFavouritesRoute`, because the binding under test is exactly what the branch does
+  and the shell around it needs Hilt. No behaviour change; two stale "no Compose test tooling"
+  comments went with it.
 
 ## Risk Areas
 
@@ -136,6 +139,28 @@ None of these are known to be wrong. All four are currently defended by someone 
   `android.car`. Render the screen with restriction values passed in as plain parameters, which is
   how `CarFavouriteMusicScreen` already takes them.
 - **Data migration:** none.
+
+## Outcome
+
+Landed as `CarFavouritesRouteTest` (2) and `CarSearchScreenTest` (2), taking `:automotive` from
+124 to 128 JVM tests. Four mutations were run against them and all four failed by name:
+`favouritesError` → `errorMessage`, `favouritesLoading` → `isLoading`, the `NO_KEYBOARD` guard
+around the Songs chip, and dropping `carConsumeTouches()` from `CarSearchScreen`.
+
+Two things worth knowing before adding more:
+
+- **Consumption itself is not observable here.** The touch-blocker test renders the real
+  `CarSearchScreen` over a stand-in shell rather than a synthetic layout, because a synthetic one
+  survives replacing `carConsumeTouches()` with an inert `pointerInput` — either version makes the
+  sheet a hit-test candidate, which alone stops the sibling below it from being hit. What the test
+  defends is the caller's contract, which is the regression T6 actually saw.
+- **Nothing rendering `AsyncImage` has been tried.** The two Favourites tests cover the error and
+  empty states, neither of which reaches the hero or a `CarTrackRow`. Whoever first renders a
+  populated list should expect to deal with Coil under Robolectric.
+
+`debugImplementation(libs.androidx.ui.test.manifest)` puts `androidx.activity.ComponentActivity`
+into the debug merged manifest. Verified absent from `playstoreRelease`, which is the manifest
+Play's AAOS media review reads.
 
 ## Notes
 

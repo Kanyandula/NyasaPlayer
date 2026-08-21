@@ -64,8 +64,8 @@ the ticket and do not keep a weak test.
 
 **Purpose:** Make `createComposeRule()` run inside `:automotive:testOemDebugUnitTest`.
 
-- [ ] Add `robolectric` to `gradle/libs.versions.toml`.
-- [ ] In `automotive/build.gradle.kts`, add:
+- [x] Add `robolectric` to `gradle/libs.versions.toml`.
+- [x] In `automotive/build.gradle.kts`, add:
 
 ```kotlin
 testImplementation(platform(libs.androidx.compose.bom))
@@ -73,12 +73,11 @@ testImplementation(libs.androidx.ui.test.junit4)
 testImplementation(libs.robolectric)
 ```
 
-- [ ] Add `debugImplementation(libs.androidx.ui.test.manifest)` only if the JVM Compose rule needs
+- [x] Add `debugImplementation(libs.androidx.ui.test.manifest)` only if the JVM Compose rule needs
       it for a manifest/activity host.
-- [ ] Set `testOptions.unitTests.isIncludeAndroidResources = true`.
-- [ ] Add a temporary harness smoke test only if the first real test is not ready in the same
-      edit. Delete the smoke test before final verification if a real render test covers it.
-- [ ] Run `./gradlew :automotive:testOemDebugUnitTest --tests "*Compose*"` or the exact new test
+- [x] Set `testOptions.unitTests.isIncludeAndroidResources = true`.
+- [ ] Not needed — `CarFavouritesRouteTest` was the first test and proved the harness.
+- [x] Run `./gradlew :automotive:testOemDebugUnitTest --tests "*Compose*"` or the exact new test
       class name.
 
 **Acceptance criteria:** a JVM test under `automotive/src/test/` renders Compose without an
@@ -99,17 +98,17 @@ Preferred implementation:
 
 Checklist:
 
-- [ ] Extract only the Favourites branch. Do not expose the full `BrowseShell` unless needed.
-- [ ] Render the route in `CarFavouritesRouteTest`.
-- [ ] Test error binding:
+- [x] Extract only the Favourites branch. Do not expose the full `BrowseShell` unless needed.
+- [x] Render the route in `CarFavouritesRouteTest`.
+- [x] Test error binding:
       `errorMessage = "catalogue error"` and `favouritesError = "favourites error"` must display
       the favourites error only.
-- [ ] Test loading binding:
+- [x] Test loading binding:
       `isLoading = true` and `favouritesLoading = false` with no songs must show
       "No favourites yet", not the skeleton.
-- [ ] Mutation-check locally by temporarily swapping the route bindings and confirming the tests
+- [x] Mutation-check locally by temporarily swapping the route bindings and confirming the tests
       fail, then revert the mutation.
-- [ ] Run `./gradlew :automotive:testOemDebugUnitTest --tests "*CarFavouritesRouteTest*"`.
+- [x] Run `./gradlew :automotive:testOemDebugUnitTest --tests "*CarFavouritesRouteTest*"`.
 
 **Acceptance criteria:** Favourites route binding regressions fail by name and the production UI is
 unchanged.
@@ -120,19 +119,18 @@ unchanged.
 
 Search test:
 
-- [ ] Render `CarSearchScreen(query = "worship", canType = false, ...)`.
-- [ ] Assert the voice prompt is visible.
-- [ ] Assert "Search", "Songs" and the editable-field placeholder are absent.
-- [ ] Assert "Browse by" remains visible.
+- [x] Render `CarSearchScreen(query = "worship", canType = false, ...)`.
+- [x] Assert the voice prompt is visible.
+- [x] Assert "Search", "Songs" and the editable-field placeholder are absent.
+- [x] Assert "Browse by" remains visible.
 
 Pointer helper test:
 
-- [ ] Render a test-only layout with an underlying clickable counter.
-- [ ] Place a full-size top Box with `carConsumeTouches()`.
-- [ ] Click empty top-surface space and assert the underlying counter stays zero.
-- [ ] Add a clickable child inside the top surface and assert the child still receives its click.
-- [ ] If this is flaky or unsupported under Robolectric, remove the test and record the exact
-      limitation in the ticket.
+- [x] Superseded: the test-only layout survived mutating `carConsumeTouches()` into an inert
+      `pointerInput`, so the assertions moved onto `CarSearchScreen` rendered over a stand-in
+      shell. Same two checks — stray tap does not reach the shell, the sheet's own Genres chip
+      still fires — against the caller instead of a synthetic surface. Limitation recorded in the
+      ticket.
 
 Run:
 
@@ -149,11 +147,11 @@ covered or honestly documented as still manual-only.
 
 **Purpose:** Keep T1 small, reviewed and ready before T4 starts.
 
-- [ ] Update `docs/tickets/T1-automotive-compose-test-tooling.md` status to implemented only after
+- [x] Update `docs/tickets/T1-automotive-compose-test-tooling.md` status to implemented only after
       the code lands.
-- [ ] Record final test count and any pointer-test carve-out in the ticket or a small verification
+- [x] Record final test count and any pointer-test carve-out in the ticket or a small verification
       note.
-- [ ] Run:
+- [x] Run:
 
 ```bash
 ./gradlew :automotive:testOemDebugUnitTest detekt \
