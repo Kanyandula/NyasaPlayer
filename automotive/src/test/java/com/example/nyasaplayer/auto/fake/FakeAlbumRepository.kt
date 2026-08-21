@@ -23,4 +23,13 @@ class FakeAlbumRepository : AlbumRepository {
     override fun getAlbumsByArtist(artistId: String): Flow<List<Album>> = albums
 
     override suspend fun getAlbumsByPopularity(limit: Int): List<Album> = albums.value.take(limit)
+
+    // Filters but does not rank: match-quality ordering is the DAO's, and CatalogSearchDaoTest
+    // owns it against real SQLite. Nothing in :automotive asserts this section's order.
+    override suspend fun searchAlbums(query: String, limit: Int): List<Album> {
+        val needle = query.trim().lowercase()
+        return albums.value.filter {
+            it.name.lowercase().contains(needle) || it.artistName.lowercase().contains(needle)
+        }.take(limit)
+    }
 }

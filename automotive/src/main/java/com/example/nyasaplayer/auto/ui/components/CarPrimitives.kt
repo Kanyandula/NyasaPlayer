@@ -1,5 +1,6 @@
 package com.example.nyasaplayer.auto.ui.components
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -30,14 +31,18 @@ fun Modifier.carTouchTarget(): Modifier =
  * area of the open search sheet pressed the nav rail button behind it and switched tabs, and the
  * queue leaked the same way through the strip beside its rows.
  *
- * Consumed on the main pass, so the surface's own children still handle their touches first —
- * only what they leave unhandled is blocked. Deliberately not a no-op `clickable`, which would
- * announce an interactive control that does nothing (FR-2.6).
+ * A tap detector, because the thing that leaks is a tap. The first version consumed every pointer
+ * change on the main pass, on the theory that children handle their touches first and only the
+ * remainder is blocked. That is not what happens: it also swallowed drags, so the search sheet's
+ * result list would not scroll on device and neither would the queue's. Consuming only what is
+ * left unconsumed does not help either — both were checked on the emulator (T4).
+ *
+ * Deliberately not a no-op `clickable`, which would announce an interactive control that does
+ * nothing (FR-2.6); `detectTapGestures` publishes no semantics.
+ *
+ * Drags do fall through to whatever is underneath. Nothing under a full-screen surface is visible
+ * to drag, and an unscrollable sheet is the worse failure.
  */
 fun Modifier.carConsumeTouches(): Modifier = this.pointerInput(Unit) {
-    awaitPointerEventScope {
-        while (true) {
-            awaitPointerEvent().changes.forEach { it.consume() }
-        }
-    }
+    detectTapGestures { }
 }

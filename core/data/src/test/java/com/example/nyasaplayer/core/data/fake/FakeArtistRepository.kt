@@ -16,4 +16,8 @@ class FakeArtistRepository : ArtistRepository {
 
     override suspend fun getArtistsByPopularity(limit: Int): List<Artist> =
         artists.value.sortedByDescending { it.popularity }.take(limit)
+
+    // Filters without ranking, like the album fake beside it.
+    override suspend fun searchArtists(query: String, limit: Int): List<Artist> =
+        artists.value.filter { it.name.contains(query.trim(), ignoreCase = true) }.take(limit)
 }

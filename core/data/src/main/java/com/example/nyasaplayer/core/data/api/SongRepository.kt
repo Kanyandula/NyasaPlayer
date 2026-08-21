@@ -13,5 +13,12 @@ interface SongRepository {
 
     // Used by AAOS browse tree
     suspend fun getSongsByPopularity(limit: Int): List<Song>
+
+    /**
+     * Songs matching [query], most popular first.
+     *
+     * Implementations trim [query] and treat LIKE wildcards in it as literal characters, so the
+     * car launcher and Assistant cannot answer the same words differently (spec 3.5).
+     */
     suspend fun searchSongs(query: String, limit: Int): List<Song>
 }

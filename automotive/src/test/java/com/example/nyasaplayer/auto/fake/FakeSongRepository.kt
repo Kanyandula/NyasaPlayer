@@ -6,6 +6,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class FakeSongRepository : SongRepository {
@@ -35,7 +36,10 @@ class FakeSongRepository : SongRepository {
         return ids.mapNotNull { byId[it] }
     }
 
-    override fun getSongsByArtist(artistId: String): Flow<List<Song>> = songs
+    // Filters like SongDao's artist_id query; catalogue artist detail depends on it.
+    override fun getSongsByArtist(artistId: String): Flow<List<Song>> =
+        songs.map { list -> list.filter { it.artistId == artistId } }
+
     override fun getSongsByGenre(genreId: String): Flow<List<Song>> = songs
     override suspend fun getSongsByPopularity(limit: Int): List<Song> = songs.value.take(limit)
     /** Every query [searchSongs] was called with, in order. */
@@ -49,15 +53,18 @@ class FakeSongRepository : SongRepository {
 
     override suspend fun searchSongs(query: String, limit: Int): List<Song> {
         searchQueries += query
+        // Trimmed like the real repository, which is what makes SearchParityTest meaningful:
+        // MediaBrowseTree hands this its query untrimmed.
+        val needle = query.trim()
         // NonCancellable for the same reason as [getSongsByIds]: a plain await() would let
         // cancellation alone discard a stale search, leaving the ViewModel's token guard untested.
         withContext(NonCancellable) { searchGates[query]?.await() }
         searchFailure?.let { throw it }
         return songs.value
             .filter {
-                it.title.contains(query, ignoreCase = true) ||
-                    it.resolvedArtistName.contains(query, ignoreCase = true) ||
-                    it.albumName.contains(query, ignoreCase = true)
+                it.title.contains(needle, ignoreCase = true) ||
+                    it.resolvedArtistName.contains(needle, ignoreCase = true) ||
+                    it.albumName.contains(needle, ignoreCase = true)
             }
             .take(limit)
     }

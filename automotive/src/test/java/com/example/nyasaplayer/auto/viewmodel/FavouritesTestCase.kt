@@ -2,6 +2,7 @@ package com.example.nyasaplayer.auto.viewmodel
 
 import com.example.nyasaplayer.auto.MainDispatcherRule
 import com.example.nyasaplayer.auto.fake.FakeAlbumRepository
+import com.example.nyasaplayer.auto.fake.FakeArtistRepository
 import com.example.nyasaplayer.auto.fake.FakeAuthRepository
 import com.example.nyasaplayer.auto.fake.FakeGenreRepository
 import com.example.nyasaplayer.auto.fake.FakePlaylistRepository
@@ -33,6 +34,7 @@ abstract class FavouritesTestCase {
         songRepository = songs,
         genreRepository = genres,
         albumRepository = FakeAlbumRepository(),
+        artistRepository = FakeArtistRepository(),
         playlistRepository = FakePlaylistRepository(),
         userRepository = users,
         authRepository = auth,

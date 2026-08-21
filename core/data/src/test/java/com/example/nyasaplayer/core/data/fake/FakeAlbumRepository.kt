@@ -20,4 +20,12 @@ class FakeAlbumRepository : AlbumRepository {
 
     override suspend fun getAlbumsByPopularity(limit: Int): List<Album> =
         albums.value.sortedByDescending { it.popularity }.take(limit)
+
+    // Filters without ranking: match-quality ordering is the DAO's, and CatalogSearchDaoTest owns
+    // it against real SQLite.
+    override suspend fun searchAlbums(query: String, limit: Int): List<Album> =
+        albums.value.filter {
+            it.name.contains(query.trim(), ignoreCase = true) ||
+                it.artistName.contains(query.trim(), ignoreCase = true)
+        }.take(limit)
 }

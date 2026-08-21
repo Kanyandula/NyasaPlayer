@@ -19,4 +19,7 @@ class OfflineArtistRepository @Inject constructor(
 
     override suspend fun getArtistsByPopularity(limit: Int): List<Artist> =
         artistDao.getByPopularity(limit).map { it.toDomain() }
+
+    override suspend fun searchArtists(query: String, limit: Int): List<Artist> =
+        artistDao.search(escapeLikeArgument(query), limit).map { it.toDomain() }
 }

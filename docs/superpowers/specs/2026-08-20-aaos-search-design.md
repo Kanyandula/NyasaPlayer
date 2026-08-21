@@ -48,7 +48,8 @@ from A4: the next slice touching it should split rather than grow the suppressio
 - **Not in-app voice capture.** The app does not request `RECORD_AUDIO`, does not draw a recorder,
   and does not collect microphone input. Driving voice search stays system/Assistant driven through
   `PlaybackService.onSearch` / `onGetSearchResult`.
-- **Not multi-entity search.** Album, artist and playlist result cards are deferred by D33.
+- **Not multi-entity search.** Album, artist and playlist result cards are deferred by D33, and
+  shipped later by T4.
 - **Not a generic artist-detail screen.** The only existing artist screen is liked-songs scoped.
 - **Not A7.** Settings and profile controls remain disabled.
 - **Not persistent search history.** Recent queries are session state in the car ViewModel only.
@@ -270,7 +271,7 @@ Numbering continues A5's D26-D30.
 |---|---|---|
 | D31 | **Q2 is resolved by using system IME when `NO_KEYBOARD` is absent and a voice-search prompt when it is present.** | The app should react to platform restrictions, not infer driving state or draw a custom keyboard. This aligns the custom launcher with Android car UX guidance and keeps `RECORD_AUDIO` out of the app. |
 | D32 | **A6 searches on explicit submit, not on every keypress.** | A head-unit search field should not create work while the driver is still editing. Submit also maps cleanly to screen 6: a results screen exists only after a committed query. |
-| D33 | **A6 ships song-only results. Album, artist and playlist result cards are deferred.** | The shared search API, media-session search path and available tests are song-search contracts. Multi-entity cards need a typed result model, repository APIs, and a real artist-detail destination before the UI can be honest. |
+| D33 | **A6 ships song-only results. Album, artist and playlist result cards are deferred.** | The shared search API, media-session search path and available tests are song-search contracts. Multi-entity cards need a typed result model, repository APIs, and a real artist-detail destination before the UI can be honest. Delivered by T4; see `aaos-DESIGN.md` D43–D47. |
 | D34 | **Recent searches are session-only in `AutomotiveSearchViewModel`.** | Persistence is not required by the PRD and would add storage/privacy questions to a screen slice. Losing recent queries on process death is acceptable; losing playback state is not, and is tracked separately by T3. |
 | D35 | **`AutomotiveContentViewModel` loses search ownership rather than growing another suppression.** | A4's D23 explicitly called out that this ViewModel now owns too many unrelated domains. A6 can isolate search with a small ViewModel because the feature depends only on `SongRepository`. |
 

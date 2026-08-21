@@ -413,7 +413,9 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
 - **D33 — A6 ships song-only results; album, artist and playlist result cards are deferred to
   T4.** `SongRepository.searchSongs()` and `MediaBrowseTree.search()` are song-search contracts
   today. The original album/artist card wording needs a typed result model, repository search APIs
-  and a valid artist destination before the UI can be honest.
+  and a valid artist destination before the UI can be honest. **Delivered by T4**, which added all
+  three — see D43 to D47. (This number collides with the Favourites D33 above; both predate T4 and
+  are left as written rather than renumbered under references from other documents.)
 - **D34 — Recent searches are session-only in the automotive search ViewModel.** The PRD asks for
   recent searches but not durable history. Persisting query history adds privacy/storage questions
   that are not needed to make screen 5 useful; losing recents on process death is acceptable.
@@ -458,7 +460,13 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   to the nav rail behind them and silently switched tabs. `carConsumeTouches()` consumes on the
   main pass, so a surface's own children still handle their touches first. Not a no-op
   `clickable`: that publishes a disabled-control semantics node on something that is not a
-  control, which is the FR-2.6 problem, and it only swallows taps rather than drags.
+  control, which is the FR-2.6 problem, and it only swallows taps rather than drags. **Amended by
+  T4:** consuming every change on the main pass also swallowed the surface's *own* drags — the
+  search sheet's result list and the queue's list could not be scrolled at all on device, which
+  hid every section below the fold. Both were reproduced on the pre-fix build: a 13-song queue
+  showed five rows and refused to move. It is now `detectTapGestures`, which blocks the tap that
+  leaks and leaves drags to the content. Consuming only unconsumed changes was tried first and
+  did not restore scrolling. Full defect record: ticket T9.
 - **D42 — Overlays are a stack; the sheet is a single value.** The queue renders *above* the full
   player and closing it must reveal the player, so a single `CarOverlay?` cannot express them —
   collapsing them drops the driver onto the browse shell instead. Sheets have no such nesting.
@@ -467,6 +475,37 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   `dropLast(1)` at the call site. The explicit `listSaver` is for the restore side — tolerating an
   enum name a later build no longer has — not for storage, which the default `autoSaver` would
   have handled, every list here being `Serializable`.
+
+- **D43 — Result sections keep their repository's order; only the featured pick ranks across
+  types.** T4's coordinator first sorted every section with the cross-type comparator, which
+  quietly reordered the song section away from `MediaBrowseTree.search()` — the ordering Assistant
+  is served. Match-quality ranking already happens where it belongs: the album and artist DAO
+  queries rank in SQL, because `LIMIT` has to keep the best rows rather than the first ones the
+  table yields, and songs stay popularity-ordered for parity. The comparator's remaining job is
+  choosing which single card is featured. `SearchParityTest` fails if the section order forks
+  again.
+- **D44 — Query normalization lives in the repository, below both search surfaces.** The launcher
+  trimmed committed queries in its ViewModel while the browse tree passed Assistant's query
+  through untouched, so `" grace "` meant two different searches on two surfaces of one feature.
+  Trimming and LIKE-wildcard escaping now sit together in `escapeLikeArgument`, which every DAO
+  search argument passes through, and the repository interfaces state it. The escaping half also
+  fixes a pre-existing defect: without it a driver searching for `50%` matched the whole
+  catalogue.
+- **D45 — Artist search matches names only, not the genre column.** `ArtistEntity.genres` is a
+  JSON-encoded list, so matching it means a LIKE over serialized text that also hits punctuation
+  and ids. The spec allowed genre matching only if it could be done without that, and it cannot.
+- **D46 — A catalogue artist is a different destination from the liked-songs artist.**
+  `CarDestination.CatalogArtist` loads artist metadata plus every catalogue track by that artist,
+  and renders through the same body as album and playlist detail — which has no like affordance.
+  Reusing screen 9 would have shown an arbitrary search result as the driver's own likes, with
+  hearts that remove rows on tap. The screen is a third wrapper over `CarDetailBody` rather than a
+  new file, since that body already renders exactly what this needs.
+- **D47 — The media-session search path stays song-only, and parity is stated with the featured
+  card lifted out.** Album, artist and playlist cards are launcher enrichment: the launcher owns
+  the tap and has detail screens to land on, while a voice or host-rendered result is a thing to
+  play. The launcher's "Top result" slot has no media-session equivalent either, so the parity
+  claim is that both surfaces return the same songs under the same limit, with the section order
+  matching once the featured song is removed — not that the two lists are identical.
 
 ## Components
 

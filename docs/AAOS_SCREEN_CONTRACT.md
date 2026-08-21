@@ -98,7 +98,7 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | 3 | `CarHomeScreen` | Continue Listening cards, Your Mixes, Recommended, Play card/item | loading, empty, error, offline banner | Allowed; lists truncated by item cap | A2 |
 | 4 | `CarBrowseScreen` | Filter chips, genre/mood/category cards, Play/open category | loading, empty, error | Allowed at root; deep drill-down refused by depth cap | A3 |
 | 5 | `CarSearchScreen` | Search field when `NO_KEYBOARD` is absent, system voice prompt, recent searches, browse-by shortcuts, clear query | idle, recent-empty, no query | Typed entry refused; system/Assistant voice offered | A6 |
-| 6 | `CarSearchResultsScreen` | Top song result, song rows, clear/back; album/artist cards deferred by D33/T4 | loading, no results, error | Results view allowed; active text entry refused | A6 |
+| 6 | `CarSearchResultsScreen` | Top result of any type, then Songs rows and Albums/Artists/Playlists card sections in fixed order, clear/back | loading, no results, error | Results view allowed; active text entry refused; one cumulative cap across every section | A6 · T4 |
 | 7 | `CarLibraryScreen` | Category rows for Playlists, Albums, Artists, Favourites, Downloads; recently played | loading, empty, error | Allowed at root; drill-down refused past cap | A3 |
 | 8 | `CarFavouriteMusicScreen` | Hero liked songs, Play all, Shuffle, track rows, unlike | empty routes to screen 17, loading, error | Allowed; list truncated; unlike is one-tap and row removal is deferred until refresh | A4 |
 | 9 | `CarArtistLikedSongsScreen` | Artist hero, Play all, track rows, unlike | loading, empty, error | Refused when beyond depth cap | A4 |
@@ -113,6 +113,11 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | 18 | `CarLoadingScreen` | Shared static skeletons and optional parked-only shimmer | initial load, section load | Allowed; no distracting animation | A8 |
 | 19 | `CarPlaybackErrorOverlay` | Error message, Try again, Skip next, Dismiss | recoverable, fatal | Allowed and dismissible while driving | A8 |
 | 20 | `CarProfileSwitcherScreen` | Current profile, switch profile, add profile, close | loading, empty/guest, error | Refused by `NO_SETUP` | A7 |
+| 21 | `CarArtistScreen` | Catalogue artist hero, Play, Shuffle, track rows, no like affordance | loading, empty, error, artist missing | Refused when beyond depth cap | T4 |
+
+Screen 21 is the catalogue artist a search result opens. It is not screen 9: that one is the
+driver's liked songs by an artist and removes rows live on unlike, which is not what an arbitrary
+catalogue artist is (D46).
 
 Screens 16-19 are states/overlays, not rail destinations. They still require full visual,
 interaction and accessibility treatment.

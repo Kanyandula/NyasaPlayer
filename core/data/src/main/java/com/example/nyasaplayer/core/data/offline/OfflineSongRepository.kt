@@ -37,5 +37,5 @@ class OfflineSongRepository @Inject constructor(
         songDao.getByPopularity(limit).map { it.toDomain() }
 
     override suspend fun searchSongs(query: String, limit: Int): List<Song> =
-        songDao.search(query, limit).map { it.toDomain() }
+        songDao.search(escapeLikeArgument(query), limit).map { it.toDomain() }
 }

@@ -2,6 +2,7 @@ package com.example.nyasaplayer.auto.viewmodel
 
 import com.example.nyasaplayer.auto.MainDispatcherRule
 import com.example.nyasaplayer.auto.fake.FakeAlbumRepository
+import com.example.nyasaplayer.auto.fake.FakeArtistRepository
 import com.example.nyasaplayer.auto.fake.FakeAuthRepository
 import com.example.nyasaplayer.auto.fake.FakeGenreRepository
 import com.example.nyasaplayer.auto.fake.FakePlaylistRepository
@@ -9,6 +10,7 @@ import com.example.nyasaplayer.auto.fake.FakeSongRepository
 import com.example.nyasaplayer.auto.fake.FakeUserRepository
 import com.example.nyasaplayer.auto.ui.navigation.CarDestination
 import com.example.nyasaplayer.core.common.models.Album
+import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import kotlinx.coroutines.CompletableDeferred
@@ -31,12 +33,14 @@ class DetailLoadingTest {
 
     private val songs = FakeSongRepository()
     private val albums = FakeAlbumRepository()
+    private val artists = FakeArtistRepository()
     private val playlists = FakePlaylistRepository()
 
     private fun viewModel() = AutomotiveContentViewModel(
         songRepository = songs,
         genreRepository = FakeGenreRepository(),
         albumRepository = albums,
+        artistRepository = artists,
         userRepository = FakeUserRepository(),
         authRepository = FakeAuthRepository(),
         playlistRepository = playlists,
@@ -95,6 +99,70 @@ class DetailLoadingTest {
         val detail = requireNotNull(vm.contentState.value.detail)
         assertEquals(listOf("y", "x"), detail.tracks.map { it.mediaId })
         assertEquals("Playlist pl1", detail.title)
+    }
+
+    @Test
+    fun openDetail_catalogArtist_loadsMetadataAndEveryCatalogueTrack() = runTest {
+        songs.songs.value = listOf(
+            song("a").copy(artistId = "ar1"),
+            song("b").copy(artistId = "ar1"),
+            song("other").copy(artistId = "ar2"),
+        )
+        artists.artists.value = listOf(
+            Artist(id = "ar1", name = "Grace Choir", imageUrl = "https://example.test/ar1.jpg"),
+        )
+        val vm = viewModel()
+
+        vm.openDetail(CarDestination.CatalogArtist("ar1"))
+
+        val detail = requireNotNull(vm.contentState.value.detail)
+        assertEquals(listOf("a", "b"), detail.tracks.map { it.mediaId })
+        assertEquals("Grace Choir", detail.title)
+        assertEquals("https://example.test/ar1.jpg", detail.artworkUrl)
+        assertFalse(detail.isLoading)
+        assertNull(detail.errorMessage)
+    }
+
+    @Test
+    fun openDetail_catalogArtist_missingArtistReportsItRatherThanAnEmptyScreen() = runTest {
+        songs.songs.value = listOf(song("a").copy(artistId = "ar1"))
+        val vm = viewModel()
+
+        vm.openDetail(CarDestination.CatalogArtist("ar1"))
+
+        val detail = requireNotNull(vm.contentState.value.detail)
+        assertNotNull(detail.errorMessage)
+        assertFalse(detail.isLoading)
+        assertTrue(detail.tracks.isEmpty())
+    }
+
+    @Test
+    fun openDetail_catalogArtist_withNoTracksLoadsWithoutError() = runTest {
+        artists.artists.value = listOf(Artist(id = "ar1", name = "Grace Choir"))
+        val vm = viewModel()
+
+        vm.openDetail(CarDestination.CatalogArtist("ar1"))
+
+        val detail = requireNotNull(vm.contentState.value.detail)
+        assertTrue(detail.tracks.isEmpty())
+        assertNull(detail.errorMessage)
+        assertFalse(detail.isLoading)
+    }
+
+    /** A settled error is not settled: re-opening the same destination has to retry it. */
+    @Test
+    fun openDetail_catalogArtist_reopeningAfterAFailureRetries() = runTest {
+        songs.songs.value = listOf(song("a").copy(artistId = "ar1"))
+        val vm = viewModel()
+        vm.openDetail(CarDestination.CatalogArtist("ar1"))
+        assertNotNull(requireNotNull(vm.contentState.value.detail).errorMessage)
+
+        artists.artists.value = listOf(Artist(id = "ar1", name = "Grace Choir"))
+        vm.openDetail(CarDestination.CatalogArtist("ar1"))
+
+        val detail = requireNotNull(vm.contentState.value.detail)
+        assertNull(detail.errorMessage)
+        assertEquals(listOf("a"), detail.tracks.map { it.mediaId })
     }
 
     @Test

@@ -117,6 +117,17 @@ class MediaBrowseTree @Inject constructor(
         }
     }
 
+    /**
+     * Songs only, and playable.
+     *
+     * The car launcher's own search screen also shows album, artist and playlist cards, but those
+     * are enrichment it can afford because it owns the tap and has detail screens to land on. A
+     * voice or host-rendered search result is a thing to play, so returning a browsable card here
+     * would hand Assistant something it cannot act on (spec 3.5).
+     *
+     * The song half must stay identical to the launcher's song section — same primitive, same
+     * limit, same order. `SearchParityTest` in `:automotive` fails if they drift.
+     */
     suspend fun search(query: String): List<MediaItem> =
         songRepository.searchSongs(query, DEFAULT_BROWSE_LIMIT).map { it.toPlayableItem() }
 
