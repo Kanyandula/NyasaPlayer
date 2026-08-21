@@ -175,7 +175,10 @@ private fun ResultsList(
                 onClick = { onSongClick(results, top) },
             )
         }
-        items(items = results.drop(1), key = { it.mediaId }) { song ->
+        // Indexed rather than results.drop(1): the drop copies the whole list every time the
+        // lazy content runs, and this list is up to the repository's search limit.
+        items(count = results.size - 1, key = { results[it + 1].mediaId }) { index ->
+            val song = results[index + 1]
             CarTrackRow(
                 title = song.title,
                 artist = song.resolvedArtistName,

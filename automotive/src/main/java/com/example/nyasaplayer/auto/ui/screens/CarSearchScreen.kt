@@ -98,6 +98,9 @@ fun CarSearchScreen(
     modifier: Modifier = Modifier,
 ) {
     val fieldFocus = remember { FocusRequester() }
+    // Remembered so the browse-by row keeps a stable callback and can skip recomposition while
+    // the driver types — an inline lambda here is a new object on every keystroke.
+    val focusField = remember(fieldFocus) { { fieldFocus.requestFocus() } }
 
     Column(
         // Opaque for the same reason as CarQueueScreen: a sheet occludes the shell behind it.
@@ -122,7 +125,7 @@ fun CarSearchScreen(
 
         BrowseByShortcuts(
             canType = canType,
-            onFocusField = { fieldFocus.requestFocus() },
+            onFocusField = focusField,
             onBrowseGenres = onBrowseGenres,
             onBrowseLibrary = onBrowseLibrary,
         )
