@@ -2,7 +2,7 @@
 
 - **Slice:** A6 (screens 5 and 6)
 - **Depends on:** A1 restrictions, A2 chrome, A3/A4 shared content components, A5 merged baseline
-- **Status:** Implemented and device-verified on `ek/aaos-a6-t1-search-viewmodel`; review-ready with recorded carve-outs
+- **Status:** Merged — PR #27, 2026-08-21. Device-verified with carve-outs; follow-ups T5-T8
 - **Spec:** `docs/superpowers/specs/2026-08-20-aaos-search-design.md`
 - **Plan:** `docs/superpowers/plans/2026-08-20-aaos-a6-search.md`
 - **Verification Record:** `docs/AAOS_A6_VERIFICATION.md`

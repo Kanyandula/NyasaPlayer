@@ -2,7 +2,7 @@
 
 - **Slice:** A5 (screens 12 and 13)
 - **Depends on:** A2 (merged)
-- **Status:** Implemented and verified on `ek/aaos-a5-t1-queue-window`; review-ready with recorded carve-outs
+- **Status:** Merged — PR #24. Device-verified with carve-outs; retryable-error and process-death restore follow-ups recorded
 - **Spec:** `docs/superpowers/specs/2026-08-20-aaos-full-player-queue-design.md`
 - **Plan:** `docs/superpowers/plans/2026-08-20-aaos-a5-full-player-queue.md`
 - **Verification Record:** `docs/AAOS_A5_VERIFICATION.md`
