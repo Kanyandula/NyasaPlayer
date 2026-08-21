@@ -452,6 +452,21 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   make the `Songs` shortcut, whose entire job is focusing the field, meaningless. The field
   focuses on tap or through `Songs`. Recorded as a deliberate deviation from the checklist
   wording rather than silently kept.
+- **D41 — Full-screen surfaces consume their own touches.** Drawing over `BrowseShell` does not
+  stop Compose delivering touches to it; hit-testing collects every overlapping pointer-input node
+  at a coordinate regardless of Z-order. On device both the search sheet and the queue leaked taps
+  to the nav rail behind them and silently switched tabs. `carConsumeTouches()` consumes on the
+  main pass, so a surface's own children still handle their touches first. Not a no-op
+  `clickable`: that publishes a disabled-control semantics node on something that is not a
+  control, which is the FR-2.6 problem, and it only swallows taps rather than drags.
+- **D42 — Overlays are a stack; the sheet is a single value.** The queue renders *above* the full
+  player and closing it must reveal the player, so a single `CarOverlay?` cannot express them —
+  collapsing them drops the driver onto the browse shell instead. Sheets have no such nesting.
+  The reachable states are exactly `[]`, `[FullPlayer]`, `[Queue]` and `[FullPlayer, Queue]`. Pushing
+  is a pure function (`overlaysWith`) so the replace-vs-push rule is tested; popping is
+  `dropLast(1)` at the call site. The explicit `listSaver` is for the restore side — tolerating an
+  enum name a later build no longer has — not for storage, which the default `autoSaver` would
+  have handled, every list here being `Serializable`.
 
 ## Components
 
