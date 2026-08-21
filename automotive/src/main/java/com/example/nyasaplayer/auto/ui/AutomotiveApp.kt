@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -115,16 +116,29 @@ private fun AuthenticatedApp(
     }
 
     var currentScreen by rememberSaveable { mutableStateOf(CarScreen.Home) }
-    var showFullPlayer by rememberSaveable { mutableStateOf(false) }
-    var showQueue by rememberSaveable { mutableStateOf(false) }
     var drillDown by rememberSaveable { mutableStateOf<CarDestination?>(null) }
-    var showSearch by rememberSaveable { mutableStateOf(false) }
+    // The queue sits *above* the full player rather than replacing it, so closing the queue has
+    // to reveal the player again. A single nullable value cannot express that.
+    var overlays by rememberSaveable(stateSaver = OverlayStackSaver) {
+        mutableStateOf(emptyList<CarOverlay>())
+    }
+    var sheet by rememberSaveable { mutableStateOf<CarSheet?>(null) }
     var denialReason by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    // The editing flag clears itself when the field leaves composition (see CarSearchScreen), so
-    // closing the sheet is all this has to do.
-    val closeSearch = { showSearch = false }
+    val openFullPlayer: () -> Unit = {
+        sheet = null
+        overlays = overlaysWith(overlays, CarOverlay.FullPlayer)
+    }
+    val openQueue: () -> Unit = {
+        sheet = null
+        overlays = overlaysWith(overlays, CarOverlay.Queue)
+    }
+    val closeTopOverlay: () -> Unit = { overlays = overlays.dropLast(1) }
+    val clearTransientSurfaces: () -> Unit = {
+        overlays = emptyList()
+        sheet = null
+    }
 
     // The platform's own NO_KEYBOARD answer, not a driving guess (spec D31).
     val canType = !playerState.restrictions.noTextEntry
@@ -133,7 +147,7 @@ private fun AuthenticatedApp(
     // "leaving for a tab" always means the same thing.
     val selectTab = { screen: CarScreen ->
         drillDown = null
-        closeSearch()
+        clearTransientSurfaces()
         currentScreen = screen
     }
 
@@ -144,10 +158,9 @@ private fun AuthenticatedApp(
 
     val location = carUiLocation(
         tab = currentScreen,
-        showFullPlayer = showFullPlayer,
-        showQueue = showQueue,
+        overlay = overlays.lastOrNull(),
         drillDown = drillDown,
-        showSearch = showSearch,
+        sheet = sheet,
         searchTextEntryActive = searchState.isEditing,
     )
 
@@ -158,10 +171,10 @@ private fun AuthenticatedApp(
         when (val result = gate(location, playerState.restrictions)) {
             is GateResult.Allowed -> Unit
             is GateResult.Denied -> {
-                showFullPlayer = false
-                showQueue = false
+                // evictTo carries a whole CarUiLocation, but only its tab is usable — see the
+                // lossy-projection note on CarUiLocation.tabRoot().
+                clearTransientSurfaces()
                 drillDown = null
-                closeSearch()
                 currentScreen = result.evictTo.tab
                 denialReason = result.reason
             }
@@ -201,10 +214,10 @@ private fun AuthenticatedApp(
     Box(modifier = modifier.fillMaxSize()) {
         CarAmbientBackground(animate = motionEnabled)
 
-        if (showFullPlayer) {
+        if (CarOverlay.FullPlayer in overlays) {
             CarFullPlayerScreen(
                 playback = playerState.playback,
-                onCollapseClick = { showFullPlayer = false },
+                onCollapseClick = closeTopOverlay,
                 onPlayPauseClick = playerViewModel::togglePlayPause,
                 onSkipNextClick = playerViewModel::skipNext,
                 onSkipPreviousClick = playerViewModel::skipPrevious,
@@ -213,7 +226,7 @@ private fun AuthenticatedApp(
                 onSeek = playerViewModel::seekTo,
                 isLiked = playerState.isCurrentSongLiked,
                 onLikeClick = playerViewModel::toggleLike,
-                onQueueClick = { showQueue = true },
+                onQueueClick = openQueue,
             )
         } else {
             BrowseShell(
@@ -227,24 +240,19 @@ private fun AuthenticatedApp(
                 // press away.
                 onSearchClick = {
                     searchViewModel.backToSearch()
-                    showSearch = true
+                    clearTransientSurfaces()
+                    sheet = CarSheet.Search
                 },
                 onSelectTab = selectTab,
-                onExpandPlayer = {
-                    closeSearch()
-                    showFullPlayer = true
-                },
-                onQueueClick = {
-                    closeSearch()
-                    showQueue = true
-                },
+                onExpandPlayer = openFullPlayer,
+                onQueueClick = openQueue,
                 decorativeMotionEnabled = motionEnabled,
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
                 onSkipPrevious = playerViewModel::skipPrevious,
                 onSongClick = { songs, song ->
                     playerViewModel.playSong(songs, song)
-                    showFullPlayer = true
+                    openFullPlayer()
                 },
                 onRetry = contentViewModel::retryLoad,
                 onRetryDetail = { drillDown?.let(contentViewModel::openDetail) },
@@ -260,16 +268,16 @@ private fun AuthenticatedApp(
                 onBackFromDetail = { drillDown = null },
                 onArtistSongClick = { songs, song ->
                     playerViewModel.playSong(songs, song)
-                    showFullPlayer = true
+                    openFullPlayer()
                 },
                 onShuffleTracks = { songs ->
                     playerViewModel.shufflePlay(songs)
-                    showFullPlayer = true
+                    openFullPlayer()
                 },
                 onPlayTracks = { tracks ->
                     tracks.firstOrNull()?.let { first ->
                         playerViewModel.playSong(tracks, first)
-                        showFullPlayer = true
+                        openFullPlayer()
                     }
                 },
                 onGenreClick = { genre ->
@@ -277,7 +285,7 @@ private fun AuthenticatedApp(
                         val songs = contentViewModel.getSongsByGenre(genre.id)
                         if (songs.isNotEmpty()) {
                             playerViewModel.shufflePlay(songs)
-                            showFullPlayer = true
+                            openFullPlayer()
                         } else {
                             playerViewModel.reportEmptyGenrePlayback()
                         }
@@ -294,7 +302,7 @@ private fun AuthenticatedApp(
             )
         }
 
-        if (showSearch) {
+        if (sheet == CarSheet.Search) {
             SearchSheet(
                 state = searchState,
                 canType = canType,
@@ -310,23 +318,24 @@ private fun AuthenticatedApp(
                 onRetry = searchViewModel::retrySearch,
                 onBrowseGenres = { selectTab(CarScreen.Browse) },
                 onBrowseLibrary = { selectTab(CarScreen.Library) },
-                onClose = closeSearch,
+                // The editing flag clears itself when the field leaves composition
+                // (see CarSearchScreen), so dropping the sheet is all this has to do.
+                onClose = { sheet = null },
                 onPlay = { songs, song ->
                     playerViewModel.playSong(songs, song)
-                    closeSearch()
-                    showFullPlayer = true
+                    openFullPlayer()
                 },
             )
         }
 
-        if (showQueue) {
+        if (CarOverlay.Queue in overlays) {
             CarQueueScreen(
                 queue = playerState.playback.queue,
                 currentIndex = playerState.playback.currentQueueIndex,
                 isPlaying = playerState.playback.isPlaying,
                 isDriving = playerState.restrictions.isDistractionOptimized,
                 maxItems = playerState.restrictions.maxCumulativeContentItems,
-                onCloseClick = { showQueue = false },
+                onCloseClick = closeTopOverlay,
                 onSkipTo = playerViewModel::skipToQueueItem,
                 onRemove = playerViewModel::removeFromQueue,
                 onClearQueue = playerViewModel::clearQueue,
@@ -364,26 +373,51 @@ private fun AuthenticatedApp(
  */
 internal fun carUiLocation(
     tab: CarScreen,
-    showFullPlayer: Boolean,
-    showQueue: Boolean,
+    overlay: CarOverlay?,
     drillDown: CarDestination?,
-    showSearch: Boolean,
+    sheet: CarSheet?,
     searchTextEntryActive: Boolean,
 ): CarUiLocation = CarUiLocation(
     tab = tab,
-    overlay = when {
-        showFullPlayer -> CarOverlay.FullPlayer
-        showQueue -> CarOverlay.Queue
-        else -> null
-    },
+    overlay = overlay,
     // All three destinations are one step from a tab root (D8). There is no depth 2 in A3.
     drillDepth = if (drillDown != null) 1 else 0,
     // Settings and Profile are A7. The field exists so that slice has nothing to retrofit.
-    sheet = if (showSearch) CarSheet.Search else null,
+    sheet = sheet,
     // Open-but-idle search is browsing, not typing, and stays allowed while driving. Only an
     // active editable field is text entry, which is why this is the ViewModel's explicit flag
     // and not "the query is non-empty" — a query left over from a parked search is not typing.
-    textEntryActive = showSearch && searchTextEntryActive,
+    textEntryActive = sheet == CarSheet.Search && searchTextEntryActive,
+)
+
+/**
+ * The overlay stack after opening [opening].
+ *
+ * The full player replaces whatever was there; the queue pushes onto it, because the queue is
+ * shown *above* the player and closing it must reveal the player again. Pure so the push and pop
+ * rules are testable — there is no Compose test tooling in this module yet (ticket T1).
+ */
+internal fun overlaysWith(current: List<CarOverlay>, opening: CarOverlay): List<CarOverlay> =
+    when (opening) {
+        CarOverlay.FullPlayer -> listOf(CarOverlay.FullPlayer)
+        CarOverlay.Queue -> if (current.lastOrNull() == opening) current else current + opening
+    }
+
+/**
+ * Enum names, and a restore that tolerates names this build no longer has.
+ *
+ * Not needed to store the list: Compose's `canBeSavedToBundle` accepts anything `Serializable`,
+ * which every list produced here is. It is needed for the restore side. Saved instance state can
+ * outlive an app update, so a removed or renamed `CarOverlay` would otherwise throw out of
+ * `valueOf` while the Activity is being restored — a crash on launch, for a transient surface not
+ * worth one. Landing
+ * on the tab root is the right answer for state we cannot honour. The plain `rememberSaveable`
+ * enums here (`currentScreen`, `sheet`) carry the same risk through the autoSaver and are not
+ * hardened; this is simply the first place it is explicit enough to handle.
+ */
+private val OverlayStackSaver = listSaver<List<CarOverlay>, String>(
+    save = { it.map(CarOverlay::name) },
+    restore = { saved -> runCatching { saved.map(CarOverlay::valueOf) }.getOrDefault(emptyList()) },
 )
 
 /**

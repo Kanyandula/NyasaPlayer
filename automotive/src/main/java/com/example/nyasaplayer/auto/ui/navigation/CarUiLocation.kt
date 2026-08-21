@@ -15,6 +15,13 @@ enum class CarSheet { Settings, Profile, Search }
  */
 data class CarUiLocation(
     val tab: CarScreen,
+    /**
+     * The surface on top, or null for the tab itself.
+     *
+     * Nothing reads this yet: [gate] refuses on [sheet], [textEntryActive] and [drillDepth] only,
+     * which is why the queue rendering above the full player while this said `FullPlayer` never
+     * misbehaved. Carried so the first rule that needs it has somewhere to read from.
+     */
     val overlay: CarOverlay? = null,
     val drillDepth: Int = 0,
     val sheet: CarSheet? = null,
@@ -26,6 +33,12 @@ data class CarUiLocation(
      * This is the eviction target. Chosen over evicting to Home, which moves the
      * user somewhere they did not choose, and over evicting to the previous
      * location, which can land on another restricted location and loop.
+     *
+     * **[CarUiLocation] is a lossy projection, so a caller cannot restore itself from one.**
+     * `drillDepth` is an `Int`: it records *that* the user was one level down, not which
+     * `CarDestination` they were in. `GateResult.Denied.evictTo` is typed as a whole location and
+     * reads like somewhere you can navigate to, but only [tab] is usable — read that field and
+     * clear the rest yourself.
      */
     fun tabRoot(): CarUiLocation = CarUiLocation(tab = tab)
 }

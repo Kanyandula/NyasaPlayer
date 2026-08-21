@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.components.carConsumeTouches
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
@@ -93,6 +94,7 @@ fun CarQueueScreen(
         // must occlude what is behind it rather than inherit the root background.
         modifier = modifier
             .fillMaxSize()
+            .carConsumeTouches()
             .background(NyasaBackground),
     ) {
         QueueHeader(
@@ -382,7 +384,7 @@ private fun RemoveConfirmDialog(
             modifier = Modifier
                 .clip(RoundedCornerShape(24.dp))
                 .background(CarGlass)
-                .clickable(enabled = false, onClick = {})
+                .carConsumeTouches()
                 .padding(48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

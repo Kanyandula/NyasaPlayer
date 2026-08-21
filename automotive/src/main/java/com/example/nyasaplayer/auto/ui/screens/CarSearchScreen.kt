@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.components.CarPillButton
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
+import com.example.nyasaplayer.auto.ui.components.carConsumeTouches
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarOutline
@@ -108,6 +109,7 @@ fun CarSearchScreen(
         // Opaque for the same reason as CarQueueScreen: a sheet occludes the shell behind it.
         modifier = modifier
             .fillMaxSize()
+            .carConsumeTouches()
             .background(NyasaBackground)
             .padding(CarScreenMargin),
         verticalArrangement = Arrangement.spacedBy(SectionSpacing),

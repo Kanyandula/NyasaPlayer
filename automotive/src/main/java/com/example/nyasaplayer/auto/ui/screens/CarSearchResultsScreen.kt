@@ -34,6 +34,7 @@ import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarPillButton
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
+import com.example.nyasaplayer.auto.ui.components.carConsumeTouches
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarListRowHeight
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
@@ -85,6 +86,7 @@ fun CarSearchResultsScreen(
         // Opaque for the same reason as CarQueueScreen: a sheet occludes the shell behind it.
         modifier = modifier
             .fillMaxSize()
+            .carConsumeTouches()
             .background(NyasaBackground)
             .padding(CarScreenMargin),
         verticalArrangement = Arrangement.spacedBy(SectionSpacing),
