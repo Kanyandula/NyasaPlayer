@@ -463,7 +463,8 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   control, which is the FR-2.6 problem, and it only swallows taps rather than drags. **Amended by
   T4:** consuming every change on the main pass also swallowed the surface's *own* drags — the
   search sheet's result list and the queue's list could not be scrolled at all on device, which
-  hid every section below the fold. It is now `detectTapGestures`, which blocks the tap that
+  hid every section below the fold. Both were reproduced on the pre-fix build: a 13-song queue
+  showed five rows and refused to move. It is now `detectTapGestures`, which blocks the tap that
   leaks and leaves drags to the content. Consuming only unconsumed changes was tried first and
   did not restore scrolling.
 - **D42 — Overlays are a stack; the sheet is a single value.** The queue renders *above* the full

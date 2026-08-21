@@ -98,8 +98,12 @@ result over two songs that matched only secondarily, with an "Open" pill rather 
 
 **It also found a defect no JVM test had:** the result list would not scroll, so everything below
 the fold was unreachable. `carConsumeTouches()` consumed every pointer change on the main pass and
-swallowed drags along with taps; `CarQueueScreen` carries the same modifier and had the same
-problem. Fixed in the helper, with a test that fails on the old implementation.
+swallowed drags along with taps. Fixed in the helper, with a test that fails on the old
+implementation.
+
+`CarQueueScreen` carries the same modifier, and rather than assume, both builds were run: on the
+pre-fix build a 13-song queue showed five rows and would not scroll; on the fixed build the same
+queue scrolls. A5's queue had been unscrollable since T6 shipped the modifier.
 
 **Not exercised:** the cumulative driving cap. This account's catalogue returns about five results
 for any query, well under `maxCumulativeContentItems` (21 on this image), so the cap never binds
