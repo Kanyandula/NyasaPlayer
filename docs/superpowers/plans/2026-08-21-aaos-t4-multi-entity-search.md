@@ -207,17 +207,19 @@ not the liked-songs artist screen.
 
 **Purpose:** Replace the song-only results screen with typed featured and section cards.
 
-- [ ] Update `SearchSheet` to derive visible typed results from `state.submittedQuery`.
-- [ ] Apply the driving cap to the flattened rendered result stream, then re-section.
-- [ ] Render a featured card when present.
-- [ ] Render sections in fixed order: Songs, Albums, Artists, Playlists.
-- [ ] Omit empty sections.
-- [ ] Keep loading, no-results, error, retry, clear and back behavior.
-- [ ] Use existing car primitives and 76dp touch targets.
-- [ ] For song cards, pass the visible song-result queue to playback.
-- [ ] For album, artist and playlist cards, close search and open the corresponding detail route.
-- [ ] Add Compose tests for all section labels, empty sections, featured de-duplication, cap
-      behavior and tap callbacks if the T1 harness is present.
+- [x] Update `SearchSheet` to derive visible typed results from `state.submittedQuery`.
+- [x] Apply the driving cap to the flattened rendered result stream, then re-section.
+- [x] Render a featured card when present.
+- [x] Render sections in fixed order: Songs, Albums, Artists, Playlists.
+- [x] Omit empty sections.
+- [x] Keep loading, no-results, error, retry, clear and back behavior.
+- [x] Use existing car primitives and 76dp touch targets.
+- [x] For song cards, pass the visible song-result queue to playback.
+- [x] For album, artist and playlist cards, close search and open the corresponding detail route.
+- [x] Add Compose tests for all section labels, empty sections, featured de-duplication, cap
+      behavior and tap callbacks if the T1 harness is present. `CarSearchResultsScreenTest` (6,
+      Compose), `SearchResultCapTest` (4, pure) and `SearchResultRoutingTest` (4, pure). Coil
+      renders fine under Robolectric — the open question T1 recorded.
 
 **Acceptance criteria:** multi-entity results render and route by type, and the visible/tappable
 list is exactly the capped rendered list.
