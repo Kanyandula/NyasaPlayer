@@ -68,7 +68,7 @@ If any of those are missing, stop and merge A6 first.
 | `automotive/.../auto/search/AutomotiveSearchResult.kt` | Typed result model, section container and ranking helpers |
 | `automotive/.../auto/search/AutomotiveCatalogSearch.kt` | Repository-backed typed search coordinator |
 | `automotive/src/test/.../auto/search/AutomotiveCatalogSearchTest.kt` | Ranking and sectioning tests |
-| `automotive/src/main/.../auto/ui/screens/CarArtistScreen.kt` | General catalogue artist detail |
+| ~~`automotive/src/main/.../auto/ui/screens/CarArtistScreen.kt`~~ | Landed as a wrapper in `CarDetailScreen.kt` — see Task 4 |
 | `automotive/src/test/.../ui/screens/CarSearchResultsScreenTest.kt` | Multi-section rendering and cap tests |
 | `core/data/src/test/.../offline/OfflineAlbumRepositoryTest.kt` | Album search semantics |
 | `core/data/src/test/.../offline/OfflineArtistRepositoryTest.kt` | Artist search semantics |
@@ -188,15 +188,17 @@ deterministic ordering.
 
 **Purpose:** Give artist result cards an honest destination.
 
-- [ ] Add a distinct destination such as `CarDestination.CatalogArtist(artistId: String)`.
-- [ ] Leave the existing liked-songs artist route intact.
-- [ ] Update comments that currently describe only album/playlist detail.
-- [ ] Add `AutomotiveContentViewModel` loading for catalogue artist metadata and songs.
-- [ ] Load artist songs from `SongRepository.getSongsByArtist(artistId)`.
-- [ ] Build a general `CarArtistScreen` or adapt the existing detail body without favourite
-      toggles.
-- [ ] Keep drill depth at 1.
-- [ ] Add tests for artist found, missing artist, empty artist tracks and retry.
+- [x] Add a distinct destination such as `CarDestination.CatalogArtist(artistId: String)`.
+- [x] Leave the existing liked-songs artist route intact.
+- [x] Update comments that currently describe only album/playlist detail.
+- [x] Add `AutomotiveContentViewModel` loading for catalogue artist metadata and songs.
+- [x] Load artist songs from `SongRepository.getSongsByArtist(artistId)`.
+- [x] Build a general `CarArtistScreen` or adapt the existing detail body without favourite
+      toggles. It is a wrapper over the shared `CarDetailBody` in `CarDetailScreen.kt`, beside its
+      album and playlist siblings, rather than the separate `CarArtistScreen.kt` the file plan
+      named — the body already renders tracks without a like affordance.
+- [x] Keep drill depth at 1.
+- [x] Add tests for artist found, missing artist, empty artist tracks and retry.
 
 **Acceptance criteria:** tapping an artist search result opens a catalogue artist detail screen,
 not the liked-songs artist screen.
