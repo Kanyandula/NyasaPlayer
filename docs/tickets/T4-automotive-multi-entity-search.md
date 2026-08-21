@@ -100,6 +100,22 @@ existed.
   hands off to — close the sheet, move to the Library tab, set `drillDown` — is composable-local
   state in `AutomotiveApp` and has no test.
 
+## Left for later
+
+- **Three detail screens are one function.** `CarAlbumScreen`, `CarPlaylistScreen` and the new
+  `CarArtistScreen` are byte-identical forwarders to `CarDetailBody` differing only in one empty
+  state string, and `DetailRoute` now has three identical branches naming them. Making the body
+  public and selecting `emptyBody` at the single call site removes about 110 lines. Two-thirds of
+  that duplication predates T4, so it is a refactor of A3 screens rather than part of this slice.
+- **The exact/prefix/substring ladder exists four times** — two DAO `CASE` blocks,
+  `matchQuality()` and `FirebasePlaylistRepository.nameMatchTier`. A shared helper would span
+  `:core:data` and `:automotive` for three lines each, which costs more than it saves. Recorded as
+  a drift risk, not a task.
+- **The `:automotive` search fakes keep `query.trim()`** even though `AutomotiveCatalogSearch`
+  trims before calling them. It is unreachable today, but the repository interfaces document
+  trimming as part of the search contract, and a fake that quietly breaks that contract would
+  mislead the first test to call it directly.
+
 ## Notes
 
 This is the follow-up that closes the result-card part of the original screen 6 ambition. It is not
