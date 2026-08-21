@@ -384,7 +384,7 @@ private fun RemoveConfirmDialog(
             modifier = Modifier
                 .clip(RoundedCornerShape(24.dp))
                 .background(CarGlass)
-                .clickable(enabled = false, onClick = {})
+                .carConsumeTouches()
                 .padding(48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

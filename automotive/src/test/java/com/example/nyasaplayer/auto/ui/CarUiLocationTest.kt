@@ -74,10 +74,8 @@ class CarUiLocationTest {
     }
 
     @Test
-    fun `closing the queue opened from the mini player leaves nothing`() {
-        val stack = overlaysWith(emptyList(), CarOverlay.Queue)
-
-        assertEquals(emptyList<CarOverlay>(), stack.dropLast(1))
+    fun `the queue opened from the mini player is the whole stack`() {
+        assertEquals(listOf(CarOverlay.Queue), overlaysWith(emptyList(), CarOverlay.Queue))
     }
 
     @Test
@@ -85,12 +83,5 @@ class CarUiLocationTest {
         val once = overlaysWith(listOf(CarOverlay.FullPlayer), CarOverlay.Queue)
 
         assertEquals(once, overlaysWith(once, CarOverlay.Queue))
-    }
-
-    @Test
-    fun `the top of the stack is what the gate sees`() {
-        val stack = overlaysWith(listOf(CarOverlay.FullPlayer), CarOverlay.Queue)
-
-        assertEquals(CarOverlay.Queue, location(overlay = stack.lastOrNull()).overlay)
     }
 }

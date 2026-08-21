@@ -43,6 +43,7 @@ import com.example.nyasaplayer.auto.ui.components.CarCardShape
 import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
+import com.example.nyasaplayer.auto.ui.components.carConsumeTouches
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
@@ -412,7 +413,7 @@ private fun SignOutModalCard(
             .fillMaxWidth(ModalWidthFraction)
             .clip(RoundedCornerShape(24.dp))
             .background(CarGlass)
-            .clickable(enabled = false, onClick = {})
+            .carConsumeTouches()
             .padding(48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

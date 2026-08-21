@@ -15,6 +15,13 @@ enum class CarSheet { Settings, Profile, Search }
  */
 data class CarUiLocation(
     val tab: CarScreen,
+    /**
+     * The surface on top, or null for the tab itself.
+     *
+     * Nothing reads this yet: [gate] refuses on [sheet], [textEntryActive] and [drillDepth] only,
+     * which is why the queue rendering above the full player while this said `FullPlayer` never
+     * misbehaved. Carried so the first rule that needs it has somewhere to read from.
+     */
     val overlay: CarOverlay? = null,
     val drillDepth: Int = 0,
     val sheet: CarSheet? = null,

@@ -135,9 +135,6 @@ private fun AuthenticatedApp(
         overlays = overlaysWith(overlays, CarOverlay.Queue)
     }
     val closeTopOverlay: () -> Unit = { overlays = overlays.dropLast(1) }
-    // The editing flag clears itself when the field leaves composition (see CarSearchScreen), so
-    // closing the sheet is all this has to do.
-    val closeSearch: () -> Unit = { sheet = null }
     val clearTransientSurfaces: () -> Unit = {
         overlays = emptyList()
         sheet = null
@@ -243,7 +240,7 @@ private fun AuthenticatedApp(
                 // press away.
                 onSearchClick = {
                     searchViewModel.backToSearch()
-                    overlays = emptyList()
+                    clearTransientSurfaces()
                     sheet = CarSheet.Search
                 },
                 onSelectTab = selectTab,
@@ -321,7 +318,9 @@ private fun AuthenticatedApp(
                 onRetry = searchViewModel::retrySearch,
                 onBrowseGenres = { selectTab(CarScreen.Browse) },
                 onBrowseLibrary = { selectTab(CarScreen.Library) },
-                onClose = closeSearch,
+                // The editing flag clears itself when the field leaves composition
+                // (see CarSearchScreen), so dropping the sheet is all this has to do.
+                onClose = { sheet = null },
                 onPlay = { songs, song ->
                     playerViewModel.playSong(songs, song)
                     openFullPlayer()
@@ -401,13 +400,22 @@ internal fun carUiLocation(
 internal fun overlaysWith(current: List<CarOverlay>, opening: CarOverlay): List<CarOverlay> =
     when (opening) {
         CarOverlay.FullPlayer -> listOf(CarOverlay.FullPlayer)
-        CarOverlay.Queue -> if (current.lastOrNull() == CarOverlay.Queue) current else current + opening
+        CarOverlay.Queue -> if (current.lastOrNull() == opening) current else current + opening
     }
 
-/** Enum names: the default autoSaver cannot put a `List` in a `Bundle`. */
+/**
+ * Enum names: the default autoSaver cannot put a `List` in a `Bundle`.
+ *
+ * Restoring tolerates names this build no longer has. Saved instance state can outlive an app
+ * update, so a removed or renamed `CarOverlay` would otherwise throw out of `valueOf` while the
+ * Activity is being restored — a crash on launch, for a transient surface not worth one. Landing
+ * on the tab root is the right answer for state we cannot honour. The plain `rememberSaveable`
+ * enums here (`currentScreen`, `sheet`) carry the same risk through the autoSaver and are not
+ * hardened; this is simply the first place it is explicit enough to handle.
+ */
 private val OverlayStackSaver = listSaver<List<CarOverlay>, String>(
     save = { it.map(CarOverlay::name) },
-    restore = { it.map(CarOverlay::valueOf) },
+    restore = { saved -> runCatching { saved.map(CarOverlay::valueOf) }.getOrDefault(emptyList()) },
 )
 
 /**
