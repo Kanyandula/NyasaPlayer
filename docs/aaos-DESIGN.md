@@ -462,9 +462,11 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
 - **D42 — Overlays are a stack; the sheet is a single value.** The queue renders *above* the full
   player and closing it must reveal the player, so a single `CarOverlay?` cannot express them —
   collapsing them drops the driver onto the browse shell instead. Sheets have no such nesting.
-  The reachable states are exactly `[]`, `[FullPlayer]`, `[Queue]` and `[FullPlayer, Queue]`. The
-  push and pop rules are a pure function so both are tested, and an explicit `listSaver` is
-  required because the default `autoSaver` cannot put a `List` in a `Bundle`.
+  The reachable states are exactly `[]`, `[FullPlayer]`, `[Queue]` and `[FullPlayer, Queue]`. Pushing
+  is a pure function (`overlaysWith`) so the replace-vs-push rule is tested; popping is
+  `dropLast(1)` at the call site. The explicit `listSaver` is for the restore side — tolerating an
+  enum name a later build no longer has — not for storage, which the default `autoSaver` would
+  have handled, every list here being `Serializable`.
 
 ## Components
 
