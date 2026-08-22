@@ -6,7 +6,7 @@ import com.example.nyasaplayer.core.common.models.UserProfile
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.AuthResult
 import com.example.nyasaplayer.core.data.api.UserRepository
-import com.example.nyasaplayer.core.data.sync.FirebaseSyncManager
+import com.example.nyasaplayer.core.data.sync.CatalogSync
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,7 +29,7 @@ data class CarAuthUiState(
 class AutomotiveAuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-    private val firebaseSyncManager: FirebaseSyncManager,
+    private val catalogSync: CatalogSync,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -53,7 +53,7 @@ class AutomotiveAuthViewModel @Inject constructor(
             when (val result = authRepository.signInWithCredential(credential)) {
                 is AuthResult.Success -> {
                     createUserProfile(result.user)
-                    firebaseSyncManager.start()
+                    catalogSync.start()
                     _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
                 }
                 is AuthResult.Error -> {

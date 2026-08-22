@@ -171,13 +171,16 @@ can emit auth sessions without constructing a `FirebaseUser`.
 
 **Purpose:** Make `AutomotiveAuthViewModel` testable without a mocking library.
 
-- [ ] Create `CatalogSync` with `start()` and `stop()`.
-- [ ] Make `FirebaseSyncManager` implement `CatalogSync`.
-- [ ] Add a Hilt binding in a sync-specific module.
-- [ ] Inject `CatalogSync` into `AutomotiveAuthViewModel`.
-- [ ] Inject `CatalogSync` into `AutomotiveApplication`; preserve its cold-start behavior.
+- [x] Create `CatalogSync` with `start()` and `stop()`.
+- [x] Make `FirebaseSyncManager` implement `CatalogSync`.
+- [x] Add a Hilt binding in a sync-specific module.
+- [x] Inject `CatalogSync` into `AutomotiveAuthViewModel`.
+- [x] Inject `CatalogSync` into `AutomotiveApplication`; preserve its cold-start behavior.
 - [ ] Optionally update `NyasaPlayerApplication` to inject `CatalogSync` too, for consistency.
-- [ ] Add a test fake that counts `start()` and `stop()` calls.
+      **Skipped:** `:app` starts sync unconditionally at cold start and gains nothing from the
+      seam, and the ticket keeps the mobile app out of scope. It still injects the concrete
+      manager, which Hilt binds either way.
+- [x] Add a test fake that counts `start()` and `stop()` calls.
 
 **Acceptance criteria:** `AutomotiveAuthViewModelTest` can construct the ViewModel directly with
 hand-written fakes and no Mockito/MockK dependency.

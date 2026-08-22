@@ -37,12 +37,12 @@ class FirebaseSyncManager @Inject constructor(
     private val artistDao: ArtistDao,
     private val genreDao: GenreDao,
     private val albumDao: AlbumDao,
-) {
+) : CatalogSync {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var syncJob: Job? = null
 
     @Synchronized
-    fun start() {
+    override fun start() {
         if (syncJob?.isActive == true) return
         syncJob = scope.launch {
             launch { collectWithRetry(songsFlow()) { songDao.sync(it) } }
@@ -53,7 +53,7 @@ class FirebaseSyncManager @Inject constructor(
     }
 
     @Synchronized
-    fun stop() {
+    override fun stop() {
         syncJob?.cancel()
         syncJob = null
     }
