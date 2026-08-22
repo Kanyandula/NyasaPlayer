@@ -532,13 +532,20 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   wrapping `FirebaseFirestore` and four DAOs and `:automotive` has no mocking library. Start/stop
   behind an interface is what made the auth gate testable, without adding Mockito or MockK. The
   mobile app keeps injecting the concrete manager; Hilt binds both.
-- **D52 — An explicit sign-in owns the transition into the shell until its own success path
-  finishes.** Firebase reports the session the moment credentials are accepted, which is before the
+- **D52 — An explicit sign-in owns entry into the shell until its own success path finishes, and
+  finishes by applying whatever the listener last reported.** Firebase reports the session the moment credentials are accepted, which is before the
   profile write. Entering the shell on that emission would drop the driver into a launcher whose
   profile does not exist yet and strand the loading state it never left, so authenticated emissions
   are ignored for UI entry while a sign-in is in flight. Unauthenticated emissions are always
-  honoured — those are revocations. Catalogue sync is deliberately not deferred with the UI: the
-  catalogue is not user-scoped.
+  honoured — those are revocations, the sign-in they interrupt is already doomed, and deferring
+  them leaves the driver watching a spinner until some credential call times out. Catalogue sync
+  is deliberately not deferred either: the catalogue is not user-scoped.
+
+  The sign-in path does **not** write "authenticated" on success. Review found the race: a session
+  revoked while the profile is being written would lose to that write, reopening the shell over a
+  dead session with sync already stopped and no further emission coming to restart it. The
+  listener's collector is the only writer of the auth state; the sign-in applies its latest
+  session when it completes.
 
 ## Components
 

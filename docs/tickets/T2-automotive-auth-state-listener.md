@@ -149,6 +149,10 @@ Catalogue sync starts and stops with the session through a new `CatalogSync` sea
 made the ViewModel constructible in a test at all: it had **zero** tests before this slice and now
 has eight, with no mocking library added.
 
+Review changed the design once: the sign-in path used to finish by writing "authenticated"
+outright, which a revocation arriving mid-sign-in would lose to. The collector is now the only
+writer of that state, and a regression test drives the sequence.
+
 The row #5 and #15 guards survive, and each still fails its named test when removed. One thing did
 need correcting: row #5's test justified itself by there being no `AuthStateListener` in the
 module — true when written, false after T2, and exactly the sentence a later reader would cite to
