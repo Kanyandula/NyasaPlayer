@@ -12,6 +12,7 @@ import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
@@ -143,8 +144,16 @@ class FakeAuthRepository(userId: String? = DefaultUserId) : AuthRepository {
         AuthResult.Error("unused")
     override suspend fun signUpWithEmail(email: String, password: String): AuthResult =
         AuthResult.Error("unused")
-    override suspend fun signInWithCredential(credential: AuthCredential): AuthResult =
-        AuthResult.Error("unused")
+    /** Holds a credential sign-in in flight, so a test can act while one is in progress. */
+    var credentialGate: CompletableDeferred<Unit>? = null
+
+    /** What a held sign-in finally returns. Success needs a FirebaseUser, which cannot be built. */
+    var credentialResult: AuthResult = AuthResult.Error("unused")
+
+    override suspend fun signInWithCredential(credential: AuthCredential): AuthResult {
+        credentialGate?.await()
+        return credentialResult
+    }
     override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = Result.success(Unit)
 
     override fun signOut() {

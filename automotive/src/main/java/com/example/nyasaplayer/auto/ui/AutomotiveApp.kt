@@ -90,7 +90,7 @@ fun AutomotiveApp(
         if (authState.isAuthenticated) {
             AuthenticatedApp(
                 onSignOut = authViewModel::signOut,
-                userDisplayName = authViewModel.currentUserDisplayName,
+                userDisplayName = authState.displayName,
             )
         } else {
             CarAuthScreen(

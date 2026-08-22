@@ -11,14 +11,20 @@ class FakeCatalogSync : CatalogSync {
     var stopCount = 0
         private set
 
-    /** True while sync should be running, mirroring the real manager's idempotent pair. */
-    val isRunning: Boolean get() = startCount > stopCount
+    /**
+     * Whether sync should be running now. Tracked rather than derived from the counts: a stop
+     * followed by a start leaves them equal, and "equal" is not "stopped".
+     */
+    var isRunning: Boolean = false
+        private set
 
     override fun start() {
         startCount++
+        isRunning = true
     }
 
     override fun stop() {
         stopCount++
+        isRunning = false
     }
 }
