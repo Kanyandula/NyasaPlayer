@@ -267,12 +267,12 @@ listener lands.
 
 **Purpose:** Close the ticket with executable and device evidence.
 
-- [ ] Update `docs/aaos-DESIGN.md` with the T2 decisions:
+- [x] Update `docs/aaos-DESIGN.md` with the T2 decisions:
       - auth state lives on `AuthRepository`
       - passive session invalidation evicts UI but does not stop playback
       - sync follows live auth state in the automotive shell
-- [ ] Update `docs/tickets/T2-automotive-auth-state-listener.md` status and outcome.
-- [ ] Run:
+- [x] Update `docs/tickets/T2-automotive-auth-state-listener.md` status and outcome.
+- [x] Run:
 
 ```bash
 ./gradlew :automotive:testOemDebugUnitTest :core:data:testDebugUnitTest detekt \
@@ -282,14 +282,17 @@ listener lands.
   :app:assembleDebug
 ```
 
-- [ ] Device check on `AAOS_AOSP_33_userdebug`:
+- [x] Device check on `AAOS_AOSP_33_userdebug`:
       - launch signed in
       - invalidate or sign out the Firebase session externally if feasible
       - verify the custom launcher returns to `CarAuthScreen`
       - verify foreground playback is not stopped by the UI eviction
       - verify catalog sync restarts after signing in again
-- [ ] If external invalidation is not feasible on the available account, record that carve-out and
-      rely on the fake-driven ViewModel/route tests for the listener transition.
+- [x] If external invalidation is not feasible on the available account, record that carve-out and
+      rely on the fake-driven ViewModel/route tests for the listener transition. It is not: a
+      Firebase client does not see a revoked token until its next refresh, up to an hour out. The
+      device run exercised the same collector path through an explicit sign-out, with playback
+      confirmed still running across the eviction.
 
 **Acceptance criteria:** T2 has JVM proof for the auth transition and honest manual evidence for
 what could and could not be exercised on the emulator/account.

@@ -2,7 +2,7 @@
 
 - **Slice:** auth flow — cross-cutting, not a screen slice
 - **Depends on:** T1 for Compose test tooling; plan adds a fakeable sync seam
-- **Status:** Plan ready — implementation not started
+- **Status:** Implemented and device-verified; server-side revocation not exercised
 - **Plan:** `docs/superpowers/plans/2026-08-22-aaos-t2-auth-state-listener.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
 - **Design Reference:** `.claude/loop/ledger.md` rows #5, #15, #16
@@ -138,6 +138,49 @@ than minor.
   mocking library.
 - The row #5 and row #15 null-user guards stay. The listener reduces the stale-auth window; it
   does not eliminate every in-flight read of a null user id.
+
+## Outcome
+
+Implemented across six tasks. Design records D48–D52 in `docs/aaos-DESIGN.md`.
+
+`AuthRepository.authSession` is a Firebase-free flow; `AutomotiveAuthViewModel` collects it and the
+shell's gate — now `AuthGate`, extracted so the real branch is renderable in a test — follows it.
+Catalogue sync starts and stops with the session through a new `CatalogSync` seam, which is what
+made the ViewModel constructible in a test at all: it had **zero** tests before this slice and now
+has eight, with no mocking library added.
+
+The row #5 and #15 guards survive, and each still fails its named test when removed. One thing did
+need correcting: row #5's test justified itself by there being no `AuthStateListener` in the
+module — true when written, false after T2, and exactly the sentence a later reader would cite to
+delete a guard that is still load-bearing. It now gives the reasons that outlive T2.
+
+## Device verification
+
+`AAOS_AOSP_33_userdebug`, driver user 10, 2026-08-22. Playback was running throughout.
+
+| Step | Result |
+|---|---|
+| Signed in, Library | "Signed in as Miracle Kanyandula" — the display name now comes from auth state, not a `FirebaseUser` read during composition |
+| Sign out | Shell replaced by `CarAuthScreen` |
+| Playback across the eviction | **Continued**, position advancing 53s → 77s → 140s (D49) |
+| Sign back in | Shell returned, Home and Favourites repopulated — sync restarted |
+
+## Not verified
+
+- **Server-side revocation.** A Firebase client does not observe a revoked token until it next
+  refreshes, up to an hour later, so a genuine passive invalidation is not reachable inside a test
+  session. What was exercised on device is the same collector path an explicit sign-out takes; the
+  passive transition itself is covered by the fake-driven ViewModel tests, which emit the
+  unauthenticated session directly.
+- **The explicit sign-in success branch.** `AuthResult.Success` carries a `FirebaseUser`, which
+  cannot be constructed, so no test drives `signInWithGoogleToken` to its success path. The D-T2.4
+  deferral is covered from the other side — a sign-in held in flight, an authenticated emission
+  during it, the shell staying shut, and a failed completion releasing the deferral. Giving
+  `AuthResult` a domain type would close this and belongs with the Phase 3 TODO on
+  `AuthRepository`.
+- **`FirebaseAuthRepository.authSession` itself.** Collecting the real flow under Robolectric
+  hangs: the SDK never delivers its initial callback on a paused looper. The mapping is exercised
+  only through fakes.
 
 ## Notes — the test story no longer needs a mocking library
 
