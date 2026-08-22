@@ -189,32 +189,40 @@ hand-written fakes and no Mockito/MockK dependency.
 
 **Purpose:** Make `CarAuthUiState.isAuthenticated` live instead of construction-only.
 
-- [ ] Seed UI state from the current snapshot as today.
-- [ ] In `init`, collect `authRepository.authSession`.
-- [ ] On unauthenticated emission:
+- [x] Seed UI state from the current snapshot as today.
+- [x] In `init`, collect `authRepository.authSession`.
+- [x] On unauthenticated emission:
       - set `isAuthenticated = false`
       - set `isLoading = false`
       - clear or leave `errorMessage` according to current sign-in error semantics
       - stop catalog sync
-- [ ] On authenticated emission while no sign-in is in progress:
+- [x] On authenticated emission while no sign-in is in progress:
       - set `isAuthenticated = true`
       - update display name if `CarAuthUiState` carries it
       - start catalog sync
-- [ ] On authenticated emission while explicit sign-in is in progress, defer UI entry until the
-      sign-in success path completes.
-- [ ] In `signInWithGoogleToken`, keep profile creation before successful UI entry.
-- [ ] In explicit `signOut()`, call `authRepository.signOut()` and let the auth-session collector
+- [x] On authenticated emission while explicit sign-in is in progress, defer UI entry until the
+      sign-in success path completes. Sync is deliberately *not* deferred with it — the catalogue
+      is not user-scoped.
+- [x] In `signInWithGoogleToken`, keep profile creation before successful UI entry.
+- [x] In explicit `signOut()`, call `authRepository.signOut()` and let the auth-session collector
       perform the final UI/sync transition.
-- [ ] Keep `onGoogleSignInError()` and `clearError()` behavior.
+- [x] Keep `onGoogleSignInError()` and `clearError()` behavior.
 
 **Acceptance criteria:** passive sign-out changes the ViewModel state without calling public
 `signOut()`, and explicit sign-in does not enter the shell before its success path completes.
+
+**Carve-out on the success path.** `AuthResult.Success` carries a `FirebaseUser`, which cannot be
+constructed in a unit test, so no test can drive `signInWithGoogleToken` to its success branch.
+The deferral is covered from the other side instead: a sign-in held in flight, an authenticated
+emission arriving during it, and the shell staying closed — then a failed completion releasing the
+deferral so later emissions are honoured. Giving `AuthResult` a domain type would close this and
+belongs with the `AuthRepository` Phase 3 TODO, not T2.
 
 ## Task 4: Prove the shell leaves signed-in UI
 
 **Purpose:** Test the user-visible failure T2 was filed for.
 
-- [ ] Add ViewModel tests:
+- [x] Add ViewModel tests:
       - initial authenticated session renders authenticated
       - passive auth loss renders unauthenticated and stops sync
       - passive auth restoration renders authenticated and starts sync
