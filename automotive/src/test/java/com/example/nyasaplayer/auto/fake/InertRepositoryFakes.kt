@@ -7,10 +7,12 @@ import com.example.nyasaplayer.core.common.models.RecentlyPlayedEntry
 import com.example.nyasaplayer.core.common.models.UserProfile
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.AuthResult
+import com.example.nyasaplayer.core.data.api.AuthSession
 import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
@@ -115,15 +117,51 @@ class FakeUserRepository : UserRepository {
  * `reloadUserContent()`'s clearing path — the interface declares it a `val`, which a `var`
  * override satisfies.
  */
-class FakeAuthRepository(override var currentUserId: String? = "test-user") : AuthRepository {
+class FakeAuthRepository(userId: String? = DefaultUserId) : AuthRepository {
+
+    /**
+     * The snapshot API and the live flow read the same value, so a test cannot leave them
+     * disagreeing about who is signed in — which is the very confusion T2 exists to remove.
+     */
+    val sessions = MutableStateFlow(AuthSession(userId = userId))
+
+    override val authSession: Flow<AuthSession> = sessions
+
+    override var currentUserId: String?
+        get() = sessions.value.userId
+        set(value) {
+            sessions.value = sessions.value.copy(userId = value)
+        }
+
+    /** Holds a credential sign-in in flight, so a test can act while one is in progress. */
+    var credentialGate: CompletableDeferred<Unit>? = null
+
+    /** What a held sign-in finally returns. Success needs a FirebaseUser, which cannot be built. */
+    var credentialResult: AuthResult = AuthResult.Error("unused")
+
+    /**
+     * A session appearing or being revoked elsewhere, as Firebase's listener would report it.
+     *
+     * Backed by a `StateFlow`, so emitting the session that is already current is not an event —
+     * the same conflation the real `distinctUntilChanged` performs.
+     */
+    fun emitSession(userId: String?, displayName: String = "") {
+        sessions.value = AuthSession(userId = userId, displayName = displayName)
+    }
+
     override val currentUser: FirebaseUser? = null
-    override val isAuthenticated: Boolean get() = currentUserId != null
+    override val isAuthenticated: Boolean get() = sessions.value.isAuthenticated
     override suspend fun signInWithEmail(email: String, password: String): AuthResult =
         AuthResult.Error("unused")
     override suspend fun signUpWithEmail(email: String, password: String): AuthResult =
         AuthResult.Error("unused")
-    override suspend fun signInWithCredential(credential: AuthCredential): AuthResult =
-        AuthResult.Error("unused")
+    override suspend fun signInWithCredential(credential: AuthCredential): AuthResult {
+        credentialGate?.await()
+        return credentialResult
+    }
     override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = Result.success(Unit)
-    override fun signOut() = Unit
+
+    override fun signOut() {
+        emitSession(userId = null)
+    }
 }

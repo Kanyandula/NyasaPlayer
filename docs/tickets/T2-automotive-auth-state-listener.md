@@ -1,8 +1,9 @@
 # T2 — `AuthStateListener` for the automotive shell
 
 - **Slice:** auth flow — cross-cutting, not a screen slice
-- **Depends on:** T1 for the mocking half of its test story (see Notes)
-- **Status:** Ready to spec
+- **Depends on:** T1 for Compose test tooling; plan adds a fakeable sync seam
+- **Status:** Implemented and device-verified; server-side revocation not exercised
+- **Plan:** `docs/superpowers/plans/2026-08-22-aaos-t2-auth-state-listener.md`
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
 - **Design Reference:** `.claude/loop/ledger.md` rows #5, #15, #16
 - **Risk Tags:** lifecycle · auth · silent failure
@@ -100,16 +101,14 @@ than minor.
   the suite still fails. Their defending tests must not have been weakened by this work.
 - Given `detekt` and lint run, then both pass with no new baseline entries.
 
-## Human Decisions Needed
+## Decisions resolved by the plan
 
-- **D-1 — What happens to playback when the session dies?** `PlaybackService` is a foreground
-  service and may be mid-track. Stopping playback abruptly on a head unit is itself a distraction
-  event; letting it continue means audio playing for a user the app no longer considers signed in.
-  Neither is obviously right and it should be decided before implementation, not discovered.
-- **D-2 — Does the gate belong in the ViewModel or the repository?** Exposing auth state as a
-  `Flow` from `FirebaseAuthRepository` is the cleaner shape and benefits mobile too, but it widens
-  the change into `:core:data` and therefore into `:app`'s blast radius. A listener confined to
-  `AutomotiveAuthViewModel` is smaller and uglier. This is an architecture call.
+- **D-1 — Playback continues when the session dies.** The custom launcher leaves signed-in UI and
+  catalog sync stops, but T2 sends no playback command. Stopping foreground audio from an async
+  listener is a separate product/security decision.
+- **D-2 — Auth state belongs in the repository.** `AuthRepository` will expose a Firebase-free
+  auth-state flow. `AutomotiveAuthViewModel` collects that flow instead of owning a raw Firebase
+  listener.
 
 ## Affected Areas
 
@@ -129,13 +128,70 @@ than minor.
 - **Compatibility:** `minSdk 29`, `targetSdk 35`.
 - **Data migration:** none.
 
-## Notes — the test story needs a mocking library
+## Plan decisions
+
+- Auth state will be exposed as a Firebase-free flow on `AuthRepository`, then collected by
+  `AutomotiveAuthViewModel`.
+- Passive session invalidation will evict the custom launcher back to `CarAuthScreen` and stop
+  catalog sync, but it will not stop foreground playback.
+- `FirebaseSyncManager` will be hidden behind a small fakeable sync interface, so T2 does not add a
+  mocking library.
+- The row #5 and row #15 null-user guards stay. The listener reduces the stale-auth window; it
+  does not eliminate every in-flight read of a null user id.
+
+## Outcome
+
+Implemented across six tasks. Design records D48–D52 in `docs/aaos-DESIGN.md`.
+
+`AuthRepository.authSession` is a Firebase-free flow; `AutomotiveAuthViewModel` collects it and the
+shell's gate — now `AuthGate`, extracted so the real branch is renderable in a test — follows it.
+Catalogue sync starts and stops with the session through a new `CatalogSync` seam, which is what
+made the ViewModel constructible in a test at all: it had **zero** tests before this slice and now
+has eight, with no mocking library added.
+
+Review changed the design once: the sign-in path used to finish by writing "authenticated"
+outright, which a revocation arriving mid-sign-in would lose to. The collector is now the only
+writer of that state, and a regression test drives the sequence.
+
+The row #5 and #15 guards survive, and each still fails its named test when removed. One thing did
+need correcting: row #5's test justified itself by there being no `AuthStateListener` in the
+module — true when written, false after T2, and exactly the sentence a later reader would cite to
+delete a guard that is still load-bearing. It now gives the reasons that outlive T2.
+
+## Device verification
+
+`AAOS_AOSP_33_userdebug`, driver user 10, 2026-08-22. Playback was running throughout.
+
+| Step | Result |
+|---|---|
+| Signed in, Library | "Signed in as Miracle Kanyandula" — the display name now comes from auth state, not a `FirebaseUser` read during composition |
+| Sign out | Shell replaced by `CarAuthScreen` |
+| Playback across the eviction | **Continued**, position advancing 53s → 77s → 140s (D49) |
+| Sign back in | Shell returned, Home and Favourites repopulated — sync restarted |
+
+## Not verified
+
+- **Server-side revocation.** A Firebase client does not observe a revoked token until it next
+  refreshes, up to an hour later, so a genuine passive invalidation is not reachable inside a test
+  session. What was exercised on device is the same collector path an explicit sign-out takes; the
+  passive transition itself is covered by the fake-driven ViewModel tests, which emit the
+  unauthenticated session directly.
+- **The explicit sign-in success branch.** `AuthResult.Success` carries a `FirebaseUser`, which
+  cannot be constructed, so no test drives `signInWithGoogleToken` to its success path. The D-T2.4
+  deferral is covered from the other side — a sign-in held in flight, an authenticated emission
+  during it, the shell staying shut, and a failed completion releasing the deferral. Giving
+  `AuthResult` a domain type would close this and belongs with the Phase 3 TODO on
+  `AuthRepository`.
+- **`FirebaseAuthRepository.authSession` itself.** Collecting the real flow under Robolectric
+  hangs: the SDK never delivers its initial callback on a paused looper. The mapping is exercised
+  only through fakes.
+
+## Notes — the test story no longer needs a mocking library
 
 `:automotive` has **junit and coroutines-test only**. `AutomotiveAuthViewModel`'s constructor takes
 `FirebaseSyncManager`, a concrete class wrapping `FirebaseFirestore` plus four DAOs, so it cannot
 be hand-faked the way the six repository interfaces in `InertRepositoryFakes.kt` were — there is no
 interface to implement.
 
-This is the same tooling gap as ticket **T1**, approached from the other direction: T1 needs
-Robolectric to render a Composable, T2 needs a mocking library to construct a ViewModel. Whoever
-picks up either should read both, because the answer may be one dependency block rather than two.
+The implementation plan resolves this by adding a tiny sync lifecycle interface and injecting that
+instead of the concrete manager. T1 already supplied the Compose/Robolectric half of the test story.

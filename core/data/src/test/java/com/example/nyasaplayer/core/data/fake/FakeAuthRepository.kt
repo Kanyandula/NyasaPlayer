@@ -2,8 +2,10 @@ package com.example.nyasaplayer.core.data.fake
 
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.AuthResult
+import com.example.nyasaplayer.core.data.api.AuthSession
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class FakeAuthRepository : AuthRepository {
@@ -17,11 +19,23 @@ class FakeAuthRepository : AuthRepository {
 
     override val currentUser: FirebaseUser? get() = user.value
 
-    var userId: String? = null
+    /**
+     * One backing state for the snapshot and the flow, so a test cannot leave them disagreeing
+     * about who is signed in — the confusion T2 exists to remove.
+     */
+    val sessions = MutableStateFlow(AuthSession())
+
+    override val authSession: Flow<AuthSession> = sessions
+
+    var userId: String?
+        get() = sessions.value.userId
+        set(value) {
+            sessions.value = sessions.value.copy(userId = value)
+        }
 
     override val currentUserId: String? get() = userId ?: user.value?.uid
 
-    override val isAuthenticated: Boolean get() = user.value != null
+    override val isAuthenticated: Boolean get() = currentUserId != null
 
     override suspend fun signInWithEmail(email: String, password: String): AuthResult = signInResult
 
@@ -33,5 +47,6 @@ class FakeAuthRepository : AuthRepository {
 
     override fun signOut() {
         user.value = null
+        sessions.value = AuthSession()
     }
 }

@@ -507,6 +507,46 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   claim is that both surfaces return the same songs under the same limit, with the section order
   matching once the featured song is removed — not that the two lists are identical.
 
+- **D48 — Auth state is a repository flow, not a listener in the ViewModel.** `AuthRepository`
+  exposes `authSession: Flow<AuthSession>`, a Firebase-free pair of user id and display name, and
+  `FirebaseAuthRepository` implements it over `addAuthStateListener`. Keeping Firebase types out of
+  the flow is what lets a test drive a revocation at all: `FirebaseUser` cannot be constructed, the
+  reason `currentUserId` was added in the first place. The flow is `distinctUntilChanged` because
+  Firebase also fires on hourly token refresh, which is not a session change. The snapshot members
+  stay — mobile, playback and repository code read them — so T2 adds a channel rather than
+  swapping an API.
+- **D49 — Passive session loss evicts the launcher and stops sync; it does not stop playback.**
+  A revoked session takes the driver off `AuthenticatedApp` back to `CarAuthScreen` and stops
+  catalogue sync. It sends no playback command. Killing foreground audio from an asynchronous
+  listener is a distraction event at speed, and PRD US-2 already establishes that audio from a
+  previous session survives states where sign-in itself is refused. If that policy changes it is a
+  product decision, not a side effect of this listener.
+- **D50 — The row #5 and row #15 null-user guards survive the listener.** The listener shortens the
+  window in which a null user id is observable; it does not close it. The id is legitimately null
+  at cold start before auth resolves, and a revocation fires asynchronously, so work already in
+  flight still reads null before the shell comes down. Row #5's defending test used to justify
+  itself by there being *no* listener in the module — a sentence T2 makes false while leaving the
+  guard necessary, and one a later reader could have cited to delete it. Corrected in place.
+- **D51 — Catalogue sync is injected as `CatalogSync`, not as `FirebaseSyncManager`.**
+  `AutomotiveAuthViewModel` had no tests at all, because its constructor took a concrete class
+  wrapping `FirebaseFirestore` and four DAOs and `:automotive` has no mocking library. Start/stop
+  behind an interface is what made the auth gate testable, without adding Mockito or MockK. The
+  mobile app keeps injecting the concrete manager; Hilt binds both.
+- **D52 — An explicit sign-in owns entry into the shell until its own success path finishes, and
+  finishes by applying whatever the listener last reported.** Firebase reports the session the moment credentials are accepted, which is before the
+  profile write. Entering the shell on that emission would drop the driver into a launcher whose
+  profile does not exist yet and strand the loading state it never left, so authenticated emissions
+  are ignored for UI entry while a sign-in is in flight. Unauthenticated emissions are always
+  honoured — those are revocations, the sign-in they interrupt is already doomed, and deferring
+  them leaves the driver watching a spinner until some credential call times out. Catalogue sync
+  is deliberately not deferred either: the catalogue is not user-scoped.
+
+  The sign-in path does **not** write "authenticated" on success. Review found the race: a session
+  revoked while the profile is being written would lose to that write, reopening the shell over a
+  dead session with sync already stopped and no further emission coming to restart it. The
+  listener's collector is the only writer of the auth state; the sign-in applies its latest
+  session when it completes.
+
 ## Components
 
 ### Implementation ownership

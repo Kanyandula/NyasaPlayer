@@ -1,0 +1,308 @@
+# AAOS T2 - Automotive Auth State Listener Implementation Plan
+
+> **For agentic workers:** This is a lifecycle/security fix, not an auth redesign. Keep the
+> existing row #5 and row #15 null-user guards. Do not widen this into mobile navigation, token
+> refresh or playback restore.
+
+**Goal:** Make the automotive custom launcher observe Firebase auth state continuously, so a
+revoked or invalidated session evicts the driver from `AuthenticatedApp` back to `CarAuthScreen`
+instead of leaving signed-in UI with silently dead user content.
+
+**Ticket:** `docs/tickets/T2-automotive-auth-state-listener.md`
+
+**Verification command:** `./gradlew :automotive:testOemDebugUnitTest`
+
+**Broader gate:** `./gradlew :automotive:testOemDebugUnitTest :core:data:testDebugUnitTest detekt
+:automotive:lintOemDebug :automotive:assembleOemDebug :automotive:assemblePlaystoreDebug
+:app:assembleDebug`
+
+## Current baseline
+
+Start from `main` after T1, T4 and T9 are merged. Current main has:
+
+- Robolectric Compose test tooling in `:automotive`.
+- `AuthRepository.currentUserId`, added so automotive tests do not need a constructible
+  `FirebaseUser`.
+- Favourites row #5 and row #15 guards in `AutomotiveContentViewModel`.
+- `FirebaseSyncManager.start()` / `stop()` already idempotent.
+
+Do not start from an old pre-T1 branch. T2's test story relies on the newer test harness and fake
+repositories.
+
+## Decisions
+
+### D-T2.1: Auth state belongs on `AuthRepository`
+
+Add a domain-shaped auth state flow to `AuthRepository` and implement it in
+`FirebaseAuthRepository` with Firebase's live listener. Do not attach a raw
+`AuthStateListener` directly in `AutomotiveAuthViewModel`.
+
+Expected shape:
+
+```kotlin
+data class AuthSession(
+    val userId: String? = null,
+    val displayName: String = "",
+) {
+    val isAuthenticated: Boolean get() = !userId.isNullOrBlank()
+}
+
+interface AuthRepository {
+    val authSession: Flow<AuthSession>
+    // existing members stay
+}
+```
+
+The exact name can change during implementation, but keep Firebase SDK types out of this flow so
+tests can drive it without a mocking library.
+
+### D-T2.2: Use a small sync interface, not a mocking dependency
+
+Create a fakeable sync contract, for example:
+
+```kotlin
+interface CatalogSync {
+    fun start()
+    fun stop()
+}
+```
+
+Have `FirebaseSyncManager` implement it and bind it through Hilt. Inject that interface into
+`AutomotiveAuthViewModel` and `AutomotiveApplication`. This removes the concrete-class test
+blocker recorded in the ticket without adding Mockito/MockK.
+
+### D-T2.3: Session invalidation evicts UI but does not stop playback
+
+On passive auth loss:
+
+- set `CarAuthUiState.isAuthenticated = false`
+- clear auth loading state
+- stop catalog sync
+- let `AutomotiveApp` naturally leave `AuthenticatedApp` and render `CarAuthScreen`
+- do not send playback commands and do not stop `PlaybackService`
+
+The rationale matches `docs/AAOS_PRD.md` US-2: setup/sign-in is refused while driving, but audio
+from a previous session continues. Stopping a foreground playback session because a listener fired
+is a distraction event and belongs in a separate product/security decision if that policy changes.
+
+### D-T2.4: Explicit sign-in keeps its current completion boundary
+
+The auth listener may emit an authenticated session before `signInWithGoogleToken()` finishes
+creating the profile. Preserve the current visible behavior: explicit sign-in should not leave the
+loading state or enter the shell until the sign-in method has finished its success path.
+
+Practical rule: while a sign-in operation is in progress, ignore authenticated listener emissions
+for UI entry. Always honor unauthenticated emissions, because they are revocations or failures.
+
+## File plan
+
+**Create**
+
+| File | Responsibility |
+|---|---|
+| `core/data/src/main/java/.../api/AuthSession.kt` | Firebase-free auth state model |
+| `core/data/src/main/java/.../sync/CatalogSync.kt` | Fakeable sync lifecycle interface |
+| `core/data/src/main/java/.../di/SyncModule.kt` | Hilt binding from `FirebaseSyncManager` |
+| `automotive/src/test/.../fake/FakeCatalogSync.kt` | Start/stop counters for auth tests |
+| `automotive/src/test/.../viewmodel/AutomotiveAuthViewModelTest.kt` | T2 auth-state tests |
+| `automotive/src/test/.../ui/AutomotiveAppAuthGateTest.kt` | Optional shell gate rendering test |
+
+**Modify**
+
+| File | Change |
+|---|---|
+| `core/data/.../api/AuthRepository.kt` | Add `authSession: Flow<AuthSession>` |
+| `core/data/.../FirebaseAuthRepository.kt` | Implement Firebase auth listener flow |
+| `core/data/.../sync/FirebaseSyncManager.kt` | Implement `CatalogSync` |
+| `automotive/.../auto/AutomotiveApplication.kt` | Inject `CatalogSync`; keep startup bootstrap |
+| `automotive/.../viewmodel/AutomotiveAuthViewModel.kt` | Collect auth state and control sync |
+| `automotive/.../ui/AutomotiveApp.kt` | Prefer state-backed display name if added |
+| `automotive/src/test/.../fake/InertRepositoryFakes.kt` | Add mutable auth-session fake support |
+| `core/data/src/test/.../fake/FakeAuthRepository.kt` | Add auth-session fake support |
+| `core/playback/src/test/.../MediaBrowseTreeTest.kt` | Add new interface member to test fake |
+| `app/.../NyasaPlayerApplication.kt` | Optional: inject `CatalogSync` instead of concrete sync |
+| `app/.../MainActivity.kt` | Compile-only adjustments if `AuthRepository` changes |
+| `docs/aaos-DESIGN.md` | Record T2 decisions after implementation |
+| `docs/tickets/T2-automotive-auth-state-listener.md` | Move status after verification |
+
+## Task 0: Baseline and branch
+
+**Purpose:** Avoid implementing T2 on a stale pre-T1 branch.
+
+- [ ] Confirm `main` is clean.
+- [ ] Confirm PR #37/T1 is present so Robolectric Compose tests exist.
+- [ ] Start a fresh T2 branch from `main`.
+- [ ] Run the current focused gate once:
+
+```bash
+./gradlew :automotive:testOemDebugUnitTest
+```
+
+**Acceptance criteria:** branch starts cleanly from the current post-T4/T9 baseline.
+
+## Task 1: Add live auth session to `AuthRepository`
+
+**Purpose:** Put Firebase's live auth state behind the shared data boundary.
+
+- [x] Add Firebase-free `AuthSession`.
+- [x] Add `val authSession: Flow<AuthSession>` to `AuthRepository`.
+- [x] Implement the flow in `FirebaseAuthRepository` with `FirebaseAuth.addAuthStateListener`.
+- [x] Remove the listener in `awaitClose`.
+- [x] Map `FirebaseUser?` to `AuthSession(userId, displayName)`.
+- [x] Use `distinctUntilChanged()` either in the repository or in ViewModels that collect it. In the repository: Firebase also fires the listener on hourly token refresh, which is not a session change.
+- [x] Update every fake/test implementation of `AuthRepository`.
+- [x] Add a focused repository test if Robolectric can construct enough FirebaseAuth state;
+      otherwise cover the contract through fakes and ViewModel tests. **Not feasible:** a
+      Robolectric test that initializes `FirebaseApp` and collects the flow hangs — the SDK never
+      delivers the initial listener callback under a paused looper, so `first()` waits forever.
+      The attempt was deleted rather than left as a slow flaky test. The contract is covered
+      through the fakes and, from Task 3, the ViewModel tests.
+
+**Technical notes**
+
+Do not remove `currentUser`, `currentUserId` or `isAuthenticated`. They are still used broadly by
+mobile, playback and repository code. T2 adds a live channel; it does not replace the existing
+snapshot API in one slice.
+
+**Acceptance criteria:** every module compiles with the new interface member, and automotive tests
+can emit auth sessions without constructing a `FirebaseUser`.
+
+## Task 2: Add fakeable sync lifecycle
+
+**Purpose:** Make `AutomotiveAuthViewModel` testable without a mocking library.
+
+- [x] Create `CatalogSync` with `start()` and `stop()`.
+- [x] Make `FirebaseSyncManager` implement `CatalogSync`.
+- [x] Add a Hilt binding in a sync-specific module.
+- [x] Inject `CatalogSync` into `AutomotiveAuthViewModel`.
+- [x] Inject `CatalogSync` into `AutomotiveApplication`; preserve its cold-start behavior.
+- [ ] Optionally update `NyasaPlayerApplication` to inject `CatalogSync` too, for consistency.
+      **Skipped:** `:app` starts sync unconditionally at cold start and gains nothing from the
+      seam, and the ticket keeps the mobile app out of scope. It still injects the concrete
+      manager, which Hilt binds either way.
+- [x] Add a test fake that counts `start()` and `stop()` calls.
+
+**Acceptance criteria:** `AutomotiveAuthViewModelTest` can construct the ViewModel directly with
+hand-written fakes and no Mockito/MockK dependency.
+
+## Task 3: Collect auth state in `AutomotiveAuthViewModel`
+
+**Purpose:** Make `CarAuthUiState.isAuthenticated` live instead of construction-only.
+
+- [x] Seed UI state from the current snapshot as today.
+- [x] In `init`, collect `authRepository.authSession`.
+- [x] On unauthenticated emission:
+      - set `isAuthenticated = false`
+      - set `isLoading = false`
+      - clear or leave `errorMessage` according to current sign-in error semantics
+      - stop catalog sync
+- [x] On authenticated emission while no sign-in is in progress:
+      - set `isAuthenticated = true`
+      - update display name if `CarAuthUiState` carries it
+      - start catalog sync
+- [x] On authenticated emission while explicit sign-in is in progress, defer UI entry until the
+      sign-in success path completes. Sync is deliberately *not* deferred with it — the catalogue
+      is not user-scoped.
+- [x] In `signInWithGoogleToken`, keep profile creation before successful UI entry.
+- [x] In explicit `signOut()`, call `authRepository.signOut()` and let the auth-session collector
+      perform the final UI/sync transition.
+- [x] Keep `onGoogleSignInError()` and `clearError()` behavior.
+
+**Acceptance criteria:** passive sign-out changes the ViewModel state without calling public
+`signOut()`, and explicit sign-in does not enter the shell before its success path completes.
+
+**Carve-out on the success path.** `AuthResult.Success` carries a `FirebaseUser`, which cannot be
+constructed in a unit test, so no test can drive `signInWithGoogleToken` to its success branch.
+The deferral is covered from the other side instead: a sign-in held in flight, an authenticated
+emission arriving during it, and the shell staying closed — then a failed completion releasing the
+deferral so later emissions are honoured. Giving `AuthResult` a domain type would close this and
+belongs with the `AuthRepository` Phase 3 TODO, not T2.
+
+## Task 4: Prove the shell leaves signed-in UI
+
+**Purpose:** Test the user-visible failure T2 was filed for.
+
+- [x] Add ViewModel tests:
+      - initial authenticated session renders authenticated
+      - passive auth loss renders unauthenticated and stops sync
+      - passive auth restoration renders authenticated and starts sync
+      - explicit sign-out delegates to repository and stops sync through the collector
+      - auth loss during loading clears loading
+- [x] Add or extend a Compose test for the `AutomotiveApp` auth gate if practical:
+      - render authenticated state and see the shell branch
+      - emit unauthenticated state and see `CarAuthScreen`
+- [x] If full `AutomotiveApp` is too Hilt-heavy, extract a tiny internal route seam that selects
+      auth vs shell from `CarAuthUiState`, similar to T1's Favourites route seam. It was:
+      `AuthenticatedApp` needs three Hilt ViewModels. `AuthGate` takes the signed-in side as
+      content, so the test renders the production branch rather than a copy of it.
+
+**Acceptance criteria:** a mutation that removes the auth-state collection fails by name, and a
+mutation that keeps `isAuthenticated` true after a null auth emission fails by name.
+
+## Task 5: Preserve row #5 and row #15 guards
+
+**Purpose:** Ensure T2 does not undo the defensive content work that made the stale auth window
+survivable.
+
+- [x] Do not remove the null-user guard in `reloadUserContent()`.
+- [x] Do not remove the split catalogue/user teardown guard in `loadContent()`.
+- [x] Run the existing Favourites boundary tests that describe rows #5 and #15.
+- [x] If auth fake changes weaken those tests, strengthen them before proceeding. They did not:
+      the fake's `currentUserId` setter now also drives the session flow, so the two can no longer
+      disagree — a stricter fake than before. Both guards still fail their named test when
+      removed: `nullUserIdOnRecreation_mustNotDestroyTheFreeze` (#5) and
+      `retryWithNoUserId_mustNotStrandFavouritesOnTheSkeleton` (#15).
+
+      One thing did need fixing: row #5's test rationale said null was reachable *because* no
+      `AuthStateListener` existed in the module. T2 makes that sentence false, and a future reader
+      could have used it to delete the guard. Rewritten to the reasons that outlive T2 — the id is
+      legitimately null at cold start, and the listener fires asynchronously so in-flight work
+      still sees null before the shell comes down.
+- [x] Mutation-check locally by removing each guard and confirming the suite still fails.
+
+**Acceptance criteria:** the existing guard tests still defend the asynchronous window after the
+listener lands.
+
+## Task 6: Manual verification and docs
+
+**Purpose:** Close the ticket with executable and device evidence.
+
+- [x] Update `docs/aaos-DESIGN.md` with the T2 decisions:
+      - auth state lives on `AuthRepository`
+      - passive session invalidation evicts UI but does not stop playback
+      - sync follows live auth state in the automotive shell
+- [x] Update `docs/tickets/T2-automotive-auth-state-listener.md` status and outcome.
+- [x] Run:
+
+```bash
+./gradlew :automotive:testOemDebugUnitTest :core:data:testDebugUnitTest detekt \
+  :automotive:lintOemDebug \
+  :automotive:assembleOemDebug \
+  :automotive:assemblePlaystoreDebug \
+  :app:assembleDebug
+```
+
+- [x] Device check on `AAOS_AOSP_33_userdebug`:
+      - launch signed in
+      - invalidate or sign out the Firebase session externally if feasible
+      - verify the custom launcher returns to `CarAuthScreen`
+      - verify foreground playback is not stopped by the UI eviction
+      - verify catalog sync restarts after signing in again
+- [x] If external invalidation is not feasible on the available account, record that carve-out and
+      rely on the fake-driven ViewModel/route tests for the listener transition. It is not: a
+      Firebase client does not see a revoked token until its next refresh, up to an hour out. The
+      device run exercised the same collector path through an explicit sign-out, with playback
+      confirmed still running across the eviction.
+
+**Acceptance criteria:** T2 has JVM proof for the auth transition and honest manual evidence for
+what could and could not be exercised on the emulator/account.
+
+## Definition of done
+
+- The automotive auth gate is live, not construction-only.
+- Passive session invalidation returns the custom launcher to `CarAuthScreen`.
+- Catalog sync starts/stops with live auth state in the automotive shell.
+- Playback is not stopped by passive auth loss.
+- Row #5 and row #15 guards remain covered.
+- No mocking library is added for T2.
+- The focused and broader Gradle gates pass.

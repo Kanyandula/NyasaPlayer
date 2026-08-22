@@ -60,6 +60,7 @@ import com.example.nyasaplayer.auto.viewmodel.AutomotivePlayerViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchUiState
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveSearchViewModel
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveUiState
+import com.example.nyasaplayer.auto.viewmodel.CarAuthUiState
 import com.example.nyasaplayer.auto.viewmodel.CarDetailState
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.auto.viewmodel.UxRestrictionState
@@ -79,6 +80,34 @@ fun AutomotiveApp(
 ) {
     val authState by authViewModel.uiState.collectAsState()
 
+    AuthGate(
+        authState = authState,
+        onGoogleToken = authViewModel::signInWithGoogleToken,
+        onGoogleError = authViewModel::onGoogleSignInError,
+        modifier = modifier,
+    ) {
+        AuthenticatedApp(
+            onSignOut = authViewModel::signOut,
+            userDisplayName = authState.displayName,
+        )
+    }
+}
+
+/**
+ * Which of the two worlds the driver is in.
+ *
+ * Separate from [AutomotiveApp] so a test can render the real branch: the signed-in side needs
+ * three Hilt ViewModels, and passing it in means the gate itself is testable without them. Since
+ * T2 the state behind it is live, so a session revoked on another device closes the shell here.
+ */
+@Composable
+internal fun AuthGate(
+    authState: CarAuthUiState,
+    onGoogleToken: (String) -> Unit,
+    onGoogleError: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    authenticatedContent: @Composable () -> Unit,
+) {
     // The background is painted once, here, rather than by each screen — the ambient layer
     // sits above it and would be hidden by any opaque surface drawn on top. It has to be at
     // the root and not in the shell, because the auth branch never passes through the shell.
@@ -88,15 +117,12 @@ fun AutomotiveApp(
             .background(NyasaBackground),
     ) {
         if (authState.isAuthenticated) {
-            AuthenticatedApp(
-                onSignOut = authViewModel::signOut,
-                userDisplayName = authViewModel.currentUserDisplayName,
-            )
+            authenticatedContent()
         } else {
             CarAuthScreen(
                 uiState = authState,
-                onGoogleToken = authViewModel::signInWithGoogleToken,
-                onGoogleError = authViewModel::onGoogleSignInError,
+                onGoogleToken = onGoogleToken,
+                onGoogleError = onGoogleError,
             )
         }
     }
