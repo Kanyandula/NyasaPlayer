@@ -88,20 +88,48 @@ class AutomotiveAuthViewModelTest {
         assertTrue(sync.isRunning)
     }
 
-    /** Auth can die mid-request; the spinner it left behind must not outlive the session. */
+    /**
+     * Credentials accepted, profile write still running, and then the session dies — the sequence
+     * where the deferral could strand the spinner it is holding.
+     */
     @Test
-    fun `losing the session while loading clears the loading state`() = runTest {
-        auth.emitSession(userId = DefaultUserId)
+    fun `a session dying mid sign-in clears the loading state it was holding`() = runTest {
+        auth.emitSession(userId = null)
         val vm = viewModel()
         advanceUntilIdle()
-        vm.onGoogleSignInError("network")
-        assertEquals("network", vm.uiState.value.errorMessage)
+        val gate = CompletableDeferred<Unit>()
+        auth.credentialGate = gate
+
+        vm.signInWithGoogleToken("token")
+        advanceUntilIdle()
+        assertTrue("the sign-in never started", vm.uiState.value.isLoading)
+
+        // Firebase reports the accepted credential, which the deferral holds back from the shell.
+        auth.emitSession(userId = DefaultUserId, displayName = "Miracle")
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.isAuthenticated)
 
         auth.emitSession(userId = null)
         advanceUntilIdle()
 
-        assertFalse(vm.uiState.value.isLoading)
-        // The reason the driver is looking at the auth screen survives the transition.
+        assertFalse("the spinner outlived the session", vm.uiState.value.isLoading)
+        assertFalse(vm.uiState.value.isAuthenticated)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+    }
+
+    /** A sign-in failure explains why the driver is still here; a later revocation must not erase it. */
+    @Test
+    fun `a revocation leaves the sign-in error on screen`() = runTest {
+        auth.emitSession(userId = DefaultUserId)
+        val vm = viewModel()
+        advanceUntilIdle()
+        vm.onGoogleSignInError("network")
+
+        auth.emitSession(userId = null)
+        advanceUntilIdle()
+
         assertEquals("network", vm.uiState.value.errorMessage)
     }
 

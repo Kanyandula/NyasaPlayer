@@ -133,7 +133,18 @@ class FakeAuthRepository(userId: String? = DefaultUserId) : AuthRepository {
             sessions.value = sessions.value.copy(userId = value)
         }
 
-    /** A session appearing or being revoked elsewhere, as Firebase's listener would report it. */
+    /** Holds a credential sign-in in flight, so a test can act while one is in progress. */
+    var credentialGate: CompletableDeferred<Unit>? = null
+
+    /** What a held sign-in finally returns. Success needs a FirebaseUser, which cannot be built. */
+    var credentialResult: AuthResult = AuthResult.Error("unused")
+
+    /**
+     * A session appearing or being revoked elsewhere, as Firebase's listener would report it.
+     *
+     * Backed by a `StateFlow`, so emitting the session that is already current is not an event —
+     * the same conflation the real `distinctUntilChanged` performs.
+     */
     fun emitSession(userId: String?, displayName: String = "") {
         sessions.value = AuthSession(userId = userId, displayName = displayName)
     }
@@ -144,12 +155,6 @@ class FakeAuthRepository(userId: String? = DefaultUserId) : AuthRepository {
         AuthResult.Error("unused")
     override suspend fun signUpWithEmail(email: String, password: String): AuthResult =
         AuthResult.Error("unused")
-    /** Holds a credential sign-in in flight, so a test can act while one is in progress. */
-    var credentialGate: CompletableDeferred<Unit>? = null
-
-    /** What a held sign-in finally returns. Success needs a FirebaseUser, which cannot be built. */
-    var credentialResult: AuthResult = AuthResult.Error("unused")
-
     override suspend fun signInWithCredential(credential: AuthCredential): AuthResult {
         credentialGate?.await()
         return credentialResult
