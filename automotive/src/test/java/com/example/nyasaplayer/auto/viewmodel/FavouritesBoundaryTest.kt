@@ -507,11 +507,13 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
      * user-scoped collectors and clears their state — and then the three restarts each hit
      * their own `?: return` and no-op. Nothing recovers it short of process death.
      *
-     * Null is reachable while the shell is still composed because `isAuthenticated` is a
-     * snapshot seeded once at AutomotiveAuthViewModel.kt:35-37 with no `AuthStateListener`
-     * anywhere in the module, so Firebase invalidating the session server-side does not take
-     * the app off `AuthenticatedApp`. `AutomotiveActivity` declares no `configChanges`, so a
-     * night-mode flip rebuilds the composition and re-runs `LaunchedEffect(Unit)`.
+     * Null is still reachable while the shell is composed, for two reasons that outlive T2's
+     * auth listener. At cold start the id is legitimately null until auth resolves, and no
+     * listener changes that. And when a session is revoked, the listener fires asynchronously:
+     * work already in flight still observes the null id before the shell comes down. T2 shortens
+     * the window and makes it recoverable — it does not close it, which is why this guard stays.
+     * `AutomotiveActivity` declares no `configChanges`, so a night-mode flip rebuilds the
+     * composition and re-runs `LaunchedEffect(Unit)`.
      */
     @Test
     fun nullUserIdOnRecreation_mustNotStrandFavouritesOnTheSkeleton() = runTest {

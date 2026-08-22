@@ -244,11 +244,21 @@ mutation that keeps `isAuthenticated` true after a null auth emission fails by n
 **Purpose:** Ensure T2 does not undo the defensive content work that made the stale auth window
 survivable.
 
-- [ ] Do not remove the null-user guard in `reloadUserContent()`.
-- [ ] Do not remove the split catalogue/user teardown guard in `loadContent()`.
-- [ ] Run the existing Favourites boundary tests that describe rows #5 and #15.
-- [ ] If auth fake changes weaken those tests, strengthen them before proceeding.
-- [ ] Mutation-check locally by removing each guard and confirming the suite still fails.
+- [x] Do not remove the null-user guard in `reloadUserContent()`.
+- [x] Do not remove the split catalogue/user teardown guard in `loadContent()`.
+- [x] Run the existing Favourites boundary tests that describe rows #5 and #15.
+- [x] If auth fake changes weaken those tests, strengthen them before proceeding. They did not:
+      the fake's `currentUserId` setter now also drives the session flow, so the two can no longer
+      disagree — a stricter fake than before. Both guards still fail their named test when
+      removed: `nullUserIdOnRecreation_mustNotDestroyTheFreeze` (#5) and
+      `retryWithNoUserId_mustNotStrandFavouritesOnTheSkeleton` (#15).
+
+      One thing did need fixing: row #5's test rationale said null was reachable *because* no
+      `AuthStateListener` existed in the module. T2 makes that sentence false, and a future reader
+      could have used it to delete the guard. Rewritten to the reasons that outlive T2 — the id is
+      legitimately null at cold start, and the listener fires asynchronously so in-flight work
+      still sees null before the shell comes down.
+- [x] Mutation-check locally by removing each guard and confirming the suite still fails.
 
 **Acceptance criteria:** the existing guard tests still defend the asynchronous window after the
 listener lands.
