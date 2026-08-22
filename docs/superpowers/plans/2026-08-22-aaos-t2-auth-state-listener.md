@@ -228,11 +228,13 @@ belongs with the `AuthRepository` Phase 3 TODO, not T2.
       - passive auth restoration renders authenticated and starts sync
       - explicit sign-out delegates to repository and stops sync through the collector
       - auth loss during loading clears loading
-- [ ] Add or extend a Compose test for the `AutomotiveApp` auth gate if practical:
+- [x] Add or extend a Compose test for the `AutomotiveApp` auth gate if practical:
       - render authenticated state and see the shell branch
       - emit unauthenticated state and see `CarAuthScreen`
-- [ ] If full `AutomotiveApp` is too Hilt-heavy, extract a tiny internal route seam that selects
-      auth vs shell from `CarAuthUiState`, similar to T1's Favourites route seam.
+- [x] If full `AutomotiveApp` is too Hilt-heavy, extract a tiny internal route seam that selects
+      auth vs shell from `CarAuthUiState`, similar to T1's Favourites route seam. It was:
+      `AuthenticatedApp` needs three Hilt ViewModels. `AuthGate` takes the signed-in side as
+      content, so the test renders the production branch rather than a copy of it.
 
 **Acceptance criteria:** a mutation that removes the auth-state collection fails by name, and a
 mutation that keeps `isAuthenticated` true after a null auth emission fails by name.
