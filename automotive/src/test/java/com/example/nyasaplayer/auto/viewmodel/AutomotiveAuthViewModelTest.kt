@@ -178,6 +178,36 @@ class AutomotiveAuthViewModelTest {
         assertTrue(vm.uiState.value.isAuthenticated)
     }
 
+    /**
+     * The race the review caught: credentials accepted, then the session revoked while the
+     * profile is being written. The sign-in used to finish by writing "authenticated" flat out,
+     * which reopened the shell over a dead session with sync already stopped and no further
+     * emission coming to restart it.
+     */
+    @Test
+    fun `a sign-in finishing after a revocation does not reopen the shell`() = runTest {
+        auth.emitSession(userId = null)
+        val vm = viewModel()
+        advanceUntilIdle()
+        val gate = CompletableDeferred<Unit>()
+        auth.credentialGate = gate
+        auth.credentialResult = AuthResult.Error("late failure")
+
+        vm.signInWithGoogleToken("token")
+        advanceUntilIdle()
+        auth.emitSession(userId = DefaultUserId, displayName = "Miracle")
+        advanceUntilIdle()
+        auth.emitSession(userId = null)
+        advanceUntilIdle()
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertFalse("the shell reopened over a dead session", vm.uiState.value.isAuthenticated)
+        assertFalse("sync outlived the session", sync.isRunning)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
     @Test
     fun `signing out delegates to the repository and transitions through the collector`() = runTest {
         auth.emitSession(userId = DefaultUserId)
@@ -188,6 +218,8 @@ class AutomotiveAuthViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.isAuthenticated)
-        assertEquals(1, sync.stopCount)
+        // State, not call count: signOut() and the collector both stop, and the contract is
+        // idempotent about that.
+        assertFalse(sync.isRunning)
     }
 }
