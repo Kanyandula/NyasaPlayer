@@ -144,15 +144,19 @@ for UI entry. Always honor unauthenticated emissions, because they are revocatio
 
 **Purpose:** Put Firebase's live auth state behind the shared data boundary.
 
-- [ ] Add Firebase-free `AuthSession`.
-- [ ] Add `val authSession: Flow<AuthSession>` to `AuthRepository`.
-- [ ] Implement the flow in `FirebaseAuthRepository` with `FirebaseAuth.addAuthStateListener`.
-- [ ] Remove the listener in `awaitClose`.
-- [ ] Map `FirebaseUser?` to `AuthSession(userId, displayName)`.
-- [ ] Use `distinctUntilChanged()` either in the repository or in ViewModels that collect it.
-- [ ] Update every fake/test implementation of `AuthRepository`.
-- [ ] Add a focused repository test if Robolectric can construct enough FirebaseAuth state;
-      otherwise cover the contract through fakes and ViewModel tests.
+- [x] Add Firebase-free `AuthSession`.
+- [x] Add `val authSession: Flow<AuthSession>` to `AuthRepository`.
+- [x] Implement the flow in `FirebaseAuthRepository` with `FirebaseAuth.addAuthStateListener`.
+- [x] Remove the listener in `awaitClose`.
+- [x] Map `FirebaseUser?` to `AuthSession(userId, displayName)`.
+- [x] Use `distinctUntilChanged()` either in the repository or in ViewModels that collect it. In the repository: Firebase also fires the listener on hourly token refresh, which is not a session change.
+- [x] Update every fake/test implementation of `AuthRepository`.
+- [x] Add a focused repository test if Robolectric can construct enough FirebaseAuth state;
+      otherwise cover the contract through fakes and ViewModel tests. **Not feasible:** a
+      Robolectric test that initializes `FirebaseApp` and collects the flow hangs — the SDK never
+      delivers the initial listener callback under a paused looper, so `first()` waits forever.
+      The attempt was deleted rather than left as a slow flaky test. The contract is covered
+      through the fakes and, from Task 3, the ViewModel tests.
 
 **Technical notes**
 

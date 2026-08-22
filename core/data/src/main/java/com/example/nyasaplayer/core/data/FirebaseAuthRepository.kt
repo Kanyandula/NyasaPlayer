@@ -2,9 +2,14 @@ package com.example.nyasaplayer.core.data
 
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.AuthResult
+import com.example.nyasaplayer.core.data.api.AuthSession
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -18,6 +23,21 @@ class FirebaseAuthRepository @Inject constructor(
     override val currentUserId: String? get() = firebaseAuth.currentUser?.uid
 
     override val isAuthenticated: Boolean get() = currentUser != null
+
+    /**
+     * Firebase calls the listener once on registration with the current user, so a collector gets
+     * the present session before it gets any change — no separate seeding read is needed.
+     *
+     * `distinctUntilChanged` because Firebase also fires on token refresh, which is not a session
+     * change and would otherwise churn every collector roughly hourly.
+     */
+    override val authSession: Flow<AuthSession> = callbackFlow {
+        val listener = FirebaseAuth.AuthStateListener { auth ->
+            trySend(auth.currentUser.toSession())
+        }
+        firebaseAuth.addAuthStateListener(listener)
+        awaitClose { firebaseAuth.removeAuthStateListener(listener) }
+    }.distinctUntilChanged()
 
     override suspend fun signInWithEmail(email: String, password: String): AuthResult {
         return try {
@@ -70,3 +90,6 @@ class FirebaseAuthRepository @Inject constructor(
         firebaseAuth.signOut()
     }
 }
+
+private fun FirebaseUser?.toSession(): AuthSession =
+    AuthSession(userId = this?.uid, displayName = this?.displayName.orEmpty())

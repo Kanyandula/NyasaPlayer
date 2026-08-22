@@ -10,12 +10,14 @@ import com.example.nyasaplayer.core.common.models.UserProfile
 import com.example.nyasaplayer.core.data.api.ArtistRepository
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.AuthResult
+import com.example.nyasaplayer.core.data.api.AuthSession
 import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
@@ -408,6 +410,9 @@ private class TestAuthRepository : AuthRepository {
 
     override val currentUser: FirebaseUser? get() = user
     override val currentUserId: String? get() = user?.uid
+
+    // MediaBrowseTree reads the snapshot only; the browse tree has no auth-driven UI to evict.
+    override val authSession: Flow<AuthSession> = flowOf(AuthSession())
     override val isAuthenticated: Boolean get() = user != null
 
     override suspend fun signInWithEmail(email: String, password: String): AuthResult =

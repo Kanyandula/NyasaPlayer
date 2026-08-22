@@ -2,8 +2,10 @@ package com.example.nyasaplayer.core.data.fake
 
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.AuthResult
+import com.example.nyasaplayer.core.data.api.AuthSession
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class FakeAuthRepository : AuthRepository {
@@ -23,6 +25,11 @@ class FakeAuthRepository : AuthRepository {
 
     override val isAuthenticated: Boolean get() = user.value != null
 
+    /** Emit here to model a session appearing or being revoked elsewhere. */
+    val sessions = MutableStateFlow(AuthSession())
+
+    override val authSession: Flow<AuthSession> = sessions
+
     override suspend fun signInWithEmail(email: String, password: String): AuthResult = signInResult
 
     override suspend fun signUpWithEmail(email: String, password: String): AuthResult = signUpResult
@@ -33,5 +40,7 @@ class FakeAuthRepository : AuthRepository {
 
     override fun signOut() {
         user.value = null
+        userId = null
+        sessions.value = AuthSession()
     }
 }
