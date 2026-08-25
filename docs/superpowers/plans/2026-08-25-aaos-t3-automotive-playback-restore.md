@@ -197,12 +197,12 @@ service-side change with its own Firestore write-rate question.
 
 **Purpose:** The branchy code T3 depends on has never had a test, for a fixable reason.
 
-- [ ] Change `PlaybackStatePersistence.userId` to `authRepository.currentUserId` (D-T3.2).
-- [ ] In `MediaBrowseTreeTest.kt`, drop `private` from `TestUserRepository` / `TestSongRepository` /
+- [x] Change `PlaybackStatePersistence.userId` to `authRepository.currentUserId` (D-T3.2).
+- [x] In `MediaBrowseTreeTest.kt`, drop `private` from `TestUserRepository` / `TestSongRepository` /
       `TestAuthRepository` (same package and source set), give `TestUserRepository` a settable
       `playbackState` (it hardcodes `null` today), and give `TestAuthRepository` a way to report a
       user id without a `FirebaseUser`. `TestSongRepository`'s song list is already settable.
-- [ ] Add `PlaybackStatePersistenceTest` covering `restore()`:
+- [x] Add `PlaybackStatePersistenceTest` covering `restore()`:
       - no signed-in user → `null`
       - no saved document → `null`
       - blank `currentSongId` → `null`
@@ -214,8 +214,16 @@ service-side change with its own Firestore write-rate question.
       - `queueIndex` past the end → coerced to `lastIndex`
       - unparseable `repeatMode` string → `RepeatMode.Off`
       - happy path → queue, index, song, position and mode all survive
-- [ ] Mutation-check: delete the `coerceIn`, then the song-first lookup, then the saved-order
-      `mapNotNull`, and confirm a differently-named test fails each time.
+- [x] Mutation-check: delete the `coerceIn`, then the song-first lookup, then the saved-order
+      `mapNotNull`, and confirm a differently-named test fails each time. Each did:
+      `queueIndexPastEnd_coercesToLastIndex`, `songDeletedEarlierInQueue_stillResumesTheSavedSong`
+      and `queueKeepsSavedOrder_notRepositoryOrder`, one failure per mutation, 34 tests otherwise
+      green.
+
+**Note on the D-T3.8 test.** The first version of it deleted a song from a queue whose current
+track was last, so `coerceIn` landed on the right song by accident and the test passed against the
+unfixed code. It only goes red once the saved index is *in range and wrong* — five ids saved, one
+deleted before the current one. A shift bug needs a queue long enough to shift.
 
 **Acceptance criteria:** `:core:playback:testDebugUnitTest` covers every `null` return of
 `restore()` by name, plus the D-T3.8 shift, with no mocking library added.
