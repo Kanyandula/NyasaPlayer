@@ -56,8 +56,15 @@ mobile's restored UI must look identical.
 `sendRestoreState` returns `ListenableFuture<SessionResult>`; `restoreIfIdle` is `suspend` and runs
 on `viewModelScope`. `kotlinx-coroutines-guava` would give `.await()` for one call site — not worth
 a dependency. Bridge with `suspendCancellableCoroutine` over the existing
-`addListener(…, MoreExecutors.directExecutor())`, reading the result inside the listener so `.get()`
-never runs on the main thread.
+`addListener(…, MoreExecutors.directExecutor())`, reading the result inside the listener, where the
+future is already complete so `.get()` does not block. (`directExecutor` runs the listener on
+whichever thread completed the future, so the claim is "not blocking", not "not on main".)
+
+**Resume with a value, never with an exception.** The car's `runCatching { … }.getOrNull()` today
+turns a failed, cancelled or error-coded command into "do not apply". A bridge that rethrew an
+`ExecutionException` would change that into a throw escaping `viewModelScope.launch` — a crash path
+where there is currently a silent no-op. Map every non-`RESULT_SUCCESS` outcome to `null`, and keep
+coroutine cancellation working via `invokeOnCancellation`.
 
 ## File plan
 
@@ -122,10 +129,12 @@ fun applyRestored(restored: RestoredPlayback)
 suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPlayback?
 ```
 
-- [ ] Order: bail if `controller == null`; run `restore()`; bail on null; **re-check
-      `controller.mediaItemCount > 0` after the suspend point** and bail if the player is no longer
-      idle; `sendRestoreState`; await the result per D-T10.4; on `RESULT_SUCCESS` call
-      `applyRestored` and return the value; otherwise return null.
+- [ ] Order: capture `controller` into a local (bail if null); run `restore()`; bail on null;
+      **re-check `mediaItemCount > 0` on that same local after the suspend point** and bail if the
+      player is no longer idle; `sendRestoreState`; await the result per D-T10.4; on
+      `RESULT_SUCCESS` call `applyRestored` and return the value; otherwise return null.
+- [ ] Use the one captured controller throughout. Reading the `controller` property twice would let
+      the re-check and the send disagree about which controller they are talking to.
 - [ ] Returning non-null must mean *the session is on screen* — read, idle, acknowledged, applied.
       Callers key their like-observer call off that.
 - [ ] Do not add a `Log` or an error channel here; failure is silent by D-T3.5 and mobile's own
@@ -138,8 +147,10 @@ suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPla
 - [ ] Replace `restorePreviousSession` with a `viewModelScope.launch` that calls
       `stateCollector.restoreIfIdle { persistence.restore() }` and, on a non-null result, calls
       `observeCurrentSongLikeState(restored.song.mediaId)`.
-- [ ] Delete `showRestoredSession` and the now-unused `RepeatMode`/`RestoredPlayback`/`SessionResult`
-      /`MoreExecutors` imports — check each, several are used elsewhere in that file.
+- [ ] Delete `showRestoredSession` and the imports that go stale with it: `RepeatMode`,
+      `RestoredPlayback`, `SessionResult`, `MoreExecutors` **and `sendRestoreState`** — the send
+      moves into the collector, so neither ViewModel imports it any more. Check each against the
+      rest of the file; `SessionCommand` and `Bundle` stay for the other commands.
 - [ ] The comment explaining why the car's `hasNext` differs from mobile's goes with it. It only
       existed because the duplication did.
 
@@ -148,7 +159,8 @@ suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPla
 ## Task 4: Mobile calls it
 
 - [ ] In `restorePlaybackState`, replace the send and the `_uiState` block with the same
-      `restoreIfIdle` call, keeping the `try`/`catch` (D-T10.2) and the like observer.
+      `restoreIfIdle` call, keeping the `try`/`catch` (D-T10.2) and the like observer. Drop the
+      `sendRestoreState` import here too.
 - [ ] Keep `playerMode = PlayerMode.Mini` — set it only when the result is non-null, so a refused
       or failed restore no longer raises the mini player over an empty player. That is mobile's
       share of the T3 success gate.
@@ -161,7 +173,10 @@ reaction; its `hasNext` no longer exists as a second formula.
 ## Task 5: Gate
 
 - [ ] Run the broader gate.
-- [ ] `grep -rn "hasNext = " app automotive core --include=*.kt` returns only the collector.
+- [ ] `grep -rn "restored\." app/src/main automotive/src/main` returns only the two
+      `observeCurrentSongLikeState(restored.song.mediaId)` calls — no snapshot arithmetic left in
+      either ViewModel. (A `hasNext =` grep is the wrong check: mobile legitimately keeps
+      `hasNext = snapshot.hasNext` in its snapshot folding, and previews set it too.)
 - [ ] No new detekt baseline entries; confirm neither ViewModel needed a new suppression.
 
 ## Task 6: Device pass, both surfaces
