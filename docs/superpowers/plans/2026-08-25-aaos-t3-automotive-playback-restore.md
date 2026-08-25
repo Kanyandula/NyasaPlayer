@@ -265,10 +265,22 @@ unchanged.
 
 ## Task 4: Static gate
 
-- [ ] `./gradlew detekt :automotive:lintOemDebug` — no new baseline entries, no new suppression.
-- [ ] Confirm `AutomotivePlayerViewModel`'s constructor is within `constructorThreshold: 10`.
+- [x] `./gradlew detekt :automotive:lintOemDebug` — no new baseline entries, no new suppression.
+- [x] Confirm `AutomotivePlayerViewModel`'s constructor is within `constructorThreshold: 10`.
+
+- [x] Run the full broader gate, not just the static half.
 
 **Acceptance criteria:** the static gate is green without editing `detekt-baseline.xml`.
+
+**Result, 2026-08-25.** Detekt clean at `maxIssues: 0`; `detekt-baseline.xml` untouched since the
+repo's first commit. `:automotive:lintOemDebug` reports zero errors and four pre-existing warnings,
+none in a file T3 touched (`OldTargetApi`, `ObsoleteSdkInt`, `UseOfNonLambdaOffsetOverload` in
+`CarNavRail.kt`). The constructor is six parameters against `constructorThreshold: 10`, and the
+class-level `TooManyFunctions` suppression is the one A5 left, not a wider one.
+
+Full gate, all tasks re-run from scratch: `:core:playback` 34 tests, `:automotive` 171,
+`:core:data` 63 — 268 total, zero failures — plus `assembleOemDebug`, `assemblePlaystoreDebug` and
+`:app:assembleDebug`.
 
 ## Task 5: Device verification
 
