@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarPillButton
+import com.example.nyasaplayer.auto.ui.components.CarRowSkeleton
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
@@ -38,10 +38,8 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 private val HeroArtSize = 200.dp
 private val HeroSpacing = 24.dp
 private val ListPadding = 24.dp
-private val SkeletonRowHeight = 80.dp
 private val TitleSize = 34.sp
 private val SubtitleSize = 20.sp
-private const val SkeletonRowCount = 4
 
 /**
  * Album detail — screen 11.
@@ -272,14 +270,6 @@ private fun DetailSkeleton(modifier: Modifier = Modifier) {
                 .clip(RoundedCornerShape(CarCardCornerRadius))
                 .background(CarRaised),
         )
-        repeat(SkeletonRowCount) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(SkeletonRowHeight)
-                    .clip(RoundedCornerShape(CarCardCornerRadius))
-                    .background(CarRaised),
-            )
-        }
+        CarRowSkeleton(spacing = HeroSpacing)
     }
 }

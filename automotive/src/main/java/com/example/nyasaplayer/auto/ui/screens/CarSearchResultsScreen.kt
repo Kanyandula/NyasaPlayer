@@ -4,13 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,11 +39,11 @@ import com.example.nyasaplayer.auto.ui.components.CarCardShape
 import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarPillButton
+import com.example.nyasaplayer.auto.ui.components.CarRowSkeleton
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.components.carConsumeTouches
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
-import com.example.nyasaplayer.auto.ui.theme.CarListRowHeight
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
@@ -63,7 +61,6 @@ private val QuerySize = 26.sp
 private val TopResultTitleSize = 26.sp
 private val LabelSize = 18.sp
 private val BodySize = 20.sp
-private const val SkeletonRowCount = 4
 
 /** Test seam: the vertical result list, so a test can scroll to a section below the fold. */
 internal const val SearchResultsListTag = "searchResults"
@@ -105,7 +102,7 @@ fun CarSearchResultsScreen(
         ResultsHeader(query = query, onBackToSearch = onBackToSearch, onClear = onClear)
 
         when {
-            isLoading -> ResultsSkeleton()
+            isLoading -> CarRowSkeleton(spacing = RowSpacing, modifier = Modifier.fillMaxSize())
 
             errorMessage != null -> CarEmptyState(
                 title = "Search didn't work",
@@ -318,24 +315,5 @@ private fun TopResult(
             },
             onClick = onClick,
         )
-    }
-}
-
-/** Static placeholders, no shimmer — same reason as HomeSkeleton. */
-@Composable
-private fun ResultsSkeleton(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(RowSpacing),
-    ) {
-        repeat(SkeletonRowCount) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(CarListRowHeight)
-                    .clip(RoundedCornerShape(CarCardCornerRadius))
-                    .background(CarRaised),
-            )
-        }
     }
 }

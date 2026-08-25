@@ -3,13 +3,11 @@ package com.example.nyasaplayer.auto.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,11 +27,11 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarPillButton
+import com.example.nyasaplayer.auto.ui.components.CarRowSkeleton
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
-import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.formatDuration
@@ -43,13 +41,11 @@ private val SectionSpacing = 24.dp
 private val ListPadding = 24.dp
 private val HeroArtSize = 120.dp
 private val HeroPadding = 20.dp
-private val SkeletonRowHeight = 80.dp
 private val SkeletonSpacing = 12.dp
 private val GreetingSize = 30.sp
 private val SubtitleSize = 18.sp
 private val HeroTitleSize = 24.sp
 private val HeroLabelSize = 14.sp
-private const val SkeletonRowCount = 4
 
 /**
  * Home.
@@ -95,7 +91,12 @@ fun CarHomeScreen(
             onAction = onRetry,
         )
 
-        isLoading -> HomeSkeleton(modifier = modifier)
+        isLoading -> CarRowSkeleton(
+            spacing = SkeletonSpacing,
+            modifier = modifier
+                .fillMaxSize()
+                .padding(vertical = ListPadding),
+        )
 
         !hasContent -> CarEmptyState(
             title = "Nothing to play yet",
@@ -255,31 +256,5 @@ private fun ResumeHero(
             )
         }
         CarPillButton(label = "Play", onClick = onClick)
-    }
-}
-
-/**
- * Static placeholders, no shimmer.
- *
- * The ambient layer is the app's only decorative motion, and it is gated on vehicle state; a
- * shimmer that ignored that gating would reintroduce exactly the motion A2 removed.
- */
-@Composable
-private fun HomeSkeleton(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(vertical = ListPadding),
-        verticalArrangement = Arrangement.spacedBy(SkeletonSpacing),
-    ) {
-        repeat(SkeletonRowCount) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(SkeletonRowHeight)
-                    .clip(RoundedCornerShape(CarCardCornerRadius))
-                    .background(CarRaised),
-            )
-        }
     }
 }

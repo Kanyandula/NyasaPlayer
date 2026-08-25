@@ -2,13 +2,11 @@ package com.example.nyasaplayer.auto.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,9 +24,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarPillButton
+import com.example.nyasaplayer.auto.ui.components.CarRowSkeleton
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
-import com.example.nyasaplayer.auto.ui.theme.CarListRowHeight
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.core.common.models.Song
@@ -40,7 +38,6 @@ private val HeroSpacing = 24.dp
 private val HeroArtSize = 200.dp
 private val TitleSize = 34.sp
 private val SubtitleSize = 20.sp
-private const val SkeletonRowCount = 4
 
 /**
  * Screen 8 — liked songs.
@@ -76,7 +73,12 @@ fun CarFavouriteMusicScreen(
             onAction = onRetry,
         )
 
-        isLoading && songs.isEmpty() -> FavouritesSkeleton(modifier = modifier)
+        isLoading && songs.isEmpty() -> CarRowSkeleton(
+            spacing = SectionSpacing,
+            modifier = modifier
+                .fillMaxSize()
+                .padding(vertical = ListPadding),
+        )
 
         songs.isEmpty() -> CarEmptyFavouritesScreen(
             onBrowseClick = onBrowseClick,
@@ -150,27 +152,6 @@ private fun FavouritesHero(
                 CarPillButton(label = "Play all", onClick = onPlayAll)
                 CarPillButton(label = "Shuffle", onClick = onShuffle, filled = false)
             }
-        }
-    }
-}
-
-/** Static placeholders, no shimmer — the ambient layer is the app's only decorative motion. */
-@Composable
-private fun FavouritesSkeleton(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(vertical = ListPadding),
-        verticalArrangement = Arrangement.spacedBy(SectionSpacing),
-    ) {
-        repeat(SkeletonRowCount) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(CarListRowHeight)
-                    .clip(RoundedCornerShape(CarCardCornerRadius))
-                    .background(CarRaised),
-            )
         }
     }
 }
