@@ -165,14 +165,16 @@ suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPla
 
 ## Task 4: Mobile calls it
 
-- [ ] In `restorePlaybackState`, replace the send and the `_uiState` block with the same
+- [x] In `restorePlaybackState`, replace the send and the `_uiState` block with the same
       `restoreIfIdle` call, keeping the `try`/`catch` (D-T10.2) and the like observer. Drop the
       `sendRestoreState` import here too.
-- [ ] Keep `playerMode = PlayerMode.Mini` — set it only when the result is non-null, so a refused
+- [x] Keep `playerMode = PlayerMode.Mini` — set it only when the result is non-null, so a refused
       or failed restore no longer raises the mini player over an empty player. That is mobile's
       share of the T3 success gate.
-- [ ] Confirm `observePlaybackSnapshot` carries the restored fields into `PlayerUiState`;
-      `playerMode` is the only field it does not cover.
+- [x] Confirm `observePlaybackSnapshot` carries the restored fields into `PlayerUiState`;
+      `playerMode` is the only field it does not cover. It folds `currentSong`, `isPlaying`,
+      `currentPositionMs`, `durationMs`, `isBuffering`, `hasPrevious`, `hasNext` and `repeatMode` —
+      every field the deleted block wrote, plus the `durationMs` it never wrote (D-T10.3).
 
 **Acceptance criteria:** mobile's restore is a launch, one call, and two lines of mobile-specific
 reaction; its `hasNext` no longer exists as a second formula.
