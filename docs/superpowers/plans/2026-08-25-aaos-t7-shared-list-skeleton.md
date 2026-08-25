@@ -122,10 +122,13 @@ across the four screens.
 
 ## Task 3: Gate
 
-- [ ] Run the broader gate.
-- [ ] Confirm no new `detekt-baseline.xml` entries.
+- [x] Run the broader gate.
+- [x] Confirm no new `detekt-baseline.xml` entries.
 
 **Acceptance criteria:** green without touching the baseline.
+
+**Result, 2026-08-25.** All tasks re-run from scratch: `:automotive` 171 tests 0 failures, detekt
+clean with `detekt-baseline.xml` untouched, `lintOemDebug` 0 errors, both flavors assembling.
 
 ## Task 4: See it
 
