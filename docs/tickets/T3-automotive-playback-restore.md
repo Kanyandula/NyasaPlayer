@@ -2,7 +2,7 @@
 
 - **Slice:** player lifecycle - cross-cutting, not an A5 overlay patch
 - **Depends on:** A5 verification evidence; D29 ViewModel boundary decision
-- **Status:** Implemented and device-verified; two checks unrun — see Outcome
+- **Status:** Implemented and device-verified — merged in PR #41
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest`
 - **Design Reference:** `docs/AAOS_A5_VERIFICATION.md` process-death observation; `docs/aaos-DESIGN.md` D29
 - **Plan:** `docs/superpowers/plans/2026-08-25-aaos-t3-automotive-playback-restore.md`
