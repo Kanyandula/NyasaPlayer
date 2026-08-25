@@ -181,12 +181,21 @@ reaction; its `hasNext` no longer exists as a second formula.
 
 ## Task 5: Gate
 
-- [ ] Run the broader gate.
-- [ ] `grep -rn "restored\." app/src/main automotive/src/main` returns only the two
+- [x] Run the broader gate.
+- [x] `grep -rn "restored\." app/src/main automotive/src/main` returns only the two
       `observeCurrentSongLikeState(restored.song.mediaId)` calls — no snapshot arithmetic left in
       either ViewModel. (A `hasNext =` grep is the wrong check: mobile legitimately keeps
       `hasNext = snapshot.hasNext` in its snapshot folding, and previews set it too.)
-- [ ] No new detekt baseline entries; confirm neither ViewModel needed a new suppression.
+- [x] No new detekt baseline entries; confirm neither ViewModel needed a new suppression.
+
+**Result, 2026-08-25.** Gate re-run from scratch: `:core:playback` 41 tests (34 before T10),
+`:automotive` 171, `:core:data` 63 — 275 total, zero failures — plus detekt, lint, both automotive
+flavors and `:app:assembleDebug`. `detekt-baseline.xml` untouched and no `@Suppress` added to
+either ViewModel.
+
+`grep -rn "restored\." app/src/main automotive/src/main` returns exactly two lines, one per
+surface, both `observeCurrentSongLikeState(restored.song.mediaId)`. No snapshot arithmetic survives
+in either ViewModel.
 
 ## Task 6: Device pass, both surfaces
 
