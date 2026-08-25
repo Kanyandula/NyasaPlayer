@@ -134,14 +134,30 @@ clean with `detekt-baseline.xml` untouched, `lintOemDebug` 0 errors, both flavor
 
 A pure refactor of drawing code is not proven by a compiler.
 
-- [ ] Install on `AAOS_AOSP_33_userdebug` and cold-start the app: Home shows its skeleton for
-      20–30s while the feed loads, which is long enough to screenshot.
-- [ ] Open an album to catch `CarDetailScreen`'s skeleton, and confirm the hero still sits 24dp
-      above the first row.
-- [ ] Compare against `git stash`-ed screenshots of the same two screens, or against the ones in
-      this session's scratchpad if they still show the pre-change skeleton.
+- [ ] Install on `AAOS_AOSP_33_userdebug` and cold-start the app: Home shows its skeleton while the
+      feed loads. **Not reached** — see below.
+- [ ] Open an album to catch `CarDetailScreen`'s skeleton. **Not reached.**
+- [x] Restore the network throttle afterwards.
 
-**Acceptance criteria:** Home and Detail look the same as before the change.
+**Result: the loading states were unreachable on this emulator, four attempts.** Home, Favourites
+and playlist detail all render their content instantly from the local caches — Room for the
+catalogue, Firestore's offline cache for user data — so `isLoading && content.isEmpty()` never
+holds long enough to screenshot. Throttling the network (`emu network speed gsm`, `delay gprs`)
+changes nothing, because nothing is being fetched. What throttling *does* show is
+`CardPlaceholder`, the image-loading state, which is a different component and untouched here.
+
+Earlier screenshots in this session caught the **pre-change** Home skeleton (four grey rows) during
+slower cold starts, so a before-image exists; there is no after-image to compare it against.
+
+What the change rests on instead: the extracted `Box` carries byte-identical modifiers to the four
+it replaces, the row height is provably the same 80dp at all four call sites, each spacing value is
+passed through unchanged, and `DetailSkeleton`'s nested `spacedBy` adds no leading space, so the
+hero gap is arithmetically unchanged. Compile, detekt, lint and 171 tests are green.
+
+**To close this properly** the loading state has to be made real, not waited for: sign out and back
+in on the head unit, which drops user content and re-syncs, or clear app data and sign in again.
+Both need an interactive Google account tap that adb cannot drive reliably. Worth doing on the next
+run that signs in for another reason.
 
 ## Task 5: Docs
 
