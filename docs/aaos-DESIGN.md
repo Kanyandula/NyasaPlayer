@@ -600,6 +600,17 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   it added is private; the class-level `TooManyFunctions` suppression is the one A5 left, not a
   wider one. A public `restorePlaybackState()` — for a retry affordance, say — would trip D29 and
   must split the ViewModel first.
+- **D60 — `CarRowSkeleton` fixes the row height and parameterises only the spacing.** Four screens
+  drew the same four grey blocks and all four had settled on 80dp, two of them via a private
+  `SkeletonRowHeight` shadowing `CarListRowHeight` — so moving the height into the component
+  changed nothing on screen and removed the shadowing. Spacing stayed a parameter because the four
+  genuinely differ (12, 16, 24, 12dp) and each matches its own screen's rhythm; outer padding stays
+  on the caller's `modifier` rather than becoming a second way to say the same thing. There is no
+  `rows` parameter: every call site wants four, and the day one wants three is the day to add it.
+
+  The card-grid skeletons in `CarLibraryScreen` and `CarBrowseScreen` were left alone. They draw
+  aspect-ratio cards, not full-width rows; folding them in would mean a component with a shape
+  switch, which costs more than the duplication does.
 
 ## Components
 
@@ -621,7 +632,7 @@ rule: a one-off button is how a 76dp target or contrast rule regresses.
 | `CarPlaybackControls` | Shared full-player transport controls; mini-player may use a compact wrapper around the same semantics |
 | `CarRestrictionDialog` | Shared refusal/eviction explanation for every driving restriction |
 | `CarEmptyState` | Shared empty-state layout with optional CTA |
-| `CarLoadingSkeleton` | Shared loading placeholder; static while driving and when system animations are disabled |
+| `CarRowSkeleton` | Shared loading placeholder for row lists: four blocks at `CarListRowHeight`, always static. Built by T7 — this row said `CarLoadingSkeleton` and named a component that did not exist, which is how four screens ended up drawing their own |
 | `CarDownloadRow` | Shared downloads row with parked-only remove actions |
 
 - **Primary CTA:** gold `#C9A84C` fill, `#0A0A0C` text, 20px weight 600, 14px radius, 76px tall.
