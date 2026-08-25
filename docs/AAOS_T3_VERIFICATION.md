@@ -52,6 +52,16 @@ overlay stack — so this is exactly the screen A5 photographed empty, now popul
 Restore also fired on the very first launch after a fresh install, before any of the above:
 `size=13`, `position=222040`, paused. Nothing about it depends on the app having run this boot.
 
+### Re-verified after review
+
+The three reviews changed `restore()` again — `RepeatMode.entries.firstOrNull` for the mode, one
+redundant guard removed — so the run was repeated on the shipped build: same track, `active item
+id=2`, `position=59327`, paused, `size=8`. Restore landed later than in the earlier runs, about a
+minute after a fresh install rather than 10–20s, because Firestore reconnects more slowly after a
+reinstall. The like state also arrives a beat behind the queue: the session read `Like` at first
+and `Unlike` seconds later, which is the like flow emitting after the restore paints, not a
+regression.
+
 ## The OEM template surface
 
 With the launcher's restore already applied, `com.android.car.media` shows the restored track in
