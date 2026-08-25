@@ -126,24 +126,28 @@ fun applyRestored(restored: RestoredPlayback)
 
 **Purpose:** the sequence T3 established, owned once.
 
-- [ ] Add to `BasePlayerStateCollector`:
+- [x] Add to `BasePlayerStateCollector`:
 
 ```kotlin
 suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPlayback?
 ```
 
-- [ ] Order: capture `controller` into a local (bail if null); run `restore()`; bail on null;
+- [x] Order: capture `controller` into a local (bail if null); run `restore()`; bail on null;
       **re-check `mediaItemCount > 0` on that same local after the suspend point** and bail if the
       player is no longer idle; `sendRestoreState`; await the result per D-T10.4; on
       `RESULT_SUCCESS` call `applyRestored` and return the value; otherwise return null.
-- [ ] Use the one captured controller throughout. Reading the `controller` property twice would let
+- [x] Use the one captured controller throughout. Reading the `controller` property twice would let
       the re-check and the send disagree about which controller they are talking to.
-- [ ] Returning non-null must mean *the session is on screen* — read, idle, acknowledged, applied.
+- [x] Returning non-null must mean *the session is on screen* — read, idle, acknowledged, applied.
       Callers key their like-observer call off that.
-- [ ] Do not add a `Log` or an error channel here; failure is silent by D-T3.5 and mobile's own
+- [x] Do not add a `Log` or an error channel here; failure is silent by D-T3.5 and mobile's own
       catch still covers the throwing case.
 
 **Acceptance criteria:** the guard and the success gate exist exactly once in the repo.
+
+**Note.** The failure code is `SessionError.ERROR_UNKNOWN`, not `SessionResult.ERROR_UNKNOWN` —
+`SessionResult` carries only `RESULT_SUCCESS`. `PlaybackService.toSessionErrorCode()` already uses
+`SessionError` for the same reason.
 
 ## Task 3: The car calls it
 
