@@ -88,10 +88,7 @@ class PlaybackStatePersistence @Inject constructor(
             val saved = userRepository.getPlaybackState(uid) ?: return null
             if (saved.currentSongId.isBlank()) return null
 
-            val songs = songRepository.getSongsByIds(saved.queueSongIds)
-            if (songs.isEmpty()) return null
-
-            val songMap = songs.associateBy { it.mediaId }
+            val songMap = songRepository.getSongsByIds(saved.queueSongIds).associateBy { it.mediaId }
             val orderedQueue = saved.queueSongIds.mapNotNull { songMap[it] }
             if (orderedQueue.isEmpty()) return null
 
