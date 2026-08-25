@@ -73,45 +73,36 @@ itself. D-T3.1 stands: a driver who only ever opens the template still gets noth
 
 - **The pre-send emptiness re-check (D56) — now verified, see below.**
 
-- **The missing-state case.** Deleting the user's `users/{uid}/playbackState/current` document is
-  the way to reach it, and both routes to that — the Firestore MCP and `run-as --user 10` — were
-  refused by this session's permission classifier. Left unrun rather than worked around. The
-  branch itself is covered by `PlaybackStatePersistenceTest`, which asserts a `null` return for a
-  missing document, a blank song id and unresolvable ids; what is missing is the device-level
-  claim that a `null` restore leaves an empty player with no crash and no error overlay.
+- **The `:automotive` unit tests the ticket's fourth criterion asked for.** `MediaController` is
+  `@DoNotMock` with a package-private constructor, so the ViewModel's controller path cannot be
+  driven in a unit test. The restore branching is covered in `:core:playback` instead, and the
+  ticket is amended to say so.
 
-## The D56 race, verified by mutation
+## The missing-state case
 
-Reaching this needed the window held open: two instrumented builds carrying a `delay()` after
-`restore()` returned, one with the guard and one without, both reverted afterwards. The tree matched
-`HEAD` and the shipped build was reinstalled and re-checked before this record was written.
+Run with the user's `users/{uid}/playbackState/current` deleted — approved, and confirmed to be the
+right document first by matching its contents against the live session (queue of 8, `positionMs`
+62649, `savedAt` 19:36). The app was force-stopped before the delete so the 30s save loop could not
+rewrite it underneath the test.
 
-**With the guard.** App launched, restore parked in the probe, "Play" tapped on the resume card
-once Home had content. Mona Lisa started (`size=8`, `active item id=0`, `state=6` buffering). When
-the window closed: **`state=3`, position 48666, still Mona Lisa**. The restore saw a non-empty
-player and returned.
+Relaunched with nothing to restore:
 
-**Without the guard.** Identical run. Mona Lisa started the same way — and when the window closed
-the session read **`state=2`, position 60803**. Playback had been paused and re-seeked to the saved
-position: `handleRestoreState` had applied its queue and its `playWhenReady = false` on top of a
-track the driver had started seconds earlier. The saved song happened to be Mona Lisa too, so the
-title did not change, but a live track cannot jump from a few seconds in to 60803 ms and stop
-playing by itself. That is the regression D56 exists to prevent, reproduced.
+| Check | Result |
+|---|---|
+| Media session | `metadata: null`, `queueTitle=null, size=0`, `state=0` |
+| Mini player | Absent — no ghost row, Home sits flush to the system bar |
+| Error overlay / dialog | None |
+| Crash or ANR | None — no `FATAL EXCEPTION`, no `ANR in com.example.nyasaplayer` in logcat |
+| Rest of the app | Working — Home, resume card and Continue Listening all populated |
 
-## A false start worth recording
+The "Pick up where you left off" card still names a song, and that is correct: it reads recently
+played, not playback state. It offers something to start, it does not claim a session is active,
+which is the "misleading active-player state" the ticket's criterion is about.
 
-The first two attempts used the OEM template as the racer — launch our shell, switch to the
-template, tap a row there. Both showed the started track surviving, and both proved nothing:
-putting another app in front stops our shell composing, so `AuthenticatedApp` never reaches the
-player ViewModel and the restore never runs. The guard was not what saved playback in those runs;
-nothing had threatened it. It only became a real test once the racer was a tap **inside our own
-foreground app**, which is also the realistic case — a driver relaunching the app and immediately
-hitting Play.
+Afterwards the app rewrote the document on the next play/pause — `savedAt` 19:40:22, the resume
+point restored.
 
-I recorded "the guard held" after the first of those runs. It did not hold anything; there was
-nothing to hold.
-
-## Observations
+## Observations## Observations
 
 - `dumpsys media_session` lists more than one session; anchor every read on the block whose
   `ownerPid` matches the app's *current* pid. A `grep -A9 ownerPid=…` window is also too short —

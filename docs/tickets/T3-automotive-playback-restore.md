@@ -90,20 +90,16 @@ position (D55). Shared code, so mobile carries that fix too — not device-verif
 Device run: PID 2485 → 2721, track, index, position, repeat mode, like state, paused and queue
 size all identical across the kill. Full table in `docs/AAOS_T3_VERIFICATION.md`.
 
+## Verified since
+
+Both gaps this ticket first recorded are now closed on device, in
+`docs/AAOS_T3_VERIFICATION.md`: the D56 guard by mutation (with it, the tapped track keeps playing
+through the restore window; without it, the track is paused and re-seeked to the saved position),
+and the missing-state case with the saved document deleted — empty player, no crash, no overlay,
+and the document rewritten on the next pause.
+
 ## Not verified
 
-- **The D56 re-check.** Four attempts could not reach the state worth testing: the window between
-  the read returning and the send is sub-second, while the emulator needs 15–30s after a relaunch
-  before Home has anything to tap. Network throttling did not widen it — the document comes from
-  Firestore's local cache. Two instrumented builds carrying a `delay()` did hold the window open
-  and showed restore still lands correctly behind one, but every tap into that window was
-  swallowed. Both were reverted before the final run. The guard's presence is a code fact, not a
-  device observation.
-- **The missing-state case on device.** Reaching it means deleting
-  `users/{uid}/playbackState/current`, and both routes to that were refused by the session's
-  permission classifier. Left unrun rather than worked around. `PlaybackStatePersistenceTest`
-  covers the branch; what is missing is the device-level claim that a `null` restore leaves an
-  empty player with no crash and no overlay.
 - **The `:automotive` unit tests the original fourth acceptance criterion asked for.** Amended
   above: `MediaController` is `@DoNotMock` with a package-private constructor, so the ViewModel's
   controller path cannot be driven in a unit test at all. Closing that means a transport seam over
