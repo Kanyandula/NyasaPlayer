@@ -79,14 +79,14 @@ Every other car component has one — `CarEmptyState.kt`, `CarTrackRow.kt`. `Car
 
 ## Task 1: Add the component
 
-- [ ] Create `automotive/.../ui/components/CarRowSkeleton.kt`.
-- [ ] `Column(modifier, verticalArrangement = Arrangement.spacedBy(spacing))` over
+- [x] Create `automotive/.../ui/components/CarRowSkeleton.kt`.
+- [x] `Column(modifier, verticalArrangement = Arrangement.spacedBy(spacing))` over
       `SkeletonRowCount` × `Box(fillMaxWidth, height CarListRowHeight, clip CarCardCornerRadius,
       background CarRaised)`.
-- [ ] Keep a private `SkeletonRowCount = 4` rather than a bare `repeat(4)`. `MagicNumber` is active
+- [x] Keep a private `SkeletonRowCount = 4` rather than a bare `repeat(4)`. `MagicNumber` is active
       and permits only -1, 0, 1, 2; the existing screens each dodge it with the same constant, which
       is why four of them exist.
-- [ ] Move `HomeSkeleton`'s KDoc onto the component — it already carries the rule and its reason
+- [x] Move `HomeSkeleton`'s KDoc onto the component — it already carries the rule and its reason
       ("static placeholders, no shimmer… the ambient layer is the app's only decorative motion, and
       it is gated on vehicle state"). This is a move, not a new sentence: today one of four copies
       explains itself and the other three are silent.
