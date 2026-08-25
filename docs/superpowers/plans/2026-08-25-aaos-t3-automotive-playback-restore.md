@@ -287,22 +287,30 @@ Full gate, all tasks re-run from scratch: `:core:playback` 34 tests, `:automotiv
 Same evidence style as `docs/AAOS_A5_VERIFICATION.md` — PID before and after, and
 `dumpsys media_session`.
 
-- [ ] Signed in, play a queue, note the track, queue size and position; wait past one 30s save
+- [x] Signed in, play a queue, note the track, queue size and position; wait past one 30s save
       (D-T3.9 — without that wait the run measures the save interval, not restore).
-- [ ] Background the app, `am kill --user 10`, record PID before → after.
-- [ ] Relaunch: full player shows the track, the queue size matches, position is within the save
+- [x] Background the app, `am kill --user 10`, record PID before → after.
+- [x] Relaunch: full player shows the track, the queue size matches, position is within the save
       interval of where it was, repeat mode survived, and playback is **paused**, not started.
-- [ ] `dumpsys media_session` reports a non-zero queue size.
+- [x] `dumpsys media_session` reports a non-zero queue size.
 - [ ] Missing-state case: delete the user's `playbackState` document, kill, relaunch — empty
-      player, no crash, no error overlay.
+      player, no crash, no error overlay. **Not run:** both routes to deleting that document (the
+      Firestore MCP and `run-as --user 10`) were refused by the session's permission classifier.
+      Needs the user's call, not a workaround.
 - [ ] Race case, best effort: kill, relaunch, and immediately start a song from the OEM template.
-      What must not happen is the tapped song being replaced by the restored queue.
-- [ ] Note whether the OEM template's Now Playing also shows the restored track once the launcher
+      What must not happen is the tapped song being replaced by the restored queue. **Not
+      reached** after four attempts — see the verification record's "Not verified". The window is
+      sub-second in practice and the emulator needs 15–30 s before there is anything to tap.
+- [x] Note whether the OEM template's Now Playing also shows the restored track once the launcher
       has restored (it shares the session, so it should) — an observation, not a claim that the
       template restores on its own (D-T3.1).
 
 **Acceptance criteria:** the run is recorded with PIDs and `dumpsys` output, including the
 missing-state case and whatever the race attempt showed.
+
+**Result:** `docs/AAOS_T3_VERIFICATION.md`. The restore path itself is confirmed field by field —
+track, index, position, repeat mode, like state, paused, queue size 8 — across PID 2485 → 2721.
+Two checks are recorded as not verified rather than claimed.
 
 ## Task 6: Docs
 
