@@ -85,7 +85,9 @@ therefore rests on the Task 4 code review (`CarErrorOverlay.kt:166` gates on `er
 and the unit-tested state, not on a device observation. Worth retrying on a device where the
 audio host can actually be blocked.
 
-**Process death returns an empty full player.** After `am kill --user 10` (PID 6984 → 7789,
+**Process death returns an empty full player.** *(Fixed by T3 on 2026-08-25 — see
+`docs/AAOS_T3_VERIFICATION.md`. The paragraph below records what A5 observed and is left as
+written.)* After `am kill --user 10` (PID 6984 → 7789,
 verified changed, playback stopped and app backgrounded first, per the A4 notes), relaunch
 brought back the full player overlay with no crash and no `FATAL EXCEPTION` — but with no track,
 `0:00 / 0:00`, and `dumpsys media_session` reporting `size=0`. Cause: `:automotive` has **no

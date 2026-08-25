@@ -71,7 +71,9 @@ would have stored it. The saver earns its place on the *restore* side, toleratin
 later build no longer has instead of throwing out of `valueOf` mid-restore.
 
 The restored player is empty (no track, 0:00) because `:automotive` never restores playback
-state. That is A5's recorded carve-out, unchanged by T6.
+state. That is A5's recorded carve-out, unchanged by T6. *(No longer true as of T3, 2026-08-25:
+the same overlay now comes back holding the restored session — `docs/AAOS_T3_VERIFICATION.md`.
+The sentence stands as what this run observed.)*
 
 This **confirms** A4's recipe rather than correcting it. A4 already records both halves — the kill
 is refused while playback holds the foreground service, and after stopping playback first it saw

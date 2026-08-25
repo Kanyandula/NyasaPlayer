@@ -322,7 +322,9 @@ private fun testArtist(
 
 // ── Minimal test fakes ──
 
-private class TestSongRepository : SongRepository {
+// The fakes below are shared by every test in this source set, not just MediaBrowseTreeTest.
+
+class TestSongRepository : SongRepository {
     val songs = MutableStateFlow<List<Song>>(emptyList())
 
     override fun getSongs(): Flow<List<Song>> = songs
@@ -350,7 +352,7 @@ private class TestSongRepository : SongRepository {
     }
 }
 
-private class TestArtistRepository : ArtistRepository {
+class TestArtistRepository : ArtistRepository {
     val artists = MutableStateFlow<List<Artist>>(emptyList())
 
     override fun getArtists(): Flow<List<Artist>> = artists
@@ -366,7 +368,7 @@ private class TestArtistRepository : ArtistRepository {
         error("MediaBrowseTree does not search artists")
 }
 
-private class TestGenreRepository : GenreRepository {
+class TestGenreRepository : GenreRepository {
     val genres = MutableStateFlow<List<Genre>>(emptyList())
 
     override fun getGenres(): Flow<List<Genre>> = genres
@@ -378,8 +380,9 @@ private class TestGenreRepository : GenreRepository {
         genres.value.sortedByDescending { it.popularity }.take(limit)
 }
 
-private class TestUserRepository : UserRepository {
+class TestUserRepository : UserRepository {
     val recentlyPlayedData = MutableStateFlow<Map<String, List<RecentlyPlayedEntry>>>(emptyMap())
+    var playbackState: PlaybackState? = null
 
     override fun getUserProfile(userId: String): Flow<UserProfile?> =
         MutableStateFlow(null)
@@ -400,20 +403,24 @@ private class TestUserRepository : UserRepository {
 
     override suspend fun logRecentlyPlayed(userId: String, mediaId: String) = Unit
 
-    override suspend fun savePlaybackState(userId: String, state: PlaybackState) = Unit
+    override suspend fun savePlaybackState(userId: String, state: PlaybackState) {
+        playbackState = state
+    }
 
-    override suspend fun getPlaybackState(userId: String): PlaybackState? = null
+    override suspend fun getPlaybackState(userId: String): PlaybackState? = playbackState
 }
 
-private class TestAuthRepository : AuthRepository {
-    var user: FirebaseUser? = null
+class TestAuthRepository : AuthRepository {
 
-    override val currentUser: FirebaseUser? get() = user
-    override val currentUserId: String? get() = user?.uid
+    /** Signs a fake user in. `FirebaseUser` cannot be constructed, so [currentUser] stays null. */
+    var userId: String? = null
+
+    override val currentUser: FirebaseUser? get() = null
+    override val currentUserId: String? get() = userId
 
     // MediaBrowseTree reads the snapshot only; the browse tree has no auth-driven UI to evict.
     override val authSession: Flow<AuthSession> = flowOf(AuthSession())
-    override val isAuthenticated: Boolean get() = user != null
+    override val isAuthenticated: Boolean get() = currentUserId != null
 
     override suspend fun signInWithEmail(email: String, password: String): AuthResult =
         AuthResult.Error("Not configured")
@@ -428,6 +435,6 @@ private class TestAuthRepository : AuthRepository {
         Result.success(Unit)
 
     override fun signOut() {
-        user = null
+        userId = null
     }
 }

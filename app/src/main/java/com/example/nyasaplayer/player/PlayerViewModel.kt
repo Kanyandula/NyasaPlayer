@@ -19,7 +19,7 @@ import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
-import com.example.nyasaplayer.core.playback.RestoredPlayback
+import com.example.nyasaplayer.core.playback.sendRestoreState
 import com.example.nyasaplayer.core.playback.toBundle
 import com.example.nyasaplayer.core.playback.toSong
 import com.example.nyasaplayer.download.SongDownloadManager
@@ -313,20 +313,6 @@ class PlayerViewModel @Inject constructor(
         )
     }
 
-    private fun sendRestoreCommand(restored: RestoredPlayback) {
-        val controller = stateCollector.controller ?: return
-        val args = Bundle().apply {
-            putBundle(PlaybackCommands.KEY_SONGS, restored.queue.toBundle())
-            putInt(PlaybackCommands.KEY_START_INDEX, restored.index)
-            putLong(PlaybackCommands.KEY_POSITION_MS, restored.positionMs)
-            putString(PlaybackCommands.KEY_REPEAT_MODE, restored.repeatMode.name)
-        }
-        controller.sendCustomCommand(
-            SessionCommand(PlaybackCommands.CMD_RESTORE_STATE, Bundle.EMPTY),
-            args,
-        )
-    }
-
     // ── Offline Handling ──
 
     private fun showOfflineError(song: Song) {
@@ -434,7 +420,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch(exceptionHandler) {
             try {
                 val restored = persistence.restore() ?: return@launch
-                sendRestoreCommand(restored)
+                stateCollector.controller?.sendRestoreState(restored)
                 _uiState.update {
                     it.copy(
                         playerMode = PlayerMode.Mini,

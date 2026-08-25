@@ -2,9 +2,11 @@
 
 - **Slice:** player lifecycle - cross-cutting, not an A5 overlay patch
 - **Depends on:** A5 verification evidence; D29 ViewModel boundary decision
-- **Status:** Ready to spec
-- **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
+- **Status:** Implemented and device-verified; two checks unrun — see Outcome
+- **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest`
 - **Design Reference:** `docs/AAOS_A5_VERIFICATION.md` process-death observation; `docs/aaos-DESIGN.md` D29
+- **Plan:** `docs/superpowers/plans/2026-08-25-aaos-t3-automotive-playback-restore.md`
+- **Verification:** `docs/AAOS_T3_VERIFICATION.md`
 - **Risk Tags:** lifecycle, playback state, ViewModel size, process death
 - **Affected Modules:** `:automotive`; likely `:core:playback`
 
@@ -24,6 +26,9 @@ state requires player lifecycle work and likely a new player API surface.
 - Define how the automotive player restores the previous queue, current item, position and repeat
   mode after process death.
 - Reuse `PlaybackStatePersistence` and the existing playback command model where possible.
+- Fix the index bug found while speccing this: `restore()` drops unresolvable ids with `mapNotNull`
+  but still indexes by the saved `queueIndex`, so a catalogue deletion earlier in the queue resumes
+  the wrong song. Shared code, so mobile gets the fix too (plan D-T3.8).
 - Split or otherwise contain `AutomotivePlayerViewModel` before adding new public player APIs, per
   D29, rather than expanding the current suppressed ViewModel by default.
 - Keep the OEM media-template path working; do not regress `PlaybackService` restore behavior.
@@ -45,8 +50,12 @@ state requires player lifecycle work and likely a new player API surface.
   player fails gracefully without a crash and without a misleading active-player state.
 - Given restore adds a new player operation, when detekt runs, then `AutomotivePlayerViewModel` is
   not widened by another suppression; the split decision from D29 is honored or explicitly revised.
-- Given `:automotive` unit tests run, then restore success, missing-state and corrupt-state cases are
-  covered without requiring an emulator.
+- Given unit tests run, then restore success, missing-state and corrupt-state cases are covered
+  without requiring an emulator. **Amended 2026-08-25:** these land in `:core:playback`
+  (`PlaybackStatePersistenceTest`), not `:automotive`. `MediaController` is `@DoNotMock` with a
+  package-private constructor, so the car ViewModel's controller path cannot be driven in a unit
+  test at all; asserting the restore cases against an automotive fake would test the fake, not the
+  branching, which lives in `PlaybackStatePersistence`. See the plan's carve-out.
 - Given manual AAOS process-death verification runs, then the result is recorded with the same PID
   and `dumpsys media_session` evidence style used in `docs/AAOS_A5_VERIFICATION.md`.
 
@@ -54,3 +63,63 @@ state requires player lifecycle work and likely a new player API surface.
 
 The A5 verification carve-out was "empty player on return", not a crash. That makes this a follow-up
 quality and lifecycle ticket, not an A5 acceptance blocker.
+
+## Outcome
+
+Implemented across six tasks. Design records D53–D59 in `docs/aaos-DESIGN.md`.
+
+The defect was one missing `else`. Every piece restore needs already existed and worked on mobile:
+`PlaybackStatePersistence.restore()`, `CMD_RESTORE_STATE`, `handleRestoreState()`, and a service
+that had been saving the car's state all along. `AutomotivePlayerViewModel.onControllerConnected`
+simply had no branch for an empty player. It has one now, through the same command mobile sends —
+one sender, in `PlaybackCommands.kt`, mobile's private copy deleted.
+
+Two things the car does that mobile does not, both from the external review. It re-checks the
+player is still empty after the Firestore read returns, because a template play arriving during
+that round trip would otherwise be replaced and paused (D56). And it shows the restored track only
+once the service acknowledges the command, so a rejected restore leaves an empty player rather
+than a session the player never received.
+
+Making restore testable found a real bug on the way. `PlaybackStatePersistence` identified the
+user through `FirebaseUser`, which no fake can construct, which is why `restore()` had never had a
+test; switching to `currentUserId` (D54) unlocked ten. The first of them found that the current
+track was chosen by the saved index while the queue silently drops ids that no longer resolve — so
+one catalogue deletion earlier in the queue resumed a *different* song at the previous song's
+position (D55). Shared code, so mobile carries that fix too — not device-verified there.
+
+Device run: PID 2485 → 2721, track, index, position, repeat mode, like state, paused and queue
+size all identical across the kill. Full table in `docs/AAOS_T3_VERIFICATION.md`.
+
+## Verified since
+
+Both gaps this ticket first recorded are now closed on device, in
+`docs/AAOS_T3_VERIFICATION.md`: the D56 guard by mutation (with it, the tapped track keeps playing
+through the restore window; without it, the track is paused and re-seeked to the saved position),
+and the missing-state case with the saved document deleted — empty player, no crash, no overlay,
+and the document rewritten on the next pause.
+
+## Not verified
+
+- **The `:automotive` unit tests the original fourth acceptance criterion asked for.** Amended
+  above: `MediaController` is `@DoNotMock` with a package-private constructor, so the ViewModel's
+  controller path cannot be driven in a unit test at all. Closing that means a transport seam over
+  the controller operations both ViewModels use — its own ticket, and it would let mobile's player
+  be tested too.
+
+## Follow-ups this slice deliberately did not take
+
+- **Mobile discards the restore command's result.** `PlayerViewModel.restorePlaybackState()` sends
+  `sendRestoreState` and shows the restored track without waiting for the `SessionResult`, so a
+  rejected command leaves mobile displaying a session the player never received — the failure the
+  car now guards against. Pre-existing, and mobile restore is out of T3's scope; the shared
+  sender's KDoc names which caller checks and which does not, so the divergence is visible at the
+  call site rather than implied.
+- **Mobile's restore leaves `hasNext` false at the end of a repeat-all queue**, because its
+  snapshot omits the `repeatMode == RepeatMode.All` term the car's has. Self-corrects on the first
+  `Player.Listener` callback, so the visible window is short; both reviewers flagged the
+  divergence, and the car's line carries a comment saying it is deliberate.
+- **`sendSetQueueCommand` and `sendShufflePlayCommand` are byte-identical in both ViewModels.**
+  T3's shared `sendRestoreState` is the pattern that deletes them — two more extensions beside it,
+  roughly 30 lines gone. Out of scope here because neither command was part of the restore path.
+- **A transport seam over `MediaController`**, which would let both ViewModels' player paths be
+  unit-tested. Named in the plan's carve-out.

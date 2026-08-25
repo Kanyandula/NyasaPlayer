@@ -32,7 +32,7 @@ class PlaybackStatePersistence @Inject constructor(
         const val SAVE_FINAL_TIMEOUT_MS = 2000L
     }
 
-    private val userId: String? get() = authRepository.currentUser?.uid
+    private val userId: String? get() = authRepository.currentUserId
 
     fun save(
         scope: CoroutineScope,
@@ -88,21 +88,21 @@ class PlaybackStatePersistence @Inject constructor(
             val saved = userRepository.getPlaybackState(uid) ?: return null
             if (saved.currentSongId.isBlank()) return null
 
-            val songs = songRepository.getSongsByIds(saved.queueSongIds)
-            if (songs.isEmpty()) return null
-
-            val songMap = songs.associateBy { it.mediaId }
+            val songMap = songRepository.getSongsByIds(saved.queueSongIds).associateBy { it.mediaId }
             val orderedQueue = saved.queueSongIds.mapNotNull { songMap[it] }
             if (orderedQueue.isEmpty()) return null
 
-            val restoredIndex = saved.queueIndex.coerceIn(0, orderedQueue.lastIndex)
+            // The saved id wins over the saved index: songs that left the catalogue are dropped
+            // above, which shifts every later position, and coercion cannot see that — an in-range
+            // index just names the wrong track. The index is the fallback, for when the song the
+            // driver was on is the one that went missing.
+            val restoredIndex = orderedQueue.indexOfFirst { it.mediaId == saved.currentSongId }
+                .takeIf { it >= 0 }
+                ?: saved.queueIndex.coerceIn(0, orderedQueue.lastIndex)
             val restoredSong = orderedQueue[restoredIndex]
 
-            val restoredRepeatMode = try {
-                RepeatMode.valueOf(saved.repeatMode)
-            } catch (_: IllegalArgumentException) {
-                RepeatMode.Off
-            }
+            val restoredRepeatMode = RepeatMode.entries.firstOrNull { it.name == saved.repeatMode }
+                ?: RepeatMode.Off
 
             RestoredPlayback(
                 queue = orderedQueue,
