@@ -175,6 +175,38 @@ abstract class BasePlayerStateCollector(
     private fun readQueue(mc: MediaController): List<Song> =
         (0 until mc.mediaItemCount).map { mc.getMediaItemAt(it).toSong() }
 
+    // ── Restore ──
+
+    /**
+     * Publishes a session the service has just restored, paused and seeked but not playing.
+     *
+     * Every value comes from [restored] and none from the controller. A `SessionResult` says the
+     * *session* applied the queue; it does not say the controller has caught up, so asking the
+     * controller here — [hasNextTrack], say — would let a one-message-loop lag answer for an empty
+     * player and show the driver nothing. The controller's own callbacks refine this moments later.
+     *
+     * Both surfaces call this, which is the point: a restored session looks the same on each.
+     */
+    fun applyRestored(restored: RestoredPlayback) {
+        _playbackState.update {
+            it.copy(
+                currentSong = restored.song,
+                isPlaying = false,
+                currentPositionMs = restored.positionMs,
+                // The position poller only runs while playing, so nothing else fills the
+                // scrubber's total on a restored-and-paused session.
+                durationMs = restored.song.durationMs,
+                hasPrevious = restored.index > 0,
+                hasNext = restored.index < restored.queue.lastIndex ||
+                    restored.repeatMode == RepeatMode.All,
+                repeatMode = restored.repeatMode,
+                queue = restored.queue,
+                queueSize = restored.queue.size,
+                currentQueueIndex = restored.index,
+            )
+        }
+    }
+
     fun updateSnapshot(transform: (PlaybackSnapshot) -> PlaybackSnapshot) {
         _playbackState.update(transform)
     }

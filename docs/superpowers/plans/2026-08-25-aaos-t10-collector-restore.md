@@ -95,26 +95,29 @@ coroutine cancellation working via `invokeOnCancellation`.
 **Purpose:** one definition of what a restored session looks like, and the first restore code in
 this project that a unit test can reach.
 
-- [ ] Add to `BasePlayerStateCollector`:
+- [x] Add to `BasePlayerStateCollector`:
 
 ```kotlin
 fun applyRestored(restored: RestoredPlayback)
 ```
 
-- [ ] It writes, via `updateSnapshot`, exactly the union of what the two copies write today:
+- [x] It writes, via `updateSnapshot`, exactly the union of what the two copies write today:
       `currentSong`, `currentPositionMs`, `durationMs = restored.song.durationMs`,
       `isPlaying = false`, `repeatMode`, `queue`, `queueSize`, `currentQueueIndex = restored.index`,
       `hasPrevious = restored.index > 0`, and
       `hasNext = restored.index < restored.queue.lastIndex || restored.repeatMode == RepeatMode.All`.
-- [ ] It must **not** call `hasNextTrack()` — that asks the live controller, which is the timing
+- [x] It must **not** call `hasNextTrack()` — that asks the live controller, which is the timing
       trap D56 exists to avoid. The ticket explains why; do not "simplify" it back.
-- [ ] Add `RestoredSnapshotTest`. The collector is constructible in a unit test without a
+- [x] Add `RestoredSnapshotTest`. The collector is constructible in a unit test without a
       `MediaController`: pass a `SettableFuture.create()` that never completes and a `TestScope`,
       subclass it for `positionPollIntervalMs`, and never call `connectController()`.
-- [ ] Cases: every field lands; `hasNext` false at the queue's end with `RepeatMode.Off`; `hasNext`
+- [x] Cases: every field lands; `hasNext` false at the queue's end with `RepeatMode.Off`; `hasNext`
       **true** at the queue's end with `RepeatMode.All`; `hasPrevious` false at index 0; a
       single-item queue; and `isPlaying` false even if the snapshot said true before.
-- [ ] Mutation-check the repeat-all term and the `hasPrevious` boundary.
+- [x] Mutation-check the repeat-all term and the `hasPrevious` boundary. Dropping the repeat-all
+      term failed `applyRestored_lastTrackWithRepeatAll_hasNext`; widening `index > 0` to
+      `index >= 0` failed `applyRestored_firstTrack_hasNoPrevious` and the single-item case. 41
+      tests otherwise green.
 
 **Acceptance criteria:** the restored-snapshot contract is covered by name, with no
 `MediaController` and no mocking library.
