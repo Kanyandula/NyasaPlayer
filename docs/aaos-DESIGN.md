@@ -546,6 +546,51 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   dead session with sync already stopped and no further emission coming to restart it. The
   listener's collector is the only writer of the auth state; the sign-in applies its latest
   session when it completes.
+- **D53 — Playback restore stays in the client, so the OEM template still returns empty.**
+  Restoring inside `PlaybackService` on first connect would cover mobile, the car launcher and the
+  template at once, and T3 did not do it: it would change mobile's restore path, which has device
+  evidence behind it and is out of T3's scope; `:core:playback` has no service test harness to
+  catch a regression in; and a service-side restore races any `CMD_SET_QUEUE` arriving from a
+  template play while the read is in flight, needing the same guard D56 describes anyway. The
+  consequence is real and deliberate: a driver who only ever opens the OEM media template gets no
+  session back after process death. Verified on device — the template shows the restored track
+  once the *launcher* has restored, because both share one `MediaLibrarySession`, not because the
+  template restores anything. A service-side restore is the ticket that would change this, and
+  this decision is the one it has to argue against.
+- **D54 — `PlaybackStatePersistence` identifies the user through `currentUserId`, not
+  `currentUser?.uid`.** Reading the id through `FirebaseUser` is why `restore()` had no test for
+  its whole life: the type cannot be constructed, so no fake could make the persistence believe
+  anyone was signed in. `AuthRepository.currentUserId` exists for exactly this and returns the
+  same value. Restore is now unit-tested; keep new persistence code off `currentUser`.
+- **D55 — Restore resumes the song the driver was on, not the index it was at.** `restore()`
+  drops song ids that no longer resolve, which shifts every later position in the queue, and the
+  saved `queueIndex` was still what chose the current track — one catalogue deletion earlier in
+  the queue and the driver resumes a *different* song at the previous song's position. `coerceIn`
+  cannot see this: the shifted index is in range, just wrong. The saved `currentSongId` picks the
+  track and the index is the fallback for when the song itself is the one that went missing.
+  Shared code, so mobile carries the fix too.
+- **D56 — The car re-checks that the player is still empty after the restore read returns.**
+  `restore()` is a Firestore round trip. The player can be empty when the controller connects and
+  playing by the time the read comes back — the driver started something from the template —
+  and `handleRestoreState` applies its queue unconditionally, so sending then would replace what
+  is playing and pause it. Empty *then* does not mean empty *now*. The car also shows the restored
+  track only once the service acknowledges the command, because a rejected command would otherwise
+  leave the UI displaying a session the player never received.
+- **D57 — A failed or absent restore is silent on the car.** `restore()` already returns `null`
+  for every failure — no user, no document, blank song id, unresolvable ids, thrown exception —
+  and the car does nothing with it: the player stays empty, exactly as it would have been. Mobile
+  raises a "Restore Error"; copying that to the car would put a dismissible dialog in front of a
+  driver for something they cannot act on. Do not add one.
+- **D58 — The restored position is accurate to the save interval, not to the moment of death.**
+  A real low-memory kill does not run `onDestroy()`, so `saveFinalState()` does not fire and the
+  freshest state is whatever the 30s save loop or the pause-save left — up to 30 seconds behind.
+  Pausing before leaving is exact, which is why the T3 device run came back 3ms off. Saving on
+  every transition instead is a service-side change with its own Firestore write-rate question.
+- **D59 — T3 added no public method to `AutomotivePlayerViewModel`, so D29's split trigger is
+  not met.** Restore is driven from the existing `onControllerConnected` override and everything
+  it added is private; the class-level `TooManyFunctions` suppression is the one A5 left, not a
+  wider one. A public `restorePlaybackState()` — for a retry affordance, say — would trip D29 and
+  must split the ViewModel first.
 
 ## Components
 
