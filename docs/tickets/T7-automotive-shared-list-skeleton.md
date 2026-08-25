@@ -55,7 +55,7 @@ on purpose (D60).
 Three of the four screens lost their wrapper composable entirely rather than keeping a one-line
 one: each was called from a single `when` branch that already carries multi-line composable calls,
 so the wrapper had nothing left to hide. `CarDetailScreen` keeps its wrapper because it owns the
-hero. Net −74 lines across the four screens, +48 for the component.
+hero. Net −74 lines across the four screens, +50 for the component.
 
 Two things the spec had wrong, both caught by external review before implementation: a bare
 `repeat(4)` would have tripped `MagicNumber` — which is exactly why each screen had declared the
