@@ -58,7 +58,15 @@ suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPla
 ```
 
 - `applyRestored` writes the snapshot once: current song, position, duration, repeat mode, queue,
-  index, and `hasNext` via the existing `hasNextTrack()`, which already handles repeat-all.
+  index, and `hasNext` as `restored.index < restored.queue.lastIndex || restored.repeatMode ==
+  RepeatMode.All`.
+
+  It must **not** delegate to the collector's existing `hasNextTrack()`, which asks the live
+  `MediaController` whether it has a next item. A `SessionResult` says the session applied the
+  queue, not that the controller has caught up, so a controller lagging one message loop would
+  answer for an empty player — the same timing trap D56 exists to avoid, and the reason the car
+  computes from `RestoredPlayback` today. One implementation, computed from the restored value:
+  that is the whole point.
 - `restoreIfIdle` owns the sequence T3 established: run the caller's read, re-check the player is
   still empty before sending, send through `sendRestoreState`, and apply the snapshot only on
   `RESULT_SUCCESS`. It returns the restored value so each surface can react.
