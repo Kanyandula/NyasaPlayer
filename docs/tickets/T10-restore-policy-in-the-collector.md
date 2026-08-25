@@ -3,7 +3,7 @@
 - **Slice:** architecture - removes a duplication that T3 was forced to work around
 - **Depends on:** T3 (merged, PR #41)
 - **Status:** Proposed
-- **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`
+- **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`, plus one device pass per surface — the race and command-failure criteria below cannot be reached from Gradle
 - **Design Reference:** `docs/aaos-DESIGN.md` D53–D59; `core/playback/.../BasePlayerStateCollector.kt`
 - **Risk Tags:** shared code, two surfaces, unverifiable controller path
 - **Affected Modules:** `:core:playback`, `:app`, `:automotive`
@@ -57,9 +57,11 @@ fun applyRestored(restored: RestoredPlayback)
 suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPlayback?
 ```
 
-- `applyRestored` writes the snapshot once: current song, position, duration, repeat mode, queue,
-  index, and `hasNext` as `restored.index < restored.queue.lastIndex || restored.repeatMode ==
-  RepeatMode.All`.
+- `applyRestored` writes the snapshot once, and writes **every** field the two copies write today:
+  `currentSong`, `currentPositionMs`, `durationMs` (from `restored.song.durationMs`),
+  `isPlaying = false`, `repeatMode`, `queue`, `queueSize`, `currentQueueIndex`,
+  `hasPrevious = restored.index > 0`, and `hasNext` as
+  `restored.index < restored.queue.lastIndex || restored.repeatMode == RepeatMode.All`.
 
   It must **not** delegate to the collector's existing `hasNextTrack()`, which asks the live
   `MediaController` whether it has a next item. A `SessionResult` says the session applied the
@@ -69,9 +71,23 @@ suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPla
   that is the whole point.
 - `restoreIfIdle` owns the sequence T3 established: run the caller's read, re-check the player is
   still empty before sending, send through `sendRestoreState`, and apply the snapshot only on
-  `RESULT_SUCCESS`. It returns the restored value so each surface can react.
-- Each ViewModel keeps only what is genuinely its own. Mobile: `playerMode = PlayerMode.Mini`, and
-  its restore-error policy if it keeps one. Car: `observeCurrentSongLikeState`.
+  `RESULT_SUCCESS`.
+
+  **It returns non-null only when all of that succeeded** — read produced a session, the player was
+  still idle, the command was acknowledged, and the snapshot was applied. A caller that got a
+  non-null value therefore knows the session is on screen. Returning the value after a
+  read-but-not-applied would have the car observing like state for a session it never showed.
+
+  The command result has to be awaited without blocking: `sendRestoreState` hands back a
+  `ListenableFuture`, `restoreIfIdle` runs inside `viewModelScope`, and `:core:playback` has no
+  `kotlinx-coroutines-guava`. Bridge it with `suspendCancellableCoroutine` plus the existing
+  `addListener(…, MoreExecutors.directExecutor())` — about eight lines, no new dependency, and
+  `.get()` never runs on the main thread.
+- Each ViewModel keeps only what is genuinely its own. Mobile: `playerMode = PlayerMode.Mini`, its
+  restore-error policy if it keeps one, and its own `observeCurrentSongLikeState`. Car: the same
+  like-observer call. Both surfaces re-observe the restored song's like state today and must keep
+  doing so — a snapshot write does not fire `onCurrentSongChanged`, and the controller callback
+  that would may arrive later or not at all.
 
 Mobile's `restorePlaybackState` collapses to a launch, one call and one line. The car's
 `restorePreviousSession` and `showRestoredSession` disappear. Two of T3's four follow-ups —
@@ -86,10 +102,11 @@ the latter implicitly; making it explicit is free.
 - **Fix mobile by hand (today's backlog).** Three small commits, and it repairs exactly the three
   divergences that exist now. It prevents none of the next ones, because the duplication that
   produced them survives. Cheapest today, recurring forever.
-- **Split the module so AAOS owns its own playback code.** The literal reading of "AAOS changes
-  should not affect mobile", and it cannot be built: there is one `PlaybackService`, one
-  `MediaLibrarySession`, one process. Two copies of the playback owner is not a separation of
-  concerns, it is two products.
+- **Split the module so AAOS owns its own playback code.** Duplicating the playback *owner* is not
+  buildable — there is one `PlaybackService`, one `MediaLibrarySession`, one process. Splitting
+  only the *client policy*, so each surface keeps its own collector and restore code, is perfectly
+  buildable; it is also exactly the state we are in, and the state that produced three divergences
+  in one ticket. It preserves the drift by design rather than removing it.
 - **Restore inside `PlaybackService` (D53's rejected option).** The strongest separation — neither
   client owns policy, and the OEM media template would finally restore too. Still rejected for the
   same reasons as in T3: `:core:playback` has no service test harness, a service-side restore races
@@ -116,9 +133,11 @@ the latter implicitly; making it explicit is free.
 - Given a `RestoredPlayback`, when either surface applies it, then the snapshot is written by one
   implementation and `hasNext` is computed once.
 - Given playback starts while a restore read is in flight, when the read returns, then **neither**
-  surface replaces what is playing.
+  surface replaces what is playing. *(Device, by the probe-and-mutation method T3 used — see
+  `docs/AAOS_T3_VERIFICATION.md`. Not reachable from a unit test.)*
 - Given the restore command fails, when the result arrives, then neither surface shows a session
-  the player did not receive.
+  the player did not receive. *(Code inspection plus the same device pass; a failing
+  `SessionResult` could not be forced on the emulator in T3.)*
 - Given `:core:playback` unit tests run, then `applyRestored` is covered directly — it is plain
   Kotlin over a `MutableStateFlow` and needs no `MediaController`.
 - Given the mobile app runs on a device, then restore still produces a mini player at the saved
