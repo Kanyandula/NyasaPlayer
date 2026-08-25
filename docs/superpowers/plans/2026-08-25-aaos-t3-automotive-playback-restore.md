@@ -357,3 +357,17 @@ not half-build it.
   if the two tests ever pull the fakes in different directions, split them then.
 - **"The mutation-check steps are plan noise."** They are the house habit that has caught real
   defects on this project (A4's R0–R7 pass). Kept.
+
+Post-implementation, from the simplification pass:
+
+- **Replace `showRestoredSession` with `syncSnapshotFromPlayer`.** The largest proposed cut, ~25
+  lines, and declined on timing — see D56 in `docs/aaos-DESIGN.md` for the full reason. Accepting
+  it would trade a timing-independent paint for one that depends on the controller having caught
+  up with the session, and its failure mode is the empty player this ticket exists to fix.
+- **Inline the `resultCode` val into the `if`.** Saves four lines by putting a `runCatching`, a
+  `getOrNull` and a comparison on one 100-plus character line. The name is worth more than the
+  lines.
+
+Accepted from the same pass: the redundant `songs.isEmpty()` guard, the dead `FirebaseUser` field
+in `TestAuthRepository`, `RepeatMode.entries.firstOrNull` in place of a try/catch, and a shorter
+KDoc on `sendRestoreState`.

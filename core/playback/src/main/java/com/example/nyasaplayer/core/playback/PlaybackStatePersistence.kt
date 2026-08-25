@@ -101,11 +101,8 @@ class PlaybackStatePersistence @Inject constructor(
                 ?: saved.queueIndex.coerceIn(0, orderedQueue.lastIndex)
             val restoredSong = orderedQueue[restoredIndex]
 
-            val restoredRepeatMode = try {
-                RepeatMode.valueOf(saved.repeatMode)
-            } catch (_: IllegalArgumentException) {
-                RepeatMode.Off
-            }
+            val restoredRepeatMode = RepeatMode.entries.firstOrNull { it.name == saved.repeatMode }
+                ?: RepeatMode.Off
 
             RestoredPlayback(
                 queue = orderedQueue,

@@ -122,5 +122,8 @@ size all identical across the kill. Full table in `docs/AAOS_T3_VERIFICATION.md`
   snapshot omits the `repeatMode == RepeatMode.All` term the car's has. Self-corrects on the first
   `Player.Listener` callback, so the visible window is short; both reviewers flagged the
   divergence, and the car's line carries a comment saying it is deliberate.
+- **`sendSetQueueCommand` and `sendShufflePlayCommand` are byte-identical in both ViewModels.**
+  T3's shared `sendRestoreState` is the pattern that deletes them — two more extensions beside it,
+  roughly 30 lines gone. Out of scope here because neither command was part of the restore path.
 - **A transport seam over `MediaController`**, which would let both ViewModels' player paths be
   unit-tested. Named in the plan's carve-out.

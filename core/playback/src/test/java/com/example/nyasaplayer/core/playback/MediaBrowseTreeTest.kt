@@ -411,13 +411,12 @@ class TestUserRepository : UserRepository {
 }
 
 class TestAuthRepository : AuthRepository {
-    var user: FirebaseUser? = null
 
-    /** Set this to sign a fake user in: `FirebaseUser` cannot be constructed in a unit test. */
+    /** Signs a fake user in. `FirebaseUser` cannot be constructed, so [currentUser] stays null. */
     var userId: String? = null
 
-    override val currentUser: FirebaseUser? get() = user
-    override val currentUserId: String? get() = userId ?: user?.uid
+    override val currentUser: FirebaseUser? get() = null
+    override val currentUserId: String? get() = userId
 
     // MediaBrowseTree reads the snapshot only; the browse tree has no auth-driven UI to evict.
     override val authSession: Flow<AuthSession> = flowOf(AuthSession())
@@ -436,7 +435,6 @@ class TestAuthRepository : AuthRepository {
         Result.success(Unit)
 
     override fun signOut() {
-        user = null
         userId = null
     }
 }

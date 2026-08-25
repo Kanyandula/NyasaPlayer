@@ -576,6 +576,15 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   is playing and pause it. Empty *then* does not mean empty *now*. The car also shows the restored
   track only once the service acknowledges the command, because a rejected command would otherwise
   leave the UI displaying a session the player never received.
+
+  It paints that track from the `RestoredPlayback` it already holds, and deliberately does **not**
+  call `syncSnapshotFromPlayer(controller)` instead, which would delete a dozen lines and reuse the
+  collector's own next/previous logic. A review proposed exactly that, and it was declined: the
+  `SessionResult` completes on the *session* side, which is not proof the controller has received
+  the state update, and `syncSnapshotFromPlayer` returns early on a null `currentMediaItem` — so a
+  controller lagging by one message loop would leave the driver looking at the empty player T3 was
+  filed to fix. Painting from the restored value is timing-independent, and the listener callbacks
+  refine it moments later. Expect this suggestion again; this paragraph is the answer.
 - **D57 — A failed or absent restore is silent on the car.** `restore()` already returns `null`
   for every failure — no user, no document, blank song id, unresolvable ids, thrown exception —
   and the car does nothing with it: the player stays empty, exactly as it would have been. Mobile
