@@ -2,8 +2,8 @@
 
 - **Slice:** player lifecycle - cross-cutting, not an A5 overlay patch
 - **Depends on:** A5 verification evidence; D29 ViewModel boundary decision
-- **Status:** Ready to spec
-- **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest`
+- **Status:** Specced — plan at `docs/superpowers/plans/2026-08-25-aaos-t3-automotive-playback-restore.md`
+- **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest`
 - **Design Reference:** `docs/AAOS_A5_VERIFICATION.md` process-death observation; `docs/aaos-DESIGN.md` D29
 - **Risk Tags:** lifecycle, playback state, ViewModel size, process death
 - **Affected Modules:** `:automotive`; likely `:core:playback`
@@ -24,6 +24,9 @@ state requires player lifecycle work and likely a new player API surface.
 - Define how the automotive player restores the previous queue, current item, position and repeat
   mode after process death.
 - Reuse `PlaybackStatePersistence` and the existing playback command model where possible.
+- Fix the index bug found while speccing this: `restore()` drops unresolvable ids with `mapNotNull`
+  but still indexes by the saved `queueIndex`, so a catalogue deletion earlier in the queue resumes
+  the wrong song. Shared code, so mobile gets the fix too (plan D-T3.8).
 - Split or otherwise contain `AutomotivePlayerViewModel` before adding new public player APIs, per
   D29, rather than expanding the current suppressed ViewModel by default.
 - Keep the OEM media-template path working; do not regress `PlaybackService` restore behavior.
@@ -45,8 +48,12 @@ state requires player lifecycle work and likely a new player API surface.
   player fails gracefully without a crash and without a misleading active-player state.
 - Given restore adds a new player operation, when detekt runs, then `AutomotivePlayerViewModel` is
   not widened by another suppression; the split decision from D29 is honored or explicitly revised.
-- Given `:automotive` unit tests run, then restore success, missing-state and corrupt-state cases are
-  covered without requiring an emulator.
+- Given unit tests run, then restore success, missing-state and corrupt-state cases are covered
+  without requiring an emulator. **Amended 2026-08-25:** these land in `:core:playback`
+  (`PlaybackStatePersistenceTest`), not `:automotive`. `MediaController` is `@DoNotMock` with a
+  package-private constructor, so the car ViewModel's controller path cannot be driven in a unit
+  test at all; asserting the restore cases against an automotive fake would test the fake, not the
+  branching, which lives in `PlaybackStatePersistence`. See the plan's carve-out.
 - Given manual AAOS process-death verification runs, then the result is recorded with the same PID
   and `dumpsys media_session` evidence style used in `docs/AAOS_A5_VERIFICATION.md`.
 
