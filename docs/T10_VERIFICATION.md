@@ -37,3 +37,35 @@ and the gold repeat icon — the two fields the shared `applyRestored` now compu
 value rather than from the controller.
 
 Restore also fired on the first launch after installing the new build, before any of the above.
+
+## Mobile — `Medium_Phone_API_35`, not established
+
+The phone AVD is signed in and the app launches with content, so this should have been the easy
+half. It was not, and the evidence does not line up well enough to claim anything.
+
+What was seen, in order:
+
+1. After installing the T10 build and launching, Home rendered signed-in and a mini player appeared
+   carrying the same session the car had left — the AMAZING SAD GUITAR track, paused, progress bar
+   part-filled. On its face that is a successful restore, and under T10 the mini player only rises
+   on a non-null result.
+2. `dumpsys media_session` lists **no session for `com.example.nyasaplayer`** — 91 lines, telecom
+   and Bluetooth only. Without a session there is no `MediaController`, and `restoreIfIdle` returns
+   null at its first line, which contradicts (1).
+3. A tap intended to expand the mini player left the expanded player showing a *different* track
+   in a playing state, with still no session anywhere and nothing from the app in logcat.
+
+One reading fits all three — the service never came up on this AVD, so the UI is showing optimistic
+state with no player behind it — but that is inference, and (1) argues against it. Rather than
+keep poking at it past midnight, it is recorded as **not established**.
+
+The car pass above stands on its own: same collector, same `applyRestored`, same `restoreIfIdle`,
+and there the session evidence is unambiguous.
+
+**To finish:** a session that starts from a clean phone AVD, watches `PlaybackService` start (or
+fail) in logcat from the first launch, and only then judges restore. Worth checking whether the
+service reaches foreground at all on API 35 with this AVD's notification permissions — a
+`startForegroundService` refusal would explain every line above.
+
+Mobile therefore still carries what it carried before T10: unverified restore, and T3's D55 index
+fix shipped without a device pass.
