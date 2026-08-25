@@ -186,6 +186,8 @@ class AutomotivePlayerViewModel @Inject constructor(
                 // scrubber's total on a restored-and-paused session.
                 durationMs = restored.song.durationMs,
                 hasPrevious = restored.index > 0,
+                // Mobile's restore omits the repeat-all term, which dims a Next button that works.
+                // Deliberately not copied: this ViewModel's skipNext() wraps on repeat-all.
                 hasNext = restored.index < restored.queue.lastIndex ||
                     restored.repeatMode == RepeatMode.All,
                 repeatMode = restored.repeatMode,

@@ -109,3 +109,14 @@ size all identical across the kill. Full table in `docs/AAOS_T3_VERIFICATION.md`
   controller path cannot be driven in a unit test at all. Closing that means a transport seam over
   the controller operations both ViewModels use — its own ticket, and it would let mobile's player
   be tested too.
+
+## Follow-ups this slice deliberately did not take
+
+- **Mobile discards the restore command's result.** `PlayerViewModel.restorePlaybackState()` sends
+  `sendRestoreState` and shows the restored track without waiting for the `SessionResult`, so a
+  rejected command leaves mobile displaying a session the player never received — the failure the
+  car now guards against. Pre-existing, and mobile restore is out of T3's scope; the shared
+  sender's KDoc names which caller checks and which does not, so the divergence is visible at the
+  call site rather than implied.
+- **A transport seam over `MediaController`**, which would let both ViewModels' player paths be
+  unit-tested. Named in the plan's carve-out.

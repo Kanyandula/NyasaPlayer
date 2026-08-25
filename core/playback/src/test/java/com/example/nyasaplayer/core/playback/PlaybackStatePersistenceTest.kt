@@ -47,7 +47,7 @@ class PlaybackStatePersistenceTest {
     // ── Nothing to restore ──
 
     @Test
-    fun noSignedInUser_returnsNull() = runTest {
+    fun restore_noSignedInUser_returnsNull() = runTest {
         authRepo.userId = null
         userRepo.playbackState = savedState("a", listOf("a"), 0)
         songRepo.songs.value = listOf(song("a"))
@@ -56,14 +56,14 @@ class PlaybackStatePersistenceTest {
     }
 
     @Test
-    fun noSavedState_returnsNull() = runTest {
+    fun restore_noSavedState_returnsNull() = runTest {
         songRepo.songs.value = listOf(song("a"))
 
         assertNull(persistence.restore())
     }
 
     @Test
-    fun blankCurrentSongId_returnsNull() = runTest {
+    fun restore_blankCurrentSongId_returnsNull() = runTest {
         userRepo.playbackState = savedState("", listOf("a"), 0)
         songRepo.songs.value = listOf(song("a"))
 
@@ -71,7 +71,7 @@ class PlaybackStatePersistenceTest {
     }
 
     @Test
-    fun noSavedIdStillResolves_returnsNull() = runTest {
+    fun restore_noSavedIdStillResolves_returnsNull() = runTest {
         userRepo.playbackState = savedState("a", listOf("a", "b"), 0)
         songRepo.songs.value = listOf(song("z"))
 
@@ -81,7 +81,7 @@ class PlaybackStatePersistenceTest {
     // ── Queue shape ──
 
     @Test
-    fun queueKeepsSavedOrder_notRepositoryOrder() = runTest {
+    fun restore_queueKeepsSavedOrder_notRepositoryOrder() = runTest {
         userRepo.playbackState = savedState("b", listOf("c", "b", "a"), 1)
         songRepo.songs.value = listOf(song("a"), song("b"), song("c"))
 
@@ -91,7 +91,7 @@ class PlaybackStatePersistenceTest {
     }
 
     @Test
-    fun queueIndexPastEnd_coercesToLastIndex() = runTest {
+    fun restore_queueIndexPastEnd_coercesToLastIndex() = runTest {
         // currentSongId is absent from the catalogue, so only the index is left to go on.
         userRepo.playbackState = savedState("gone", listOf("a", "b"), 47)
         songRepo.songs.value = listOf(song("a"), song("b"))
@@ -105,7 +105,7 @@ class PlaybackStatePersistenceTest {
     // ── The saved song wins over the saved index (plan D-T3.8) ──
 
     @Test
-    fun songDeletedEarlierInQueue_stillResumesTheSavedSong() = runTest {
+    fun restore_songDeletedEarlierInQueue_stillResumesTheSavedSong() = runTest {
         // Saved with "d" at index 3. "b" has since left the catalogue, so the surviving queue is
         // [a, c, d, e] and the saved index now names "e". Coercion cannot catch this: index 3 is
         // still in range, just wrong.
@@ -120,7 +120,7 @@ class PlaybackStatePersistenceTest {
     }
 
     @Test
-    fun savedSongItselfDeleted_fallsBackToTheSavedIndex() = runTest {
+    fun restore_savedSongItselfDeleted_fallsBackToTheSavedIndex() = runTest {
         userRepo.playbackState = savedState("b", listOf("a", "b", "c"), 1)
         songRepo.songs.value = listOf(song("a"), song("c"))
 
@@ -133,7 +133,7 @@ class PlaybackStatePersistenceTest {
     // ── Repeat mode ──
 
     @Test
-    fun unparseableRepeatMode_fallsBackToOff() = runTest {
+    fun restore_unparseableRepeatMode_fallsBackToOff() = runTest {
         userRepo.playbackState = savedState("a", listOf("a"), 0, repeatMode = "Sideways")
         songRepo.songs.value = listOf(song("a"))
 
@@ -143,7 +143,7 @@ class PlaybackStatePersistenceTest {
     // ── Happy path ──
 
     @Test
-    fun savedSession_restoresQueueIndexSongPositionAndMode() = runTest {
+    fun restore_savedSession_restoresQueueIndexSongPositionAndMode() = runTest {
         userRepo.playbackState = savedState(
             currentSongId = "b",
             queueSongIds = listOf("a", "b", "c"),

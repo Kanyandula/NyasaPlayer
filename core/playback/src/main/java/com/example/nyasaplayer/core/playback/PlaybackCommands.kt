@@ -23,9 +23,12 @@ object PlaybackCommands {
  * Hands a [RestoredPlayback] to `PlaybackService`, which applies the queue paused.
  *
  * Both surfaces restore, so both need this exact bundle; the keys live one object up, and a second
- * hand-built copy of them is how a wire format starts drifting. The returned future carries the
- * service's verdict — a caller that shows the restored track before checking it can end up
- * displaying a session the player never received.
+ * hand-built copy of them is how a wire format starts drifting.
+ *
+ * The returned future carries the service's verdict. The car waits for it before showing anything,
+ * because a caller that shows the restored track without checking can end up displaying a session
+ * the player never received. Mobile discards it and shows the track either way — pre-existing
+ * behaviour that T3 deliberately did not change, since mobile restore is out of its scope.
  */
 fun MediaController.sendRestoreState(restored: RestoredPlayback): ListenableFuture<SessionResult> {
     val args = Bundle().apply {
