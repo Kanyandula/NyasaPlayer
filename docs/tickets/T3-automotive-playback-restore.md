@@ -118,5 +118,9 @@ size all identical across the kill. Full table in `docs/AAOS_T3_VERIFICATION.md`
   car now guards against. Pre-existing, and mobile restore is out of T3's scope; the shared
   sender's KDoc names which caller checks and which does not, so the divergence is visible at the
   call site rather than implied.
+- **Mobile's restore leaves `hasNext` false at the end of a repeat-all queue**, because its
+  snapshot omits the `repeatMode == RepeatMode.All` term the car's has. Self-corrects on the first
+  `Player.Listener` callback, so the visible window is short; both reviewers flagged the
+  divergence, and the car's line carries a comment saying it is deliberate.
 - **A transport seam over `MediaController`**, which would let both ViewModels' player paths be
   unit-tested. Named in the plan's carve-out.
