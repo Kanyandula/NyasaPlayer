@@ -242,18 +242,22 @@ deleted before the current one. A shift bug needs a queue long enough to shift.
 
 ## Task 3: Restore in the car
 
-- [ ] Inject `PlaybackStatePersistence` into `AutomotivePlayerViewModel`.
-- [ ] Add the missing `else` branch in `onControllerConnected`: when the player is neither playing
+- [x] Inject `PlaybackStatePersistence` into `AutomotivePlayerViewModel`.
+- [x] Add the missing `else` branch in `onControllerConnected`: when the player is neither playing
       nor holding items, launch a restore on `viewModelScope`.
-- [ ] After the suspend `restore()` returns and before sending: bail out if the controller now
+- [x] After the suspend `restore()` returns and before sending: bail out if the controller now
       holds items (D-T3.7 rule 1).
-- [ ] Send through the shared sender; on `RESULT_SUCCESS` write the snapshot per D-T3.7 rule 3 and
+- [x] Send through the shared sender; on `RESULT_SUCCESS` write the snapshot per D-T3.7 rule 3 and
       call the existing `observeCurrentSongLikeState(restored.song.mediaId)` so the heart is right
       on return. On a non-success result, leave the player empty.
-- [ ] On `null` from `restore()`: do nothing (D-T3.5).
-- [ ] Do not add a public method (D-T3.6).
-- [ ] Confirm the restore cannot double-fire: a reconnect after the first restore sees a non-empty
-      player and takes the sync branch.
+- [x] On `null` from `restore()`: do nothing (D-T3.5).
+- [x] Do not add a public method (D-T3.6).
+- [x] Confirm the restore cannot double-fire: a reconnect after the first restore sees a non-empty
+      player and takes the sync branch. `connectController()` runs once per ViewModel, and the
+      restore itself leaves the player holding items, so a later connection cannot reach the
+      restore branch.
+- [x] Hilt resolves `PlaybackStatePersistence` into `:automotive` — `:automotive:assembleOemDebug`
+      is the check, since the graph is validated at compile time.
 
 **Acceptance criteria:** the car's `onControllerConnected` has both branches mobile has, it cannot
 overwrite playback that started while the read was in flight, and the class-level suppression is

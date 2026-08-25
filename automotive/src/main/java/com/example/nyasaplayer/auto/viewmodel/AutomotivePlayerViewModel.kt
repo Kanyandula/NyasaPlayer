@@ -10,6 +10,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
@@ -17,9 +18,14 @@ import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.PlaybackCommands
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
+import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
+import com.example.nyasaplayer.core.playback.RepeatMode
+import com.example.nyasaplayer.core.playback.RestoredPlayback
+import com.example.nyasaplayer.core.playback.sendRestoreState
 import com.example.nyasaplayer.core.playback.toBundle
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +49,7 @@ private const val TAG = "AutoPlayerVM"
 class AutomotivePlayerViewModel @Inject constructor(
     controllerFuture: ListenableFuture<MediaController>,
     private val uxHandler: CarUxRestrictionsHandler,
+    private val persistence: PlaybackStatePersistence,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
     private val networkMonitor: NetworkMonitor,
@@ -63,6 +70,8 @@ class AutomotivePlayerViewModel @Inject constructor(
         override fun onControllerConnected(controller: MediaController) {
             if (controller.isPlaying || controller.mediaItemCount > 0) {
                 syncSnapshotFromPlayer(controller)
+            } else {
+                restorePreviousSession(controller)
             }
         }
 
@@ -129,6 +138,63 @@ class AutomotivePlayerViewModel @Inject constructor(
             _uiState.update { it.copy(isOffline = !online) }
         }.catch { /* Network state flow is internal — errors are non-fatal */ }
             .launchIn(viewModelScope)
+    }
+
+    // ── Playback State Restore ──
+
+    /**
+     * Brings back the session the driver left, after the process was killed with the car's player
+     * empty. Paused, never playing: the service applies the queue with `playWhenReady = false`.
+     *
+     * A failed or absent restore does nothing at all — the player stays empty, which is what it
+     * would have been anyway. An error overlay here would put a dialog in front of a driver for
+     * something they cannot act on (spec D-T3.5).
+     */
+    private fun restorePreviousSession(controller: MediaController) {
+        viewModelScope.launch {
+            val restored = persistence.restore() ?: return@launch
+            // restore() is a network round trip. If playback started while it was in flight — the
+            // driver tapping a song in the OEM template, say — restoring now would replace what
+            // is playing and pause it, because handleRestoreState applies its queue
+            // unconditionally. Empty then does not mean empty now.
+            if (controller.mediaItemCount > 0) return@launch
+
+            val command = controller.sendRestoreState(restored)
+            command.addListener(
+                {
+                    val resultCode = runCatching { command.get().resultCode }.getOrNull()
+                    if (resultCode == SessionResult.RESULT_SUCCESS) {
+                        showRestoredSession(restored)
+                    }
+                },
+                MoreExecutors.directExecutor(),
+            )
+        }
+    }
+
+    /**
+     * Shown only once the service has acknowledged the command: the player's own callbacks refine
+     * this a moment later, but they cannot un-show a session that never arrived.
+     */
+    private fun showRestoredSession(restored: RestoredPlayback) {
+        stateCollector.updateSnapshot {
+            it.copy(
+                currentSong = restored.song,
+                isPlaying = false,
+                currentPositionMs = restored.positionMs,
+                // The position poller only runs while playing, so nothing else fills the
+                // scrubber's total on a restored-and-paused session.
+                durationMs = restored.song.durationMs,
+                hasPrevious = restored.index > 0,
+                hasNext = restored.index < restored.queue.lastIndex ||
+                    restored.repeatMode == RepeatMode.All,
+                repeatMode = restored.repeatMode,
+                queue = restored.queue,
+                queueSize = restored.queue.size,
+                currentQueueIndex = restored.index,
+            )
+        }
+        observeCurrentSongLikeState(restored.song.mediaId)
     }
 
     // ── Playback Controls ──
