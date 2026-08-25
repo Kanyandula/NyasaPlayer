@@ -230,11 +230,13 @@ deleted before the current one. A shift bug needs a queue long enough to shift.
 
 ## Task 2: One restore sender
 
-- [ ] Add `fun MediaController.sendRestoreState(restored: RestoredPlayback)` in `:core:playback`,
+- [x] Add `fun MediaController.sendRestoreState(restored: RestoredPlayback)` in `:core:playback`,
       building the same bundle mobile builds today (`KEY_SONGS`, `KEY_START_INDEX`,
-      `KEY_POSITION_MS`, `KEY_REPEAT_MODE`) and returning the command future.
-- [ ] Replace `PlayerViewModel.sendRestoreCommand` with a call to it and delete the private copy.
-- [ ] `./gradlew :app:assembleDebug` to prove mobile still builds.
+      `KEY_POSITION_MS`, `KEY_REPEAT_MODE`) and returning the command future. It went in
+      `PlaybackCommands.kt` rather than beside `RestoredPlayback`: that file already owns the keys,
+      and `PlaybackStatePersistence` has no Media3 imports worth adding.
+- [x] Replace `PlayerViewModel.sendRestoreCommand` with a call to it and delete the private copy.
+- [x] `./gradlew :app:assembleDebug` to prove mobile still builds.
 
 **Acceptance criteria:** exactly one place in the repo builds a `CMD_RESTORE_STATE` bundle.
 
