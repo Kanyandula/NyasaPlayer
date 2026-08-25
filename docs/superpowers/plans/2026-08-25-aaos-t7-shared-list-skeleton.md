@@ -167,3 +167,22 @@ run that signs in for another reason.
 - [x] Ticket status and outcome.
 
 **Acceptance criteria:** the design doc names a component that exists.
+
+## From the simplification pass
+
+**Taken.** An orphaned KDoc left at the end of `CarFavouriteMusicScreen` — `FavouritesSkeleton`
+went but its doc comment survived, because the deletion was done by pattern and the comment sat
+outside the match. Detekt does not flag a dangling comment. The same slip was caught and fixed in
+`CarSearchResultsScreen` during Task 2; this one was missed. The component's KDoc also lost its
+refactor archaeology, which D60 already holds.
+
+**Declined — drop `spacing` and hardcode 12dp.** It would change what two screens render:
+Favourites 16 → 12dp, Detail 24 → 12dp. This PR's entire claim is that nothing renders differently,
+and with the loading states unreachable on the emulator there is no way to look at the result. A
+refactor is not the place to make a design change nobody can see. Detail's 24dp is also
+`HeroSpacing` on purpose — the rows continue the rhythm the hero sets.
+
+**Declined — remove the no-op `fillMaxSize()` at the search call site.** True as analysis and
+pre-existing: it was a faithful port of the old private composable. Same reasoning as above — an
+unverifiable layout tweak does not belong in a change whose premise is that the layout is
+untouched. Worth doing in a pass that can see the screens.

@@ -24,9 +24,8 @@ private const val SkeletonRowCount = 4
  * is gated on vehicle state; a shimmer that ignored that gating would reintroduce exactly the
  * motion A2 removed.
  *
- * [spacing] varies by screen because each list has its own rhythm. The row height does not: four
- * screens drew this by hand and all four settled on the same 80dp, two of them via a private
- * constant shadowing the token. Pass outer padding through [modifier].
+ * [spacing] varies by screen; the row height does not, and is not a parameter — see D60 in
+ * `docs/aaos-DESIGN.md`. Pass outer padding through [modifier].
  */
 @Composable
 fun CarRowSkeleton(

@@ -155,5 +155,3 @@ private fun FavouritesHero(
         }
     }
 }
-
-/** Static placeholders, no shimmer — the ambient layer is the app's only decorative motion. */
