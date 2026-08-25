@@ -314,13 +314,23 @@ Two checks are recorded as not verified rather than claimed.
 
 ## Task 6: Docs
 
-- [ ] Append D53+ to `docs/aaos-DESIGN.md` for D-T3.1, D-T3.2, D-T3.5, D-T3.6, D-T3.8 and D-T3.9 —
+- [x] Append D53+ to `docs/aaos-DESIGN.md` for D-T3.1, D-T3.2, D-T3.5, D-T3.6, D-T3.8 and D-T3.9 —
       the ones a future reader could otherwise undo or re-litigate.
-- [ ] Update the ticket status and write its Outcome, including anything not verified.
-- [ ] Amend `docs/AAOS_A5_VERIFICATION.md`'s "Process death returns an empty full player" note to
+- [x] Update the ticket status and write its Outcome, including anything not verified.
+- [x] Amend `docs/AAOS_A5_VERIFICATION.md`'s "Process death returns an empty full player" note to
       point at T3 rather than reading as current.
 
+- [x] Sweep for the claim itself, not just the two files the plan named. `AAOS_T5_T6_VERIFICATION.md`
+      also asserted it as current; it and the A5 note are now annotated as historical rather than
+      rewritten, and the session memory that recorded "`:automotive` never restores playback state"
+      is corrected.
+
 **Acceptance criteria:** no document still describes the car as having no restore wiring.
+
+**Result:** D53–D59 recorded. Three documents carried the stale claim — A5's verification, T5/T6's
+verification, and the emulator-verification memory. Each observation is left as written with a
+dated pointer to `docs/AAOS_T3_VERIFICATION.md`; a verification record says what a run saw, so
+correcting one in place would falsify it.
 
 ## Known carve-out: the ViewModel-to-`MediaController` boundary stays device-verified
 
