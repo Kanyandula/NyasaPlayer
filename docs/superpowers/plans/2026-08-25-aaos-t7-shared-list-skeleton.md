@@ -161,9 +161,9 @@ run that signs in for another reason.
 
 ## Task 5: Docs
 
-- [ ] Record the component in `docs/aaos-DESIGN.md`'s component table, replacing the
+- [x] Record the component in `docs/aaos-DESIGN.md`'s component table, replacing the
       `CarLoadingSkeleton` row that was never built with the name that now exists.
-- [ ] Add the decision that its height is fixed and its spacing is not.
-- [ ] Ticket status and outcome.
+- [x] Add the decision that its height is fixed and its spacing is not.
+- [x] Ticket status and outcome.
 
 **Acceptance criteria:** the design doc names a component that exists.
