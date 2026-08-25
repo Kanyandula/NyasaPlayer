@@ -95,24 +95,30 @@ Every other car component has one — `CarEmptyState.kt`, `CarTrackRow.kt`. `Car
 
 ## Task 2: Collapse the four call sites
 
-- [ ] `CarHomeScreen.HomeSkeleton` → `CarRowSkeleton(spacing = SkeletonSpacing, modifier = …)`;
+- [x] `CarHomeScreen.HomeSkeleton` → `CarRowSkeleton(spacing = SkeletonSpacing, modifier = …)`;
       delete `SkeletonRowHeight` and `SkeletonRowCount`.
-- [ ] `CarFavouriteMusicScreen.FavouritesSkeleton` → same with `SectionSpacing`; delete
+- [x] `CarFavouriteMusicScreen.FavouritesSkeleton` → same with `SectionSpacing`; delete
       `SkeletonRowCount`.
-- [ ] `CarSearchResultsScreen.ResultsSkeleton` → same with `RowSpacing`, no padding; delete
+- [x] `CarSearchResultsScreen.ResultsSkeleton` → same with `RowSpacing`, no padding; delete
       `SkeletonRowCount`.
-- [ ] `CarDetailScreen.DetailSkeleton` keeps its `Column` and hero `Box`, and uses the shared one
+- [x] `CarDetailScreen.DetailSkeleton` keeps its `Column` and hero `Box`, and uses the shared one
       for the row list with `HeroSpacing`; delete `SkeletonRowHeight` and `SkeletonRowCount`.
       **Add no top padding or spacer to the nested call.** The hero and the rows are children of
       one `Column(spacedBy(HeroSpacing))` today; a nested `spacedBy` adds no leading space, so the
       24dp hero-to-first-row gap survives on its own. Any padding "to be safe" makes it 48dp.
-- [ ] Prune imports per file, by checking each symbol rather than assuming: `Box` and `height` go
+- [x] Prune imports per file, by checking each symbol rather than assuming: `Box` and `height` go
       stale in Home, Favourites and Results; `CarListRowHeight` goes stale in Favourites and
       Results. `CarRaised` and `RoundedCornerShape` **stay** — Favourites' hero, Detail's hero and
       Results' top-result card all still use them.
 
 **Acceptance criteria:** `grep -rn "SkeletonRowHeight\|SkeletonRowCount" automotive/src/main`
 returns nothing, and each screen's wrapper is a single call.
+
+**Went one step further than planned.** `HomeSkeleton`, `FavouritesSkeleton` and `ResultsSkeleton`
+were deleted outright rather than reduced to one-line wrappers: each was called from exactly one
+`when` branch, and those branches already carry multi-line composable calls, so the wrapper was an
+indirection with nothing left to hide. `DetailSkeleton` stays — it owns the hero. Net −74 lines
+across the four screens.
 
 ## Task 3: Gate
 
