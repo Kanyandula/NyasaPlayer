@@ -151,14 +151,14 @@ suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPla
 
 ## Task 3: The car calls it
 
-- [ ] Replace `restorePreviousSession` with a `viewModelScope.launch` that calls
+- [x] Replace `restorePreviousSession` with a `viewModelScope.launch` that calls
       `stateCollector.restoreIfIdle { persistence.restore() }` and, on a non-null result, calls
       `observeCurrentSongLikeState(restored.song.mediaId)`.
-- [ ] Delete `showRestoredSession` and the imports that go stale with it: `RepeatMode`,
+- [x] Delete `showRestoredSession` and the imports that go stale with it: `RepeatMode`,
       `RestoredPlayback`, `SessionResult`, `MoreExecutors` **and `sendRestoreState`** — the send
       moves into the collector, so neither ViewModel imports it any more. Check each against the
       rest of the file; `SessionCommand` and `Bundle` stay for the other commands.
-- [ ] The comment explaining why the car's `hasNext` differs from mobile's goes with it. It only
+- [x] The comment explaining why the car's `hasNext` differs from mobile's goes with it. It only
       existed because the duplication did.
 
 **Acceptance criteria:** `AutomotivePlayerViewModel` contains no snapshot arithmetic.
