@@ -144,8 +144,18 @@ reads `controller` each tick and picks up the new one, so starting another would
 
 ### Step 5 — Both ViewModels
 
-No API change expected beyond construction. `onCleared()` still calls `releaseController()`, which now
+No API change beyond construction, and `onCleared()` still calls `releaseController()` — which now
 means "I am done" rather than "release the process's controller".
+
+**One gap the plan did not foresee.** Mobile's `togglePlayPause` opens with `isPlaying()`, a query,
+which is silent by design and therefore cannot trigger a rebuild. It reported failure directly, so
+after T14 the play button would have been the one control on either surface that gave up instead of
+recovering. It now asks for the toggle and lets it fail, which routes through the same reconnect
+every other control gets.
+
+Both `onPlayerUnavailable()` overrides say in their KDoc that they are reached only after a rebuild
+has failed — a controller that can be replaced is replaced silently, and the user never learns it
+happened.
 
 ## Tests
 

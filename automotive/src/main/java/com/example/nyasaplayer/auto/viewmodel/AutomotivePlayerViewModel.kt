@@ -101,8 +101,11 @@ class AutomotivePlayerViewModel @Inject constructor(
         }
 
         /**
-         * A command found no connected player. `CarErrorOverlay` renders this above everything and
-         * blocks the controls underneath, so repeated taps cannot stack it.
+         * A command found no connected player **and rebuilding the connection failed** (T14). A
+         * controller that can be replaced is replaced silently; this is the last resort.
+         *
+         * `CarErrorOverlay` renders it above everything and blocks the controls underneath, so
+         * repeated taps cannot stack it.
          */
         override fun onPlayerUnavailable() {
             _uiState.update {

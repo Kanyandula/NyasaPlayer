@@ -121,6 +121,9 @@ class PlayerViewModel @Inject constructor(
     /**
      * Says that the player is gone, once, in the words the connection failure already uses.
      *
+     * Reached only after a rebuild has been attempted and failed (T14) — a controller that can be
+     * replaced is replaced silently, and the user never learns it happened.
+     *
      * Only when nothing else is showing: the snackbar clears the error after displaying it, so
      * raising it per tap would re-trigger a message the user is already reading.
      */
@@ -251,8 +254,10 @@ class PlayerViewModel @Inject constructor(
         // Reads the live player, as this did before the transport existed: the snapshot's
         // isPlaying lags a listener callback behind it.
         val isPlaying = transport.isPlaying() ?: run {
-            // The query is deliberately silent, so this is the one path that must speak for itself.
-            reportPlayerUnavailable()
+            // The query is silent by design and cannot trigger a rebuild, so ask for the toggle and
+            // let it fail: that routes through the same reconnect every other control gets, and the
+            // user hears about it only if the rebuild fails too (T14).
+            transport.togglePlayPause()
             return
         }
         if (isPlaying) {
