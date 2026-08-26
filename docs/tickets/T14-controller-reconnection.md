@@ -2,9 +2,11 @@
 
 - **Slice:** playback lifecycle
 - **Depends on:** T11 (merged, PR #47) reports the condition. T17 would make it testable.
-- **Status:** Filed, not specced
+- **Status:** Implemented; the failure mode is proved in tests, not on a device — see Outcome
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`
-- **Design Reference:** `docs/aaos-DESIGN.md` D63; `core/playback/.../di/PlaybackModule.kt`
+- **Design Reference:** `docs/aaos-DESIGN.md` D63, and D65 for the outcome
+- **Plan:** `docs/superpowers/plans/2026-08-26-aaos-t14-reconnection.md`
+- **Verification:** `docs/T14_VERIFICATION.md`
 - **Risk Tags:** lifecycle, both surfaces, singleton state, hard to test
 - **Affected Modules:** `:core:playback`, `:app`, `:automotive`
 
@@ -60,3 +62,38 @@ source they are listening to is the one that stopped answering.
 The honest fix for the condition T11 only reports, and the largest of the four follow-ups. It also
 changes `PlaybackModule`'s contract, which every surface depends on — worth a design round before
 implementation rather than after.
+
+## Outcome
+
+Implemented across five steps. Design record D65.
+
+The ticket was filed as "a disconnected controller stays dead for the life of the process". Step 1
+proved something sharper first: **the app released its own controller in the ordinary course of
+events.** `releaseController()` released the process-wide `@Singleton` future from either ViewModel's
+`onCleared()`, the future is idempotent, and release is terminal — so the next ViewModel got the same
+instance with `isConnected == false`. Backing out and returning was the whole trigger.
+
+`ControllerConnection` now owns it: `acquire()` / `release()` reference-counted, `reconnect()` to
+replace what cannot be revived. `PlaybackModule` provides no future at all, and
+`ListenableFuture<MediaController>` appears in exactly one production file. A command that finds no
+usable controller triggers one rebuild behind an `AtomicBoolean`, and T11's message fires only if
+that fails.
+
+Nineteen new tests, all on the JVM, all of them impossible before T17 landed the same evening:
+`SharedControllerFutureTest` (the bug), `ControllerConnectionTest` (the ownership rules, including
+the unbalanced-release case), `ReconnectingCollectorTest` (rebuild once, report only on failure,
+three taps produce one attempt).
+
+Gates: 315 tests, detekt clean with the baseline untouched and no `@Suppress` added, lint clean, both
+automotive flavors and `:app:assembleDebug`.
+
+## Not verified
+
+**The failure mode on a device.** Backing out of `AutomotiveActivity` does not finish it on this AAOS
+build, so `onCleared()` never runs and the trigger is unreachable there — established by running the
+**pre-fix `main` build** through the same gesture and watching it keep playing, not by assumption.
+The car pass is therefore a regression check: restore, play, pause, next and play-after-return all
+behave, in one process.
+
+Mobile is where finishing the root activity is routine, and that pass is still owed. So is a
+driving-state check on the car, though T14 adds no UI.
