@@ -214,10 +214,10 @@ in either ViewModel.
 
 ## Task 7: Docs
 
-- [ ] `docs/aaos-DESIGN.md`: D61 — restore policy lives in the collector; what each surface keeps;
+- [x] `docs/aaos-DESIGN.md`: D61 — restore policy lives in the collector; what each surface keeps;
       why `applyRestored` computes from the value and not the controller.
-- [ ] T10 ticket status and outcome.
-- [ ] `docs/tickets/T3-automotive-playback-restore.md`: strike the two follow-ups this closes
+- [x] T10 ticket status and outcome.
+- [x] `docs/tickets/T3-automotive-playback-restore.md`: strike the two follow-ups this closes
       (mobile's discarded result, mobile's `hasNext`), leaving the sender duplication and the
       transport seam.
 
