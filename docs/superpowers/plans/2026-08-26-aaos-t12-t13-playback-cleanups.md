@@ -99,16 +99,22 @@ this series of tickets exists to prevent.
 
 ## Task 1: T12 — the two senders move
 
-- [ ] Add to `PlaybackCommands.kt`, beside `sendRestoreState`:
+- [x] Add to `PlaybackCommands.kt`, beside `sendRestoreState`:
       `MediaController.sendSetQueue(songs: List<Song>, startIndex: Int)` and
       `MediaController.sendShufflePlay(songs: List<Song>)`, both returning the command future.
-- [ ] Delete both private copies from each ViewModel; update the call sites.
-- [ ] Prune imports per file by checking each symbol — `Bundle`, `SessionCommand`, `toBundle` and
+- [x] Delete both private copies from each ViewModel; update the call sites.
+- [x] Prune imports per file by checking each symbol — `Bundle`, `SessionCommand`, `toBundle` and
       `PlaybackCommands` may or may not go stale depending on what else the file does.
-- [ ] `grep -rn "CMD_SET_QUEUE\|CMD_SHUFFLE_PLAY"` over `--include` Kotlin sources returns only
+- [x] `grep -rn "CMD_SET_QUEUE\|CMD_SHUFFLE_PLAY"` over `--include` Kotlin sources returns only
       `PlaybackCommands.kt` and `PlaybackService.kt`.
 
 **Acceptance criteria:** ~30 lines gone, both apps build, no behaviour change.
+
+**Result.** 52 deletions against 41 insertions across three files. The constants grep returns only
+`PlaybackCommands.kt` and `PlaybackService.kt`. `toBundle` went stale in both ViewModels — it was
+only there for the two bundles that moved — and `Song` had to be imported into `PlaybackCommands.kt`
+for the new signatures. Each call site is now `stateCollector.controller?.sendSetQueue(...)`, which
+keeps the silent no-controller behaviour the private copies had; T13 is where that changes.
 
 ## Task 2: T13 — transport moves to the collector
 

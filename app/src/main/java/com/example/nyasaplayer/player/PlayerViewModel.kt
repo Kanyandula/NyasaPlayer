@@ -19,7 +19,8 @@ import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
-import com.example.nyasaplayer.core.playback.toBundle
+import com.example.nyasaplayer.core.playback.sendSetQueue
+import com.example.nyasaplayer.core.playback.sendShufflePlay
 import com.example.nyasaplayer.core.playback.toSong
 import com.example.nyasaplayer.download.SongDownloadManager
 import com.google.common.util.concurrent.ListenableFuture
@@ -172,7 +173,7 @@ class PlayerViewModel @Inject constructor(
         val resolvedSongs = songs.map { resolveSongUri(it) }
         val resolvedSong = resolveSongUri(song)
         val startIndex = resolvedSongs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
-        sendSetQueueCommand(resolvedSongs, startIndex)
+        stateCollector.controller?.sendSetQueue(resolvedSongs, startIndex)
         _uiState.update {
             it.copy(
                 playerMode = PlayerMode.Expanded,
@@ -200,7 +201,7 @@ class PlayerViewModel @Inject constructor(
             showOfflineError(songs.first())
             return
         }
-        sendShufflePlayCommand(resolvedSongs)
+        stateCollector.controller?.sendShufflePlay(resolvedSongs)
         _uiState.update {
             it.copy(
                 playerMode = PlayerMode.Expanded,
@@ -288,29 +289,6 @@ class PlayerViewModel @Inject constructor(
     }
 
     // ── Custom Commands ──
-
-    private fun sendSetQueueCommand(songs: List<Song>, startIndex: Int) {
-        val controller = stateCollector.controller ?: return
-        val args = Bundle().apply {
-            putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
-            putInt(PlaybackCommands.KEY_START_INDEX, startIndex)
-        }
-        controller.sendCustomCommand(
-            SessionCommand(PlaybackCommands.CMD_SET_QUEUE, Bundle.EMPTY),
-            args,
-        )
-    }
-
-    private fun sendShufflePlayCommand(songs: List<Song>) {
-        val controller = stateCollector.controller ?: return
-        val args = Bundle().apply {
-            putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
-        }
-        controller.sendCustomCommand(
-            SessionCommand(PlaybackCommands.CMD_SHUFFLE_PLAY, Bundle.EMPTY),
-            args,
-        )
-    }
 
     // ── Offline Handling ──
 
