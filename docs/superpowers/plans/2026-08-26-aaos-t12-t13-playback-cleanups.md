@@ -118,19 +118,35 @@ keeps the silent no-controller behaviour the private copies had; T13 is where th
 
 ## Task 2: T13 — transport moves to the collector
 
-- [ ] Create `PlayerTransport` in `:core:playback` over a `() -> MediaController?` supplier, each
+- [x] Create `PlayerTransport` in `:core:playback` over a `() -> MediaController?` supplier, each
       operation returning `Boolean` per D-T13.3: `togglePlayPause`, `skipNext`, `skipPrevious`,
       `seekTo`, `toggleRepeatMode`, `toggleShuffle`, `skipToQueueItem`, `removeFromQueue`,
       `clearQueue`, `stopAndClear`. The names are the ViewModels' own — `toggleRepeatMode`, not
       `cycleRepeatMode`.
-- [ ] Expose it from `BasePlayerStateCollector` as a property built from its own controller.
-- [ ] Take the bodies verbatim, including every index and queue-size guard. A move, not a rewrite.
-- [ ] Each ViewModel method becomes a transport call plus its own reaction, per D-T13.4's table.
-- [ ] Thirteen `stateCollector.controller ?: return` opens remain once T12 has removed the four
+- [x] Expose it from `BasePlayerStateCollector` as a property built from its own controller.
+- [x] Take the bodies verbatim, including every index and queue-size guard. A move, not a rewrite.
+- [x] Each ViewModel method becomes a transport call plus its own reaction, per D-T13.4's table.
+- [x] Thirteen `stateCollector.controller ?: return` opens remain once T12 has removed the four
       command senders — not seventeen, which counted those.
 
 **Acceptance criteria:** no transport method in either ViewModel reaches
 `stateCollector.controller`.
+
+**Result.** Both ViewModels reach the controller in exactly two places each, and both are T12's
+queue-setting senders — no transport method does. Thirteen operations on `PlayerTransport`, one
+under the class threshold's headroom.
+
+`togglePlayPause` on mobile needed one extra member: it reads `isPlaying` from the *live* player,
+not the snapshot, so the transport exposes `isPlaying(): Boolean?` and mobile keeps its offline and
+download pre-flight between the read and `play()`. Using the snapshot instead would have been a
+quieter behaviour change — it lags a listener callback behind.
+
+`toggleShuffle` now writes its optimistic flag only when the command was actually sent, on both
+surfaces. Previously each wrote the flag first and returned early if there was no controller, which
+amounted to the same thing; this is the same behaviour expressed once.
+
+Both ViewModels shed `Bundle`, `Player`, `SessionCommand` and `PlaybackCommands` — after T12 and
+T13 neither one names a Media3 command primitive.
 
 ## Task 3: Tests for the branch that keeps biting
 

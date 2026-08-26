@@ -1,20 +1,16 @@
 package com.example.nyasaplayer.player
 
-import android.os.Bundle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
-import androidx.media3.session.SessionCommand
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
-import com.example.nyasaplayer.core.playback.PlaybackCommands
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
@@ -148,7 +144,7 @@ class PlayerViewModel @Inject constructor(
 
     private fun handleOfflineBuffering(isBuffering: Boolean) {
         if (isBuffering && !isOnline) {
-            stateCollector.controller?.pause()
+            stateCollector.transport.pause()
             _uiState.update {
                 it.copy(
                     isBuffering = false,
@@ -213,64 +209,51 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun toggleShuffle() {
-        val controller = stateCollector.controller ?: return
-        _uiState.update { it.copy(isShuffled = !it.isShuffled) }
-        controller.sendCustomCommand(
-            SessionCommand(PlaybackCommands.CMD_TOGGLE_SHUFFLE, Bundle.EMPTY),
-            Bundle.EMPTY,
-        )
+        if (stateCollector.transport.toggleShuffle()) {
+            _uiState.update { it.copy(isShuffled = !it.isShuffled) }
+        }
     }
 
     fun skipNext() {
-        val controller = stateCollector.controller ?: return
-        if (controller.hasNextMediaItem()) {
-            controller.seekToNextMediaItem()
-        } else if (controller.repeatMode == Player.REPEAT_MODE_ALL && controller.mediaItemCount > 0) {
-            controller.seekTo(0, 0L)
-        }
+        stateCollector.transport.skipNext()
     }
 
     fun skipPrevious() {
-        val controller = stateCollector.controller ?: return
-        if (controller.hasPreviousMediaItem()) {
-            controller.seekToPreviousMediaItem()
-        }
+        stateCollector.transport.skipPrevious()
     }
 
     fun toggleRepeatMode() {
-        val controller = stateCollector.controller ?: return
-        controller.repeatMode = when (controller.repeatMode) {
-            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-            else -> Player.REPEAT_MODE_OFF
-        }
+        stateCollector.transport.toggleRepeatMode()
     }
 
     fun togglePlayPause() {
-        val controller = stateCollector.controller ?: return
-        if (controller.isPlaying) {
-            controller.pause()
-        } else {
-            val currentMediaId = _uiState.value.currentSong?.mediaId
-            val isDownloaded = currentMediaId != null &&
-                downloadManager.getLocalFileUri(currentMediaId) != null
-            if (!isOnline && !isDownloaded) {
-                _uiState.update {
-                    it.copy(
-                        error = PlayerError(
-                            title = "Offline",
-                            message = "Can't stream while offline. Download songs for offline playback.",
-                        ),
-                    )
-                }
-                return
-            }
-            controller.play()
+        val transport = stateCollector.transport
+        // Reads the live player, as this did before the transport existed: the snapshot's
+        // isPlaying lags a listener callback behind it.
+        val isPlaying = transport.isPlaying() ?: return
+        if (isPlaying) {
+            transport.pause()
+            return
         }
+        val currentMediaId = _uiState.value.currentSong?.mediaId
+        val isDownloaded = currentMediaId != null &&
+            downloadManager.getLocalFileUri(currentMediaId) != null
+        if (!isOnline && !isDownloaded) {
+            _uiState.update {
+                it.copy(
+                    error = PlayerError(
+                        title = "Offline",
+                        message = "Can't stream while offline. Download songs for offline playback.",
+                    ),
+                )
+            }
+            return
+        }
+        transport.play()
     }
 
     fun seekTo(positionMs: Long) {
-        stateCollector.controller?.seekTo(positionMs)
+        stateCollector.transport.seekTo(positionMs)
         _uiState.update { it.copy(currentPositionMs = positionMs) }
     }
 
@@ -283,8 +266,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun dismiss() {
-        stateCollector.controller?.stop()
-        stateCollector.controller?.clearMediaItems()
+        stateCollector.transport.stopAndClear()
         _uiState.update { PlayerUiState() }
     }
 
