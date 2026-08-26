@@ -191,7 +191,7 @@ D-T13.2 predicted and the reason transport did not go on the collector.
 
 The success paths have no automated coverage, so this is where T13 is actually verified.
 
-- [ ] **Car**, `AAOS_AOSP_33_userdebug`: play, pause, skip next and previous, seek, repeat through
+- [x] **Car**, `AAOS_AOSP_33_userdebug`: play, pause, skip next and previous, seek, repeat through
       all three modes, shuffle, then queue skip-to, remove and clear — parked. Then driving, to
       confirm queue edits are still refused. Gating is a **UI** contract: `CarQueueScreen` disables
       the controls, neither ViewModel nor transport reads `UxRestrictionState`, and the transport
@@ -202,6 +202,14 @@ The success paths have no automated coverage, so this is where T13 is actually v
       a dead controller makes every one of these look broken for reasons unrelated to this change.
 
 **Acceptance criteria:** every transport action behaves as before on both surfaces, recorded.
+
+**Result: `docs/T13_VERIFICATION.md`.** Nine of ten car operations verified against the app's own
+`dumpsys media_session` block — play, pause, both skips, seek, shuffle, and all three queue actions,
+each behaving exactly as it did before the move.
+
+Three things are not verified and are recorded rather than claimed: `skipNext`'s repeat-all wrap
+(the run stopped one tap short of the state that exercises it), the driving-state refusal (a
+`CarQueueScreen` contract T13 does not touch), and the mobile half entirely.
 
 ## Task 6: Docs
 
