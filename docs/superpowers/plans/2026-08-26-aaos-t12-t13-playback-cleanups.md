@@ -11,6 +11,10 @@ own reactions.
 **Tickets:** `docs/tickets/T12-shared-queue-command-senders.md`,
 `docs/tickets/T13-transport-in-the-collector.md`
 
+**External review:** `codex exec`, 2026-08-26 — three blockers and six should-fixes, all folded in:
+a wrong operation inventory, a call-site count that double-counted T12's senders, and detekt's class
+threshold, which is why transport is now its own class rather than more methods on the collector.
+
 **Verification command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest`
 
 **Broader gate:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest
@@ -36,21 +40,57 @@ keeps recurring is the **null-controller branch**, and that becomes testable sim
 collector — which T10 proved is constructible in a unit test with a `SettableFuture` that never
 completes. Build the seam when a second consumer needs to assert what was sent.
 
-### D-T13.2: Transport operations report failure; they do not surface it
+**The honest limit:** this buys the failure branch, not the success path. Asserting *what was sent*
+still needs a seam or a real `MediaSession`/`SimpleBasePlayer` harness, and `:core:playback` has
+only JUnit and coroutines test deps today — Robolectric lives in `:automotive`. Do not present this
+ticket as making transport tested; it makes the branch that keeps biting tested and leaves the rest
+device-verified, exactly as it is now.
 
-Each returns a value the caller can act on. The collector does not know about `PlayerError`,
-snackbars or `CarErrorOverlay` — D61's rule that the collector stays UI-agnostic still holds. T11
-decides what each surface shows.
+### D-T13.2: Transport lives in its own class, not on the collector
 
-`Boolean` is enough: every operation has exactly one failure mode, "there is no controller". A
-sealed result would be inventing vocabulary for a second case that does not exist.
+`BasePlayerStateCollector` has ten member functions and detekt's `thresholdInClasses` is 16. Adding
+eight transport methods puts it at eighteen, and this project does not answer a threshold with a
+suppression (D23).
 
-### D-T13.3: Per-surface differences are decided one at a time, in the open
+So: a `PlayerTransport` class over a `() -> MediaController?` supplier, owning the operations and
+exposed by the collector as a property — `stateCollector.transport.skipNext()`. It is also better
+than piling onto the collector: the transport is constructible in a test with a supplier that
+returns null, without standing up a collector at all.
 
-`skipNext` differs today: the car wraps to index 0 on repeat-all, mobile does not. Do not
-silently unify. For each operation where the two surfaces differ, either make it a parameter or
-leave it in the ViewModel — and record which, with the reason, in the design doc. An unexplained
-behaviour change on mobile is exactly what this series of tickets exists to prevent.
+### D-T13.3: `Boolean` means "reached the controller", nothing more
+
+`false` when there is no controller, `true` when the call was made. It does **not** mean the
+operation had an effect: `skipToQueueItem` already ignores an out-of-range index, `removeFromQueue`
+ignores the current item, `clearQueue` ignores a queue of one, and `skipNext` at the end of a
+non-repeating queue does nothing. Those guards move unchanged and stay silent — they are correct
+refusals, not failures, and T11 is about the case where the player is gone.
+
+Say that in the KDoc, or the first reader wires an error dialog to a driver tapping remove on the
+current track.
+
+The transport knows nothing of `PlayerError`, snackbars or `CarErrorOverlay` — D61's rule that this
+layer stays UI-agnostic holds. T11 decides what each surface shows.
+
+### D-T13.4: Per-surface differences are decided one at a time, in the open
+
+**Correction from review:** an earlier draft claimed `skipNext` differs between the surfaces and
+proposed unifying it. It does not — both wrap to index 0 when `repeatMode == REPEAT_MODE_ALL` and
+`mediaItemCount > 0`, byte for byte. No mobile behaviour change there, and that `mediaItemCount > 0`
+guard must survive the move: `hasNextTrack()` returns true for repeat-all without checking the queue
+is non-empty.
+
+What genuinely differs, and must be decided per operation rather than merged:
+
+| Operation | Difference | Disposition |
+|---|---|---|
+| `togglePlayPause` | mobile checks offline state and the download manager before `play()` and can emit a `PlayerError`; the car just toggles | transport moves the toggle; mobile keeps its pre-flight |
+| `seekTo` | mobile writes the position optimistically into `_uiState`; the car does not | transport moves the seek; the optimistic write stays mobile's |
+| `toggleShuffle` | mobile's optimistic flag lives in `PlayerUiState`, the car's in `PlaybackSnapshot` | transport sends the command; each keeps its flag until a ticket unifies where `isShuffled` lives |
+| `dismiss` (mobile only) | `stop()` + `clearMediaItems()`, then resets `PlayerUiState` | transport gets `stopAndClear()`; the state reset stays mobile's |
+| offline-buffering pause (mobile only) | `controller?.pause()` from `handleOfflineBuffering` | uses the shared `pause()` |
+
+Record each row in the design doc with its reason. An unexplained behaviour change on mobile is what
+this series of tickets exists to prevent.
 
 ## Task 0: Baseline and branch
 
@@ -72,17 +112,16 @@ behaviour change on mobile is exactly what this series of tickets exists to prev
 
 ## Task 2: T13 — transport moves to the collector
 
-- [ ] Add to `BasePlayerStateCollector`, each returning `Boolean` (false = no controller):
-      `togglePlayPause`, `skipNext`, `skipPrevious`, `seekTo`, `cycleRepeatMode`, `skipToQueueItem`,
-      `removeFromQueue`, `clearQueue`.
-- [ ] Take the bodies from the existing ViewModel methods verbatim; this is a move, not a rewrite.
-- [ ] `skipNext` — the car wraps on repeat-all, mobile does not. Decide per D-T13.3 and record it.
-      Recommended: make wrapping the shared behaviour, since mobile's `hasNext` already claims a
-      next track exists under repeat-all after T10, and a button that claims to work should work.
-      That is a mobile behaviour change and must be called out in the device pass.
-- [ ] Shuffle stays where it is if it differs — mobile keeps a local `isShuffled` in `PlayerUiState`
-      and the car writes the snapshot; check before moving.
-- [ ] Each ViewModel method becomes a call plus its own reaction.
+- [ ] Create `PlayerTransport` in `:core:playback` over a `() -> MediaController?` supplier, each
+      operation returning `Boolean` per D-T13.3: `togglePlayPause`, `skipNext`, `skipPrevious`,
+      `seekTo`, `toggleRepeatMode`, `toggleShuffle`, `skipToQueueItem`, `removeFromQueue`,
+      `clearQueue`, `stopAndClear`. The names are the ViewModels' own — `toggleRepeatMode`, not
+      `cycleRepeatMode`.
+- [ ] Expose it from `BasePlayerStateCollector` as a property built from its own controller.
+- [ ] Take the bodies verbatim, including every index and queue-size guard. A move, not a rewrite.
+- [ ] Each ViewModel method becomes a transport call plus its own reaction, per D-T13.4's table.
+- [ ] Thirteen `stateCollector.controller ?: return` opens remain once T12 has removed the four
+      command senders — not seventeen, which counted those.
 
 **Acceptance criteria:** no transport method in either ViewModel reaches
 `stateCollector.controller`.
@@ -100,17 +139,23 @@ first automated coverage any transport path has ever had.
 ## Task 4: Gate
 
 - [ ] Broader gate, `--rerun-tasks`.
-- [ ] No new detekt baseline entries, no new suppressions. Note both ViewModels are already at
-      class-level `TooManyFunctions`; this should *reduce* their method bodies, not their count.
+- [ ] No new detekt baseline entries and no new suppressions — which is why transport is its own
+      class (D-T13.2). Check `PlayerTransport` against `thresholdInClasses: 16`: ten operations fits,
+      but only just.
+- [ ] Both ViewModels are already at class-level `TooManyFunctions`; this reduces their bodies, not
+      their method count.
 
 ## Task 5: Device pass, both surfaces
 
 The success paths have no automated coverage, so this is where T13 is actually verified.
 
-- [ ] **Car**, `AAOS_AOSP_33_userdebug`: play, pause, skip next and previous, seek, cycle repeat
-      through all three modes, shuffle, then queue skip-to, remove and clear — parked. Then driving,
-      to confirm the restriction gating still refuses edits.
-- [ ] **Mobile**: the same transport set, plus the `skipNext` repeat-all wrap if D-T13.3 changed it.
+- [ ] **Car**, `AAOS_AOSP_33_userdebug`: play, pause, skip next and previous, seek, repeat through
+      all three modes, shuffle, then queue skip-to, remove and clear — parked. Then driving, to
+      confirm queue edits are still refused. Gating is a **UI** contract: `CarQueueScreen` disables
+      the controls, neither ViewModel nor transport reads `UxRestrictionState`, and the transport
+      must not learn about it.
+- [ ] **Mobile**: the same transport set, plus `dismiss()` and the offline-buffering pause — both
+      mobile-only paths that now route through the shared transport.
 - [ ] Watch `PlaybackService` start in logcat from the first launch on mobile, per T11's lesson —
       a dead controller makes every one of these look broken for reasons unrelated to this change.
 

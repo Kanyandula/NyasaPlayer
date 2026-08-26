@@ -28,8 +28,11 @@ Three consequences:
 2. **None of it is testable.** `MediaController` is `@DoNotMock` with a package-private
    constructor, so no unit test can reach a ViewModel's transport path. Every claim about skip,
    seek or repeat has to be made on a device.
-3. **The two surfaces already disagree in small ways** — the car's `skipNext` wraps on repeat-all,
-   mobile's does not — and nothing structural keeps those decisions together.
+3. **The two surfaces already disagree in small ways** — mobile runs an offline and download-manager
+   pre-flight before `play()`, writes an optimistic position on seek, and keeps `isShuffled` in a
+   different place than the car — and nothing structural keeps those decisions together. (`skipNext`
+   is *not* one of them: both wrap on repeat-all identically. An earlier draft of this ticket said
+   otherwise and was wrong.)
 
 ## Proposed solution
 
@@ -51,13 +54,19 @@ moment to build a seam, with a second consumer to justify it.
 
 ## Scope
 
-- Add transport operations to `BasePlayerStateCollector`: play/pause toggle, skip next/previous,
-  seek, repeat-mode cycle, shuffle toggle, queue skip-to/remove/clear.
-- Each returns something the caller can act on when there is no controller — a `Boolean` or a
-  sealed result — so T11 can surface an error instead of nothing.
-- Both ViewModels call them; per-surface behaviour that genuinely differs (the car's repeat-all
-  wrap in `skipNext`) becomes a parameter or stays in the ViewModel, decided per operation with the
-  reason recorded.
+- Add a `PlayerTransport` class in `:core:playback` over a `() -> MediaController?` supplier,
+  exposed by `BasePlayerStateCollector` as a property — not more methods on the collector, which
+  would cross detekt's 16-function class threshold and this project does not answer that with a
+  suppression.
+- Operations: `togglePlayPause`, `skipNext`, `skipPrevious`, `seekTo`, `toggleRepeatMode`,
+  `toggleShuffle`, `skipToQueueItem`, `removeFromQueue`, `clearQueue`, `stopAndClear`.
+- Each returns `Boolean` meaning "reached the controller" — **not** "had an effect". The existing
+  index, current-item and queue-size guards move unchanged and stay silent; they are correct
+  refusals, not failures.
+- Both ViewModels call them, keeping their own reactions. The differences that are real — mobile's
+  offline pre-flight on play, its optimistic seek write, where each surface keeps `isShuffled`, and
+  its mobile-only `dismiss()` and offline-buffering pause — are decided per operation with the
+  reason recorded, not merged.
 - Unit-test the no-controller branch for each operation.
 
 ## Out Of Scope
