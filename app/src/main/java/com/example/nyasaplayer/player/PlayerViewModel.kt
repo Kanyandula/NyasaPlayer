@@ -11,13 +11,13 @@ import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
+import com.example.nyasaplayer.core.playback.ControllerConnection
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
 import com.example.nyasaplayer.core.playback.toSong
 import com.example.nyasaplayer.download.SongDownloadManager
-import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
@@ -38,7 +38,7 @@ private const val MobilePositionPollIntervalMs = 250L
 @HiltViewModel
 @Suppress("TooManyFunctions")
 class PlayerViewModel @Inject constructor(
-    private val controllerFuture: ListenableFuture<MediaController>,
+    private val connection: ControllerConnection,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
     private val persistence: PlaybackStatePersistence,
@@ -68,7 +68,7 @@ class PlayerViewModel @Inject constructor(
     private val isOnline: Boolean get() = networkMonitor.isOnline.value
 
     private val stateCollector = object : BasePlayerStateCollector(
-        mediaControllerFuture = controllerFuture,
+        connection = connection,
         collectorScope = viewModelScope,
     ) {
         override val positionPollIntervalMs: Long = MobilePositionPollIntervalMs

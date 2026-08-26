@@ -107,6 +107,17 @@ this consumer is finished rather than releasing the shared future itself.
 *Preserve:* the existing `onControllerConnected` / `onControllerConnectionFailed` hooks and the
 position poller's lifecycle, which is keyed to `collectorScope`.
 
+**Done.** The collector takes a `ControllerConnection` instead of a future; `connectController()`
+acquires, `releaseController()` releases *this consumer*. `PlaybackModule` no longer provides a
+future at all — Hilt builds the connection from its `@Inject` constructor — so there is no shared
+future left for anyone to release.
+
+One cost, taken deliberately: `RestoredSnapshotTest` used to construct a collector from a
+`SettableFuture` with no Android at all, and now needs Robolectric, because a `ControllerConnection`
+needs a `Context` and a `SessionToken` to exist. Its seven assertions are unchanged and it still
+never calls `connectController()`, so nothing connects — the session it builds is only there to hand
+over a token.
+
 ### Step 4 — Reconnect on a failed command, once
 
 When `PlayerTransport` finds no connected controller (T11), the collector asks the owner to

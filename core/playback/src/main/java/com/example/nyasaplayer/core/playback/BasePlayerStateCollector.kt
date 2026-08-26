@@ -23,7 +23,7 @@ import java.util.concurrent.ExecutionException
 import kotlin.coroutines.resume
 
 abstract class BasePlayerStateCollector(
-    private val mediaControllerFuture: ListenableFuture<MediaController>,
+    private val connection: ControllerConnection,
     private val collectorScope: CoroutineScope,
 ) {
     private val _playbackState = MutableStateFlow(PlaybackSnapshot())
@@ -53,6 +53,7 @@ abstract class BasePlayerStateCollector(
     protected open fun onPlayerUnavailable() {}
 
     fun connectController() {
+        val mediaControllerFuture = connection.acquire()
         mediaControllerFuture.addListener(
             {
                 try {
@@ -71,8 +72,15 @@ abstract class BasePlayerStateCollector(
         )
     }
 
+    /**
+     * This consumer is finished with playback.
+     *
+     * Not the same as ending the connection: [ControllerConnection] releases the controller only
+     * when the last consumer has gone. Releasing it here directly is what left the next ViewModel
+     * holding a disconnected controller for the rest of the process's life (T14).
+     */
     fun releaseController() {
-        MediaController.releaseFuture(mediaControllerFuture)
+        connection.release()
     }
 
     // ── Controller Listener ──
