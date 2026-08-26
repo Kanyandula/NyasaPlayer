@@ -252,6 +252,16 @@ pass below. Building that harness is a follow-up.
 `ListenableFuture<MediaController>` to construct. The verification command is therefore *not*
 sufficient on its own, and the plan does not pretend otherwise.
 
+## Gate result, 2026-08-26
+
+Re-run from scratch: `:core:playback` 57 tests (55 before T11), `:automotive` 171, `:core:data` 63 —
+**291 total, zero failures** — plus detekt, `lintOemDebug` at zero errors, both automotive flavors and
+`:app:assembleDebug`. `detekt-baseline.xml` untouched and no `@Suppress` added anywhere, which is why
+the class-threshold problem was solved by splitting rather than silencing.
+
+`grep -rn "stateCollector.controller" app/src/main automotive/src/main` returns nothing: after T12,
+T13 and T11, no ViewModel reaches a `MediaController` at all.
+
 ## Manual Verification
 
 **Neither of the obvious kill commands works** — both were tried:
