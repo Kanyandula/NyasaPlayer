@@ -170,6 +170,15 @@ With T17's harness, all of these are JVM tests:
 | two failures do not start two connections | Principle 3 |
 | reconnect fails → `onPlayerUnavailable` fires once | T11's path still works as the fallback |
 
+## Gate result, 2026-08-26
+
+Re-run from scratch: `:core:playback` 81 tests (72 before Task 2, 55 before T11), `:automotive` 171,
+`:core:data` 63 — **315 total, zero failures** — plus detekt, `lintOemDebug` at zero errors, both
+automotive flavors and `:app:assembleDebug`. `detekt-baseline.xml` untouched, no `@Suppress` added.
+
+Eleven files, +796/−64. `ListenableFuture<MediaController>` now appears in exactly one production
+file, `ControllerConnection`; nothing else in the codebase holds a controller future.
+
 ## Manual Verification
 
 - **Mobile:** play something, finish the Activity (back out until the app closes, process alive),
