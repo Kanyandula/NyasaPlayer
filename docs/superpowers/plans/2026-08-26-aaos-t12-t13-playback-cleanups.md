@@ -150,13 +150,25 @@ T13 neither one names a Media3 command primitive.
 
 ## Task 3: Tests for the branch that keeps biting
 
-- [ ] Extend `RestoredSnapshotTest`'s harness, or add a sibling, constructing a collector with an
+- [x] Extend `RestoredSnapshotTest`'s harness, or add a sibling, constructing a collector with an
       unresolved future: every transport operation returns false and mutates no snapshot state.
-- [ ] Mutation-check two of them: make one return `true` unconditionally and confirm a named test
+- [x] Mutation-check two of them: make one return `true` unconditionally and confirm a named test
       fails.
 
 **Acceptance criteria:** the no-controller branch is covered by name for every operation — the
 first automated coverage any transport path has ever had.
+
+**Result.** `PlayerTransportTest`, 14 cases, `:core:playback` now at 55 tests. A supplier returning
+null is the entire harness — no collector, no `MediaController`, no Robolectric.
+
+The last case is a roll-call over all twelve operations, so one added later without its own test
+still fails something. `isPlaying()` gets its own reasoning: it must answer `null` and not `false`,
+or mobile's `togglePlayPause` takes the play branch and runs an offline check against a player that
+is not there.
+
+Mutations: making `skipNext` return `true` unconditionally failed
+`skipNext_noController_reportsItDidNotReachThePlayer` **and** the roll-call; making `isPlaying()`
+fall back to `false` failed `isPlaying_noController_isUnknownRatherThanFalse`.
 
 ## Task 4: Gate
 
