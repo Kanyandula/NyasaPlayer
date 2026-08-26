@@ -108,16 +108,11 @@ and the document rewritten on the next pause.
 
 ## Follow-ups this slice deliberately did not take
 
-- **Mobile discards the restore command's result.** `PlayerViewModel.restorePlaybackState()` sends
-  `sendRestoreState` and shows the restored track without waiting for the `SessionResult`, so a
-  rejected command leaves mobile displaying a session the player never received — the failure the
-  car now guards against. Pre-existing, and mobile restore is out of T3's scope; the shared
-  sender's KDoc names which caller checks and which does not, so the divergence is visible at the
-  call site rather than implied.
-- **Mobile's restore leaves `hasNext` false at the end of a repeat-all queue**, because its
-  snapshot omits the `repeatMode == RepeatMode.All` term the car's has. Self-corrects on the first
-  `Player.Listener` callback, so the visible window is short; both reviewers flagged the
-  divergence, and the car's line carries a comment saying it is deliberate.
+- ~~**Mobile discards the restore command's result.**~~ **Closed by T10**, which moved the success
+  gate into `BasePlayerStateCollector.restoreIfIdle`: neither surface can now show a session the
+  player did not receive.
+- ~~**Mobile's restore leaves `hasNext` false at the end of a repeat-all queue.**~~ **Closed by
+  T10** — `applyRestored` computes it once, from the restored value, for both surfaces.
 - **`sendSetQueueCommand` and `sendShufflePlayCommand` are byte-identical in both ViewModels.**
   T3's shared `sendRestoreState` is the pattern that deletes them — two more extensions beside it,
   roughly 30 lines gone. Out of scope here because neither command was part of the restore path.

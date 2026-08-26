@@ -19,7 +19,6 @@ import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
-import com.example.nyasaplayer.core.playback.sendRestoreState
 import com.example.nyasaplayer.core.playback.toBundle
 import com.example.nyasaplayer.core.playback.toSong
 import com.example.nyasaplayer.download.SongDownloadManager
@@ -419,19 +418,13 @@ class PlayerViewModel @Inject constructor(
     private fun restorePlaybackState() {
         viewModelScope.launch(exceptionHandler) {
             try {
-                val restored = persistence.restore() ?: return@launch
-                stateCollector.controller?.sendRestoreState(restored)
-                _uiState.update {
-                    it.copy(
-                        playerMode = PlayerMode.Mini,
-                        currentSong = restored.song,
-                        isPlaying = false,
-                        currentPositionMs = restored.positionMs,
-                        hasPrevious = restored.index > 0,
-                        hasNext = restored.index < restored.queue.lastIndex,
-                        repeatMode = restored.repeatMode,
-                    )
-                }
+                // The collector publishes the restored session; everything below it is mobile's.
+                // A null result means nothing was restored — no saved session, a player that
+                // filled up while the read was in flight, or a command the service refused — and
+                // the mini player stays down rather than rising over a player that has nothing.
+                val restored = stateCollector.restoreIfIdle { persistence.restore() }
+                    ?: return@launch
+                _uiState.update { it.copy(playerMode = PlayerMode.Mini) }
                 observeCurrentSongLikeState(restored.song.mediaId)
             } catch (e: CancellationException) {
                 throw e

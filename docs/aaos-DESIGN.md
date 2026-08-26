@@ -611,6 +611,27 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   The card-grid skeletons in `CarLibraryScreen` and `CarBrowseScreen` were left alone. They draw
   aspect-ratio cards, not full-width rows; folding them in would mean a component with a shape
   switch, which costs more than the duplication does.
+- **D61 — Restore policy lives in `BasePlayerStateCollector`, not in either ViewModel.** T3 shipped
+  three deliberate divergences between the surfaces — the car ORed repeat-all into `hasNext`, the
+  car re-checked the player was still empty before sending, the car waited for `RESULT_SUCCESS` —
+  and each existed only because "what a restored session looks like" was written twice. The
+  collector already publishes the one `PlaybackSnapshot` both ViewModels fold into their own UI
+  state; restore was the one path that wrote around it, mobile straight into `_uiState`.
+
+  `applyRestored` writes that snapshot once. `restoreIfIdle` owns the sequence: read, re-check the
+  player is still idle after the suspend point, send, and publish only on an acknowledged command.
+  It returns non-null **only** when all of that succeeded, so a caller holding a value knows the
+  session is on screen — which is what each surface keys its like observer, and mobile its mini
+  player, off. Each ViewModel keeps its own reaction and nothing else.
+
+  Two details that must not be "simplified" later. `applyRestored` computes `hasNext` from the
+  `RestoredPlayback`, never from `hasNextTrack()`, which asks the live controller: a `SessionResult`
+  says the *session* applied the queue, not that the controller has caught up (D56). And the command
+  future resumes with a value, never an exception — a failed command is a restore that does not
+  happen, and rethrowing would put a crash path where both callers have always had a silent no-op.
+
+  Mobile gained one thing it never had: a restored session shows the track's real duration instead
+  of `0:00`, because the shared write sets a field mobile's own restore omitted.
 
 ## Components
 

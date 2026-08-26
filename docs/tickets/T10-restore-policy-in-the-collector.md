@@ -2,9 +2,11 @@
 
 - **Slice:** architecture - removes a duplication that T3 was forced to work around
 - **Depends on:** T3 (merged, PR #41)
-- **Status:** Proposed
+- **Status:** Implemented; car device-verified, mobile not established — see Outcome
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`, plus one device pass per surface — the race and command-failure criteria below cannot be reached from Gradle
-- **Design Reference:** `docs/aaos-DESIGN.md` D53–D59; `core/playback/.../BasePlayerStateCollector.kt`
+- **Design Reference:** `docs/aaos-DESIGN.md` D53–D59, and D61 for the outcome
+- **Plan:** `docs/superpowers/plans/2026-08-25-aaos-t10-collector-restore.md`
+- **Verification:** `docs/T10_VERIFICATION.md`
 - **Risk Tags:** shared code, two surfaces, unverifiable controller path
 - **Affected Modules:** `:core:playback`, `:app`, `:automotive`
 
@@ -151,3 +153,41 @@ worth testing. The send path stays device-verified, as in T3.
 
 Mobile also still carries the D55 index fix without a device pass. That predates this ticket and is
 not fixed by it, but T10's device step is the natural moment to close it.
+
+## Outcome
+
+Implemented across seven tasks. Design record D61.
+
+`BasePlayerStateCollector` owns restore now: `applyRestored` writes the snapshot, `restoreIfIdle`
+owns the sequence and returns non-null only when the session is actually on screen. The car's two
+private methods are gone and mobile's `_uiState` restore block with them; each ViewModel keeps a
+launch, one call, and the reaction that is genuinely its own. `grep -rn "restored\."` across both
+main source sets returns two lines, one per surface, both the like observer.
+
+The ticket's own case is what landed: the three divergences T3 had to comment on are now
+unreachable rather than scheduled, and the comment explaining why the car's `hasNext` differed from
+mobile's was deleted along with the duplication that required it.
+
+**`applyRestored` is the first restore code in this project a unit test can reach.** The collector
+never touches its controller future until `connectController()`, so a `SettableFuture` that never
+completes and a `TestScope` are enough to construct one — seven cases, both `hasNext` boundaries,
+both `hasPrevious` boundaries, and the mutation checks behind them. T3 had to send every claim about
+restore to a device.
+
+Mobile gained a correct duration on a restored session (D-T10.3) and lost the mini player over a
+refused restore — its share of the T3 success gate.
+
+Gates: 275 tests, detekt clean with the baseline untouched, lint clean, both automotive flavors and
+`:app:assembleDebug`.
+
+## Not verified
+
+**Mobile, on device.** The car pass is field-by-field in `docs/T10_VERIFICATION.md`, PID 12456 →
+12766. The phone AVD gave contradictory evidence — a restored mini player on screen, no
+`MediaSession` for the package in `dumpsys`, nothing in logcat — and it is recorded as not
+established rather than called either way. T11 explains it after the fact: the session had existed
+and gone away, which is exactly the dead-controller state that ticket describes, so mobile is
+probably closer to passing than the record says. It still needs a clean run that watches
+`PlaybackService` start from the first launch.
+
+Mobile therefore still carries T3's D55 index fix without a device pass.
