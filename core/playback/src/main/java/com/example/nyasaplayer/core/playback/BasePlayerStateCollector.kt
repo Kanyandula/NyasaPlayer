@@ -34,7 +34,7 @@ abstract class BasePlayerStateCollector(
         private set
 
     /** Every transport action, over whatever controller exists at the moment it is called. */
-    val transport: PlayerTransport = PlayerTransport { controller }
+    val transport: PlayerTransport = PlayerTransport({ controller }, { onPlayerUnavailable() })
 
     protected abstract val positionPollIntervalMs: Long
 
@@ -42,6 +42,15 @@ abstract class BasePlayerStateCollector(
     protected open fun onCurrentSongChanged(mediaItem: MediaItem) {}
     protected open fun onPlaybackError(error: PlaybackException) {}
     protected open fun onControllerConnectionFailed() {}
+
+    /**
+     * A command found no connected controller — the player is gone and the surface should say so.
+     *
+     * Distinct from [onControllerConnectionFailed], which fires once if the connection never
+     * happened; this fires per user action against a player that is missing or has since
+     * disconnected.
+     */
+    protected open fun onPlayerUnavailable() {}
 
     fun connectController() {
         mediaControllerFuture.addListener(

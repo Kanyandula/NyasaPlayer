@@ -15,8 +15,6 @@ import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
-import com.example.nyasaplayer.core.playback.sendSetQueue
-import com.example.nyasaplayer.core.playback.sendShufflePlay
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -91,6 +89,22 @@ class AutomotivePlayerViewModel @Inject constructor(
         }
 
         override fun onControllerConnectionFailed() {
+            _uiState.update {
+                it.copy(
+                    error = PlayerError(
+                        title = "Player Error",
+                        message = "Could not connect to playback service",
+                        isPlaybackError = false,
+                    ),
+                )
+            }
+        }
+
+        /**
+         * A command found no connected player. `CarErrorOverlay` renders this above everything and
+         * blocks the controls underneath, so repeated taps cannot stack it.
+         */
+        override fun onPlayerUnavailable() {
             _uiState.update {
                 it.copy(
                     error = PlayerError(
@@ -182,7 +196,8 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     fun playSong(songs: List<Song>, song: Song) {
         val startIndex = songs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
-        stateCollector.controller?.sendSetQueue(songs, startIndex)
+        // Nothing is painted as playing unless the command reached a connected player (T11).
+        if (!stateCollector.transport.setQueue(songs, startIndex)) return
         stateCollector.updateSnapshot {
             it.copy(
                 currentSong = song,
@@ -194,7 +209,7 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     fun shufflePlay(songs: List<Song>) {
         if (songs.isEmpty()) return
-        stateCollector.controller?.sendShufflePlay(songs)
+        if (!stateCollector.transport.shufflePlay(songs)) return
         stateCollector.updateSnapshot {
             it.copy(
                 currentSong = songs.first(),
@@ -207,15 +222,15 @@ class AutomotivePlayerViewModel @Inject constructor(
     // ── Queue Management ──
 
     fun skipToQueueItem(index: Int) {
-        stateCollector.transport.skipToQueueItem(index)
+        stateCollector.transport.queue.skipToQueueItem(index)
     }
 
     fun removeFromQueue(index: Int) {
-        stateCollector.transport.removeFromQueue(index)
+        stateCollector.transport.queue.removeFromQueue(index)
     }
 
     fun clearQueue() {
-        stateCollector.transport.clearQueue()
+        stateCollector.transport.queue.clearQueue()
     }
 
     // ── Like / Unlike ──
