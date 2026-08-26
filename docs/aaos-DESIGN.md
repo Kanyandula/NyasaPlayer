@@ -657,6 +657,37 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   differed there and they do not, both wrapping on repeat-all identically. `togglePlayPause` needed
   `isPlaying()` on the transport, returning `Boolean?`, because mobile decides from the live player
   and the snapshot lags a listener callback behind it.
+- **D63 — A controller is usable only while it is connected, and only commands say so out loud.**
+  `BasePlayerStateCollector` assigns its controller once and never clears it — there is no
+  `MediaController.Listener` anywhere in the repo, only a `Player.Listener`, which carries no
+  disconnect signal. So a null check is not an availability check: after a session dies the field
+  still holds a `MediaController`, and every command sails into it and reports success. That is the
+  shape of the bug a user hit on 2026-08-26 — a fully drawn player, no session, silent buttons.
+
+  `PlayerTransport` therefore asks `controller != null && isConnected` at command time, and raises
+  `onPlayerUnavailable()` — a fifth collector hook — once per command that finds no player. Each
+  surface answers with the `PlayerError` it already shows for a failed connection.
+
+  Three rules the implementation must keep. **Queries stay silent:** `isPlaying()` returns `null` and
+  raises nothing, because an error belongs to a user action, and reporting there too would raise two
+  for one tap. **Refusals are not failures:** the index, current-item and queue-size guards return
+  `true` and say nothing (D62) — wiring an error to them would put a dialog in front of a driver who
+  tapped remove on the playing track. **Optimistic state requires dispatch:** `playSong` and
+  `shufflePlay` now go through the transport, so neither surface paints a track as playing unless the
+  command reached a connected player.
+
+  `true` still does not promise the command arrived. The session can vanish between the check and the
+  call; it means the controller was connected when the transport attempted it.
+
+  Two consequences worth knowing. `PlayerTransport` hit detekt's 16-function class ceiling — which is
+  inclusive — so the queue mutations split into `QueueTransport`, reached as `transport.queue`, and
+  the availability predicate lives at file level. And mobile's snackbar host moved above
+  `GlobalPlayerLayer`: it had been inside the `Scaffold`, so the message about an unreachable player
+  rendered *behind* the expanded player, which is exactly where the dead buttons are.
+
+  What this does **not** do is reconnect anything. The controller future is a `@Singleton` built once
+  in `PlaybackModule`, so a dead controller stays dead for the process; T11 tells the user, and
+  recovery is a separate ticket.
 
 ## Components
 

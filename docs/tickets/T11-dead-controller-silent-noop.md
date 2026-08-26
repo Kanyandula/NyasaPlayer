@@ -1,10 +1,11 @@
-# T11 - A dead controller leaves a fully drawn player whose buttons do nothing
+# T11 - Disconnected or missing MediaController makes playback actions fail silently
 
 - **Slice:** playback robustness - both surfaces
 - **Depends on:** —
-- **Status:** Filed, not specced
+- **Status:** Implemented; the disconnected branch is not device-verified — see Outcome
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`
-- **Design Reference:** `docs/aaos-DESIGN.md` D61; `core/playback/.../BasePlayerStateCollector.kt`
+- **Design Reference:** `docs/aaos-DESIGN.md` D61–D62, and D63 for the outcome
+- **Plan:** `docs/superpowers/plans/2026-08-26-aaos-t11-dead-controller.md`
 - **Risk Tags:** silent failure, both surfaces, user-visible
 - **Affected Modules:** `:app`, `:automotive`, possibly `:core:playback`
 
@@ -112,3 +113,38 @@ Found while verifying T10 on the phone AVD. Not caused by T10 or T13 — the gua
 
 External review (`codex exec`, 2026-08-26) is what turned it from a null check into the ticket above:
 the null-only version would not have fixed the bug that produced it.
+
+## Outcome
+
+Implemented in one pass. Design record D63. The title changed with it: the old one described the
+symptom, this one names the condition — and there turned out to be two conditions, not one.
+
+`PlayerTransport` asks `controller != null && isConnected` at command time and raises a new
+`onPlayerUnavailable()` collector hook once per command that finds no player; each surface answers
+with the `PlayerError` it already shows for a failed connection. `playSong` and `shufflePlay` moved
+behind the transport, so neither surface paints a track as playing unless the command reached a
+connected player. **No ViewModel touches `stateCollector.controller` any more** — the end of the line
+that started with T12.
+
+Queries stay silent and refusals stay silent. Mobile's snackbar host moved above `GlobalPlayerLayer`,
+where the message is actually visible.
+
+Three things the plan did not predict, all recorded in it: `PlayerTransport` hit detekt's
+16-function ceiling — inclusive, so 16 fails — which forced the `QueueTransport` split a ticket
+earlier than expected; the new `(controller, onUnavailable)` signature makes a bare
+`PlayerTransport { … }` bind to the *callback*, so every construction site names its arguments; and
+`NyasaPlayerApp` tripped `LongMethod` when the snackbar host moved into the `Box`.
+
+Gates: 291 tests, detekt clean with the baseline untouched and no `@Suppress` added anywhere, lint
+clean, both automotive flavors and `:app:assembleDebug`.
+
+## Not verified
+
+**The `isConnected == false` branch, on a device.** It is not unit-testable here — `MediaController`
+is `@DoNotMock` with a package-private constructor — and neither obvious kill reproduces it: the
+service shares the app process, so `am force-stop` takes the Activity with it, and `am stopservice`
+returns "Service stopped" while the session stays bound and alive. Both were tried on the AAOS
+emulator. Reaching it needs the instrumented probe described in the plan.
+
+**Which branch produced the original report** — null or disconnected — therefore remains open. The
+plan carries a log line at the boundary to settle it the next time it happens.
