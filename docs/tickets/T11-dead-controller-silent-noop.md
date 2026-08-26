@@ -66,6 +66,12 @@ session had existed and gone away, leaving exactly this state.
 
 Not caused by T10. The guards predate it on both surfaces; T10 only moved restore policy.
 
-Seventeen call sites share the pattern, so the fix belongs behind one helper rather than in each
-method — `BasePlayerStateCollector` already owns the controller and would be the natural home,
-which also keeps the two surfaces from answering differently, as they did for restore before T10.
+Seventeen call sites shared the pattern when this was filed, so the fix belongs behind one helper
+rather than in each method.
+
+**T13 built that helper.** `PlayerTransport` now owns every transport action and already returns
+`false` when there is no controller; `isPlaying()` returns `null` for the same reason. So T11 is no
+longer thirteen edits across two ViewModels — it is deciding what each surface *shows* when a call
+returns false, and wiring it at one call site per action. Note the `Boolean` means the controller was
+reached, not that the operation had an effect (D62): the index and queue-size guards return `true`
+and must not raise an error.

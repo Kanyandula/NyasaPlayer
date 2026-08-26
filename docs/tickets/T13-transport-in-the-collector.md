@@ -2,9 +2,11 @@
 
 - **Slice:** architecture - the same move T10 made for restore, applied to transport
 - **Depends on:** T10 (merged, PR #45). Unblocks T11.
-- **Status:** Proposed
+- **Status:** Implemented; car device-verified nine of ten, mobile not run — see Outcome
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`
-- **Design Reference:** `docs/aaos-DESIGN.md` D61
+- **Design Reference:** `docs/aaos-DESIGN.md` D61, and D62 for the outcome
+- **Plan:** `docs/superpowers/plans/2026-08-26-aaos-t12-t13-playback-cleanups.md`
+- **Verification:** `docs/T13_VERIFICATION.md`
 - **Risk Tags:** both surfaces, every transport path, no device coverage for mobile
 - **Affected Modules:** `:core:playback`, `:app`, `:automotive`
 
@@ -98,3 +100,35 @@ import churn in the two ViewModels to one round.
 Mobile's transport has no automated coverage today and this ticket does not add device coverage —
 it makes the failure branch testable, not the success path. The success path stays device-verified,
 and mobile's device debt (T3's D55 fix, T10's restore pass) is still outstanding.
+
+## Outcome
+
+`PlayerTransport` holds the thirteen operations both ViewModels used to open with
+`controller ?: return`. 102 lines left the ViewModels, 108 arrived in one class, and neither
+ViewModel reaches `stateCollector.controller` for transport any more — the only two reaches left on
+each side are T12's queue senders.
+
+The class exists instead of more collector methods because of detekt's 16-function class threshold
+(D62), and that constraint produced the better shape: `PlayerTransport { null }` is the entire test
+harness. `PlayerTransportTest` is 14 cases covering every operation's no-controller branch plus a
+roll-call that catches an operation added later without its own test — **the first automated coverage
+any transport path in this project has had.** Mutations: `skipNext` returning `true` unconditionally
+fails its named test and the roll-call; `isPlaying()` falling back to `false` fails
+`isPlaying_noController_isUnknownRatherThanFalse`.
+
+Two things surfaced while doing it. `togglePlayPause` needed `isPlaying(): Boolean?` on the transport,
+because mobile decides from the live player and the snapshot lags a listener callback behind — using
+the snapshot would have been a quiet behaviour change. And `toggleShuffle` now writes its optimistic
+flag only when the command was actually sent, on both surfaces; previously each wrote the flag first
+and hit `controller ?: return` after, which came to the same thing by accident of ordering.
+
+## Not verified
+
+Nine of ten car operations are recorded field by field in `docs/T13_VERIFICATION.md`.
+`skipNext`'s repeat-all wrap was not observed — the run stopped one tap short of the state that
+exercises it — and the driving-state refusal was not run, though it tests a `CarQueueScreen`
+contract this ticket does not touch.
+
+**Mobile was not run at all.** Its transport set, plus `dismiss()` and the offline-buffering pause,
+still needs a session with a signed-in phone — the same session that owes T3's D55 fix and T10's
+restore pass.

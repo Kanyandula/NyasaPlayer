@@ -2,7 +2,7 @@
 
 - **Slice:** cleanup - the tail of T3's shared-sender pattern
 - **Depends on:** T3 (merged, PR #41)
-- **Status:** Proposed
+- **Status:** Implemented
 - **Verification Command:** `./gradlew :automotive:assembleOemDebug :app:assembleDebug detekt`
 - **Design Reference:** `core/playback/.../PlaybackCommands.kt`, `sendRestoreState`
 - **Risk Tags:** duplication, wire format
@@ -40,3 +40,14 @@ They were left alone then because neither command was on the restore path. There
 
 Roughly 30 lines removed. The senders return `ListenableFuture<SessionResult>` like
 `sendRestoreState` does, though neither caller has a reason to read it today — T11 may.
+
+## Outcome
+
+`sendSetQueue` and `sendShufflePlay` sit beside `sendRestoreState` in `PlaybackCommands.kt`, next to
+the keys they use. 52 deletions against 41 insertions; `CMD_SET_QUEUE` and `CMD_SHUFFLE_PLAY` are now
+named only there and in `PlaybackService.kt`.
+
+`toBundle` went stale in both ViewModels — it was only there for the two bundles that moved — and
+`Song` had to be imported into `PlaybackCommands.kt` for the new signatures. No behaviour change:
+each call site kept the silent no-controller semantics the private copies had, which is T13's
+problem, not this one's.
