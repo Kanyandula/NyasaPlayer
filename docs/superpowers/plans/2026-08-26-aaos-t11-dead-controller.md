@@ -10,6 +10,10 @@ tapping a dead button on the move.
 
 **Ticket:** `docs/tickets/T11-dead-controller-silent-noop.md`
 
+**External review:** `codex exec`, 2026-08-26 — two blockers and five should-fixes, all folded in.
+One of them, D-T11.0, changes what this ticket is: as planned it would not have fixed the symptom
+that produced it.
+
 **Verification command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`
 
 **Broader gate:** the usual set, plus a device pass per surface — and this one is reproducible, which
@@ -33,6 +37,25 @@ What is missing is the connection between them.
 
 ## Decisions
 
+### D-T11.0: "Unavailable" means null **or** disconnected — and only the second one matches the bug
+
+`BasePlayerStateCollector` sets `controller = mc` once and never clears it; `releaseController()`
+only releases the future. So after the service dies the field still holds a `MediaController`, and
+`PlayerTransport.withController` — which reports only when the supplier returns `null` — would sail
+straight through and call methods on a corpse.
+
+That is exactly the state the reported symptom came from: a fully drawn player, no `ServiceRecord`,
+no `MediaSession`, every button silent. **A ticket that only handles `null` would have shipped
+without fixing the thing that was reported.**
+
+So: treat a controller as unavailable when it is `null` *or* `!isConnected`. `MediaController`
+exposes `isConnected` for this. One predicate, inside the transport, used by every operation and by
+`isPlaying()`.
+
+Whether the collector should also clear `controller` on disconnect is a separate question and not
+required here — the transport asking is enough, and clearing the field would need the listener
+lifecycle thought through.
+
 ### D-T11.1: One hook, not thirteen call sites
 
 Add a fifth hook beside the existing four:
@@ -51,7 +74,11 @@ the shape T10 and T13 removed.
 
 **Wiring:** the transport already takes a supplier; give it a second constructor parameter, an
 `onUnavailable: () -> Unit` defaulting to `{}`, and have the collector pass `{ onPlayerUnavailable() }`.
-Its fourteen unit tests keep working with the default, and one new test asserts the callback fires.
+Its fourteen unit tests keep working with the default, and new tests assert the callback fires.
+
+`isPlaying()` stays **side-effect-free** — it is a query, and mobile calls it as one. If it fired the
+callback too, mobile's `togglePlayPause` would report twice for one tap: once from the query and once
+from its own early return.
 
 ### D-T11.2: Only "no controller" reports. Refusals stay silent.
 
@@ -62,18 +89,46 @@ dimming the button.
 
 This is the finding most likely to be got wrong by someone reading only the ticket title.
 
-### D-T11.3: The message is the one both surfaces already use
+### D-T11.3: The message is the one both surfaces already use — but mobile cannot currently show it
 
 `onControllerConnectionFailed` produces "Player Error / Could not connect to playback service" today,
-with `isPlaybackError = false` so it routes to the snackbar rather than the expanded player's inline
-banner. Reuse it verbatim. A second phrasing for the same condition is how two surfaces start
-describing one failure differently.
+with `isPlaybackError = false`. Reuse the wording verbatim; a second phrasing for one condition is how
+two surfaces start describing the same failure differently.
 
-### D-T11.4: `togglePlayPause` on mobile needs its own line
+**The car is fine.** `AutomotiveApp` renders any `playerState.error` as `CarErrorOverlay` above the
+full player and the queue, `isPlaybackError = false` only changes its icon, and Retry stays hidden
+unless `isRetryable` — which this is not. The overlay also blocks the controls underneath, so repeated
+taps cannot stack.
 
-Mobile calls `isPlaying()` first and returns early on `null`, so it never reaches a transport call
-and would never report. Add the report to that early return explicitly. It is the one place the hook
-cannot cover, and the one a reader will not notice.
+**Mobile has a layering problem.** `isPlaybackError = false` routes to the snackbar, whose host lives
+in the `Scaffold`; `GlobalPlayerLayer` is drawn *after* the `Scaffold` in the same `Box` and the
+expanded player fills the screen. So the message a user gets while tapping dead buttons in the
+expanded player is behind the expanded player.
+
+Move `AppSnackbarHost` out of the `Scaffold` and into the `Box` after `GlobalPlayerLayer`, keeping
+its bottom-bar padding. That fixes every non-playback error, not just this one. If the padding proves
+fiddly, the fallback is to let the expanded player's inline banner render non-playback errors too —
+but that changes routing semantics for errors beyond this ticket, so prefer the move.
+
+**One report per dead session.** Mobile's `LaunchedEffect` shows the snackbar and then calls
+`clearError()`, so each tap would re-raise and re-show it. Raise the unavailable error only when no
+error is currently showing.
+
+### D-T11.4: The paths the hook cannot cover, named
+
+Two, and both would otherwise ship silent:
+
+1. **Mobile's `togglePlayPause`** returns early on `isPlaying() == null`, and that query does not
+   report (above). Report explicitly at the early return.
+2. **Both surfaces' play-entry paths.** `playSong` and `shufflePlay` still call
+   `stateCollector.controller?.sendSetQueue(...)` directly and then write an optimistic playing
+   state — so with a dead controller they paint a track as playing that never reached the player.
+   That is the ticket's second acceptance criterion, and the plan's first draft missed it.
+
+   Fix it the way T13 fixed transport: put `setQueue` and `shufflePlay` on `PlayerTransport`, over
+   the same predicate and the same callback, and have both ViewModels write their optimistic state
+   only when the call returned `true`. That finishes what T12 started — the senders stay in
+   `PlaybackCommands.kt`, the transport just calls them.
 
 ### D-T11.5: Reconnection is a different ticket
 
@@ -103,14 +158,19 @@ it is worth arguing.
 
 ## Task 1: The callback
 
-- [ ] `PlayerTransport(controller: () -> MediaController?, onUnavailable: () -> Unit = {})`, invoked
-      from `withController`'s null branch and from `isPlaying()` when there is no controller.
+- [ ] `PlayerTransport(controller: () -> MediaController?, onUnavailable: () -> Unit = {})`.
+- [ ] One private predicate — `controller()?.takeIf { it.isConnected }` — used by `withController`
+      **and** `isPlaying()` (D-T11.0). The callback fires from `withController`'s failure branch
+      only.
+- [ ] Add `setQueue` and `shufflePlay` to the transport, delegating to the `PlaybackCommands`
+      extensions, so the play-entry paths report too (D-T11.4).
 - [ ] `BasePlayerStateCollector`: `protected open fun onPlayerUnavailable() {}`, and build the
       transport with `{ onPlayerUnavailable() }`.
-- [ ] Extend `PlayerTransportTest`: the callback fires for each operation, and — the case worth
-      writing — does **not** fire when a controller is present but a guard refuses. That needs a
-      controller, so assert it the other way round: with `{ null }`, a refusal cannot happen, so
-      assert the count equals the number of calls made.
+- [ ] Extend `PlayerTransportTest`: the callback fires once per failed operation, and `isPlaying()`
+      does not fire it.
+- [ ] Do **not** claim a test for "a present controller whose guard refuses does not report". That
+      needs a real `MediaSession`, which this module has no harness for; the existing suite is
+      explicit that it covers the failure branch only. State the gap instead of faking it.
 
 **Acceptance criteria:** the branch reports through one path, and its tests say so.
 
@@ -131,6 +191,11 @@ surface already uses for a failed connection.
 - [ ] **Reproduce the original symptom first**, on either surface: `am force-stop` the app while its
       UI is live, then tap play, skip and seek. Before this ticket that is silence; after it, the
       message. This is the first device check in the series that reproduces on demand.
+- [ ] While reproducing, confirm **which** branch fires — a null controller or a disconnected one.
+      D-T11.0 predicts disconnected, and if the log says otherwise the predicate is answering the
+      wrong question.
+- [ ] Tap a song from a list in that state: the row must not paint as playing (the second acceptance
+      criterion).
 - [ ] Confirm the refusals stay quiet: with a live controller, remove the current track from the
       queue and clear a queue of one — neither should show anything.
 
