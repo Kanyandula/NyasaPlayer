@@ -88,9 +88,16 @@ smallest shape that fits: a `@Singleton` `ControllerConnection` in `:core:playba
 would know about the other's, which is a different bug rather than a fix. Reference counting is the
 smallest thing that makes "my ViewModel is done" distinct from "nobody is using playback".
 
-*Alternative worth weighing in review:* drop `releaseController()` entirely and let the process own
-the controller for its lifetime. Fewer moving parts, at the cost of a controller outliving every
-consumer. Media3 tolerates that; it is not obviously wrong.
+*Alternative weighed and rejected:* drop `releaseController()` entirely and let the process own the
+controller for its lifetime. Fewer moving parts — but a `MediaController` holds a binding to
+`PlaybackService`, so never releasing means the service can never stop, including the
+`onTaskRemoved` → `stopSelf()` path that exists precisely to let it go. Reference counting keeps that
+working; five tests hold the rules, including the unbalanced-release case.
+
+**Done.** `ControllerConnection` is a `@Singleton` over `acquire()` / `release()` / `reconnect()`,
+tested against a real `MediaSession` rather than `PlaybackService` (D64). `reconnect()` exists
+because Step 1 proved a released future is terminal and idempotent: it can only be replaced, never
+revived.
 
 ### Step 3 — `BasePlayerStateCollector`: connect through the owner
 
