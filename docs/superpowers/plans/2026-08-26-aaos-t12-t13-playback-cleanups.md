@@ -213,8 +213,8 @@ Three things are not verified and are recorded rather than claimed: `skipNext`'s
 
 ## Task 6: Docs
 
-- [ ] `docs/aaos-DESIGN.md`: D62 — transport lives in the collector; the null-controller contract;
+- [x] `docs/aaos-DESIGN.md`: D62 — transport lives in the collector; the null-controller contract;
       why there is no `MediaController` interface; and each per-surface difference that was unified
       or kept, with its reason.
-- [ ] Both ticket outcomes.
-- [ ] Note in T11 that its fix now has one place to live.
+- [x] Both ticket outcomes.
+- [x] Note in T11 that its fix now has one place to live.
