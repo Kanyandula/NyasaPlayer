@@ -1,4 +1,4 @@
-# T13 - Transport actions ask the controller directly, seventeen times
+# T13 - Transport actions ask the controller directly, thirteen times
 
 - **Slice:** architecture - the same move T10 made for restore, applied to transport
 - **Depends on:** T10 (merged, PR #45). Unblocks T11.
@@ -16,14 +16,14 @@ Every transport action on both surfaces starts the same way:
 val controller = stateCollector.controller ?: return
 ```
 
-Seven times in `PlayerViewModel`, ten in `AutomotivePlayerViewModel`. Each then talks to
-`MediaController` directly — `play`, `pause`, `seekTo`, `seekToNextMediaItem`, `repeatMode`,
-`removeMediaItems`, and so on.
+Five times in `PlayerViewModel` and eight in `AutomotivePlayerViewModel` once T12 has taken the
+four command senders out of the count. Each then talks to `MediaController` directly — `play`,
+`pause`, `seekTo`, `seekToNextMediaItem`, `repeatMode`, `removeMediaItems`, and so on.
 
 Three consequences:
 
-1. **T11's defect has seventeen homes.** When the controller is gone, every one returns silently
-   and the UI keeps showing a working player. Fixing that where it is means seventeen edits and two
+1. **T11's defect has thirteen homes.** When the controller is gone, every one returns silently and
+   the UI keeps showing a working player. Fixing that where it is means thirteen edits and two
    surfaces that can drift apart again — the situation T10 just removed for restore.
 2. **None of it is testable.** `MediaController` is `@DoNotMock` with a package-private
    constructor, so no unit test can reach a ViewModel's transport path. Every claim about skip,
@@ -36,17 +36,22 @@ Three consequences:
 
 ## Proposed solution
 
-Move transport onto `BasePlayerStateCollector`, which already owns the controller and, since T10,
-already owns restore. One `controller ?: return` per operation, in one place; each ViewModel calls
-a collector method and keeps only its own reaction.
+A `PlayerTransport` class in `:core:playback`, over a `() -> MediaController?` supplier and exposed
+by `BasePlayerStateCollector` as a property. One `controller ?: return` per operation, in one place;
+each ViewModel calls `stateCollector.transport.…` and keeps only its own reaction.
+
+Not more methods on the collector itself: it has ten already against detekt's 16-function class
+threshold, and this project does not answer a threshold with a suppression (D23). Its own class is
+the better shape regardless — a transport is constructible in a test from a supplier that returns
+null, with no collector involved.
 
 **Explicitly not proposed: an interface over `MediaController`.** The union of members the two
 surfaces touch is about seventeen, so a seam means an interface, a delegating implementation and a
 fake — a large surface invented for one consumer, and every transport path rewritten to go through
 it. What that buys is the ability to assert *what was sent to the controller*. What T11 needs, and
 what the recurring defect actually is, is the **null-controller branch** — and that is testable
-the moment the branch lives on the collector, because T10 proved the collector is constructible in
-a unit test with a future that never completes.
+the moment the branch lives behind one class, and that class needs nothing but a supplier to
+construct.
 
 If a later ticket genuinely needs to assert transport calls against a fake player, Media3 ships
 `SimpleBasePlayer` and a real `MediaSession` can be stood up in a Robolectric test. That is the
@@ -77,8 +82,8 @@ moment to build a seam, with a second consumer to justify it.
 
 ## Acceptance Criteria
 
-- Given a collector with no controller, when any transport operation runs, then it reports failure
-  rather than returning silently, and a unit test asserts that per operation.
+- Given a transport with no controller, when any operation runs, then it returns `false` rather
+  than silently doing nothing, and a unit test asserts that per operation.
 - Given `grep -rn "stateCollector.controller" app/src/main automotive/src/main`, then no transport
   method reaches through it.
 - Given a device pass on both surfaces, then play, pause, skip, seek, repeat, shuffle and the
