@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
+import com.example.nyasaplayer.core.common.models.Song
 
 /**
  * Every transport action both surfaces perform, in one place.
@@ -18,13 +19,31 @@ import androidx.media3.session.SessionCommand
  * non-repeating queue still does nothing — those are correct refusals and they stay silent. `false`
  * means there was no player to talk to at all, which is the only case a surface should report.
  *
+ * **What available means: non-null and connected.** The collector assigns its controller once and
+ * never clears it, so after a session dies the field still holds a `MediaController` — asking only
+ * whether it is null would sail straight into a dead session and report success (T11).
+ *
+ * `true` does not promise the command reached the service. The session can vanish between the check
+ * and the call; it means the controller was connected when the transport attempted it.
+ *
  * Holds a supplier rather than a controller because the controller arrives asynchronously and can
  * go away again; it also makes this class constructible in a unit test with `{ null }`.
+ *
+ * @param onUnavailable raised once per *command* that found no connected controller. Queries do not
+ * raise it: a user-facing error belongs to a user action, not to reading state.
  */
-class PlayerTransport(private val controller: () -> MediaController?) {
+class PlayerTransport(
+    private val controller: () -> MediaController?,
+    private val onUnavailable: () -> Unit = {},
+) {
 
-    /** Whether the player is playing, or `null` when there is no controller to ask. */
-    fun isPlaying(): Boolean? = controller()?.isPlaying
+    /**
+     * Whether the player is playing, or `null` when no connected controller can be asked.
+     *
+     * Deliberately silent — `null` is the caller's cue to report, and mobile's `togglePlayPause`
+     * does exactly that. Reporting here as well would raise two errors for one tap.
+     */
+    fun isPlaying(): Boolean? = controller().connectedOrNull()?.isPlaying
 
     fun play(): Boolean = withController { it.play() }
 
@@ -70,21 +89,59 @@ class PlayerTransport(private val controller: () -> MediaController?) {
         )
     }
 
-    fun skipToQueueItem(index: Int): Boolean = withController {
+    /** Queue mutations, split out because the parent class sits on detekt's function ceiling. */
+    val queue: QueueTransport = QueueTransport(controller, onUnavailable)
+
+    /** Stops playback and empties the queue — mobile's dismiss. */
+    fun stopAndClear(): Boolean = withController {
+        it.stop()
+        it.clearMediaItems()
+    }
+
+    /** Queue-setting entry points, behind the same availability check as the transport controls. */
+    fun setQueue(songs: List<Song>, startIndex: Int): Boolean = withController {
+        it.sendSetQueue(songs, startIndex)
+    }
+
+    fun shufflePlay(songs: List<Song>): Boolean = withController { it.sendShufflePlay(songs) }
+
+    private inline fun withController(action: (MediaController) -> Unit): Boolean =
+        controller().dispatch(onUnavailable, action)
+}
+
+/**
+ * The availability predicate, in one place: a controller is usable only while it is connected.
+ *
+ * File-level rather than a member because `PlayerTransport` sits exactly on detekt's 16-function
+ * class threshold, and a suppression is not how this project answers that (D23).
+ */
+/**
+ * The queue mutations, over the same availability rule and the same report as its parent.
+ *
+ * Its own class only because `PlayerTransport` reached detekt's 16-function class limit; the
+ * grouping is at least honest — these three are the operations that change what is queued rather
+ * than what is playing.
+ */
+class QueueTransport(
+    private val controller: () -> MediaController?,
+    private val onUnavailable: () -> Unit = {},
+) {
+
+    fun skipToQueueItem(index: Int): Boolean = controller().dispatch(onUnavailable) {
         if (index in 0 until it.mediaItemCount) {
             it.seekTo(index, 0L)
             it.play()
         }
     }
 
-    fun removeFromQueue(index: Int): Boolean = withController {
+    fun removeFromQueue(index: Int): Boolean = controller().dispatch(onUnavailable) {
         if (index in 0 until it.mediaItemCount && index != it.currentMediaItemIndex) {
             it.removeMediaItem(index)
         }
     }
 
     /** Empties the queue around the current item, which stays. */
-    fun clearQueue(): Boolean = withController {
+    fun clearQueue(): Boolean = controller().dispatch(onUnavailable) {
         val currentIndex = it.currentMediaItemIndex
         val count = it.mediaItemCount
         if (count > 1) {
@@ -93,16 +150,26 @@ class PlayerTransport(private val controller: () -> MediaController?) {
             if (currentIndex > 0) it.removeMediaItems(0, currentIndex)
         }
     }
+}
 
-    /** Stops playback and empties the queue — mobile's dismiss. */
-    fun stopAndClear(): Boolean = withController {
-        it.stop()
-        it.clearMediaItems()
-    }
+private fun MediaController?.connectedOrNull(): MediaController? = this?.takeIf { it.isConnected }
 
-    private inline fun withController(action: (MediaController) -> Unit): Boolean {
-        val mc = controller() ?: return false
-        action(mc)
-        return true
+/**
+ * Runs [action] against this controller if it is connected; otherwise reports and does nothing.
+ *
+ * File-level for the same reason as [connectedOrNull] — the class is at the function ceiling. The
+ * next operation added to `PlayerTransport` will not fit, and that is the moment to split the queue
+ * operations out rather than to suppress the rule.
+ */
+private inline fun MediaController?.dispatch(
+    onUnavailable: () -> Unit,
+    action: (MediaController) -> Unit,
+): Boolean {
+    val mc = connectedOrNull()
+    if (mc == null) {
+        onUnavailable()
+        return false
     }
+    action(mc)
+    return true
 }

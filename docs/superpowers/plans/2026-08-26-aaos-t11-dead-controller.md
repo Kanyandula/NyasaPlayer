@@ -139,6 +139,23 @@ not only this one.
 *Preserve:* the existing routing rule; do not start showing non-playback errors in the expanded
 player's inline banner, which would change semantics for errors beyond T11.
 
+## Implementation notes, from doing it
+
+Three things the plan did not predict:
+
+1. **`PlayerTransport` blew the class threshold twice.** It was at 14 functions; `setQueue`,
+   `shufflePlay` and the availability predicate took it to 17, and detekt's `thresholdInClasses: 16`
+   is **inclusive** — 16 fails too. The predicate and the dispatch helper moved to file level, and
+   the three queue mutations moved into a `QueueTransport` reached as `transport.queue`. That is the
+   split this plan named as the response to the ceiling, arriving one ticket earlier than expected.
+2. **The trailing-lambda trap.** `PlayerTransport` now takes `(controller, onUnavailable)`, so
+   `PlayerTransport { null }` binds the lambda to *the callback*, not the controller — silently
+   giving a transport with no controller supplier. Every construction site now names its arguments,
+   and the test file says why.
+3. **`NyasaPlayerApp` hit `LongMethod`** at 61 lines once the snackbar host moved into the `Box`.
+   The call is a single line and the explanation lives on `AppSnackbarHost`'s KDoc, which is a better
+   home for it anyway.
+
 ## Transport Contract
 
 `PlayerTransport` operations return `Boolean`:

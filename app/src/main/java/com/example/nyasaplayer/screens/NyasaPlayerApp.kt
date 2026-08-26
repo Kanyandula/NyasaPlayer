@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -55,7 +56,6 @@ fun NyasaPlayerApp(
 
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
-            snackbarHost = { AppSnackbarHost(snackbarHostState) },
             bottomBar = {
                 NyasaBottomNavBar(
                     navController = navController,
@@ -95,9 +95,18 @@ fun NyasaPlayerApp(
             onClearError = playerViewModel::clearError,
             bottomOffset = navBarHeight,
         )
+
+        AppSnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter).padding(bottom = navBarHeight))
     }
 }
 
+/**
+ * Hosted above `GlobalPlayerLayer` rather than inside the `Scaffold`.
+ *
+ * The expanded player fills the screen and is drawn after the `Scaffold`, so a snackbar hosted there
+ * renders behind it — including the "could not connect to playback service" message, which is
+ * needed exactly when the user is tapping controls that do nothing (T11).
+ */
 @Composable
 private fun AppSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {
     SnackbarHost(hostState = hostState, modifier = modifier) { data ->

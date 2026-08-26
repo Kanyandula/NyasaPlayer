@@ -15,8 +15,6 @@ import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
-import com.example.nyasaplayer.core.playback.sendSetQueue
-import com.example.nyasaplayer.core.playback.sendShufflePlay
 import com.example.nyasaplayer.core.playback.toSong
 import com.example.nyasaplayer.download.SongDownloadManager
 import com.google.common.util.concurrent.ListenableFuture
@@ -116,6 +114,27 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         }
+
+        override fun onPlayerUnavailable() = reportPlayerUnavailable()
+    }
+
+    /**
+     * Says that the player is gone, once, in the words the connection failure already uses.
+     *
+     * Only when nothing else is showing: the snackbar clears the error after displaying it, so
+     * raising it per tap would re-trigger a message the user is already reading.
+     */
+    private fun reportPlayerUnavailable() {
+        if (_uiState.value.error != null) return
+        _uiState.update {
+            it.copy(
+                error = PlayerError(
+                    title = "Player Error",
+                    message = "Could not connect to playback service",
+                    isPlaybackError = false,
+                ),
+            )
+        }
     }
 
     init {
@@ -169,7 +188,8 @@ class PlayerViewModel @Inject constructor(
         val resolvedSongs = songs.map { resolveSongUri(it) }
         val resolvedSong = resolveSongUri(song)
         val startIndex = resolvedSongs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
-        stateCollector.controller?.sendSetQueue(resolvedSongs, startIndex)
+        // Nothing is painted as playing unless the command reached a connected player (T11).
+        if (!stateCollector.transport.setQueue(resolvedSongs, startIndex)) return
         _uiState.update {
             it.copy(
                 playerMode = PlayerMode.Expanded,
@@ -197,7 +217,7 @@ class PlayerViewModel @Inject constructor(
             showOfflineError(songs.first())
             return
         }
-        stateCollector.controller?.sendShufflePlay(resolvedSongs)
+        if (!stateCollector.transport.shufflePlay(resolvedSongs)) return
         _uiState.update {
             it.copy(
                 playerMode = PlayerMode.Expanded,
@@ -230,7 +250,11 @@ class PlayerViewModel @Inject constructor(
         val transport = stateCollector.transport
         // Reads the live player, as this did before the transport existed: the snapshot's
         // isPlaying lags a listener callback behind it.
-        val isPlaying = transport.isPlaying() ?: return
+        val isPlaying = transport.isPlaying() ?: run {
+            // The query is deliberately silent, so this is the one path that must speak for itself.
+            reportPlayerUnavailable()
+            return
+        }
         if (isPlaying) {
             transport.pause()
             return
