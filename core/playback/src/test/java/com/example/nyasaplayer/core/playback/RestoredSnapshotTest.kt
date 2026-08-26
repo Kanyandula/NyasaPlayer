@@ -1,34 +1,50 @@
 package com.example.nyasaplayer.core.playback
 
-import androidx.media3.session.MediaController
+import android.os.Looper
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.SimpleBasePlayer
+import androidx.media3.session.MediaSession
+import androidx.test.core.app.ApplicationProvider
 import com.example.nyasaplayer.core.common.models.Song
+import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 /**
  * What a restored session looks like, asserted without a `MediaController`.
  *
- * The collector never touches its controller future until `connectController()`, so a future that
- * never completes is enough to construct one — which is what makes [BasePlayerStateCollector
- * .applyRestored] the first piece of restore code in this project a unit test can reach.
+ * The collector never asks its [ControllerConnection] for anything until `connectController()`, which
+ * this never calls — so no controller is ever built, and every assertion below is about the snapshot
+ * alone. Robolectric is here only because a `ControllerConnection` needs a `Context` and a
+ * `SessionToken` to exist (T14); before that it took a future and needed neither.
  */
+@RunWith(RobolectricTestRunner::class)
 class RestoredSnapshotTest {
 
+    private lateinit var session: MediaSession
     private lateinit var collector: BasePlayerStateCollector
 
     @Before
     fun setUp() {
-        val neverConnects: ListenableFuture<MediaController> = SettableFuture.create()
-        collector = object : BasePlayerStateCollector(neverConnects, TestScope()) {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        session = MediaSession.Builder(context, UnusedPlayer()).setId("restored").build()
+        val connection = ControllerConnection(context, session.token)
+        collector = object : BasePlayerStateCollector(connection, TestScope()) {
             override val positionPollIntervalMs: Long = 1_000L
         }
     }
+
+    @After
+    fun tearDown() = session.release()
 
     private fun song(id: String, durationMs: Long = 0L) =
         Song(mediaId = id, title = id.uppercase(), durationMs = durationMs)
@@ -117,4 +133,16 @@ class RestoredSnapshotTest {
         assertFalse(snapshot.hasPrevious)
         assertFalse(snapshot.hasNext)
     }
+}
+
+/** Never used: `connectController()` is never called, so nothing connects to this session. */
+private class UnusedPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
+    override fun getState(): State =
+        State.Builder()
+            .setAvailableCommands(Player.Commands.Builder().addAllCommands().build())
+            .setPlaylist(listOf(MediaItemData.Builder("a").setMediaItem(MediaItem.EMPTY).build()))
+            .build()
+
+    override fun handlePrepare(): ListenableFuture<*> = Futures.immediateVoidFuture()
+    override fun handleRelease(): ListenableFuture<*> = Futures.immediateVoidFuture()
 }

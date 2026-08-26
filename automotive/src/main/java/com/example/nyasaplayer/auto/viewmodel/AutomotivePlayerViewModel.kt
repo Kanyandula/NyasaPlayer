@@ -12,10 +12,10 @@ import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
+import com.example.nyasaplayer.core.playback.ControllerConnection
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
-import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,7 +37,7 @@ private const val TAG = "AutoPlayerVM"
 @HiltViewModel
 @Suppress("TooManyFunctions")
 class AutomotivePlayerViewModel @Inject constructor(
-    controllerFuture: ListenableFuture<MediaController>,
+    connection: ControllerConnection,
     private val uxHandler: CarUxRestrictionsHandler,
     private val persistence: PlaybackStatePersistence,
     private val userRepository: UserRepository,
@@ -52,7 +52,7 @@ class AutomotivePlayerViewModel @Inject constructor(
     private var likeObserverJob: Job? = null
 
     private val stateCollector = object : BasePlayerStateCollector(
-        mediaControllerFuture = controllerFuture,
+        connection = connection,
         collectorScope = viewModelScope,
     ) {
         override val positionPollIntervalMs: Long = AutoPositionPollIntervalMs
@@ -101,8 +101,11 @@ class AutomotivePlayerViewModel @Inject constructor(
         }
 
         /**
-         * A command found no connected player. `CarErrorOverlay` renders this above everything and
-         * blocks the controls underneath, so repeated taps cannot stack it.
+         * A command found no connected player **and rebuilding the connection failed** (T14). A
+         * controller that can be replaced is replaced silently; this is the last resort.
+         *
+         * `CarErrorOverlay` renders it above everything and blocks the controls underneath, so
+         * repeated taps cannot stack it.
          */
         override fun onPlayerUnavailable() {
             _uiState.update {

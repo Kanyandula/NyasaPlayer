@@ -712,6 +712,37 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   static state leaves the index frozen and `hasPreviousMediaItem()` permanently false. The fake
   tracks its own index and calls `invalidateState()`; a test that skips forward and back will
   otherwise fail for a reason that has nothing to do with the code under test.
+- **D65 — One connection, reference-counted, rebuildable: `ControllerConnection` owns it.** The app
+  used to destroy its own playback. `PlaybackModule` provided a single `@Singleton`
+  `ListenableFuture<MediaController>`, and `releaseController()` released *that* future from either
+  ViewModel's `onCleared()`. `SharedControllerFutureTest` shows what followed: the future is
+  idempotent and release is terminal, so the next ViewModel injected the same instance with
+  `isConnected == false` and every command failed for the rest of the process's life. Backing out of
+  the app and returning was enough — nothing had to crash, and no service had to die. It is the most
+  likely explanation for the 2026-08-26 report that T11 could only leave open.
+
+  So the future is gone from the module. `ControllerConnection` builds it, hands it out through
+  `acquire()`, and releases it only when the last `release()` arrives — a ViewModel saying "I am
+  done" no longer speaks for the process. `reconnect()` exists because a released future cannot be
+  revived, only replaced.
+
+  **Reference counting was chosen over never releasing at all.** The simpler option — let the
+  process own the controller for its lifetime — was rejected because a `MediaController` holds a
+  binding to `PlaybackService`, so never releasing means the service can never stop, including its
+  own `onTaskRemoved` → `stopSelf()` path.
+
+  **A lost controller is rebuilt before the user is told.** `BasePlayerStateCollector.onControllerLost()`
+  runs one reconnect behind an `AtomicBoolean`, and `onPlayerUnavailable()` (D63) now fires only when
+  that rebuild fails. The command that found the controller dead is deliberately **not** replayed: a
+  skip that lands two seconds late is worse than one that visibly did nothing, and replaying a queue
+  mutation against a freshly-connected session is a correctness question this does not open. The next
+  tap works.
+
+  Two details for whoever touches it. The position poller is not restarted on reconnect — the
+  original loop reads `controller` each tick and picks the new one up, so a second would double it.
+  And a *query* cannot trigger a rebuild: mobile's `togglePlayPause` opens with `isPlaying()`, so on
+  a null answer it asks for the toggle and lets that fail, or the play button would be the one
+  control on either surface that gives up instead of recovering.
 
 ## Components
 

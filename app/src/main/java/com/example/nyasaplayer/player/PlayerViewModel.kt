@@ -11,13 +11,13 @@ import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
+import com.example.nyasaplayer.core.playback.ControllerConnection
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
 import com.example.nyasaplayer.core.playback.toSong
 import com.example.nyasaplayer.download.SongDownloadManager
-import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
@@ -38,7 +38,7 @@ private const val MobilePositionPollIntervalMs = 250L
 @HiltViewModel
 @Suppress("TooManyFunctions")
 class PlayerViewModel @Inject constructor(
-    private val controllerFuture: ListenableFuture<MediaController>,
+    private val connection: ControllerConnection,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
     private val persistence: PlaybackStatePersistence,
@@ -68,7 +68,7 @@ class PlayerViewModel @Inject constructor(
     private val isOnline: Boolean get() = networkMonitor.isOnline.value
 
     private val stateCollector = object : BasePlayerStateCollector(
-        mediaControllerFuture = controllerFuture,
+        connection = connection,
         collectorScope = viewModelScope,
     ) {
         override val positionPollIntervalMs: Long = MobilePositionPollIntervalMs
@@ -120,6 +120,9 @@ class PlayerViewModel @Inject constructor(
 
     /**
      * Says that the player is gone, once, in the words the connection failure already uses.
+     *
+     * Reached only after a rebuild has been attempted and failed (T14) — a controller that can be
+     * replaced is replaced silently, and the user never learns it happened.
      *
      * Only when nothing else is showing: the snackbar clears the error after displaying it, so
      * raising it per tap would re-trigger a message the user is already reading.
@@ -251,8 +254,10 @@ class PlayerViewModel @Inject constructor(
         // Reads the live player, as this did before the transport existed: the snapshot's
         // isPlaying lags a listener callback behind it.
         val isPlaying = transport.isPlaying() ?: run {
-            // The query is deliberately silent, so this is the one path that must speak for itself.
-            reportPlayerUnavailable()
+            // The query is silent by design and cannot trigger a rebuild, so ask for the toggle and
+            // let it fail: that routes through the same reconnect every other control gets, and the
+            // user hears about it only if the rebuild fails too (T14).
+            transport.togglePlayPause()
             return
         }
         if (isPlaying) {

@@ -3,10 +3,8 @@ package com.example.nyasaplayer.core.playback.di
 import android.content.ComponentName
 import android.content.Context
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.example.nyasaplayer.core.playback.PlaybackService
-import com.google.common.util.concurrent.ListenableFuture
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,12 +21,4 @@ object PlaybackModule {
     @Singleton
     fun provideSessionToken(@ApplicationContext context: Context): SessionToken =
         SessionToken(context, ComponentName(context, PlaybackService::class.java))
-
-    @Provides
-    @Singleton
-    fun provideMediaControllerFuture(
-        @ApplicationContext context: Context,
-        sessionToken: SessionToken,
-    ): ListenableFuture<MediaController> =
-        MediaController.Builder(context, sessionToken).buildAsync()
 }

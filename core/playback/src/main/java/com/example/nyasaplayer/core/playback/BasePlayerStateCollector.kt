@@ -20,10 +20,11 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 
 abstract class BasePlayerStateCollector(
-    private val mediaControllerFuture: ListenableFuture<MediaController>,
+    private val connection: ControllerConnection,
     private val collectorScope: CoroutineScope,
 ) {
     private val _playbackState = MutableStateFlow(PlaybackSnapshot())
@@ -34,7 +35,9 @@ abstract class BasePlayerStateCollector(
         private set
 
     /** Every transport action, over whatever controller exists at the moment it is called. */
-    val transport: PlayerTransport = PlayerTransport({ controller }, { onPlayerUnavailable() })
+    val transport: PlayerTransport = PlayerTransport({ controller }, { onControllerLost() })
+
+    private val reconnecting = AtomicBoolean(false)
 
     protected abstract val positionPollIntervalMs: Long
 
@@ -53,14 +56,11 @@ abstract class BasePlayerStateCollector(
     protected open fun onPlayerUnavailable() {}
 
     fun connectController() {
+        val mediaControllerFuture = connection.acquire()
         mediaControllerFuture.addListener(
             {
                 try {
-                    val mc = mediaControllerFuture.get()
-                    controller = mc
-                    mc.addListener(controllerListener)
-                    startPositionPolling()
-                    onControllerConnected(mc)
+                    attach(mediaControllerFuture.get(), startPolling = true)
                 } catch (_: ExecutionException) {
                     onControllerConnectionFailed()
                 } catch (_: java.util.concurrent.CancellationException) {
@@ -71,8 +71,55 @@ abstract class BasePlayerStateCollector(
         )
     }
 
+    /**
+     * A command found no usable controller: build a new connection before giving up on it.
+     *
+     * The command that triggered this is **not** replayed. A skip that happens two seconds late is
+     * worse than one that visibly did nothing, and replaying a queue mutation against a
+     * freshly-connected session is a correctness question this does not need to open. The user taps
+     * again, against a player that now answers.
+     *
+     * Only one attempt runs at a time: repeated taps on a dead player must not start a queue of
+     * connections. While an attempt is in flight, later failures are silent — the first one already
+     * decided what happens.
+     */
+    private fun onControllerLost() {
+        if (!reconnecting.compareAndSet(false, true)) return
+        val fresh = connection.reconnect()
+        fresh.addListener(
+            {
+                try {
+                    // The poller from the first connection is still running and reads `controller`
+                    // each tick, so it picks the new one up; starting another would double it.
+                    attach(fresh.get(), startPolling = false)
+                } catch (_: ExecutionException) {
+                    onPlayerUnavailable()
+                } catch (_: java.util.concurrent.CancellationException) {
+                    onPlayerUnavailable()
+                } finally {
+                    reconnecting.set(false)
+                }
+            },
+            MoreExecutors.directExecutor(),
+        )
+    }
+
+    private fun attach(mc: MediaController, startPolling: Boolean) {
+        controller = mc
+        mc.addListener(controllerListener)
+        if (startPolling) startPositionPolling()
+        onControllerConnected(mc)
+    }
+
+    /**
+     * This consumer is finished with playback.
+     *
+     * Not the same as ending the connection: [ControllerConnection] releases the controller only
+     * when the last consumer has gone. Releasing it here directly is what left the next ViewModel
+     * holding a disconnected controller for the rest of the process's life (T14).
+     */
     fun releaseController() {
-        MediaController.releaseFuture(mediaControllerFuture)
+        connection.release()
     }
 
     // ── Controller Listener ──
@@ -188,9 +235,6 @@ abstract class BasePlayerStateCollector(
         }
     }
 
-    private fun readQueue(mc: MediaController): List<Song> =
-        (0 until mc.mediaItemCount).map { mc.getMediaItemAt(it).toSong() }
-
     // ── Restore ──
 
     /**
@@ -217,32 +261,6 @@ abstract class BasePlayerStateCollector(
         applyRestored(restored)
         return restored
     }
-
-    /**
-     * Awaits a session command's result code, mapping every failure to [SessionError.ERROR_UNKNOWN].
-     *
-     * Deliberately value-returning rather than throwing: a command that fails is a restore that
-     * does not happen, and turning it into an exception would put a crash path where the callers
-     * have always had a silent no-op. Cancellation still propagates, through the coroutine.
-     */
-    private suspend fun ListenableFuture<SessionResult>.awaitResultCode(): Int =
-        suspendCancellableCoroutine { continuation ->
-            addListener(
-                {
-                    // The listener runs only once the future is done, so this does not block.
-                    val code = try {
-                        get().resultCode
-                    } catch (_: ExecutionException) {
-                        SessionError.ERROR_UNKNOWN
-                    } catch (_: java.util.concurrent.CancellationException) {
-                        SessionError.ERROR_UNKNOWN
-                    }
-                    if (continuation.isActive) continuation.resume(code)
-                },
-                MoreExecutors.directExecutor(),
-            )
-            continuation.invokeOnCancellation { cancel(false) }
-        }
 
     /**
      * Publishes a session the service has just restored, paused and seeked but not playing.
@@ -278,6 +296,39 @@ abstract class BasePlayerStateCollector(
         _playbackState.update(transform)
     }
 }
+
+/** The queue as songs, in player order. */
+private fun readQueue(mc: MediaController): List<Song> =
+    (0 until mc.mediaItemCount).map { mc.getMediaItemAt(it).toSong() }
+
+/**
+ * Awaits a session command's result code, mapping every failure to [SessionError.ERROR_UNKNOWN].
+ *
+ * Deliberately value-returning rather than throwing: a command that fails is a restore that does not
+ * happen, and turning it into an exception would put a crash path where the callers have always had
+ * a silent no-op. Cancellation still propagates, through the coroutine.
+ *
+ * File-level because `BasePlayerStateCollector` sits on detekt's 16-function class ceiling, and this
+ * touches nothing of its state.
+ */
+private suspend fun ListenableFuture<SessionResult>.awaitResultCode(): Int =
+    suspendCancellableCoroutine { continuation ->
+        addListener(
+            {
+                // The listener runs only once the future is done, so this does not block.
+                val code = try {
+                    get().resultCode
+                } catch (_: ExecutionException) {
+                    SessionError.ERROR_UNKNOWN
+                } catch (_: java.util.concurrent.CancellationException) {
+                    SessionError.ERROR_UNKNOWN
+                }
+                if (continuation.isActive) continuation.resume(code)
+            },
+            MoreExecutors.directExecutor(),
+        )
+        continuation.invokeOnCancellation { cancel(false) }
+    }
 
 fun Int.toAppRepeatMode(): RepeatMode = when (this) {
     Player.REPEAT_MODE_ALL -> RepeatMode.All
