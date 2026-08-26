@@ -140,6 +140,12 @@ clean, both automotive flavors and `:app:assembleDebug`.
 
 ## Not verified
 
+**Update, T17:** the `isConnected == false` branch **is** covered now, by
+`ConnectedTransportTest.releasedController_isNotConnected_andEveryCommandRefuses` — a real
+`MediaController` released against a real `MediaSession` under Robolectric (D64). So is the D62
+refusal rule this ticket could not test. What follows was true when T11 shipped and is kept for the
+record.
+
 **The `isConnected == false` branch, on a device.** It is not unit-testable here — `MediaController`
 is `@DoNotMock` with a package-private constructor — and neither obvious kill reproduces it: the
 service shares the app process, so `am force-stop` takes the Activity with it, and `am stopservice`

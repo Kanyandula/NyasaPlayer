@@ -688,6 +688,30 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   What this does **not** do is reconnect anything. The controller future is a `@Singleton` built once
   in `PlaybackModule`, so a dead controller stays dead for the process; T11 tells the user, and
   recovery is a separate ticket.
+- **D64 — The connected half of playback is testable on the JVM: a real `MediaSession` over a fake
+  player, under Robolectric.** `MediaController` is `@DoNotMock` with a package-private constructor,
+  so for four tickets every claim about a *live* controller went to a device — T3's restore command,
+  T13's transport, T11's disconnected branch. Each wrote the same paragraph explaining why half its
+  table was manual.
+
+  It was never necessary. `MediaSession.Builder(context, SimpleBasePlayer).build()`, a real
+  `MediaController` connected to its token, and `shadowOf(Looper.getMainLooper()).idle()` to pump the
+  connection is the whole harness — `ConnectedTransportTest`. **No production code changed**: T17
+  considered a seam over `MediaController` and did not need one, which is the outcome worth
+  remembering, because the seam would have been a permanent abstraction bought for a test.
+
+  It covers both kinds of operation: Media3's own commands, asserted through the fake player's
+  handlers, and the app's custom commands, asserted through a recording `MediaSession.Callback` —
+  including `sendRestoreState`'s bundle, which T3 could only watch land on a device.
+
+  It also reaches the two conditions that had no coverage at all: a **released** controller, where
+  `isConnected` is false and every command must refuse and report (T11), and a **connected** one
+  whose guard declines, where the command must stay silent (D62).
+
+  One trap for whoever extends it: `SimpleBasePlayer` renders whatever `getState()` builds, so a
+  static state leaves the index frozen and `hasPreviousMediaItem()` permanently false. The fake
+  tracks its own index and calls `invalidateState()`; a test that skips forward and back will
+  otherwise fail for a reason that has nothing to do with the code under test.
 
 ## Components
 
