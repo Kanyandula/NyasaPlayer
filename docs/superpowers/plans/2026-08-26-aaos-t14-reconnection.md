@@ -129,7 +129,18 @@ today.
 visibly did nothing, and replaying a queue-mutating command against a freshly connected session is a
 correctness question this ticket should not open.
 
-*Guard:* one attempt in flight; further failures report immediately rather than queueing attempts.
+*Guard:* one attempt in flight; further failures while it runs are silent, because the first one
+already decided what happens.
+
+**Done.** `onControllerLost()` on the collector, behind an `AtomicBoolean`. Four tests over T17's
+harness: a command against a lost controller rebuilds the connection and the *next* command works; a
+successful reconnect tells the surface nothing; three taps during one attempt produce one attempt;
+and a reconnect with no session to reach reports exactly once.
+
+Two implementation notes. The position poller is **not** restarted on reconnect — the original loop
+reads `controller` each tick and picks up the new one, so starting another would double it. And
+`BasePlayerStateCollector` hit the same 16-function ceiling `PlayerTransport` did; `readQueue` and
+`awaitResultCode` moved to file level, both touching no class state.
 
 ### Step 5 — Both ViewModels
 
