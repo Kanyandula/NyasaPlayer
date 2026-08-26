@@ -33,6 +33,9 @@ abstract class BasePlayerStateCollector(
     var controller: MediaController? = null
         private set
 
+    /** Every transport action, over whatever controller exists at the moment it is called. */
+    val transport: PlayerTransport = PlayerTransport { controller }
+
     protected abstract val positionPollIntervalMs: Long
 
     protected open fun onControllerConnected(controller: MediaController) {}

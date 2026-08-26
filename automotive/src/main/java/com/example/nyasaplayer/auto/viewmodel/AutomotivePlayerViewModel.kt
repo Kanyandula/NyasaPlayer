@@ -1,25 +1,22 @@
 package com.example.nyasaplayer.auto.viewmodel
 
-import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
-import androidx.media3.session.SessionCommand
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
-import com.example.nyasaplayer.core.playback.PlaybackCommands
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
-import com.example.nyasaplayer.core.playback.toBundle
+import com.example.nyasaplayer.core.playback.sendSetQueue
+import com.example.nyasaplayer.core.playback.sendShufflePlay
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -156,53 +153,36 @@ class AutomotivePlayerViewModel @Inject constructor(
     // ── Playback Controls ──
 
     fun togglePlayPause() {
-        val controller = stateCollector.controller ?: return
-        if (controller.isPlaying) controller.pause() else controller.play()
+        stateCollector.transport.togglePlayPause()
     }
 
     fun skipNext() {
-        val controller = stateCollector.controller ?: return
-        if (controller.hasNextMediaItem()) {
-            controller.seekToNextMediaItem()
-        } else if (controller.repeatMode == Player.REPEAT_MODE_ALL && controller.mediaItemCount > 0) {
-            controller.seekTo(0, 0L)
-        }
+        stateCollector.transport.skipNext()
     }
 
     fun skipPrevious() {
-        val controller = stateCollector.controller ?: return
-        if (controller.hasPreviousMediaItem()) {
-            controller.seekToPreviousMediaItem()
-        }
+        stateCollector.transport.skipPrevious()
     }
 
     fun seekTo(positionMs: Long) {
-        stateCollector.controller?.seekTo(positionMs)
+        stateCollector.transport.seekTo(positionMs)
     }
 
     fun toggleRepeatMode() {
-        val controller = stateCollector.controller ?: return
-        controller.repeatMode = when (controller.repeatMode) {
-            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-            else -> Player.REPEAT_MODE_OFF
-        }
+        stateCollector.transport.toggleRepeatMode()
     }
 
     fun toggleShuffle() {
-        val controller = stateCollector.controller ?: return
-        stateCollector.updateSnapshot { it.copy(isShuffled = !it.isShuffled) }
-        controller.sendCustomCommand(
-            SessionCommand(PlaybackCommands.CMD_TOGGLE_SHUFFLE, Bundle.EMPTY),
-            Bundle.EMPTY,
-        )
+        if (stateCollector.transport.toggleShuffle()) {
+            stateCollector.updateSnapshot { it.copy(isShuffled = !it.isShuffled) }
+        }
     }
 
     // ── Play Actions ──
 
     fun playSong(songs: List<Song>, song: Song) {
         val startIndex = songs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
-        sendSetQueueCommand(songs, startIndex)
+        stateCollector.controller?.sendSetQueue(songs, startIndex)
         stateCollector.updateSnapshot {
             it.copy(
                 currentSong = song,
@@ -214,7 +194,7 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     fun shufflePlay(songs: List<Song>) {
         if (songs.isEmpty()) return
-        sendShufflePlayCommand(songs)
+        stateCollector.controller?.sendShufflePlay(songs)
         stateCollector.updateSnapshot {
             it.copy(
                 currentSong = songs.first(),
@@ -224,58 +204,18 @@ class AutomotivePlayerViewModel @Inject constructor(
         }
     }
 
-    private fun sendSetQueueCommand(songs: List<Song>, startIndex: Int) {
-        val controller = stateCollector.controller ?: return
-        val args = Bundle().apply {
-            putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
-            putInt(PlaybackCommands.KEY_START_INDEX, startIndex)
-        }
-        controller.sendCustomCommand(
-            SessionCommand(PlaybackCommands.CMD_SET_QUEUE, Bundle.EMPTY),
-            args,
-        )
-    }
-
-    private fun sendShufflePlayCommand(songs: List<Song>) {
-        val controller = stateCollector.controller ?: return
-        val args = Bundle().apply {
-            putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
-        }
-        controller.sendCustomCommand(
-            SessionCommand(PlaybackCommands.CMD_SHUFFLE_PLAY, Bundle.EMPTY),
-            args,
-        )
-    }
-
     // ── Queue Management ──
 
     fun skipToQueueItem(index: Int) {
-        val controller = stateCollector.controller ?: return
-        if (index in 0 until controller.mediaItemCount) {
-            controller.seekTo(index, 0L)
-            controller.play()
-        }
+        stateCollector.transport.skipToQueueItem(index)
     }
 
     fun removeFromQueue(index: Int) {
-        val controller = stateCollector.controller ?: return
-        if (index in 0 until controller.mediaItemCount && index != controller.currentMediaItemIndex) {
-            controller.removeMediaItem(index)
-        }
+        stateCollector.transport.removeFromQueue(index)
     }
 
     fun clearQueue() {
-        val controller = stateCollector.controller ?: return
-        val currentIndex = controller.currentMediaItemIndex
-        val count = controller.mediaItemCount
-        if (count <= 1) return
-        // Remove tail first so currentIndex stays valid, then head.
-        if (currentIndex < count - 1) {
-            controller.removeMediaItems(currentIndex + 1, count)
-        }
-        if (currentIndex > 0) {
-            controller.removeMediaItems(0, currentIndex)
-        }
+        stateCollector.transport.clearQueue()
     }
 
     // ── Like / Unlike ──

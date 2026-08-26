@@ -632,6 +632,31 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
 
   Mobile gained one thing it never had: a restored session shows the track's real duration instead
   of `0:00`, because the shared write sets a field mobile's own restore omitted.
+- **D62 — Transport lives in `PlayerTransport`, and its `Boolean` means "reached the controller".**
+  T13 finished what D61 started. Thirteen transport methods across the two ViewModels each opened
+  with `stateCollector.controller ?: return` and then talked to `MediaController` directly; they now
+  call one class that holds a `() -> MediaController?` supplier. After T12 moved the last two command
+  senders as well, neither ViewModel names `Bundle`, `Player`, `SessionCommand` or `PlaybackCommands`
+  at all — no Media3 command primitive appears above `:core:playback`.
+
+  It is a class rather than more methods on the collector because the collector has ten functions
+  against detekt's `thresholdInClasses: 16`, and this project does not answer a threshold with a
+  suppression (D23). The constraint produced the better shape: a transport is constructible in a
+  unit test from `{ null }`, with no collector, no `MediaController` and no Robolectric — which is
+  how the null-controller branch got its first automated coverage after being the cause of T11.
+
+  **The `Boolean` means the controller was reached, not that anything happened.**
+  `skipToQueueItem` still ignores an out-of-range index, `removeFromQueue` the current item,
+  `clearQueue` a queue of one, and `skipNext` the end of a non-repeating queue. Those guards moved
+  unchanged and stay silent: they are correct refusals, and wiring an error to them would put a
+  dialog in front of a driver who tapped remove on the track that is playing.
+
+  Per-surface differences were decided one at a time rather than merged: mobile keeps its offline and
+  download pre-flight before `play()`, its optimistic seek write, its own `isShuffled` flag, and the
+  state reset in `dismiss()`. `skipNext` was *not* one of them — an early draft claimed the surfaces
+  differed there and they do not, both wrapping on repeat-all identically. `togglePlayPause` needed
+  `isPlaying()` on the transport, returning `Boolean?`, because mobile decides from the live player
+  and the snapshot lags a listener callback behind it.
 
 ## Components
 

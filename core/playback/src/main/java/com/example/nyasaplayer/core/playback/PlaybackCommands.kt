@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
+import com.example.nyasaplayer.core.common.models.Song
 import com.google.common.util.concurrent.ListenableFuture
 
 object PlaybackCommands {
@@ -34,6 +35,38 @@ fun MediaController.sendRestoreState(restored: RestoredPlayback): ListenableFutu
     }
     return sendCustomCommand(
         SessionCommand(PlaybackCommands.CMD_RESTORE_STATE, Bundle.EMPTY),
+        args,
+    )
+}
+
+/**
+ * Replaces the queue and starts playing [songs] from [startIndex].
+ *
+ * Each surface decides separately what to show around this — mobile resolves downloaded songs to
+ * local URIs first and opens the expanded player, the car opens nothing — but the command itself
+ * is the same on both, which is why it is written once.
+ */
+fun MediaController.sendSetQueue(
+    songs: List<Song>,
+    startIndex: Int,
+): ListenableFuture<SessionResult> {
+    val args = Bundle().apply {
+        putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
+        putInt(PlaybackCommands.KEY_START_INDEX, startIndex)
+    }
+    return sendCustomCommand(
+        SessionCommand(PlaybackCommands.CMD_SET_QUEUE, Bundle.EMPTY),
+        args,
+    )
+}
+
+/** Replaces the queue with a shuffled [songs] and starts playing. */
+fun MediaController.sendShufflePlay(songs: List<Song>): ListenableFuture<SessionResult> {
+    val args = Bundle().apply {
+        putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
+    }
+    return sendCustomCommand(
+        SessionCommand(PlaybackCommands.CMD_SHUFFLE_PLAY, Bundle.EMPTY),
         args,
     )
 }
