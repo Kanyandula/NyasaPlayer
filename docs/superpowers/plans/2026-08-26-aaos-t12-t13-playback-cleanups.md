@@ -172,12 +172,20 @@ fall back to `false` failed `isPlaying_noController_isUnknownRatherThanFalse`.
 
 ## Task 4: Gate
 
-- [ ] Broader gate, `--rerun-tasks`.
-- [ ] No new detekt baseline entries and no new suppressions — which is why transport is its own
+- [x] Broader gate, `--rerun-tasks`.
+- [x] No new detekt baseline entries and no new suppressions — which is why transport is its own
       class (D-T13.2). Check `PlayerTransport` against `thresholdInClasses: 16`: ten operations fits,
       but only just.
-- [ ] Both ViewModels are already at class-level `TooManyFunctions`; this reduces their bodies, not
+- [x] Both ViewModels are already at class-level `TooManyFunctions`; this reduces their bodies, not
       their method count.
+
+**Result, 2026-08-26.** Gate re-run from scratch: `:core:playback` 55 tests (41 before T13),
+`:automotive` 171, `:core:data` 63 — 289 total, zero failures — plus detekt, `lintOemDebug` at zero
+errors, both automotive flavors and `:app:assembleDebug`.
+
+`detekt-baseline.xml` untouched and no `@Suppress` added anywhere in the diff. `PlayerTransport`
+carries fourteen functions against `thresholdInClasses: 16` — two spare, which is the headroom
+D-T13.2 predicted and the reason transport did not go on the collector.
 
 ## Task 5: Device pass, both surfaces
 
