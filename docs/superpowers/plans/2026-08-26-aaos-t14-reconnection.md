@@ -50,13 +50,28 @@ controller or throws. The first task settles it with a test rather than reasonin
 
 ## Proposed Implementation
 
-### Step 1 — Prove the failure mode, before changing anything
+### Step 1 — Prove the failure mode, before changing anything ✅ **done**
 
-Using T17's Robolectric harness: build a session, connect a controller, call
-`MediaController.releaseFuture(...)`, then ask a second consumer to use that same future. Assert what
-actually happens — a disconnected controller, or a throw.
+`SharedControllerFutureTest`, two tests, both passing:
 
-*Why first:* the whole ticket rests on it, and it converts the T11 open question into a fact.
+- **`releasingTheSharedFuture_leavesTheNextConsumerHoldingADeadController`** — the future hands the
+  *same* `MediaController` instance to the next caller, and after `MediaController.releaseFuture(...)`
+  that instance reports `isConnected == false`. It does not throw, and it does not rebuild.
+- **`aDeadControllerRefusesEveryCommandAndReports`** — in that state every transport command refuses
+  and raises T11's report.
+
+**So the hypothesis is now a fact.** One ViewModel reaching `onCleared()` poisons the controller for
+the whole process, and the next ViewModel injects the corpse. Nothing has to crash, no service has to
+die, and the user does nothing unusual: back out of the app while the process lives, come back, press
+play.
+
+That also makes it the most likely mechanism behind the 2026-08-26 report — a drawn player with a
+dead controller — which T11 recorded as an open question between "null" and "stale". It is a third
+answer, and the only one that needs no crash to explain the symptom.
+
+Two facts for the implementation: the future is **idempotent** (same instance every `get()`), and
+release is **terminal** for it. So recovery cannot mean "ask the future again"; it means building a
+new one, which is exactly what Step 2 has to make possible.
 
 ### Step 2 — `:core:playback`: an owner for the connection
 

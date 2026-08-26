@@ -10,6 +10,17 @@
 
 ## Problem
 
+**Update, 2026-08-26 — proved before implementation.** The ticket below describes a controller dying
+and no way back. The sharper problem is that **the app kills its own controller in the ordinary
+course of events**: `releaseController()` releases a `@Singleton` future, both ViewModels call it from
+`onCleared()`, and `SharedControllerFutureTest` shows the future then hands the same, disconnected
+instance to the next consumer. Back out of the app with the process alive, return, press play —
+nothing happens, and T11 reports a failure the app inflicted on itself.
+
+That is very likely the mechanism behind the 2026-08-26 bug report, which T11 left open between a
+null controller and a stale one. This is a third answer and the only one requiring nothing to crash.
+
+
 `PlaybackModule.provideMediaControllerFuture` builds **one** `@Singleton`
 `ListenableFuture<MediaController>` for the whole process. `BasePlayerStateCollector.connectController()`
 attaches a listener to that future and nothing ever asks for another one.
