@@ -187,6 +187,14 @@ file, `ControllerConnection`; nothing else in the codebase holds a controller fu
 - Capture `dumpsys media_session` and the app pid at each step; the pid must not change, or the test
   has proved nothing about reconnection.
 
+**Result: `docs/T14_VERIFICATION.md`.** The car ran clean as a regression check — restore, play,
+pause, next, and play again after backing out and returning, all in one process (pid 9119).
+
+**It could not reproduce the bug, though.** On this AAOS build backing out does not finish
+`AutomotiveActivity`, so `onCleared()` never runs; the pre-fix `main` build was run through the same
+gesture and played fine afterwards. The reproduction needs a surface where finishing the root
+activity is routine — mobile — and that pass is still owed.
+
 ## Out of Scope
 
 - Restore behaviour, which already treats a null controller as "do nothing".
