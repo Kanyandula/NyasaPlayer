@@ -47,6 +47,15 @@ val CarOutline = Color(0x1FFFFFFF)
 val CarDivider = Color(0x14FFFFFF)
 
 /**
+ * Destructive actions — sign out, and nothing else yet.
+ *
+ * The value `CarLibraryScreen` has shipped privately since A3, promoted here rather than copied when
+ * sign-out moved to Settings (A7). Always on its own 15% wash, which is the pairing already measured
+ * and shipped; it is not a new colour.
+ */
+val CarSignOutRed = Color(0xFFEF5350)
+
+/**
  * Ambient background tints. Never used as a fill on an interactive element.
  *
  * Unused until the ambient-motion work; screens currently draw NyasaBackground. Same for

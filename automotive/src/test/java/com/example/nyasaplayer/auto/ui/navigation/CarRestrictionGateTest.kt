@@ -56,6 +56,19 @@ class CarRestrictionGateTest {
         assertTrue(gate(at(sheet = CarSheet.Profile), driving) is GateResult.Denied)
     }
 
+    /**
+     * Idling is `DO: true` with only `NO_VIDEO` set — `UxR: 16`, not 255. A gate that read
+     * `isDistractionOptimized` alone would refuse Settings at a red light.
+     * See `docs/AAOS_DRIVING_STATE_TESTING.md`, "Idling is not moving".
+     */
+    @Test
+    fun idling_allowsSettingsAndProfile() {
+        val idling = UxRestrictionState(requiresDistractionOptimization = true)
+
+        assertEquals(GateResult.Allowed, gate(at(sheet = CarSheet.Settings), idling))
+        assertEquals(GateResult.Allowed, gate(at(sheet = CarSheet.Profile), idling))
+    }
+
     // --- driving denies text entry but not browsing search ---
 
     @Test

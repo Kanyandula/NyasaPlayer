@@ -285,6 +285,8 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
 - **D14 — Sign-out stays on `CarLibraryScreen`** with its confirmation overlay, marked for
   deletion in A7. It belongs on screen 14, but removing it in A3 leaves no way to sign out of the
   vehicle at all, since the system bar's avatar is disabled until A7 (A2 D3).
+  **Closed by D68:** A7 built screen 14, and the Library carries no account chrome now.
+  D18's playlist-artwork gap is unaffected; only the header changed.
 - **D18 — Library's playlist cards render the gold placeholder, not the first resolved track's
   artwork.** The spec defines playlist artwork as the first resolved track's `resolvedCoverUrl`
   (same derivation `deriveFavoriteArtists()` uses for artist avatars), and `CarPlaylistScreen`
@@ -743,6 +745,41 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   And a *query* cannot trigger a rebuild: mobile's `togglePlayPause` opens with `isPlaying()`, so on
   a null answer it asks for the toggle and lets that fail, or the play button would be the one
   control on either surface that gives up instead of recovering.
+
+- **D66 — A profile is a Firebase account, not one of the platform's car users.** The contract's
+  screen 20 says "switch profile" and AAOS has two candidate meanings. Switching the vehicle's user
+  through `CarUserManager` needs privileged permissions the app does not hold, and it is a
+  whole-vehicle change to hang off a media app's avatar; the platform already gives each car user
+  their own app data, so nothing is lost by staying at the app level. `AuthRepository` already
+  models exactly this. Recorded so it is not revisited in six months.
+
+- **D67 — The PIN opt-in (screen 2) is deferred, and A7 ships no PIN affordance at all.** Not a
+  disabled one. The contract says what the screen looks like; nothing says what the PIN protects.
+  Any answer carries a security decision — a salted hash in `EncryptedSharedPreferences` or the
+  keystore, plus a lockout policy — and a PIN that gates nothing is worse than no PIN. A disabled
+  control is a promise, and there is nothing behind this one. Filed as a ticket with the storage
+  question in its title.
+
+- **D68 — Sign-out lives in Settings, and its confirmation lives in the shell.** D14's condition
+  was "until A7 owns screen 14"; it does. The Library's header is now title and strapline only.
+  The confirmation modal moved out of `CarLibraryScreen` into `CarSignOutConfirmation` and is
+  rendered by `AutomotiveApp`, not by either sheet: two entry points offering sign-out is exactly
+  how one confirmation becomes two differently-worded ones, and hoisting it means the eviction that
+  clears a sheet when the vehicle starts moving clears the confirmation with it. Both sheets only
+  *request* sign-out.
+
+- **D69 — Settings and Profile are sheets, and neither carries a parked badge.** `CarSheet.Settings`
+  and `CarSheet.Profile` already existed and `gate()` already refused both by name under
+  `NO_SETUP`, so nav destinations would have meant a second gating path for one restriction. The
+  gate also makes both screens unreachable while driving, which is why neither renders a
+  "parked only" label: it would announce a condition the driver cannot be in while reading it.
+
+- **D70 — Settings ships only rows something reads.** Account, sign out, about. The contract also
+  lists an audio-quality preference; nothing in `PlaybackService` reads a quality setting, so the
+  row would persist a value no one observes — FR-2.6's problem in a different costume. It arrives
+  when a reader does. The same rule kept phone and email sign-in off `CarAuthScreen`: both need
+  text entry that `NO_KEYBOARD` refuses while driving, phone sign-in needs an SMS round trip on a
+  head unit that may have no SIM, and Google sign-in already works.
 
 ## Components
 
