@@ -187,9 +187,20 @@ typically far larger. Treat 15px as the floor to revisit, not as a target.
 | Secondary `#ACACBC` on cards `#181824` | 7.9:1 | AAA |
 | Secondary `#ACACBC` on chrome `#111118` | 8.4:1 | AAA |
 | Secondary `#ACACBC` on raised `#1E1E2A` | 7.4:1 | AAA |
+| Sign-out red `#EF5350` on its 15% wash over chrome | 4.6:1 | AA |
+| White on sign-out fill `#C62828` | 5.2:1 | AA |
+| Sign-out fill `#C62828` against card `#181824` (edge, non-text) | 3.4:1 | passes the 3:1 UI bar |
 | Disabled `#555568` on base | 2.7:1 | exempt — disabled text |
 
-Every non-disabled pair clears AAA on every surface it lands on.
+Every non-disabled pair clears AAA on every surface it lands on, **except the two destructive
+pairs**, which clear AA. Red is the constraint: a red dark enough for white text at AAA reads brown
+at automotive brightness, and a red light enough for AAA as text on a dark wash cannot carry white
+text at all. The two roles therefore take two tokens — `CarSignOutRed` for foreground,
+`CarSignOutRedSolid` for fills — because one value cannot serve both.
+
+The solid fill was `#EF5350` from A3 to A7, giving 3.5:1 white-on-red, which failed AA outright.
+Darkening the shared token would have fixed the fill and broken the row: red-on-wash drops to
+3.3:1 at `#C62828`. Do not collapse these two tokens back into one without re-measuring both pairs.
 
 The secondary token was `#A0A0B0` and gave only 6.8:1 on cards — AA, not AAA — which made the
 blanket "AAA" claim false. It is now `#ACACBC`. The binding surface is raised `#1E1E2A` at

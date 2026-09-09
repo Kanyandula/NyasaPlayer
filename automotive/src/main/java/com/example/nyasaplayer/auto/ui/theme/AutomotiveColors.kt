@@ -47,18 +47,29 @@ val CarOutline = Color(0x1FFFFFFF)
 val CarDivider = Color(0x14FFFFFF)
 
 /**
- * Destructive actions — sign out, and nothing else yet.
+ * Destructive actions as **foreground** — red text on its own 15% wash (`CarSignOutRow`).
  *
  * The value `CarLibraryScreen` has shipped privately since A3, promoted here rather than copied when
- * sign-out moved to Settings (A7). Not a new colour.
+ * sign-out moved to Settings (A7). Measures 4.59:1 against the washed chrome it lands on, which is
+ * AA, not AAA — see the design doc's contrast table.
  *
- * Two pairings, and only one of them is measured. On its own 15% wash (`CarSignOutRow`) it clears
- * the bar in the design doc's contrast table. As a **solid fill under white text** — the confirm
- * button in `CarSignOutConfirmation` — it measures 3.49:1, which fails WCAG AA. That pairing
- * shipped in `CarLibraryScreen` from A3 and moved here unchanged; T21 fixes it rather than this
- * comment claiming it was already fine.
+ * **Never use this as a solid fill under white text.** It measures 3.49:1 that way, which fails AA.
+ * That is what [CarSignOutRedSolid] is for, and why the two are separate tokens rather than one
+ * value doing both jobs: darkening this one to fix the fill would drop the row's red-on-wash text
+ * to 3.32:1 and break the pairing that currently passes.
  */
 val CarSignOutRed = Color(0xFFEF5350)
+
+/**
+ * Destructive actions as **background** — the confirm button in `CarSignOutConfirmation`.
+ *
+ * White text and icon on this fill measure 5.17:1 (AA). The button's edge against the modal card
+ * `#181824` is 3.4:1, clearing the 3:1 that a non-text UI boundary needs, so the fill still reads
+ * as a button.
+ *
+ * A3 through A7 used [CarSignOutRed] here, at 3.49:1 — below AA. This token is the fix (T21).
+ */
+val CarSignOutRedSolid = Color(0xFFC62828)
 
 /**
  * Ambient background tints. Never used as a fill on an interactive element.

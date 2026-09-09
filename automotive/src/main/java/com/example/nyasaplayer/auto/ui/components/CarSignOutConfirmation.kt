@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarScrim
-import com.example.nyasaplayer.auto.ui.theme.CarSignOutRed
+import com.example.nyasaplayer.auto.ui.theme.CarSignOutRedSolid
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 
 private const val ModalWidthFraction = 0.5f
@@ -114,7 +114,7 @@ private fun SignOutActions(
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(16.dp))
-                .background(CarSignOutRed)
+                .background(CarSignOutRedSolid)
                 .clickable(onClick = onConfirm)
                 .padding(vertical = 20.dp),
             contentAlignment = Alignment.Center,

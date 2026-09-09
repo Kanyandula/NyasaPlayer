@@ -2,7 +2,7 @@
 
 - **Slice:** A7 review finding — pre-existing, promoted rather than introduced
 - **Depends on:** a palette decision (the design doc owns the contrast table)
-- **Status:** Filed, not specced
+- **Status:** Done — fixed in the A7 PR that filed it
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest detekt`
 - **Design Reference:** `docs/aaos-DESIGN.md` "Contrast, measured"; D68
 - **Risk Tags:** accessibility, in-vehicle legibility, design system
@@ -50,3 +50,15 @@ contrast table actually measured.
 
 Caught by the quality reviewer on the A7 pre-PR pass and confirmed by computing the ratio, not by
 eye — the button is legible, which is why it survived a device pass and three slices.
+
+## Outcome
+
+Fixed in A7 rather than deferred, on request. `CarSignOutRedSolid` (`#C62828`) is a second token
+for the fill role; `CarSignOutRed` (`#EF5350`) keeps the foreground role unchanged.
+
+One token could not do both. Darkening the shared value to `#C62828` would have taken the confirm
+button from 3.5:1 to 5.2:1 and, in the same move, dropped `CarSignOutRow`'s red-on-wash text from
+4.6:1 to 3.3:1 — trading one AA failure for another. Measured both before choosing.
+
+The contrast table now carries all three pairs, and the blanket "every non-disabled pair clears
+AAA" claim is scoped to exclude the two destructive ones, which clear AA.
