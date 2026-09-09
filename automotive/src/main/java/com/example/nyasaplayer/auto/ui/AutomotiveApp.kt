@@ -18,9 +18,9 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
+import com.example.nyasaplayer.auto.BuildConfig
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResult
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResults
 import com.example.nyasaplayer.auto.search.capped
@@ -930,7 +930,7 @@ private fun AccountSheets(
     when (sheet) {
         CarSheet.Settings -> CarSettingsScreen(
             displayName = displayName,
-            appVersion = appVersion(),
+            appVersion = BuildConfig.VERSION_NAME,
             onSignOut = onRequestSignOut,
             onClose = onClose,
         )
@@ -944,21 +944,5 @@ private fun AccountSheets(
         // Search draws itself: it needs the search ViewModel's whole surface, which does not
         // belong in a composable about accounts.
         CarSheet.Search, null -> Unit
-    }
-}
-
-/**
- * The installed version name, for Settings' About row.
- *
- * Read from the package manager rather than `BuildConfig` so it needs no build-feature flag, and
- * degrades to a blank rather than throwing on the one path where the package cannot be found.
- */
-@Composable
-private fun appVersion(): String {
-    val context = LocalContext.current
-    return remember(context) {
-        runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
-        }.getOrDefault("")
     }
 }

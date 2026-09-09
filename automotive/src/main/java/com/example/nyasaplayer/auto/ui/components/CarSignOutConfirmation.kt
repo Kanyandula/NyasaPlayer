@@ -54,42 +54,33 @@ fun CarSignOutConfirmation(
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
-        SignOutModalCard(onConfirm = onConfirm, onDismiss = onDismiss)
-    }
-}
-
-@Composable
-private fun SignOutModalCard(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth(ModalWidthFraction)
-            .clip(RoundedCornerShape(24.dp))
-            .background(CarGlass)
-            .carConsumeTouches()
-            .padding(48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = "Sign Out?",
-            color = Color.White,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "You will need to sign in again to access your music library.",
-            color = CarTextSecondary,
-            fontSize = 20.sp,
-            textAlign = TextAlign.Center,
-            lineHeight = 28.sp,
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        SignOutActions(onConfirm = onConfirm, onDismiss = onDismiss)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(ModalWidthFraction)
+                .clip(RoundedCornerShape(24.dp))
+                .background(CarGlass)
+                .carConsumeTouches()
+                .padding(48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "Sign Out?",
+                color = Color.White,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "You will need to sign in again to access your music library.",
+                color = CarTextSecondary,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 28.sp,
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            SignOutActions(onConfirm = onConfirm, onDismiss = onDismiss)
+        }
     }
 }
 

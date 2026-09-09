@@ -50,8 +50,13 @@ val CarDivider = Color(0x14FFFFFF)
  * Destructive actions — sign out, and nothing else yet.
  *
  * The value `CarLibraryScreen` has shipped privately since A3, promoted here rather than copied when
- * sign-out moved to Settings (A7). Always on its own 15% wash, which is the pairing already measured
- * and shipped; it is not a new colour.
+ * sign-out moved to Settings (A7). Not a new colour.
+ *
+ * Two pairings, and only one of them is measured. On its own 15% wash (`CarSignOutRow`) it clears
+ * the bar in the design doc's contrast table. As a **solid fill under white text** — the confirm
+ * button in `CarSignOutConfirmation` — it measures 3.49:1, which fails WCAG AA. That pairing
+ * shipped in `CarLibraryScreen` from A3 and moved here unchanged; T21 fixes it rather than this
+ * comment claiming it was already fine.
  */
 val CarSignOutRed = Color(0xFFEF5350)
 

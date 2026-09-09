@@ -62,7 +62,6 @@ fun CarSheetHeader(title: String, onClose: () -> Unit, modifier: Modifier = Modi
         )
         Box(
             modifier = Modifier
-                .carTouchTarget()
                 .size(CarTouchTargetSize)
                 .clip(CircleShape)
                 .background(CarRaised)
