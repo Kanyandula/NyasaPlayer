@@ -4,10 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -26,12 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nyasaplayer.auto.ui.theme.CarGlass
-import com.example.nyasaplayer.auto.ui.theme.CarScrim
 import com.example.nyasaplayer.auto.ui.theme.CarSignOutRedSolid
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
-
-private const val ModalWidthFraction = 0.5f
 
 /**
  * "Sign Out?" — the one confirmation, shared by Settings and the profile switcher.
@@ -47,22 +41,8 @@ fun CarSignOutConfirmation(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CarScrim)
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(ModalWidthFraction)
-                .clip(RoundedCornerShape(24.dp))
-                .background(CarGlass)
-                .carConsumeTouches()
-                .padding(48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+    CarModalScrim(onDismiss = onDismiss, modifier = modifier) {
+        CarModalCard {
             Text(
                 text = "Sign Out?",
                 color = Color.White,

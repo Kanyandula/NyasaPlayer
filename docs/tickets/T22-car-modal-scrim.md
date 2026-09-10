@@ -2,7 +2,7 @@
 
 - **Slice:** A7 review finding — pre-existing duplication
 - **Depends on:** nothing
-- **Status:** Filed, not specced
+- **Status:** Done
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest detekt`
 - **Design Reference:** `docs/aaos-DESIGN.md` D68
 - **Risk Tags:** drift, design-system consistency
@@ -41,3 +41,44 @@ fourth copy.
 
 Deliberately not folded into A7: it touches two files the A7 diff never opened, and the slice had
 already had its device pass.
+
+## Outcome
+
+Two components, not one — the ticket's plan would have moved pixels it promised not to.
+
+`CarModalScrim` owns the backdrop, the dismiss tap and the centring. All three modals share it
+verbatim, so that part of the ticket held.
+
+The **card** did not. `CarRestrictionDialog` is a fixed `width(780.dp)` with `CarCardCornerRadius`
+(20dp, not the modals' 24dp) and `padding(44.dp)`, so folding the card geometry into the scrim as
+the ticket described would have resized and re-rounded it. The half-width glass card is therefore
+`CarModalCard`, used by the sign-out and error modals only, and the restriction dialog keeps its
+own Column inside the shared scrim.
+
+Both private `ModalWidthFraction` constants are gone. Net -56 lines.
+
+### A claim this ticket nearly shipped
+
+While writing it up I asserted that `CarErrorOverlay`'s `clickable(enabled = false, onClick = {})`
+did not consume the tap, and that tapping the error card therefore dismissed it. **That is false.**
+Measured with a throwaway Robolectric probe:
+
+| Card guard | Taps reaching the scrim |
+|---|---|
+| `carConsumeTouches()` | 0 |
+| `clickable(enabled = false)` | 0 |
+| no guard | 1 |
+
+A disabled clickable blocks the tap just as well. The reason to prefer `carConsumeTouches` is
+semantics — a disabled clickable publishes an interactive-but-disabled node to accessibility
+services, announcing a control that never existed (FR-2.6) — not dismissal. Both KDocs were
+corrected before commit.
+
+`CarModalTest` pins what actually matters: a card with *no* guard leaks. Verified by mutation —
+removing `carConsumeTouches()` fails the test, swapping it for the disabled clickable does not.
+
+### Left alone, deliberately
+
+`CarRestrictionDialog`'s card carries no touch guard, so tapping the dialog body dismisses it while
+the driver may still be reading the reason. Pre-existing, and changing the dismissal behaviour of a
+refusal dialog is a product call, not a refactor. Filed here rather than fixed.

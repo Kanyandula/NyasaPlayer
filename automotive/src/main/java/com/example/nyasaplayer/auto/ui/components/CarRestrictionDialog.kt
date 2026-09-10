@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -22,7 +21,6 @@ import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarPillButtonHeight
-import com.example.nyasaplayer.auto.ui.theme.CarScrim
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
@@ -47,13 +45,7 @@ fun CarRestrictionDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CarScrim)
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
+    CarModalScrim(onDismiss = onDismiss, modifier = modifier) {
         Column(
             modifier = Modifier
                 .width(DialogWidth)
