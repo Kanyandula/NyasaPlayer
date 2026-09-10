@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -26,9 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarGradientOrange
-import com.example.nyasaplayer.auto.ui.theme.CarScrim
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.core.common.ui.icons.RefreshIcon
 import com.example.nyasaplayer.core.common.ui.icons.WarningIcon
@@ -40,7 +37,6 @@ import com.example.nyasaplayer.core.playback.PlayerError
 
 private val IconCircleSize = 128.dp
 private val IconSize = 64.dp
-private const val ModalWidthFraction = 0.5f
 
 @Composable
 fun CarErrorOverlay(
@@ -49,38 +45,14 @@ fun CarErrorOverlay(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CarScrim)
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        ErrorModalCard(error = error, onDismiss = onDismiss, onRetry = onRetry)
-    }
-}
-
-@Composable
-private fun ErrorModalCard(
-    error: PlayerError,
-    onDismiss: () -> Unit,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth(ModalWidthFraction)
-            .clip(RoundedCornerShape(24.dp))
-            .background(CarGlass)
-            .clickable(enabled = false, onClick = {})
-            .padding(48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        ErrorIcon(isPlaybackError = error.isPlaybackError)
-        Spacer(modifier = Modifier.height(32.dp))
-        ErrorText(title = error.title, message = error.message)
-        Spacer(modifier = Modifier.height(32.dp))
-        ErrorActions(isRetryable = error.isRetryable, onDismiss = onDismiss, onRetry = onRetry)
+    CarModalScrim(onDismiss = onDismiss, modifier = modifier) {
+        CarModalCard {
+            ErrorIcon(isPlaybackError = error.isPlaybackError)
+            Spacer(modifier = Modifier.height(32.dp))
+            ErrorText(title = error.title, message = error.message)
+            Spacer(modifier = Modifier.height(32.dp))
+            ErrorActions(isRetryable = error.isRetryable, onDismiss = onDismiss, onRetry = onRetry)
+        }
     }
 }
 
