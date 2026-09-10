@@ -110,12 +110,6 @@ class PlayerTransport(
 }
 
 /**
- * The availability predicate, in one place: a controller is usable only while it is connected.
- *
- * File-level rather than a member because `PlayerTransport` sits exactly on detekt's 16-function
- * class threshold, and a suppression is not how this project answers that (D23).
- */
-/**
  * The queue mutations, over the same availability rule and the same report as its parent.
  *
  * Its own class only because `PlayerTransport` reached detekt's 16-function class limit; the
@@ -152,7 +146,15 @@ class QueueTransport(
     }
 }
 
-private fun MediaController?.connectedOrNull(): MediaController? = this?.takeIf { it.isConnected }
+/**
+ * The availability predicate for the whole module: usable means connected, not merely non-null.
+ *
+ * `internal` because the collector's reads answer with it too (T15).
+ *
+ * File-level rather than a member because `PlayerTransport` sits exactly on detekt's 16-function
+ * class threshold, and a suppression is not how this project answers that (D23).
+ */
+internal fun MediaController?.connectedOrNull(): MediaController? = this?.takeIf { it.isConnected }
 
 /**
  * Runs [action] against this controller if it is connected; otherwise reports and does nothing.
