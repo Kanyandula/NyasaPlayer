@@ -56,11 +56,10 @@ private val ControlSpacing = 8.dp
  * as a wordmark plus a right-hand control cluster, and having tabs in both places is how a
  * driver's muscle memory breaks between screens.
  *
- * [onSearchClick] opens the search sheet (A6). [onSettingsClick] and [onAvatarClick] are
- * accepted but unused: those controls stay disabled until A7 gives them destinations. They are
- * in the signature now so the caller does not need one more change later.
+ * All three controls open a sheet: [onSearchClick] the search sheet (A6), [onSettingsClick] and
+ * [onAvatarClick] settings and the profile switcher (A7). The gate refuses the latter two while
+ * the vehicle is moving; this bar does not know that and does not need to.
  */
-@Suppress("UnusedParameter")
 @Composable
 fun CarSystemBar(
     onSearchClick: () -> Unit,
@@ -78,7 +77,11 @@ fun CarSystemBar(
     ) {
         AppLogo()
         Spacer(modifier = Modifier.weight(1f))
-        SystemBarControls(onSearchClick = onSearchClick)
+        SystemBarControls(
+            onSearchClick = onSearchClick,
+            onSettingsClick = onSettingsClick,
+            onAvatarClick = onAvatarClick,
+        )
         ClockDisplay(modifier = Modifier.padding(start = 16.dp))
     }
 }
@@ -114,25 +117,28 @@ private fun AppLogo(modifier: Modifier = Modifier) {
 }
 
 /**
- * Search, settings and profile.
+ * Search, settings and profile — all three live since A7.
  *
- * Search is live from A6. Settings and profile stay **disabled** until A7 gives them
- * destinations. Disabled rather than silently inert: FR-2.6 prohibits a control that looks
- * live and does nothing. All three keep their full hit areas so the bar does not reflow when
- * that slice enables the other two.
+ * The disabled path in [SystemBarControl] is kept, not dead: it is how the next control that
+ * arrives before its destination announces itself, which is what FR-2.6 asks for.
  *
  * Wi-fi, bluetooth and battery are deliberately absent — see the A2 spec, D7.
  */
 @Composable
-private fun SystemBarControls(onSearchClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SystemBarControls(
+    onSearchClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onAvatarClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(ControlSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SystemBarControl(SearchIcon, "Search", onClick = onSearchClick)
-        SystemBarControl(SettingsIcon, "Settings")
-        SystemBarControl(ProfileIcon, "Profile", iconSize = AvatarIconSize)
+        SystemBarControl(SettingsIcon, "Settings", onClick = onSettingsClick)
+        SystemBarControl(ProfileIcon, "Profile", iconSize = AvatarIconSize, onClick = onAvatarClick)
     }
 }
 

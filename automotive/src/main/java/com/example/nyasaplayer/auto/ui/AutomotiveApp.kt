@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
+import com.example.nyasaplayer.auto.BuildConfig
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResult
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResults
 import com.example.nyasaplayer.auto.search.capped
@@ -28,6 +29,7 @@ import com.example.nyasaplayer.auto.ui.components.CarErrorOverlay
 import com.example.nyasaplayer.auto.ui.components.CarMiniPlayer
 import com.example.nyasaplayer.auto.ui.components.CarNavRail
 import com.example.nyasaplayer.auto.ui.components.CarRestrictionDialog
+import com.example.nyasaplayer.auto.ui.components.CarSignOutConfirmation
 import com.example.nyasaplayer.auto.ui.components.CarSystemBar
 import com.example.nyasaplayer.auto.ui.motion.decorativeMotionEnabled
 import com.example.nyasaplayer.auto.ui.motion.rememberAnimatorDurationScale
@@ -48,9 +50,11 @@ import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
 import com.example.nyasaplayer.auto.ui.screens.CarLibraryScreen
 import com.example.nyasaplayer.auto.ui.screens.CarPlaylistScreen
+import com.example.nyasaplayer.auto.ui.screens.CarProfileSwitcherScreen
 import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchResultsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
+import com.example.nyasaplayer.auto.ui.screens.CarSettingsScreen
 import com.example.nyasaplayer.auto.ui.screens.artistLikedSongs
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
@@ -155,6 +159,9 @@ private fun AuthenticatedApp(
         mutableStateOf(emptyList<CarOverlay>())
     }
     var sheet by rememberSaveable { mutableStateOf<CarSheet?>(null) }
+    // Hoisted out of the two sheets that offer sign-out so there is one confirmation rather than
+    // two copies of one, and so the eviction below clears it with everything else.
+    var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     var denialReason by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -170,6 +177,7 @@ private fun AuthenticatedApp(
     val clearTransientSurfaces: () -> Unit = {
         overlays = emptyList()
         sheet = null
+        confirmSignOut = false
     }
 
     // The platform's own NO_KEYBOARD answer, not a driving guess (spec D31).
@@ -275,8 +283,8 @@ private fun AuthenticatedApp(
                 currentScreen = currentScreen,
                 playerState = playerState,
                 contentState = contentState,
-                onSignOut = onSignOut,
-                userDisplayName = userDisplayName,
+                onSettingsClick = { sheet = CarSheet.Settings },
+                onAvatarClick = { sheet = CarSheet.Profile },
                 // The search control opens the search view, not whatever results were left
                 // over from an earlier trip. The draft query survives, so re-running it is one
                 // press away.
@@ -344,6 +352,13 @@ private fun AuthenticatedApp(
             )
         }
 
+        AccountSheets(
+            sheet = sheet,
+            displayName = userDisplayName,
+            onRequestSignOut = { confirmSignOut = true },
+            onClose = { sheet = null },
+        )
+
         if (sheet == CarSheet.Search) {
             SearchSheet(
                 state = searchState,
@@ -393,6 +408,18 @@ private fun AuthenticatedApp(
             )
         }
 
+        // Above both sheets that raise it, and below the restriction dialog, which is the one
+        // thing that outranks anything the driver opened.
+        if (confirmSignOut) {
+            CarSignOutConfirmation(
+                onConfirm = {
+                    confirmSignOut = false
+                    onSignOut()
+                },
+                onDismiss = { confirmSignOut = false },
+            )
+        }
+
         val error = playerState.error
         if (error != null) {
             CarErrorOverlay(
@@ -432,7 +459,7 @@ internal fun carUiLocation(
     overlay = overlay,
     // Every destination is one step from a tab root (D8). There is no depth 2 in A3.
     drillDepth = if (drillDown != null) 1 else 0,
-    // Settings and Profile are A7. The field exists so that slice has nothing to retrofit.
+    // Settings and Profile are live from A7; the gate refuses both under NO_SETUP.
     sheet = sheet,
     // Open-but-idle search is browsing, not typing, and stays allowed while driving. Only an
     // active editable field is text entry, which is why this is the ViewModel's explicit flag
@@ -577,9 +604,9 @@ private fun BrowseShell(
     currentScreen: CarScreen,
     playerState: AutomotiveUiState,
     contentState: AutomotiveContentState,
-    onSignOut: () -> Unit,
-    userDisplayName: String,
     onSearchClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onAvatarClick: () -> Unit,
     onSelectTab: (CarScreen) -> Unit,
     onExpandPlayer: () -> Unit,
     onQueueClick: () -> Unit,
@@ -608,11 +635,10 @@ private fun BrowseShell(
     val restrictions = playerState.restrictions
 
     Column(modifier = modifier.fillMaxSize()) {
-        // Settings and profile are still no-ops and render disabled until A7.
         CarSystemBar(
             onSearchClick = onSearchClick,
-            onSettingsClick = {},
-            onAvatarClick = {},
+            onSettingsClick = onSettingsClick,
+            onAvatarClick = onAvatarClick,
         )
 
         // Above the rail: an app-level condition, not screen content.
@@ -721,8 +747,6 @@ private fun BrowseShell(
                             onArtistClick = onArtistClick,
                             onFavouritesClick = { onSelectTab(CarScreen.Favourites) },
                             onBrowseClick = { onSelectTab(CarScreen.Browse) },
-                            onSignOut = onSignOut,
-                            userDisplayName = userDisplayName,
                             currentlyPlayingMediaId = currentlyPlayingMediaId,
                             isPlaying = isPlaying,
                             isLoading = contentState.isLoading,
@@ -887,5 +911,38 @@ private fun DetailRoute(
         // The liked-songs artist screen, routed by the caller's own branch; a when over a sealed
         // interface must be exhaustive.
         is CarDestination.Artist -> Unit
+    }
+}
+
+/**
+ * The two sheets the system bar's gear and avatar open (A7).
+ *
+ * Together because they are one decision — both are parked-only, both show the same account, and
+ * both hand the same sign-out request back to the shell rather than confirming it themselves.
+ */
+@Composable
+private fun AccountSheets(
+    sheet: CarSheet?,
+    displayName: String,
+    onRequestSignOut: () -> Unit,
+    onClose: () -> Unit,
+) {
+    when (sheet) {
+        CarSheet.Settings -> CarSettingsScreen(
+            displayName = displayName,
+            appVersion = BuildConfig.VERSION_NAME,
+            onSignOut = onRequestSignOut,
+            onClose = onClose,
+        )
+
+        CarSheet.Profile -> CarProfileSwitcherScreen(
+            displayName = displayName,
+            onSignOut = onRequestSignOut,
+            onClose = onClose,
+        )
+
+        // Search draws itself: it needs the search ViewModel's whole surface, which does not
+        // belong in a composable about accounts.
+        CarSheet.Search, null -> Unit
     }
 }

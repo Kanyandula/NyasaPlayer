@@ -214,8 +214,6 @@ private fun LibraryScreenPreview() {
             onArtistClick = {},
             onFavouritesClick = {},
             onBrowseClick = {},
-            onSignOut = {},
-            userDisplayName = "John Doe",
             currentlyPlayingMediaId = "1",
             isPlaying = true,
         )

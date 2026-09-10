@@ -7,34 +7,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,23 +32,17 @@ import com.example.nyasaplayer.auto.ui.components.CarCardShape
 import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
-import com.example.nyasaplayer.auto.ui.components.carConsumeTouches
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
-import com.example.nyasaplayer.auto.ui.theme.CarScrim
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
-import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.auto.viewmodel.FavoriteArtist
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
-
-private val SignOutRed = Color(0xFFEF5350)
-private const val ModalWidthFraction = 0.5f
 
 private val RowSpacing = 32.dp
 private val CardSpacing = 24.dp
@@ -80,7 +63,8 @@ private const val SkeletonCardCount = 4
  * Favourites is one card showing the liked count, not a list: it is a shortcut to a rail
  * destination that already renders that list, and two surfaces rendering identical content is a
  * visible bug (A2 D2). Downloads renders visibly disabled rather than hidden, so Library does not
- * change shape when A8 lands (D13). Sign-out stays here until A7 owns screen 14 (D14).
+ * change shape when A8 lands (D13). Account chrome is not here: sign-out moved to Settings when
+ * A7 built screen 14 (D68), closing D14.
  */
 @Suppress("LongParameterList")
 @Composable
@@ -96,16 +80,13 @@ fun CarLibraryScreen(
     onArtistClick: (FavoriteArtist) -> Unit,
     onFavouritesClick: () -> Unit,
     onBrowseClick: () -> Unit,
-    onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
-    userDisplayName: String = "",
     currentlyPlayingMediaId: String? = null,
     isPlaying: Boolean = false,
     isLoading: Boolean = false,
     errorMessage: String? = null,
     onRetry: () -> Unit = {},
 ) {
-    var showSignOutConfirmation by remember { mutableStateOf(false) }
     val hasContent = recentlyPlayed.isNotEmpty() || playlists.isNotEmpty() ||
         albums.isNotEmpty() || favoriteArtists.isNotEmpty() || likedSongCount > 0
 
@@ -133,17 +114,8 @@ fun CarLibraryScreen(
                 onArtistClick = onArtistClick,
                 onFavouritesClick = onFavouritesClick,
                 onBrowseClick = onBrowseClick,
-                userDisplayName = userDisplayName,
-                onSignOutClick = { showSignOutConfirmation = true },
                 currentlyPlayingMediaId = currentlyPlayingMediaId,
                 isPlaying = isPlaying,
-            )
-        }
-
-        if (showSignOutConfirmation) {
-            SignOutConfirmationOverlay(
-                onConfirm = onSignOut,
-                onDismiss = { showSignOutConfirmation = false },
             )
         }
     }
@@ -164,8 +136,6 @@ private fun LibraryRows(
     onArtistClick: (FavoriteArtist) -> Unit,
     onFavouritesClick: () -> Unit,
     onBrowseClick: () -> Unit,
-    userDisplayName: String,
-    onSignOutClick: () -> Unit,
     currentlyPlayingMediaId: String?,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
@@ -176,7 +146,7 @@ private fun LibraryRows(
         verticalArrangement = Arrangement.spacedBy(RowSpacing),
     ) {
         item {
-            LibraryHeader(userDisplayName = userDisplayName, onSignOutClick = onSignOutClick)
+            LibraryHeader()
         }
 
         if (!hasContent) {
@@ -332,164 +302,14 @@ private fun LibrarySkeleton(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun LibraryHeader(
-    userDisplayName: String,
-    onSignOutClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text("Your Library", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-            Text(
-                text = if (userDisplayName.isNotEmpty()) {
-                    "Signed in as $userDisplayName"
-                } else {
-                    "All your music in one place"
-                },
-                color = CarTextSecondary,
-                fontSize = 18.sp,
-            )
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Box(
-            modifier = Modifier
-                .height(CarTouchTargetSize)
-                .clip(RoundedCornerShape(16.dp))
-                .background(SignOutRed.copy(alpha = 0.15f))
-                .clickable(onClick = onSignOutClick)
-                .padding(horizontal = 20.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = "Sign Out",
-                    tint = SignOutRed,
-                    modifier = Modifier.size(24.dp),
-                )
-                Text(
-                    text = "Sign Out",
-                    color = SignOutRed,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SignOutConfirmationOverlay(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CarScrim)
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        SignOutModalCard(onConfirm = onConfirm, onDismiss = onDismiss)
-    }
-}
-
-@Composable
-private fun SignOutModalCard(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth(ModalWidthFraction)
-            .clip(RoundedCornerShape(24.dp))
-            .background(CarGlass)
-            .carConsumeTouches()
-            .padding(48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+private fun LibraryHeader(modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text("Your Library", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         Text(
-            text = "Sign Out?",
-            color = Color.White,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "You will need to sign in again to access your music library.",
+            text = "All your music in one place",
             color = CarTextSecondary,
-            fontSize = 20.sp,
-            textAlign = TextAlign.Center,
-            lineHeight = 28.sp,
+            fontSize = 18.sp,
         )
-        Spacer(modifier = Modifier.height(32.dp))
-        SignOutActions(onConfirm = onConfirm, onDismiss = onDismiss)
-    }
-}
-
-@Composable
-private fun SignOutActions(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.White.copy(alpha = 0.1f))
-                .clickable(onClick = onDismiss)
-                .padding(vertical = 20.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "Cancel",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(SignOutRed)
-                .clickable(onClick = onConfirm)
-                .padding(vertical = 20.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp),
-                )
-                Text(
-                    text = "Sign Out",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-        }
     }
 }
 

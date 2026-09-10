@@ -93,8 +93,8 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 
 | # | Screen | UI and CTAs | Required states | Driving behavior | Phase |
 |---|---|---|---|---|---|
-| 1 | `CarAuthScreen` | Gold wordmark, parked badge, Google sign-in, phone sign-in, email sign-in, retry on failure | loading, error, signed-out | Refused by `NO_SETUP`; no keyboard while driving | A7 |
-| 2 | `CarPinOptInScreen` | PIN dots, numeric keypad, Enable PIN, Not now, back | partial entry, validation error, loading | Refused by `NO_SETUP` | A7 |
+| 1 | `CarAuthScreen` | Gold wordmark, parked badge, Google sign-in, retry on failure (the button returns beneath the error) | loading, error, signed-out | Refused by `NO_SETUP`; no keyboard while driving | A2 · phone and email sign-in deferred, D70 |
+| 2 | `CarPinOptInScreen` | PIN dots, numeric keypad, Enable PIN, Not now, back | partial entry, validation error, loading | Refused by `NO_SETUP` | Deferred — no PIN affordance ships until its storage and lockout questions are answered (D67) |
 | 3 | `CarHomeScreen` | Continue Listening cards, Your Mixes, Recommended, Play card/item | loading, empty, error, offline banner | Allowed; lists truncated by item cap | A2 |
 | 4 | `CarBrowseScreen` | Filter chips, genre/mood/category cards, Play/open category | loading, empty, error | Allowed at root; deep drill-down refused by depth cap | A3 |
 | 5 | `CarSearchScreen` | Search field when `NO_KEYBOARD` is absent, system voice prompt, recent searches, browse-by shortcuts, clear query | idle, recent-empty, no query | Typed entry refused; system/Assistant voice offered | A6 |
@@ -106,13 +106,13 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | 11 | `CarAlbumScreen` | Album hero, Play, Download, track rows | loading, empty, error, download progress | Refused when beyond depth cap; download mutation parked-only | A3 |
 | 12 | `CarFullPlayerScreen` | Large artwork, title/artist, play/pause, prev/next, seek, like, shuffle, repeat, queue | buffering, paused, playing, error overlay | Allowed; playback control remains available | A5 |
 | 13 | `CarQueueScreen` | Up Next, skip-to row tap, close, clear, remove controls while parked | empty, current track, playing indicator | View/skip-to allowed; remove/clear refused, list truncated | A5 |
-| 14 | `CarSettingsScreen` | Parked badge, account, audio quality, about, sign out | loading, error | Refused by `NO_SETUP`; standalone activity, if created, omits `distractionOptimized` | A7 |
+| 14 | `CarSettingsScreen` | Account, sign out, about — no parked badge and no audio quality (D69, D70) | account, no display name | Refused by `NO_SETUP`, as a sheet rather than a destination (D69) | A7 |
 | 15 | `CarDownloadsScreen` | Downloaded content rows, storage bar, remove one, remove all, retry failed | empty, in-progress, failed, offline | View allowed; delete/remove refused | A8 |
 | 16 | `CarNoConnectionScreen` | Offline illustration/state, Retry, Browse Downloads | no network, retrying | Allowed; Browse Downloads remains available | A8 |
 | 17 | `CarEmptyFavouritesScreen` | Empty heart state, Browse Music CTA | empty | Allowed; CTA routes to Browse root | A4 |
 | 18 | `CarLoadingScreen` | Shared static skeletons and optional parked-only shimmer | initial load, section load | Allowed; no distracting animation | A8 |
 | 19 | `CarPlaybackErrorOverlay` | Error message, Try again, Skip next, Dismiss | recoverable, fatal | Allowed and dismissible while driving | A8 |
-| 20 | `CarProfileSwitcherScreen` | Current profile, switch profile, add profile, close | loading, empty/guest, error | Refused by `NO_SETUP` | A7 |
+| 20 | `CarProfileSwitcherScreen` | Current account, close, and sign-out as the way to use a different one — no picker and no add-profile, because the app remembers one account (D66) | account, no display name | Refused by `NO_SETUP`, as a sheet rather than a destination (D69) | A7 |
 | 21 | `CarArtistScreen` | Catalogue artist hero, Play, Shuffle, track rows, no like affordance | loading, empty, error, artist missing | Refused when beyond depth cap | T4 |
 
 Screen 21 is the catalogue artist a search result opens. It is not screen 9: that one is the

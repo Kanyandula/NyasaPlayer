@@ -29,11 +29,9 @@ private const val ReasonDepth =
  *
  * Playback transport, seeking, queue view/skip-to and tab switching are never denied.
  *
- * The Search branch is live from A6: AutomotiveApp's carUiLocation() sets
- * `sheet = CarSheet.Search` while the sheet is open, and `textEntryActive` from the search
- * ViewModel's editing flag. The Settings and Profile branches stay unreachable until A7 —
- * do not delete them as dead code, they are the contract that slice is written against, and
- * the gate tests already cover them.
+ * Every sheet branch is live: Search from A6, Settings and Profile from A7. AutomotiveApp's
+ * carUiLocation() reports whichever sheet is open, and `textEntryActive` comes from the search
+ * ViewModel's editing flag.
  *
  * This function gates LOCATIONS, not ACTIONS. Queue remove/reorder/clear and download
  * deletion are parked-only, but they are actions inside a permitted location, so they are
