@@ -21,7 +21,7 @@ cat=[android.intent.category.LAUNCHER] cmp=com.example.nyasaplayer/androidx.acti
 ```
 
 `createComposeRule()` launches `androidx.activity.ComponentActivity`, which reaches the merged
-manifest only through the `ui-test-manifest` AAR. `automotive/build.gradle.kts:131` wires that as
+manifest only through the `ui-test-manifest` AAR. `automotive/build.gradle.kts` wires that as
 `debugImplementation` — correctly, and with a comment saying why it cannot be `testImplementation` —
 so the release variant has no such activity and every test that needs one dies in `@Before`.
 
@@ -40,7 +40,7 @@ ever typed by hand, and typing it is how this was found (during T15, PR #53).
 ## Scope
 
 Pick one and apply it to `:automotive`, then check `:app`, which has the identical
-`debugImplementation(libs.androidx.ui.test.manifest)` at `app/build.gradle.kts:131` and is one
+`debugImplementation(libs.androidx.ui.test.manifest)` in `app/build.gradle.kts` and is one
 Compose unit test away from the same red.
 
 1. **Disable unit tests on the release variant** (recommended) — AGP native, one block:
