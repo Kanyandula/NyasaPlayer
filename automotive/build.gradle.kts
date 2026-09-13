@@ -1,3 +1,4 @@
+import com.android.build.api.variant.HostTestBuilder
 import java.util.Properties
 
 plugins {
@@ -77,6 +78,13 @@ android {
             // without it.
             isIncludeAndroidResources = true
         }
+    }
+}
+
+// Release has no ui-test-manifest, so createComposeRule() has nothing to launch (T23).
+androidComponents {
+    beforeVariants(selector().withBuildType("release")) {
+        it.hostTests.getValue(HostTestBuilder.UNIT_TEST_TYPE).enable = false
     }
 }
 

@@ -1,3 +1,4 @@
+import com.android.build.api.variant.HostTestBuilder
 import java.util.Properties
 
 plugins {
@@ -68,6 +69,14 @@ android {
         lintConfig = file("lint.xml")
         checkAllWarnings = true
         disable += setOf("ObsoleteLintCustomCheck")
+    }
+}
+
+// Unit tests belong to the debug variant: ui-test-manifest, which gives createComposeRule() its
+// ComponentActivity, is debugImplementation and must stay so, and release has nothing to launch (T23).
+androidComponents {
+    beforeVariants(selector().withBuildType("release")) {
+        it.hostTests.getValue(HostTestBuilder.UNIT_TEST_TYPE).enable = false
     }
 }
 

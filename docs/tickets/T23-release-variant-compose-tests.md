@@ -2,7 +2,7 @@
 
 - **Slice:** build, developer-facing gate
 - **Depends on:** —
-- **Status:** Filed, not specced
+- **Status:** Done — option 1, see Outcome
 - **Verification Command:** `./gradlew test`
 - **Design Reference:** —
 - **Risk Tags:** build config, false-red gate
@@ -21,7 +21,7 @@ cat=[android.intent.category.LAUNCHER] cmp=com.example.nyasaplayer/androidx.acti
 ```
 
 `createComposeRule()` launches `androidx.activity.ComponentActivity`, which reaches the merged
-manifest only through the `ui-test-manifest` AAR. `automotive/build.gradle.kts:131` wires that as
+manifest only through the `ui-test-manifest` AAR. `automotive/build.gradle.kts` wires that as
 `debugImplementation` — correctly, and with a comment saying why it cannot be `testImplementation` —
 so the release variant has no such activity and every test that needs one dies in `@Before`.
 
@@ -40,7 +40,7 @@ ever typed by hand, and typing it is how this was found (during T15, PR #53).
 ## Scope
 
 Pick one and apply it to `:automotive`, then check `:app`, which has the identical
-`debugImplementation(libs.androidx.ui.test.manifest)` at `app/build.gradle.kts:131` and is one
+`debugImplementation(libs.androidx.ui.test.manifest)` in `app/build.gradle.kts` and is one
 Compose unit test away from the same red.
 
 1. **Disable unit tests on the release variant** (recommended) — AGP native, one block:
@@ -72,3 +72,13 @@ test-only launcher activity into the shipped app.
 
 Found while running the full suite for T15 (PR #53). Confirmed pre-existing by stashing that branch's
 changes and running `:automotive:testOemReleaseUnitTest` against a clean `main`: same 20 failures.
+
+## Outcome
+
+Option 1, in both `:automotive` and `:app`: an `androidComponents.beforeVariants` block turns off the
+unit-test component for the release build type. It uses `hostTests[UNIT_TEST_TYPE].enable` rather
+than `enableUnitTest`, which AGP 8.8 deprecates for removal in 9.0.
+
+`./gradlew clean test --rerun-tasks` on the fix: 664 tests, 0 failures. Every `*DebugUnitTest` task
+still runs, including `:automotive:testOemDebugUnitTest`. The `:core:*` library modules keep their
+release unit tests; they carry no `ui-test-manifest`, so the trap is not there.
