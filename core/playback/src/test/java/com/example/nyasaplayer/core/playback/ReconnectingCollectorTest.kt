@@ -9,9 +9,11 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -20,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
 /**
- * What a collector does when a command finds the controller gone (T14, step 4).
+ * What a collector does when the controller is gone — commands rebuild it (T14), reads refuse (T15).
  *
  * The sequence a user produces without trying: back out of the app, come back, press play. Before
  * this, the controller had been released and nothing could rebuild it — every command failed for the
@@ -90,6 +92,35 @@ class ReconnectingCollectorTest {
 
         assertTrue(collector.controller!!.isConnected)
         assertEquals("one attempt, not three", 0, collector.unavailableReports)
+    }
+
+    // ── Reads against the same lost controller (T15) ──
+
+    @Test
+    fun hasNextTrack_onALostController_answersAsIfThereWereNoController() {
+        assertTrue(
+            "precondition: two queued items, so a live controller has a next",
+            collector.hasNextTrack(RepeatMode.Off),
+        )
+        loseTheController()
+
+        // Repeat-all is the case that answered true whatever the queue said.
+        assertFalse(collector.hasNextTrack(RepeatMode.All))
+        assertEquals("a read is not a user action: nothing reported", 0, collector.unavailableReports)
+    }
+
+    @Test
+    fun restoreIfIdle_onALostController_neverRunsTheRead() = runTest {
+        loseTheController()
+        var askedForTheSession = false
+
+        val restored = collector.restoreIfIdle {
+            askedForTheSession = true
+            null
+        }
+
+        assertNull(restored)
+        assertFalse("no session read against a player that cannot receive it", askedForTheSession)
     }
 
     @Test

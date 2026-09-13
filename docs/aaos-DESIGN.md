@@ -698,6 +698,12 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   `GlobalPlayerLayer`: it had been inside the `Scaffold`, so the message about an unreachable player
   rendered *behind* the expanded player, which is exactly where the dead buttons are.
 
+  **T15 — the predicate covers reads too.** `hasNextTrack()` and `restoreIfIdle()` open with
+  `connectedOrNull()` as well, which is why it is `internal` rather than private to
+  `PlayerTransport`. Reads still report nothing and start no reconnect — a query is not a user
+  action — so a disconnected controller now answers as no controller at all. T15 carries the two
+  failure shapes this closes, and why the collector's other reads did not need it.
+
   What this does **not** do is reconnect anything. The controller future is a `@Singleton` built once
   in `PlaybackModule`, so a dead controller stays dead for the process; T11 tells the user, and
   recovery is a separate ticket.

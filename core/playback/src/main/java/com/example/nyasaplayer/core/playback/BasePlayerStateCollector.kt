@@ -124,6 +124,11 @@ abstract class BasePlayerStateCollector(
 
     // ── Controller Listener ──
 
+    /**
+     * The plain null check is deliberate here, unlike in the reads below (T15): these fire from a
+     * live controller's own events — `release()` synthesizes none — and each uses what it reads
+     * as-is rather than building a claim on top of a disconnected controller's defaults.
+     */
     private val controllerListener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             if (mediaItem == null) return
@@ -210,8 +215,9 @@ abstract class BasePlayerStateCollector(
 
     // ── Helpers ──
 
+    /** Connected, not just non-null: repeat-all would answer true for a dead player (T15). */
     fun hasNextTrack(repeatMode: RepeatMode): Boolean {
-        val mc = controller ?: return false
+        val mc = controller.connectedOrNull() ?: return false
         return mc.hasNextMediaItem() || repeatMode == RepeatMode.All
     }
 
@@ -252,7 +258,9 @@ abstract class BasePlayerStateCollector(
      * null: an unrestorable session is not something the driver can act on.
      */
     suspend fun restoreIfIdle(restore: suspend () -> RestoredPlayback?): RestoredPlayback? {
-        val mc = controller ?: return null
+        // Connected, because a disconnected controller answers `mediaItemCount` with 0 — the very
+        // shape of "empty, restore onto it" — and would spend a Firestore read to find that out.
+        val mc = controller.connectedOrNull() ?: return null
         val restored = restore() ?: return null
         if (mc.mediaItemCount > 0) return null
         if (mc.sendRestoreState(restored).awaitResultCode() != SessionResult.RESULT_SUCCESS) {
