@@ -43,8 +43,14 @@ Each was put to the user and answered; none is open.
 2. **NoConnection is a behaviour, not a screen.** The banner stays. A play attempt while offline
    raises the existing overlay *immediately*. No full-screen state: offline-first lists still work,
    and a blocker would hide them.
-3. **The offline rule is shared.** One pure predicate in `:core:playback`, called by both ViewModels,
-   rather than a car-only copy or a service-side refusal.
+3. **The offline rule is shared.** One pure predicate in `:core:playback`, rather than a car-only
+   copy or a service-side refusal. The car calls it in A8; mobile adopts it in T28.
+4. **A8 leaves `:app` untouched.** Surface differences are kept by module, not by `isMobileApp` /
+   `isAaosApp` checks in shared code: a surface that should not get a behaviour yet simply does not
+   call it. Everything A8 adds to `:core:playback` is additive — a new function, and a snapshot field
+   with a default — so mobile's behaviour cannot change. Mobile's adoption, and the restore trigger in
+   its `handleOfflineBuffering()`, are **T28**, verified on a phone, because `PlayerViewModel` has no
+   unit tests.
 
 ## Scope
 
@@ -102,21 +108,14 @@ it.
 
 `isOffline` is already in `AutomotiveUiState`; no new dependency.
 
-### 3. Mobile — `PlayerViewModel`
+### 3. Mobile — untouched
 
-Two of its three `!isOnline && !isDownloaded` checks become `isPlayableNow` on the **resolved** song:
-
-- `playSong`: `resolveSongUri(song).isPlayableNow(isOnline)`.
-- `shufflePlay`: `resolvedSongs.any { it.isPlayableNow(isOnline) }` replaces the `zip` comparison.
-- `togglePlayPause` **keeps its current check**, `downloadManager.getLocalFileUri(currentMediaId)`.
-  It cannot switch to the rule without changing behaviour: a restored session's songs come from
-  `PlaybackStatePersistence` via `songRepository.getSongsByIds()` and reach the snapshot through
-  `applyRestored` without `resolveSongUri()`, so a restored song that *is* downloaded still carries
-  its `https:` URL. Today's mediaId check lets it play; `isPlayableNow` would refuse it.
-
-Behaviour, wording and `handleOfflineBuffering()` stay as they are. **This is a refactor with no
-test net:** `:app`'s only unit test is `SongMediaItemMapperTest`, so the mobile change is verified on
-a device (see Testing).
+No file in `:app` changes. `PlayerViewModel` keeps its own three offline checks and
+`handleOfflineBuffering()` exactly as they are; T28 moves it onto the shared rule. The one thing T28
+must not do, recorded here because the Codex review found it: switch `togglePlayPause` to
+`isPlayableNow`. Restored songs reach the snapshot through `applyRestored` without `resolveSongUri()`,
+so a restored song that *is* downloaded still carries its `https:` URL, and the rule would refuse what
+today's `getLocalFileUri(currentMediaId)` check allows.
 
 ### 4. The overlay — `CarErrorOverlay`
 
@@ -138,6 +137,7 @@ a device (see Testing).
 ## Out of scope
 
 - **Car downloads** — A9.
+- **Mobile** — T28: adopting the rule, and the restore trigger in `handleOfflineBuffering()`.
 - **A full-screen NoConnection state** — decision 2.
 - **Playback started outside the custom UI.** The OEM media template and Assistant reach
   `PlaybackService` directly and keep today's slow failure. Only a service-side refusal would cover
@@ -170,12 +170,8 @@ a device (see Testing).
 - a non-network playback error with a next track → Skip next plays the next track
 - driving (`inject-vhal-event`): overlay still dismissible, Skip next and Retry still work
 
-**Mobile device regression** — the refactor's only check:
-
-- offline, tap a streamed song → refused with today's wording
-- offline, tap a downloaded song → plays
-- offline, shuffle a list mixing both → starts
-- Worth running in the same session as the T14 mobile pass that `docs/T14_VERIFICATION.md` still owes.
+**`:app`** — `./gradlew :app:testDebugUnitTest :app:assembleDebug` stays green. Nothing in `:app`
+changes, so there is no mobile device pass in A8.
 
 ## Open items to settle during implementation
 
@@ -185,11 +181,7 @@ a device (see Testing).
    harmless.
 2. **Contrast.** Read the measured-contrast table in `aaos-DESIGN.md` before the device pass, and
    sample the outlined pills on the overlay's card.
-3. **Mobile's `handleOfflineBuffering()` has the same restore trigger.** It checks
-   `isBuffering && !isOnline`, so an offline mobile restore likely raises its "Connection lost"
-   error too. Not device-verified. With `playWhenReady` on the snapshot, mobile can adopt the same
-   condition in one line; whether to do that here or file it is for the review of this spec.
-4. **A non-network playback error on demand.** The emulator pass needs one for Skip next. How to
+3. **A non-network playback error on demand.** The emulator pass needs one for Skip next. How to
    produce it (a test catalog entry with a bad URL, or an unsupported file) is the plan's to decide.
 
 ## Decisions to record
@@ -198,13 +190,15 @@ a device (see Testing).
 the attempt, with the existing overlay, because offline-first lists still work and a full-screen
 blocker would hide them. Loading is satisfied by the per-screen skeletons. A refused play offers no
 Retry, because the refused song was never queued. Retry needs no change: Media3 re-prepares an
-idle player on a controller's `play()`. Car downloads move to A9. Known gap: playback started from the
+idle player on a controller's `play()`. Car downloads move to A9. A8 leaves `:app` untouched — surfaces differ by module, not by
+`isMobileApp`-style checks in shared code — and mobile adopts the rule in T28. Known gap: playback started from the
 OEM template or Assistant still fails slowly offline.
 
 ## Risks
 
-- **The mobile refactor ships without unit coverage.** Mitigated by keeping it a like-for-like
-  substitution and by the device regression; a `PlayerViewModel` test harness is not in scope.
+- **The two surfaces disagree until T28 lands.** Mobile keeps its inline checks and its restore
+  trigger; the car uses the rule. That is the price of not touching `:app` here, and T28 is filed so it
+  is not permanent.
 - **Guards in two ViewModels can drift.** The rule is shared; the three call sites per surface are
   not. A9 is the natural moment to fold them into the collector if it grows room under detekt's
   function ceiling.
