@@ -29,9 +29,9 @@ The work is sequenced into **nine phases**. Phase A1 is foundation — tokens, t
 primitives, build variants, and the restriction layer. Phases A2–A8 deliver the AAOS screens.
 Project B is tracked separately; the AAOS release does not wait for the mobile brand migration.
 
-**Current state:** A1-A6 are merged on `main`. The phase table in §9 carries each slice's
-status and links its dated verification record; carve-outs live in those records rather than
-being restated here, which is what kept this paragraph stale through two slices.
+**Current state:** the phase table in §9 is the only place slice status lives. It links each
+slice's verification record, and carve-outs live in those records. This paragraph used to restate
+the merged count and went stale three times.
 
 ---
 
@@ -423,7 +423,7 @@ option, not an actively shipped artifact.
 | **A4** | Favourites, ArtistLikedSongs, EmptyFavourites | A2 | Merged and device-verified — PRs #21-#23 |
 | **A5** | FullPlayer, Queue | A2 | Merged and device-verified — PR #24; retryable-error and restore follow-ups recorded |
 | **A6** | Search, SearchResults | A2 + A6 design | Merged and device-verified — PR #27; `docs/AAOS_A6_VERIFICATION.md`; T5-T8 follow-ups recorded |
-| **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Not started |
+| **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Merged and device-verified — PR #51 (parked and driving pass in the PR); PinOptIn deferred (D67, T18), phone and email sign-in deferred (T19) |
 | **A8** | NoConnection, Loading, Downloads, PlaybackError | A2 | Not started |
 | **Project B** | Mobile brand migration — **separate PRD, non-blocking** | A1 tokens | Not started |
 
