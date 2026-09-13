@@ -10,24 +10,21 @@
 
 ## Problem
 
-Both apps are `com.example.nyasaplayer` in one Firebase project, so after T25 their crashes land in
-one stream with nothing to tell them apart except the device model. Head-unit model names are
+After T25 both apps' crashes land in one stream (T24 D1), with nothing to tell them apart except
+the device model. Head-unit model names are
 chosen by OEMs, and AAOS emulator images use generic ones, so that is not a filter anyone can rely
 on.
 
 ## Scope
 
-- A `@Singleton` class in `:core:data` (name it in the style of `CatalogSync`, e.g. `CrashReporter`)
-  with an `@ApplicationContext` constructor and a `start()` that sets the Crashlytics custom key
-  `surface` to `car` when `packageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)`,
-  otherwise `mobile`.
+- A `@Singleton` reporter class in `:core:data` whose `start()` sets the Crashlytics custom key
+  `surface` as T24 D6 defines it.
 - `FirebaseCrashlytics.getInstance()` is called inside `start()`, not in the constructor or a
   property initializer. T27 injects this class into two ViewModels, and constructing one must not
   touch Firebase.
 - `NyasaPlayerApplication` and `AutomotiveApplication` each inject it and call `start()` first in
-  `onCreate`, before `firebaseSyncManager.start()` and before the auth-gated `catalogSync.start()`.
-  A crash in either should already carry the key. In the car it is called unconditionally, not
-  behind `isAuthenticated`.
+  `onCreate`, ahead of `firebaseSyncManager.start()` and outside the car's `isAuthenticated` gate,
+  so a crash in either sync already carries the key.
 - Add a `surface` row to `docs/CRASH_REPORTING.md`.
 
 ## Out Of Scope
@@ -57,5 +54,3 @@ on.
   anchoring on the current `ownerPid` as that record's Observations explain. Confirm
   `AutomotiveActivity` is absent from `dumpsys activity activities`. Then force the crash as in
   T25's Notes.
-- **The key describes the device** (T24 D6). The phone APK sideloaded onto an AAOS device reports
-  `car`. That's intended.

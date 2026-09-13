@@ -119,7 +119,7 @@ stream, filterable by surface, silent in debug, with everything sent written dow
   `~/StudioProjects/Nyasa`). It would send log text that has never been reviewed under D8.
 - A second Firebase app or a car `applicationId` (D1).
 - Consent UI and opt-in reporting, until the audience in D8 widens.
-- R8 and mapping upload. Nothing to do until `isMinifyEnabled` flips; the plugin handles it then (D3).
+- R8 and mapping upload (D3).
 - NDK crash reporting. The project has no native code.
 - Firebase BoM 34 and the KTX migration (D5).
 
@@ -144,8 +144,8 @@ How the facts behind the Decisions were checked, 2026-09-13:
 - D4: Firebase's `setCrashlyticsCollectionEnabled` reference (a `false` override applies on the
   next run and persists) and the Crashlytics customize-reports guide (the manifest flag; reports
   made while collection is off are stored on the device).
-- D5: `./gradlew :app:dependencyInsight --dependency com.google.firebase:firebase-common
-  --configuration releaseRuntimeClasspath`, which gives 21.0.0. The BoM 34.0.0 release notes list
+- D5: the `firebase-common` `dependencyInsight` check in T25's Notes, which gives 21.0.0. The
+  BoM 34.0.0 release notes list
   the 33.16.0 → 34.0.0 mapping. The `firebase-crashlytics-19.4.4.pom` on Google Maven.
 - The reference app `~/StudioProjects/Nyasa` uses BoM 33.8.0 with `firebase-crashlytics-ktx` and
   plugin 3.0.3 on the buildscript classpath. It is a useful check on versions, but don't copy its

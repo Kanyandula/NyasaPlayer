@@ -12,8 +12,8 @@
 ## Problem
 
 A crash on a tester's phone or head unit leaves no trace anywhere we can read. This ticket wires
-Crashlytics so a release crash is sent, and makes sure a debug crash is not. Custom keys and
-non-fatals are T26 and T27. This ticket adds no Kotlin.
+Crashlytics so a release crash is sent, and makes sure a debug crash is not. This ticket adds no
+Kotlin.
 
 ## Scope
 
@@ -30,17 +30,12 @@ non-fatals are T26 and T27. This ticket adds no Kotlin.
   `<meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />`
   inside `<application>`, with a comment pointing at T24 D4.
 - New `docs/CRASH_REPORTING.md`, the inventory D8 asks for. It covers:
-  - what the SDK sends by default: stack traces and exception class and message, the Crashlytics
-    installation UUID, the Firebase installation ID, the Firebase session ID, crash timestamp,
-    package name and version, OS version, device model, CPU architecture, RAM and disk, the rooted
-    flag, the background flag, orientation, ANRs on Android 11+, and the Firebase Sessions events
-    behind crash-free metrics
+  - what the SDK sends by default, taken from Firebase's current privacy and Play data-disclosure
+    pages at implementation time, not from this ticket. Include Firebase Sessions, which
+    Crashlytics pulls in.
   - what is never sent (D8's list)
   - where collection is switched, and how to check it (the Notes below)
-  - retention: 90 days, per Firebase's privacy page
-
-  Take the default list from Firebase's current privacy and Play data-disclosure pages at
-  implementation time, not from this ticket.
+  - retention, per Firebase's privacy page
 - One line under `docs/AAOS_COMPLIANCE.md` → Distribution Tracks pointing at the inventory, so
   the car's data story has a home in the compliance notes.
 
@@ -71,9 +66,8 @@ non-fatals are T26 and T27. This ticket adds no Kotlin.
 
 ## Notes
 
-- **The build ID.** Without the plugin, the SDK throws at startup, in debug too (T24 D3). If a build
-  crashes on launch with "The Crashlytics build ID is missing", the plugin is missing from that app
-  module.
+- **The build ID.** A launch crash with "The Crashlytics build ID is missing" means that app module
+  lacks the plugin (T24 D3).
 - **Signing a release build to test with.** Neither app has a release `signingConfig`, so
   `assembleRelease` produces an unsigned APK. For the checks above, sign it locally with
   `apksigner` and the debug keystore. **Uninstall the debug build first.** The two share a package,

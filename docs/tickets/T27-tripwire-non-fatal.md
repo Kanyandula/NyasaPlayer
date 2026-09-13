@@ -70,9 +70,8 @@ again.
   only the most recent eight between sends. The hook fires once per reconnect attempt, not once
   per loss. `reconnecting` is cleared in `finally`, and a failed rebuild leaves the old
   disconnected controller in place, so every later tap tries again and reports again. That's
-  accepted: the first report is the evidence T16 needs, and the eight-report cap bounds the rest.
-  A dedupe flag would be more state in the collector to answer a question one event already
-  answers.
+  accepted, with no dedupe flag: the first report is the evidence T16 needs, and the eight-report
+  cap bounds the rest.
 - **Why the ViewModels forward it** rather than the collector calling the reporter itself:
   `:core:playback` already depends on `:core:data` and could reach the reporter. But that would
   change the collector's constructor, which four places build (two ViewModels, two test classes),
