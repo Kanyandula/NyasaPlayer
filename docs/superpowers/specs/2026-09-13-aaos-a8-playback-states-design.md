@@ -10,7 +10,7 @@ fourth to its own phase.
 
 | # | Contract row | What the code already has |
 |---|---|---|
-| 19 | `CarPlaybackErrorOverlay` — message, Try again, Skip next, Dismiss | `CarErrorOverlay(error, onDismiss, onRetry, modifier)` in `auto/ui/components/`, drawn by `AutomotiveApp` whenever `playerState.error != null`. Dismiss and Try again, no Skip next. Its buttons are hand-rolled `Box`es with `padding(vertical = 20.dp)` and do not apply `carTouchTarget()`. |
+| 19 | `CarPlaybackErrorOverlay` — message, Try again, Skip next, Dismiss | `CarErrorOverlay(error, onDismiss, onRetry, modifier)` in `auto/ui/components/`, drawn by `AutomotiveApp` whenever `playerState.error != null`. Dismiss and **Retry** (the contract calls it Try again; the label stays), no Skip next. Its buttons are hand-rolled `Box`es with `padding(vertical = 20.dp)` and do not apply `carTouchTarget()`. |
 | 16 | `CarNoConnectionScreen` — offline state, Retry, Browse Downloads | `OfflineBanner(isOffline = playerState.isOffline)`; `AutomotivePlayerViewModel.observeNetworkState()` feeds `AutomotiveUiState.isOffline` from `NetworkMonitor`. No screen, and nothing uses `isOffline` except the banner. |
 | 18 | `CarLoadingScreen` — shared static skeletons | Home (`CarRowSkeleton`), Browse (`BrowseSkeleton`) and Library (`LibrarySkeleton`) each render a skeleton inside the chrome while `isLoading` is true. |
 | 15 | `CarDownloadsScreen` | A visibly disabled Downloads row in `CarLibraryScreen`. `SongDownloadManager` lives in `:app`, which `:automotive` does not depend on (`CarDetailScreen` KDoc, D12). |
@@ -24,7 +24,7 @@ Two behaviours matter more than the screens:
   "No Connection". Mobile fails fast: `PlayerViewModel` checks `isOnline` before streaming, in three
   places.
 
-**Try again already retries.** The car's `onRetry` is `clearError()` then `togglePlayPause()`. After a
+**Retry already retries.** The car's `onRetry` is `clearError()` then `togglePlayPause()`. After a
 player error `isPlaying` is false, so the toggle sends `play()`. In Media3 1.5.1 a controller's
 `play()` reaches `MediaSessionImpl.handleMediaControllerPlayRequest`, which calls
 `Util.handlePlayButtonAction`; that calls `prepare()` when the player is `STATE_IDLE`. The failed item
@@ -37,7 +37,8 @@ Each was put to the user and answered; none is open.
 
 1. **Downloads leave A8.** Files are per device and the car cannot start a download, so a car
    Downloads screen would always be empty. Car downloads become **A9**, which moves
-   `SongDownloadManager` into a shared module, moves local-URI resolution into shared code, adds
+   `SongDownloadManager` into a shared module, moves local-URI resolution into shared code — including for restored sessions, which today are
+   queued with their streaming URLs even when downloaded — adds
    parked-only download actions, builds screen 15, and enables the Library row.
 2. **NoConnection is a behaviour, not a screen.** The banner stays. A play attempt while offline
    raises the existing overlay *immediately*. No full-screen state: offline-first lists still work,
@@ -71,9 +72,20 @@ network failure: title **"No Connection"**, message **"Check your vehicle's inte
 
 | Guard | Condition | `isRetryable` |
 |---|---|---|
-| `playSong(songs, song)` and `shufflePlay(songs)`, before the transport call | no song in the list `isPlayableNow` | **false** |
+| `playSong(songs, song)`, before `setQueue` | the tapped `song` is not `isPlayableNow` — it is what starts, and a mixed list must not wave it through | **false** |
+| `shufflePlay(songs)`, before the transport call | no song in `songs` is `isPlayableNow` | **false** |
 | `togglePlayPause()`, when about to play | the current song (`uiState.playback.currentSong`) is not `isPlayableNow` | true |
-| the snapshot observer in `observePlaybackSnapshot()` | `snapshot.isBuffering && isOffline` — pause through the transport, then raise | true |
+| the snapshot observer in `observePlaybackSnapshot()` | `snapshot.isBuffering && snapshot.playWhenReady && isOffline` — pause through the transport, then raise | true |
+
+**Why the buffering guard needs `playWhenReady`.** Buffering alone is not a play attempt. A restore
+runs `applyQueueToPlayer()` — which calls `exoPlayer.prepare()` — and only then sets
+`playWhenReady = false` (`PlaybackService`'s restore handler), so a restored-but-paused session
+buffers. Offline, a guard on `isBuffering` alone would put an overlay in front of a driver who has
+pressed nothing, which T3's D-T3.5 rules out. `isPlaying` cannot stand in: it is false *while*
+buffering. So `PlaybackSnapshot` gains `playWhenReady: Boolean = false`, which the collector keeps
+current from `Player.Listener.onPlayWhenReadyChanged`, sets in `syncSnapshotFromPlayer`, and sets to
+`false` in `applyRestored`. The listener is an object member, so `BasePlayerStateCollector`'s
+detekt function ceiling is not touched.
 
 **Why a refused play offers no Retry.** The refused song was never queued. Retry is
 `togglePlayPause()`, which would act on whatever *else* is current, and `PlayerError.isRetryable`'s
@@ -92,12 +104,15 @@ it.
 
 ### 3. Mobile — `PlayerViewModel`
 
-Its three `!isOnline && !isDownloaded` checks become `isPlayableNow` on the **resolved** song:
+Two of its three `!isOnline && !isDownloaded` checks become `isPlayableNow` on the **resolved** song:
 
 - `playSong`: `resolveSongUri(song).isPlayableNow(isOnline)`.
 - `shufflePlay`: `resolvedSongs.any { it.isPlayableNow(isOnline) }` replaces the `zip` comparison.
-- `togglePlayPause`: `currentSong?.isPlayableNow(isOnline) ?: isOnline`. The fallback keeps today's
-  answer when there is no current song — offline with no song is still an error.
+- `togglePlayPause` **keeps its current check**, `downloadManager.getLocalFileUri(currentMediaId)`.
+  It cannot switch to the rule without changing behaviour: a restored session's songs come from
+  `PlaybackStatePersistence` via `songRepository.getSongsByIds()` and reach the snapshot through
+  `applyRestored` without `resolveSongUri()`, so a restored song that *is* downloaded still carries
+  its `https:` URL. Today's mediaId check lets it play; `isPlayableNow` would refuse it.
 
 Behaviour, wording and `handleOfflineBuffering()` stay as they are. **This is a refactor with no
 test net:** `:app`'s only unit test is `SongMediaItemMapperTest`, so the mobile change is verified on
@@ -107,7 +122,7 @@ a device (see Testing).
 
 - Actions move onto the existing **`CarPillButton`** (`CarControls.kt`), which applies
   `carTouchTarget()` at `CarPillButtonHeight` (76dp) and already carries the gold-label contrast rule.
-  Try again is `filled = true`; Dismiss and Skip next are `filled = false`.
+  Retry is `filled = true`; Dismiss and Skip next are `filled = false`.
 - New parameter `onSkipNext: (() -> Unit)?`; `null` hides the button.
 - `AutomotiveApp` passes it only when `playerState.playback.hasNext && !playerState.isOffline`.
   Offline, skipping raises the next track's error.
@@ -138,17 +153,22 @@ a device (see Testing).
 - offline with a `file:/` URL → true
 - offline, blank `audioUrl`, `file:/` `songUrl` → true (the `resolvedAudioUrl` fallback)
 
+**JVM, `:core:playback`** — `playWhenReady` in the snapshot, on the real-`MediaSession` harness
+(`ReconnectingCollectorTest` / `ConnectedTransportTest`, D64): it follows `play()` and `pause()`, and
+`applyRestored` leaves it false.
+
 **Compose, `:automotive` debug variant** — `CarErrorOverlay`:
 
 - Skip next is shown if and only if `onSkipNext` is non-null
-- Try again is shown if and only if `error.isRetryable`
+- Retry is shown if and only if `error.isRetryable`
 
 **AAOS emulator, `oem` flavor** (`svc wifi disable` / `svc data disable` for offline):
 
-- offline, tap a song → overlay at once, no Try again, nothing queued
-- network lost mid-track → buffering → overlay with Try again; network back, Try again → plays
+- offline, tap a song → overlay at once, no Retry, nothing queued
+- offline, relaunch onto a restored session → **no** overlay until play is pressed
+- network lost mid-track → buffering → overlay with Retry; network back, Retry → plays
 - a non-network playback error with a next track → Skip next plays the next track
-- driving (`inject-vhal-event`): overlay still dismissible, Skip next and Try again still work
+- driving (`inject-vhal-event`): overlay still dismissible, Skip next and Retry still work
 
 **Mobile device regression** — the refactor's only check:
 
@@ -165,7 +185,11 @@ a device (see Testing).
    harmless.
 2. **Contrast.** Read the measured-contrast table in `aaos-DESIGN.md` before the device pass, and
    sample the outlined pills on the overlay's card.
-3. **A non-network playback error on demand.** The emulator pass needs one for Skip next. How to
+3. **Mobile's `handleOfflineBuffering()` has the same restore trigger.** It checks
+   `isBuffering && !isOnline`, so an offline mobile restore likely raises its "Connection lost"
+   error too. Not device-verified. With `playWhenReady` on the snapshot, mobile can adopt the same
+   condition in one line; whether to do that here or file it is for the review of this spec.
+4. **A non-network playback error on demand.** The emulator pass needs one for Skip next. How to
    produce it (a test catalog entry with a bad URL, or an unsupported file) is the plan's to decide.
 
 ## Decisions to record
@@ -173,7 +197,7 @@ a device (see Testing).
 **D71 — A8 is three states, not four screens.** NoConnection is a behaviour: offline play fails before
 the attempt, with the existing overlay, because offline-first lists still work and a full-screen
 blocker would hide them. Loading is satisfied by the per-screen skeletons. A refused play offers no
-Retry, because the refused song was never queued. Try again needs no change: Media3 re-prepares an
+Retry, because the refused song was never queued. Retry needs no change: Media3 re-prepares an
 idle player on a controller's `play()`. Car downloads move to A9. Known gap: playback started from the
 OEM template or Assistant still fails slowly offline.
 
