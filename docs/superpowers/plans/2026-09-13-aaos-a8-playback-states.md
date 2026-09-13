@@ -226,7 +226,13 @@ class PlayWhenReadySnapshotTest {
 
         val song = Song(mediaId = "a", title = "A")
         collector.applyRestored(
-            RestoredPlayback(queue = listOf(song), index = 0, song = song, positionMs = 0L, repeatMode = RepeatMode.Off),
+            RestoredPlayback(
+                queue = listOf(song),
+                index = 0,
+                song = song,
+                positionMs = 0L,
+                repeatMode = RepeatMode.Off,
+            ),
         )
 
         assertFalse(collector.playbackState.value.playWhenReady)
