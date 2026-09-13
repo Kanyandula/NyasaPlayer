@@ -798,6 +798,15 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   text entry that `NO_KEYBOARD` refuses while driving, phone sign-in needs an SMS round trip on a
   head unit that may have no SIM, and Google sign-in already works.
 
+- **D71 — A8 is three states, not four screens.** NoConnection is a behaviour: offline play fails
+  before the attempt, with the existing overlay, because offline-first lists still work and a
+  full-screen blocker would hide them. Loading is satisfied by the per-screen skeletons. A refused
+  play offers no Retry, because the refused song was never queued. Retry needs no change: Media3
+  re-prepares an idle player on a controller's `play()`. Car downloads move to A9. A8 leaves `:app`
+  untouched — surfaces differ by module, not by `isMobileApp`-style checks in shared code — and
+  mobile adopts the rule in T28. Known gap: playback started from the OEM template or Assistant
+  still fails slowly offline.
+
 ## Components
 
 ### Implementation ownership

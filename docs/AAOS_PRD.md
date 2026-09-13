@@ -25,8 +25,8 @@ measured, compliance-aware system. It delivers a **20-screen custom launcher** i
 visual identity, with driving restrictions enforced from the vehicle's own signals rather than
 assumed.
 
-The work is sequenced into **nine phases**. Phase A1 is foundation — tokens, touch-target
-primitives, build variants, and the restriction layer. Phases A2–A8 deliver the AAOS screens.
+The work is sequenced into **ten phases**. Phase A1 is foundation — tokens, touch-target
+primitives, build variants, and the restriction layer. Phases A2–A9 deliver the AAOS screens.
 Project B is tracked separately; the AAOS release does not wait for the mobile brand migration.
 
 **Current state:** the phase table in §9 is the only place slice status lives. It links each
@@ -249,11 +249,11 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 | 12 | CarFullPlayerScreen | Mini-player artwork/title | Play/pause, skip, seek, shuffle, repeat, like, queue | buffering, error → 19 | **Allowed** — playback control | Player VM | A5 |
 | 13 | CarQueueScreen | Mini-player queue icon, or full player | **P:** skip to, remove, clear · **D:** skip to only | empty queue | Viewable; edit actions refused, list truncated | Player VM | A5 |
 | 14 | CarSettingsScreen | System bar: settings | Toggle prefs, sign out | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
-| 15 | CarDownloadsScreen | Library → Downloads chip | **P:** remove one, remove all · **D:** view only | empty, in-progress | Viewable; delete actions refused | Content VM | A8 |
-| 16 | CarNoConnectionScreen | Network loss | Retry, go to downloads | — | Allowed | NetworkMonitor | A8 |
+| 15 | CarDownloadsScreen | Library → Downloads chip | **P:** remove one, remove all · **D:** view only | empty, in-progress | Viewable; delete actions refused | Content VM | A9 |
+| 16 | CarNoConnectionScreen — *not a screen: offline play fails fast into the error overlay; the banner stays (D71)* | Network loss | — | — | Allowed | NetworkMonitor | A8 |
 | 17 | CarEmptyFavouritesScreen | Favourites with none liked | Browse music | — | Allowed | Content VM | A4 |
-| 18 | CarLoadingScreen | Initial content load | none | — | Allowed | Content VM | A8 |
-| 19 | CarPlaybackErrorOverlay | Playback failure | Try again, skip to next | — | **Allowed** — must be dismissible while driving | Player VM | A8 |
+| 18 | CarLoadingScreen — *satisfied by the per-screen skeletons in Home, Browse and Library (D71)* | Initial content load | none | — | Allowed | Content VM | A8 |
+| 19 | CarPlaybackErrorOverlay | Playback failure | Retry, Skip next, Dismiss | — | **Allowed** — must be dismissible while driving | Player VM | A8 |
 | 20 | CarProfileSwitcherScreen | System bar: avatar | Switch, add profile | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
 
 **Cross-cutting requirements that apply to every screen**, and are therefore not repeated per
@@ -424,7 +424,8 @@ option, not an actively shipped artifact.
 | **A5** | FullPlayer, Queue | A2 | Merged and device-verified — PR #24; retryable-error and restore follow-ups recorded |
 | **A6** | Search, SearchResults | A2 + A6 design | Merged and device-verified — PR #27; `docs/AAOS_A6_VERIFICATION.md`; T5-T8 follow-ups recorded |
 | **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Merged and device-verified — PR #51 (parked and driving pass in the PR); PinOptIn deferred (D67, T18), phone and email sign-in deferred (T19) |
-| **A8** | NoConnection, Loading, Downloads, PlaybackError | A2 | Not started |
+| **A8** | PlaybackError, NoConnection (behaviour), Loading (satisfied) — Downloads moved to A9 | A2 | Merged and device-verified — PR #<n>; `docs/AAOS_A8_VERIFICATION.md` |
+| **A9** | Car downloads: `SongDownloadManager` into a shared module, local-URI resolution in shared code (restore included), parked-only download actions, Downloads screen, Library row | A8 | Not started |
 | **Project B** | Mobile brand migration — **separate PRD, non-blocking** | A1 tokens | Not started |
 
 **Why A1 first.** The restriction layer has a live bug and there is no touch-target discipline.
@@ -534,5 +535,5 @@ and cascade automatically; 4 hardcode the hex and need hand edits.
 | **Drill-down depth** | Levels below a tab root; the platform caps this while driving |
 | **Eviction** | Removing a user from a screen that became restricted mid-session |
 | **Chrome** | The persistent system bar, navigation rail and mini-player |
-| **A1–A8** | Implementation phases |
-| **Project B** | The mobile brand migration, independent of A1–A8 |
+| **A1–A9** | Implementation phases |
+| **Project B** | The mobile brand migration, independent of A1–A9 |
