@@ -162,7 +162,9 @@ today's `getLocalFileUri(currentMediaId)` check allows.
 - Skip next is shown if and only if `onSkipNext` is non-null
 - Retry is shown if and only if `error.isRetryable`
 
-**AAOS emulator, `oem` flavor** (`svc wifi disable` / `svc data disable` for offline):
+**AAOS emulator, `oem` flavor.** Not `svc wifi disable` / `svc data disable`: on this emulator they
+took down `car_service`, `CarLauncher` and `audioserver` (recorded in the A4-era emulator notes). The
+plan establishes an offline method first and checks the car stack survives it:
 
 - offline, tap a song → overlay at once, no Retry, nothing queued
 - offline, relaunch onto a restored session → **no** overlay until play is pressed
