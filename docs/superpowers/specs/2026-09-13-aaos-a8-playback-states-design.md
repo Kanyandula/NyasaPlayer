@@ -123,8 +123,14 @@ today's `getLocalFileUri(currentMediaId)` check allows.
   `carTouchTarget()` at `CarPillButtonHeight` (76dp) and already carries the gold-label contrast rule.
   Retry is `filled = true`; Dismiss and Skip next are `filled = false`.
 - New parameter `onSkipNext: (() -> Unit)?`; `null` hides the button.
-- `AutomotiveApp` passes it only when `playerState.playback.hasNext && !playerState.isOffline`.
-  Offline, skipping raises the next track's error.
+- It shows only for an error about the current item — the `isRetryable` rule Retry already uses — so a
+  failed like or an empty genre never offers a transport action.
+- `AutomotiveApp` passes it only when `playback.hasNext && playback.queueSize > 1 && !isOffline`.
+  `hasNext` alone is true under repeat-all for a queue of one, which would replay the failed item;
+  offline, skipping raises the next track's error.
+- `playSong` and `shufflePlay` return whether playback started, and `AutomotiveApp`'s six play call
+  sites open the full player only on `true`. Today they open it unconditionally, which would put the
+  overlay over an empty full player.
 - Skip next calls a new `AutomotivePlayerViewModel` function that clears the error, skips, then plays
   through the transport — see Open items for why *then plays*.
 

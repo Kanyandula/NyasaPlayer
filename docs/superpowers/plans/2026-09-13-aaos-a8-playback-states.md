@@ -339,7 +339,7 @@ There is no JVM harness for `AutomotivePlayerViewModel` (its constructor needs `
 
 **Interfaces:**
 - Consumes: `Song.isPlayableNow(isOnline)` (Task 1), `PlaybackSnapshot.playWhenReady` (Task 2), `stateCollector.transport` (`isPlaying(): Boolean?`, `play()`, `pause()`, `togglePlayPause()`, `skipNext()`, `setQueue(...)`, `shufflePlay(...)` — each command returns `Boolean`), `networkMonitor.isOnline: StateFlow<Boolean>`.
-- Produces: `fun skipNextAfterError()` on `AutomotivePlayerViewModel` (Task 4 calls it).
+- Produces: `fun skipNextAfterError()` on `AutomotivePlayerViewModel`; `playSong(songs, song): Boolean` and `shufflePlay(songs): Boolean`, true only when playback started (Task 4 uses all three).
 
 - [ ] **Step 1: One source for the offline wording**
 
@@ -395,27 +395,57 @@ Mobile reads `networkMonitor.isOnline.value` directly rather than the UI state, 
     private val isOnline: Boolean get() = networkMonitor.isOnline.value
 ```
 
-- [ ] **Step 3: Guard `playSong` and `shufflePlay`**
+- [ ] **Step 3: Guard `playSong` and `shufflePlay`, and say whether they started**
 
-In `playSong(songs, song)`, as the first statement:
+Both return `Unit` today, and every caller in `AutomotiveApp` opens the full player straight after —
+so a refused play would put the overlay over a full player with nothing in it. They now return
+whether playback started. Replace both functions whole; the bodies below are today's, plus the guard
+and the returns.
 
 ```kotlin
+    /** True only when the queue reached a connected player — the caller opens the full player on it. */
+    fun playSong(songs: List<Song>, song: Song): Boolean {
         // The tapped song is what starts. It was never queued, so Retry would act on someone else's
         // queue — hence no Retry (PlayerError.isRetryable).
         if (!song.isPlayableNow(isOnline)) {
             _uiState.update { it.copy(error = noConnectionError(isRetryable = false)) }
-            return
+            return false
         }
-```
+        val startIndex = songs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
+        // Nothing is painted as playing unless the command reached a connected player (T11).
+        if (!stateCollector.transport.setQueue(songs, startIndex)) return false
+        stateCollector.updateSnapshot {
+            it.copy(
+                currentSong = song,
+                isPlaying = true,
+                isShuffled = false,
+            )
+        }
+        return true
+    }
 
-In `shufflePlay(songs)`, directly after the existing `if (songs.isEmpty()) return`:
-
-```kotlin
+    /** True only when the shuffle reached a connected player. */
+    fun shufflePlay(songs: List<Song>): Boolean {
+        if (songs.isEmpty()) return false
         if (songs.none { it.isPlayableNow(isOnline) }) {
             _uiState.update { it.copy(error = noConnectionError(isRetryable = false)) }
-            return
+            return false
         }
+        if (!stateCollector.transport.shufflePlay(songs)) return false
+        stateCollector.updateSnapshot {
+            it.copy(
+                currentSong = songs.first(),
+                isPlaying = true,
+                isShuffled = true,
+            )
+        }
+        return true
+    }
 ```
+
+The `false` from a failed transport call is new behaviour too, and correct: T14 rebuilds the
+controller silently and drops the tap, so the full player should not open over it either. The next
+tap works.
 
 - [ ] **Step 4: Restructure `togglePlayPause`**
 
@@ -507,8 +537,10 @@ Expected: BUILD SUCCESSFUL. The class already carries `@Suppress("TooManyFunctio
 git add automotive/src/main/java/com/example/nyasaplayer/auto/viewmodel/AutomotivePlayerViewModel.kt
 git commit -m "A8: the car refuses to stream offline instead of timing out" -m "Three guards on the shared rule: a tapped song or shuffle that cannot
 play, a play toggle on a streamed current song, and a stream that starts
-buffering or loses the network mid-track. togglePlayPause keeps mobile's
-null branch so play still rebuilds a lost controller (T14)."
+buffering or loses the network mid-track. playSong and shufflePlay now
+say whether they started, so the shell stops opening the full player
+over a refused play. togglePlayPause keeps mobile's null branch so play
+still rebuilds a lost controller (T14)."
 ```
 
 ---
@@ -521,7 +553,7 @@ null branch so play still rebuilds a lost controller (T14)."
 - Test: `automotive/src/test/java/com/example/nyasaplayer/auto/ui/components/CarErrorOverlayTest.kt`
 
 **Interfaces:**
-- Consumes: `CarPillButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, filled: Boolean = true)` (`CarControls.kt`), `AutomotivePlayerViewModel.skipNextAfterError()` (Task 3), `PlayerError(title, message, isPlaybackError, isRetryable)`.
+- Consumes: `CarPillButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, filled: Boolean = true)` (`CarControls.kt`), `AutomotivePlayerViewModel.skipNextAfterError()`, `playSong(...): Boolean`, `shufflePlay(...): Boolean` (Task 3), `PlayerError(title, message, isPlaybackError, isRetryable)`.
 - Produces: `CarErrorOverlay(error, onDismiss, onRetry, modifier, onSkipNext: (() -> Unit)? = null)`.
 
 - [ ] **Step 1: Write the failing test**
@@ -543,8 +575,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Which actions the error overlay offers (A8). Skip next only when the caller has somewhere to skip
- * to; Retry only when retrying acts on the thing that failed.
+ * Which actions the error overlay offers (A8). Retry and Skip next only for an error about the current
+ * item (`isRetryable`); Skip next also only when the caller has somewhere to skip to.
  */
 @RunWith(RobolectricTestRunner::class)
 class CarErrorOverlayTest {
@@ -574,6 +606,17 @@ class CarErrorOverlayTest {
         composeRule.onNodeWithText("Skip next").assertIsDisplayed().performClick()
 
         composeRule.runOnIdle { assertEquals(1, skips) }
+    }
+
+    @Test
+    fun `skip next is not offered for an error about something other than the current item`() {
+        // A failed like or an empty genre is not about the playing track; skipping would act on the
+        // queue for an error that has nothing to do with it. Same rule as Retry.
+        composeRule.setContent {
+            CarErrorOverlay(error = notRetryable, onDismiss = {}, onRetry = {}, onSkipNext = {})
+        }
+
+        composeRule.onNodeWithText("Skip next").assertDoesNotExist()
     }
 
     @Test
@@ -641,7 +684,8 @@ private fun ErrorActions(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         CarPillButton(label = "Dismiss", onClick = onDismiss, modifier = Modifier.weight(1f), filled = false)
-        if (onSkipNext != null) {
+        // Same rule as Retry: only an error about the current item has anything to skip past.
+        if (isRetryable && onSkipNext != null) {
             CarPillButton(label = "Skip next", onClick = onSkipNext, modifier = Modifier.weight(1f), filled = false)
         }
         if (isRetryable) {
@@ -686,20 +730,49 @@ In `AutomotiveApp.kt`, the existing call is:
 Add one argument after `onRetry`:
 
 ```kotlin
-                // Only when there is somewhere to go. Offline, skipping just raises the next error.
-                onSkipNext = if (playerState.playback.hasNext && !playerState.isOffline) {
+                // Only when there is another track: hasNext is true under repeat-all even for a queue of
+                // one, which would replay the item that just failed. Offline, skipping just raises the
+                // next error.
+                onSkipNext = if (
+                    playerState.playback.hasNext &&
+                    playerState.playback.queueSize > 1 &&
+                    !playerState.isOffline
+                ) {
                     playerViewModel::skipNextAfterError
                 } else {
                     null
                 },
 ```
 
-- [ ] **Step 7: Run the tests**
+- [ ] **Step 7: Open the full player only when playback started**
+
+Six call sites in `AutomotiveApp.kt` call `playerViewModel.playSong(...)` or `.shufflePlay(...)` and
+then `openFullPlayer()` unconditionally. Find them with
+`grep -n "playerViewModel.playSong\|playerViewModel.shufflePlay" automotive/src/main/java/com/example/nyasaplayer/auto/ui/AutomotiveApp.kt`
+(at `93b5bee`: lines 304, 320, 324, 329, 337, 388). Each pair
+
+```kotlin
+                    playerViewModel.playSong(songs, song)
+                    openFullPlayer()
+```
+
+becomes
+
+```kotlin
+                    if (playerViewModel.playSong(songs, song)) openFullPlayer()
+```
+
+keeping each site's own arguments (`tracks, first` in `onPlayTracks`; `shufflePlay(songs)` in
+`onShuffleTracks` and `onGenreClick`). In `onGenreClick` only the `if (songs.isNotEmpty())` branch
+changes; its `else` still calls `reportEmptyGenrePlayback()`. Afterwards no `openFullPlayer()` may sit
+on the line after a play call.
+
+- [ ] **Step 8: Run the tests**
 
 Run: `./gradlew :automotive:testOemDebugUnitTest detekt`
-Expected: BUILD SUCCESSFUL; the 3 new tests pass with the rest.
+Expected: BUILD SUCCESSFUL; the 4 new tests pass with the rest.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarErrorOverlay.kt \
@@ -707,7 +780,8 @@ git add automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarE
         automotive/src/test/java/com/example/nyasaplayer/auto/ui/components/CarErrorOverlayTest.kt
 git commit -m "A8: Skip next on the error overlay, on real touch targets" -m "The overlay's actions move onto CarPillButton, which has the 76dp
 target and contrast rule the hand-rolled boxes lacked. Skip next shows
-only when there is a next track and the car is online."
+only for an error about the current item, with another track queued,
+online. A refused play no longer opens the full player."
 ```
 
 ---
@@ -726,9 +800,9 @@ Line numbers are as of `93b5bee`; match on content, not numbers. Edit by exact r
 Keep each row's column count. Replace the four rows' contents:
 
 - **15** `CarDownloadsScreen` — phase column `A8` → `A9`; nothing else.
-- **16** `CarNoConnectionScreen` — Primary actions `Retry, go to downloads` → `none — a behaviour, not a screen: offline play fails fast with the error overlay; the offline banner stays (D71)`. Keep the phase `A8`.
-- **18** `CarLoadingScreen` — Primary actions `none` → `none — satisfied by the per-screen skeletons in Home, Browse and Library (D71)`.
-- **19** `CarPlaybackErrorOverlay` — Primary actions `Try again, skip to next` → `Retry, Skip next (only with a next track, online), Dismiss`.
+- **16** — Screen `CarNoConnectionScreen` → `CarNoConnectionScreen — *not a screen: offline play fails fast into the error overlay; the banner stays (D71)*`; Primary actions `Retry, go to downloads` → `—`. Keep the phase `A8`.
+- **18** — Screen `CarLoadingScreen` → `CarLoadingScreen — *satisfied by the per-screen skeletons in Home, Browse and Library (D71)*`; Primary actions stay `none`.
+- **19** `CarPlaybackErrorOverlay` — Primary actions `Try again, skip to next` → `Retry, Skip next, Dismiss`.
 
 - [ ] **Step 2: PRD §9 and glossary**
 
@@ -753,7 +827,7 @@ In `AAOS_SCREEN_CONTRACT.md`:
 - **15** — last column `A8` → `A9`.
 - **16** — Content `Offline illustration/state, Retry, Browse Downloads` → `No screen: offline play fails fast into the error overlay; offline banner stays`; States `no network, retrying` → `offline`; Driving `Allowed; Browse Downloads remains available` → `Allowed`.
 - **18** — Content → `Satisfied by per-screen skeletons (Home, Browse, Library); parked-only shimmer not built`.
-- **19** — Content `Error message, Try again, Skip next, Dismiss` → `Error message, Retry, Skip next (next track exists and online), Dismiss`.
+- **19** — Content `Error message, Try again, Skip next, Dismiss` → `Error message, Retry, Skip next (current-item errors, another track queued, online), Dismiss`.
 
 - [ ] **Step 4: D71**
 
@@ -811,7 +885,7 @@ This is the spec's open item 1: does an errored player stay idle after a seek? P
 - `run-as com.example.nyasaplayer --user 10` into the app's Room database, inspect the schema with `sqlite3 <db> .schema` (do not assume table or column names), and point one cached song's audio URL at a URL that serves non-audio. Play it inside a list so a next track exists.
 - Note in the record how the car **classified** that error: `onPlaybackError` treats `error.cause is IOException` as network, and Media3's parser exceptions are `IOException`s — so the overlay may say `No Connection` for a bad file. Record it; do not fix it here.
 
-Pass: Skip next is visible, and tapping it plays the next track. If the next track does not start, the extra `play()` in `skipNextAfterError` is not reaching an idle player — report it.
+Pass: Skip next is visible, and tapping it plays the next track. Then the negatives: the same bad row as the only song with repeat-all on → **no** Skip next; a non-playback error (unlike while offline) → no Skip next and no Retry. If the next track does not start, the extra `play()` in `skipNextAfterError` is not reaching an idle player — report it.
 
 Restore the edited row (or clear app data for user 10) afterwards.
 
