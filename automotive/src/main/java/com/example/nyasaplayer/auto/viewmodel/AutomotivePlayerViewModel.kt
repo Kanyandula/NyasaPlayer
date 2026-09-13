@@ -16,6 +16,7 @@ import com.example.nyasaplayer.core.playback.ControllerConnection
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
+import com.example.nyasaplayer.core.playback.isPlayableNow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,20 @@ import kotlin.coroutines.cancellation.CancellationException
 
 private const val AutoPositionPollIntervalMs = 500L
 private const val TAG = "AutoPlayerVM"
+private const val NoConnectionTitle = "No Connection"
+private const val NoConnectionMessage = "Check your vehicle's internet connection"
+
+/**
+ * The offline error, one shape for the slow path and the fast one (A8). `isPlaybackError = false`
+ * selects the overlay's Wi-Fi-off icon. Retry only when the failing thing is the current item —
+ * see [PlayerError.isRetryable].
+ */
+private fun noConnectionError(isRetryable: Boolean) = PlayerError(
+    title = NoConnectionTitle,
+    message = NoConnectionMessage,
+    isPlaybackError = false,
+    isRetryable = isRetryable,
+)
 
 @UnstableApi
 @HiltViewModel
@@ -50,6 +65,7 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     private val userId get() = authRepository.currentUserId
     private var likeObserverJob: Job? = null
+    private val isOnline: Boolean get() = networkMonitor.isOnline.value
 
     private val stateCollector = object : BasePlayerStateCollector(
         connection = connection,
@@ -73,17 +89,17 @@ class AutomotivePlayerViewModel @Inject constructor(
             val isNetwork = error.cause is IOException
             _uiState.update {
                 it.copy(
-                    error = PlayerError(
-                        title = if (isNetwork) "No Connection" else "Playback Error",
-                        message = if (isNetwork) {
-                            "Check your vehicle's internet connection"
-                        } else {
-                            error.message ?: "Playback error"
-                        },
-                        // The current item is what failed, so Retry re-attempting it via
-                        // togglePlayPause() acts on the thing the error is actually about.
-                        isRetryable = true,
-                    ),
+                    // The current item is what failed, so Retry re-attempting it via
+                    // togglePlayPause() acts on the thing the error is actually about.
+                    error = if (isNetwork) {
+                        noConnectionError(isRetryable = true)
+                    } else {
+                        PlayerError(
+                            title = "Playback Error",
+                            message = error.message ?: "Playback error",
+                            isRetryable = true,
+                        )
+                    },
                 )
             }
         }
@@ -131,6 +147,7 @@ class AutomotivePlayerViewModel @Inject constructor(
     private fun observePlaybackSnapshot() {
         stateCollector.playbackState.onEach { snapshot ->
             _uiState.update { it.copy(playback = snapshot) }
+            stopIfStreamingOffline(snapshot)
         }.catch { /* Snapshot flow is internal — errors are non-fatal */ }
             .launchIn(viewModelScope)
     }
@@ -145,8 +162,21 @@ class AutomotivePlayerViewModel @Inject constructor(
     private fun observeNetworkState() {
         networkMonitor.isOnline.onEach { online ->
             _uiState.update { it.copy(isOffline = !online) }
+            if (!online) stopIfStreamingOffline(_uiState.value.playback)
         }.catch { /* Network state flow is internal — errors are non-fatal */ }
             .launchIn(viewModelScope)
+    }
+
+    /**
+     * Buffering, trying to play, offline, and not a local file: the stream cannot recover, so stop
+     * it now rather than after ExoPlayer's timeout (A8). `playWhenReady` is what keeps a
+     * restored-but-paused session — which buffers too — from raising anything (T3, D-T3.5).
+     */
+    private fun stopIfStreamingOffline(snapshot: PlaybackSnapshot) {
+        if (isOnline || !snapshot.isBuffering || !snapshot.playWhenReady) return
+        if (snapshot.currentSong?.isPlayableNow(isOnline = false) == true) return
+        stateCollector.transport.pause()
+        _uiState.update { it.copy(error = noConnectionError(isRetryable = true)) }
     }
 
     // ── Playback State Restore ──
@@ -170,11 +200,38 @@ class AutomotivePlayerViewModel @Inject constructor(
     // ── Playback Controls ──
 
     fun togglePlayPause() {
-        stateCollector.transport.togglePlayPause()
+        val transport = stateCollector.transport
+        // Reads the live player: the snapshot's isPlaying lags a listener callback behind it.
+        val isPlaying = transport.isPlaying() ?: run {
+            // Silent query, no rebuild. Ask for the toggle and let it fail, so play reconnects like
+            // every other control (T14).
+            transport.togglePlayPause()
+            return
+        }
+        if (isPlaying) {
+            transport.pause()
+            return
+        }
+        val current = _uiState.value.playback.currentSong
+        if (current != null && !current.isPlayableNow(isOnline)) {
+            _uiState.update { it.copy(error = noConnectionError(isRetryable = true)) }
+            return
+        }
+        transport.play()
     }
 
     fun skipNext() {
         stateCollector.transport.skipNext()
+    }
+
+    /**
+     * The overlay's Skip next. An errored player is idle, so the skip is followed by a play, which
+     * Media3 turns into prepare-then-play on an idle player (`Util.handlePlayButtonAction`).
+     */
+    fun skipNextAfterError() {
+        clearError()
+        val transport = stateCollector.transport
+        if (transport.skipNext()) transport.play()
     }
 
     fun skipPrevious() {
@@ -197,10 +254,17 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     // ── Play Actions ──
 
-    fun playSong(songs: List<Song>, song: Song) {
+    /** True only when the queue reached a connected player — the caller opens the full player on it. */
+    fun playSong(songs: List<Song>, song: Song): Boolean {
+        // The tapped song is what starts. It was never queued, so Retry would act on someone else's
+        // queue — hence no Retry (PlayerError.isRetryable).
+        if (!song.isPlayableNow(isOnline)) {
+            _uiState.update { it.copy(error = noConnectionError(isRetryable = false)) }
+            return false
+        }
         val startIndex = songs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
         // Nothing is painted as playing unless the command reached a connected player (T11).
-        if (!stateCollector.transport.setQueue(songs, startIndex)) return
+        if (!stateCollector.transport.setQueue(songs, startIndex)) return false
         stateCollector.updateSnapshot {
             it.copy(
                 currentSong = song,
@@ -208,11 +272,17 @@ class AutomotivePlayerViewModel @Inject constructor(
                 isShuffled = false,
             )
         }
+        return true
     }
 
-    fun shufflePlay(songs: List<Song>) {
-        if (songs.isEmpty()) return
-        if (!stateCollector.transport.shufflePlay(songs)) return
+    /** True only when the shuffle reached a connected player. */
+    fun shufflePlay(songs: List<Song>): Boolean {
+        if (songs.isEmpty()) return false
+        if (songs.none { it.isPlayableNow(isOnline) }) {
+            _uiState.update { it.copy(error = noConnectionError(isRetryable = false)) }
+            return false
+        }
+        if (!stateCollector.transport.shufflePlay(songs)) return false
         stateCollector.updateSnapshot {
             it.copy(
                 currentSong = songs.first(),
@@ -220,6 +290,7 @@ class AutomotivePlayerViewModel @Inject constructor(
                 isShuffled = true,
             )
         }
+        return true
     }
 
     // ── Queue Management ──
