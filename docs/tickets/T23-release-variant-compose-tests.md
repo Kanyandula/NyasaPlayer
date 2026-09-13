@@ -2,7 +2,7 @@
 
 - **Slice:** build, developer-facing gate
 - **Depends on:** —
-- **Status:** Filed, not specced
+- **Status:** Done — option 1, see Outcome
 - **Verification Command:** `./gradlew test`
 - **Design Reference:** —
 - **Risk Tags:** build config, false-red gate
@@ -72,3 +72,13 @@ test-only launcher activity into the shipped app.
 
 Found while running the full suite for T15 (PR #53). Confirmed pre-existing by stashing that branch's
 changes and running `:automotive:testOemReleaseUnitTest` against a clean `main`: same 20 failures.
+
+## Outcome
+
+Option 1, in both `:automotive` and `:app`: an `androidComponents.beforeVariants` block turns off the
+unit-test component for the release build type. It uses `hostTests[UNIT_TEST_TYPE].enable` rather
+than `enableUnitTest`, which AGP 8.8 deprecates for removal in 9.0.
+
+`./gradlew clean test --rerun-tasks` on the fix: 664 tests, 0 failures. Every `*DebugUnitTest` task
+still runs, including `:automotive:testOemDebugUnitTest`. The `:core:*` library modules keep their
+release unit tests; they carry no `ui-test-manifest`, so the trap is not there.
