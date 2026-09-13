@@ -61,8 +61,9 @@ reinstall of a different build type into the same data directory. And `:core:dat
 `BuildConfig`. So nothing in this story calls `setCrashlyticsCollectionEnabled`.
 
 **D5 — Versions: `firebase-crashlytics` 19.4.4, Crashlytics Gradle plugin 3.0.8.** The existing
-Firebase libraries are pinned individually from the BoM 33 generation (`-ktx` artifacts), and
-`firebase-common` resolves to 21.0.0 in `:app`'s release runtime classpath. Crashlytics 19.4.4 is
+Firebase libraries are pinned individually from the BoM 33 generation (auth and Firestore as `-ktx`
+artifacts, Realtime Database as `firebase-database`), and `firebase-common` resolves to 21.0.0 in
+`:app`'s release runtime classpath. Crashlytics 19.4.4 is
 the last BoM 33 release (BoM 33.16.0), and its POM asks for `firebase-common` 21.0.0 exactly, so
 nothing underneath the other libraries moves. Crashlytics 20.x belongs to BoM 34, which pulls
 `firebase-common` 22.0.0 in underneath `-ktx` artifacts that generation stopped publishing. That
