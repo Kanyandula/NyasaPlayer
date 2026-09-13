@@ -1,5 +1,6 @@
 package com.example.nyasaplayer.core.playback
 
+import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -22,6 +23,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
+
+private const val TAG = "PlayerStateCollector"
 
 abstract class BasePlayerStateCollector(
     private val connection: ControllerConnection,
@@ -85,6 +88,9 @@ abstract class BasePlayerStateCollector(
      */
     private fun onControllerLost() {
         if (!reconnecting.compareAndSet(false, true)) return
+        // T16 tripwire: `disconnected` here reopens T16 (see its Outcome); `null` is expected.
+        val state = if (controller == null) "null" else "disconnected"
+        Log.w(TAG, "Command found no usable controller ($state); rebuilding")
         val fresh = connection.reconnect()
         fresh.addListener(
             {
@@ -92,7 +98,8 @@ abstract class BasePlayerStateCollector(
                     // The poller from the first connection is still running and reads `controller`
                     // each tick, so it picks the new one up; starting another would double it.
                     attach(fresh.get(), startPolling = false)
-                } catch (_: ExecutionException) {
+                } catch (e: ExecutionException) {
+                    Log.w(TAG, "Controller rebuild failed", e.cause)
                     onPlayerUnavailable()
                 } catch (_: java.util.concurrent.CancellationException) {
                     onPlayerUnavailable()

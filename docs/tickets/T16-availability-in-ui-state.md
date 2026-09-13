@@ -2,7 +2,7 @@
 
 - **Slice:** UX, both surfaces
 - **Depends on:** T11 (merged, PR #47)
-- **Status:** Filed, not specced
+- **Status:** Closed — superseded by T14, see Outcome
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`
 - **Design Reference:** `docs/aaos-DESIGN.md` D63
 - **Risk Tags:** UX, both surfaces, driving-time affordances
@@ -40,3 +40,29 @@ while it is false — the answer arriving before the tap rather than after it.
 Needs a real answer to "what does the snapshot know and when" — availability is currently asked at
 command time, and making it observable means deciding how often it is polled or how it is pushed.
 That is the interesting part of this ticket, not the dimming.
+
+## Outcome
+
+**Closed without building it, because nothing known can produce the state it would show.**
+
+The ticket assumed a player that could be "gone" while the UI still drew it. Since T14 there is no
+known way to get there while the process lives:
+
+- `PlaybackService` shares the app process, and a held `MediaController` keeps it bound. T11's device
+  pass on the AAOS emulator found `am stopservice` returns "Service stopped" while the session stays
+  bound and alive, and `am force-stop` takes the Activity with the service. The same holds for the
+  service's own `onTaskRemoved` → `stopSelf()`: a bound service is not destroyed by it.
+- The one known way to a dead controller in a live process was the app releasing its own on
+  `onCleared()`. T14 fixed that (D65).
+- The windows that remain do not need dimming. Before the first connection the snapshot has no song,
+  so there is no player UI to dim; a connection that fails already raises `onControllerConnectionFailed`;
+  and a failed rebuild can only follow a disconnect no one has reproduced.
+
+**The tripwire.** `BasePlayerStateCollector.onControllerLost()` now logs once per loss, saying
+whether the controller it found was `null` or `disconnected`, and logs the cause if the rebuild
+fails. `null` is expected — a tap before the first connection resolved. **A `disconnected` line on a
+device reopens this ticket**, with the evidence T11 could never collect. It goes to logcat only:
+there is no crash reporting in this project yet, which is T24.
+
+**For whoever reopens it:** the push in Notes would be a `MediaController.Listener` on the `Builder` in
+`ControllerConnection`. T15 rejected that listener for clearing a field; publishing state is a fair use.

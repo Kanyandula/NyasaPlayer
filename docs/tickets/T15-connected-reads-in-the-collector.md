@@ -46,7 +46,7 @@ It is the same class: a field that outlives its connection, read as if it were t
 - Reconnection (T14, merged) — a read must not trigger one. Queries stay silent (D63), and
   `connectedOrNull()` does not report, so this stays true by construction.
 - Publishing availability into `PlaybackSnapshot` so the UI can dim dead controls — that is T16, and
-  it is the ticket that needs the interesting answer.
+  it is the ticket that needs the interesting answer. (T16 has since closed; see its Outcome.)
 
 ## Acceptance Criteria
 
@@ -80,5 +80,5 @@ These two reads are the only places that build a claim on top of the default: an
 All` that turns false into true, and an idle check that reads 0 as "empty, restore onto it".
 
 **Why it is still worth doing** with commands already guarded: the reads feed `PlaybackSnapshot`, and
-T16 is about trusting the snapshot enough to drive what the driver can touch. A `hasNext` that is
-true because nothing was listening is not a base to build that on.
+mobile's `MiniPlayer` and `ExpandedPlayer` already enable skip-next from `hasNext`. A `hasNext` that is
+true because nothing was listening is a button that looks live over a player that is not.
