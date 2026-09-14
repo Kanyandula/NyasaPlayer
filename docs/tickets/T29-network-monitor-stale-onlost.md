@@ -2,7 +2,7 @@
 
 - **Slice:** correctness, shared by both surfaces
 - **Depends on:** —
-- **Status:** Filed, not specced
+- **Status:** Done — see Outcome and `docs/T29_VERIFICATION.md`
 - **Verification Command:** `./gradlew :core:common:testDebugUnitTest`, plus a device pass
 - **Design Reference:** `docs/AAOS_A8_VERIFICATION.md` (findings); D71
 - **Risk Tags:** shared module, both surfaces, mobile behaviour change
@@ -34,14 +34,14 @@ custom UI.
 
 - **Reproduce first**, on the AAOS emulator and a phone: toggle airplane mode repeatedly with the app
   in the foreground and record how often the banner fails to appear.
-- Derive the answer from the callback's own arguments rather than synchronous queries: `onLost` →
-  offline; `onCapabilitiesChanged(network, caps)` → `caps` has `INTERNET` and `VALIDATED`; leave
-  `onAvailable` to the capabilities callback that follows it.
+- Derive the answer from the callbacks' own arguments rather than synchronous queries, through a pure
+  tracker: `onLost` → offline; `onCapabilitiesChanged(network, caps)` → `INTERNET` and not
+  `CAPTIVE_PORTAL`; `onAvailable` waits for the capabilities that follow it (API 24–25 excepted — see
+  the spec).
 - A JVM test for the state machine, with the callback driven directly.
 
 ## Out Of Scope
 
-- Changing what "online" means (the `VALIDATED` requirement stays).
 - The car's classification of every `IOException` as "No Connection" — separate finding in the A8 record.
 
 ## Acceptance Criteria
@@ -55,3 +55,17 @@ custom UI.
 
 This changes mobile behaviour, which is why A8 filed it rather than fixing it (spec decision 4: A8
 leaves `:app`'s behaviour untouched). It needs its own phone pass.
+
+## Outcome
+
+Online now means the default network has `INTERNET` and is not a `CAPTIVE_PORTAL`, not `VALIDATED`
+(spec decision 1): a network that never validates — an OEM or telematics APN that blocks Google's
+probe — used to read offline forever, and since A8 that refuses every song tap on the car; a false
+offline is now worse than a false online, which only falls back to the slow failure.
+
+Baseline, measured on `main` on 2026-09-14 with the protocol in the spec's Testing section: 1 miss in
+20 valid transitions (an offline transition where the system settled offline and the app stayed
+online).
+
+Mobile's behaviour changes too: more networks now read online, since an unvalidated network no
+longer shows the banner or blocks offline checks.

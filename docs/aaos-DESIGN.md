@@ -813,6 +813,14 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   buffering. Known gap: playback started from the OEM template or Assistant fails slowly offline
   only when the car app is not running; when it is, the stall guard pauses it and the overlay
   waits for the car app.
+- **D72 — Online means the default network has `INTERNET` and is not a `CAPTIVE_PORTAL`, answered
+  from the callbacks' own arguments.** `NetworkMonitor` used to re-read `activeNetwork` inside every
+  callback, which the platform documents as possibly stale, and to require `VALIDATED`. The first missed
+  about one network loss in ten on the emulator (T29). The second would read a network that never
+  validates — an OEM or telematics APN that blocks Google's probe — as offline forever, and since D71
+  that refuses every song tap on the car. A false offline is now worse than a false online, which only
+  falls back to the slow failure. A pure tracker keyed by network handle holds the rule; the monitor
+  registers before it seeds, and only API 24–25 keep a synchronous read. Mobile changes with it.
 
 ## Components
 
