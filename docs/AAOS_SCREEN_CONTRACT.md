@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Applies to** | 20-screen `oem` AAOS launcher |
-| **Status** | Binding implementation contract for A2-A8 |
+| **Status** | Binding implementation contract for A2-A9 |
 | **Date** | 2026-08-03 |
 | **Primary PRD** | `docs/AAOS_PRD.md` |
 | **Design system** | `docs/aaos-DESIGN.md` |

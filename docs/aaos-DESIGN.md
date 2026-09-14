@@ -292,7 +292,8 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   button that permanently claims a download is in progress. Extracting the manager into a shared
   module touches seven `:app` files — `NyasaPlayerNavigation`, `PlayerViewModel`,
   `SongOverflowWithDownload`, `DownloadsViewModel`, `LibraryScreen`, `PlaylistDetailScreen`,
-  `SearchScreen` — and belongs to A8, which owns downloads and needs it anyway.
+  `SearchScreen` — and belongs to A9, which owns car downloads and needs it anyway
+  (moved from A8 by D71).
 - **D14 — Sign-out stays on `CarLibraryScreen`** with its confirmation overlay, marked for
   deletion in A7. It belongs on screen 14, but removing it in A3 leaves no way to sign out of the
   vehicle at all, since the system bar's avatar is disabled until A7 (A2 D3).
