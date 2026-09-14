@@ -136,6 +136,31 @@ class DefaultNetworkStateTest {
     }
 
     @Test
+    fun availableFirst_thenSeed_seedIsIgnored() {
+        // available() alone must count as a callback, or a seed read just after registering could
+        // overwrite the network the callback has already reported.
+        state.available(a)
+        state.seed(a, hasInternet = true, isCaptivePortal = false)
+        assertFalse(state.isOnline)
+    }
+
+    @Test
+    fun lostFirst_thenSeed_seedIsIgnored() {
+        state.lost(a)
+        state.seed(a, hasInternet = true, isCaptivePortal = false)
+        assertFalse(state.isOnline)
+    }
+
+    @Test
+    fun capabilitiesAfterLoss_areIgnored() {
+        state.available(a)
+        state.capabilities(a, hasInternet = true, isCaptivePortal = false)
+        state.lost(a)
+        state.capabilities(a, hasInternet = true, isCaptivePortal = false)
+        assertFalse(state.isOnline)
+    }
+
+    @Test
     fun seedWithNoNetwork_isOffline() {
         state.seed(null, hasInternet = true, isCaptivePortal = false)
         assertFalse(state.isOnline)
@@ -199,7 +224,7 @@ internal class DefaultNetworkState {
 - [ ] **Step 4: Run it to see it pass**
 
 Run: `./gradlew :core:common:testDebugUnitTest --tests '*DefaultNetworkStateTest*'`
-Expected: 11 tests, 0 failures.
+Expected: 14 tests, 0 failures.
 
 - [ ] **Step 5: Commit**
 
