@@ -50,7 +50,7 @@
 - Consumes: `Song` (`core/common/.../models/Song.kt`) — `audioUrl`, `songUrl`, `resolvedAudioUrl` (`audioUrl.ifBlank { songUrl }`).
 - Produces: `fun Song.isPlayableNow(isOnline: Boolean): Boolean`, package `com.example.nyasaplayer.core.playback`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```kotlin
 package com.example.nyasaplayer.core.playback
@@ -96,12 +96,12 @@ class OfflinePlaybackTest {
 }
 ```
 
-- [ ] **Step 2: Run it to see it fail**
+- [x] **Step 2: Run it to see it fail**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests '*OfflinePlaybackTest*'`
 Expected: compilation fails — `Unresolved reference: isPlayableNow`.
 
-- [ ] **Step 3: Write the rule**
+- [x] **Step 3: Write the rule**
 
 ```kotlin
 package com.example.nyasaplayer.core.playback
@@ -119,12 +119,12 @@ fun Song.isPlayableNow(isOnline: Boolean): Boolean =
     isOnline || resolvedAudioUrl.startsWith("file:")
 ```
 
-- [ ] **Step 4: Run it to see it pass**
+- [x] **Step 4: Run it to see it pass**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests '*OfflinePlaybackTest*'`
 Expected: 4 tests, 0 failures.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/playback/src/main/java/com/example/nyasaplayer/core/playback/OfflinePlayback.kt \
@@ -148,7 +148,7 @@ Why: a restore calls `prepare()` and then pauses, so a restored-but-paused sessi
 - Consumes: `BasePlayerStateCollector(connection, collectorScope)`, `ControllerConnection(context, sessionToken)`, `RestoredPlayback(queue, index, song, positionMs, repeatMode)`, `collector.transport.play()` / `.pause()`, `collector.playbackState: StateFlow<PlaybackSnapshot>`.
 - Produces: `PlaybackSnapshot.playWhenReady: Boolean` (default `false`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 The harness is `ReconnectingCollectorTest`'s — a real `MediaSession` over a `SimpleBasePlayer`, a real `ControllerConnection`, and the main looper pumped with `idle()` (D64). Its fake player must **report** `playWhenReady` in `getState()`, or the controller never sees it change.
 
@@ -269,12 +269,12 @@ private class PlayWhenReadyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
 
 Wrap any line over 120 characters before running detekt.
 
-- [ ] **Step 2: Run it to see it fail**
+- [x] **Step 2: Run it to see it fail**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests '*PlayWhenReadySnapshotTest*'`
 Expected: compilation fails — `Unresolved reference: playWhenReady`.
 
-- [ ] **Step 3: Add the field**
+- [x] **Step 3: Add the field**
 
 In `PlaybackSnapshot.kt`, append after `currentQueueIndex`:
 
@@ -285,7 +285,7 @@ In `PlaybackSnapshot.kt`, append after `currentQueueIndex`:
 )
 ```
 
-- [ ] **Step 4: Keep it current in the collector**
+- [x] **Step 4: Keep it current in the collector**
 
 In `BasePlayerStateCollector.kt`, inside `controllerListener`, directly after the existing `onIsPlayingChanged` override:
 
@@ -307,17 +307,17 @@ In `applyRestored`, add after `isPlaying = false,`:
                 playWhenReady = false,
 ```
 
-- [ ] **Step 5: Run the module's tests**
+- [x] **Step 5: Run the module's tests**
 
 Run: `./gradlew :core:playback:testDebugUnitTest`
 Expected: all pass, including the 2 new ones. If `playWhenReady_followsPlayAndPause` fails on the `play()` assertion, check that `handlePrepare` exists on the fake: a controller's `play()` on an idle player goes through `Util.handlePlayButtonAction`, which calls `prepare()` first.
 
-- [ ] **Step 6: Run detekt**
+- [x] **Step 6: Run detekt**
 
 Run: `./gradlew detekt`
 Expected: BUILD SUCCESSFUL. If `TooManyFunctions` fires on `BasePlayerStateCollector`, a function was added to the class rather than to the listener object — move it.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add core/playback/src/main/java/com/example/nyasaplayer/core/playback/PlaybackSnapshot.kt \
@@ -341,7 +341,7 @@ There is no JVM harness for `AutomotivePlayerViewModel` (its constructor needs `
 - Consumes: `Song.isPlayableNow(isOnline)` (Task 1), `PlaybackSnapshot.playWhenReady` (Task 2), `stateCollector.transport` (`isPlaying(): Boolean?`, `play()`, `pause()`, `togglePlayPause()`, `skipNext()`, `setQueue(...)`, `shufflePlay(...)` — each command returns `Boolean`), `networkMonitor.isOnline: StateFlow<Boolean>`.
 - Produces: `fun skipNextAfterError()` on `AutomotivePlayerViewModel`; `playSong(songs, song): Boolean` and `shufflePlay(songs): Boolean`, true only when playback started (Task 4 uses all three).
 
-- [ ] **Step 1: One source for the offline wording**
+- [x] **Step 1: One source for the offline wording**
 
 Add, next to the existing file-level `private const val TAG`:
 
@@ -387,7 +387,7 @@ Then make `onPlaybackError`'s network branch use it. Replace the whole body of t
 
 This changes one pixel-level thing on purpose: a network playback error now shows the Wi-Fi-off icon instead of the warning icon, matching the fast path.
 
-- [ ] **Step 2: The live network answer**
+- [x] **Step 2: The live network answer**
 
 Mobile reads `networkMonitor.isOnline.value` directly rather than the UI state, which lags a collection behind. Do the same. Add below `private var likeObserverJob: Job? = null`:
 
@@ -395,7 +395,7 @@ Mobile reads `networkMonitor.isOnline.value` directly rather than the UI state, 
     private val isOnline: Boolean get() = networkMonitor.isOnline.value
 ```
 
-- [ ] **Step 3: Guard `playSong` and `shufflePlay`, and say whether they started**
+- [x] **Step 3: Guard `playSong` and `shufflePlay`, and say whether they started**
 
 Both return `Unit` today, and every caller in `AutomotiveApp` opens the full player straight after —
 so a refused play would put the overlay over a full player with nothing in it. They now return
@@ -447,7 +447,7 @@ The `false` from a failed transport call is new behaviour too, and correct: T14 
 controller silently and drops the tap, so the full player should not open over it either. The next
 tap works.
 
-- [ ] **Step 4: Restructure `togglePlayPause`**
+- [x] **Step 4: Restructure `togglePlayPause`**
 
 Replace the one-line body. The `null` branch is load-bearing: a query cannot trigger a controller rebuild and the toggle can (T14, D65) — this is mobile's structure, copied.
 
@@ -476,7 +476,7 @@ Replace the one-line body. The `null` branch is load-bearing: a query cannot tri
 
 With no current song there is nothing to refuse, so the call goes through; the transport's own availability rules apply.
 
-- [ ] **Step 5: Stop a stream that loses the network**
+- [x] **Step 5: Stop a stream that loses the network**
 
 Add this private function beside `observeNetworkState()`:
 
@@ -508,7 +508,7 @@ In `observeNetworkState()`, after the existing `_uiState.update { it.copy(isOffl
 
 The second call covers the order the first misses: buffering begins online, *then* the network drops, and no new snapshot arrives to trigger the check.
 
-- [ ] **Step 6: Skip next after an error**
+- [x] **Step 6: Skip next after an error**
 
 Add under `skipNext()`:
 
@@ -524,14 +524,14 @@ Add under `skipNext()`:
     }
 ```
 
-- [ ] **Step 7: Add the import and build**
+- [x] **Step 7: Add the import and build**
 
 Add `import com.example.nyasaplayer.core.playback.isPlayableNow` in sorted position. Then:
 
 Run: `./gradlew :automotive:compileOemDebugKotlin :automotive:testOemDebugUnitTest detekt`
 Expected: BUILD SUCCESSFUL. The class already carries `@Suppress("TooManyFunctions")`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add automotive/src/main/java/com/example/nyasaplayer/auto/viewmodel/AutomotivePlayerViewModel.kt
@@ -556,7 +556,7 @@ still rebuilds a lost controller (T14)."
 - Consumes: `CarPillButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, filled: Boolean = true)` (`CarControls.kt`), `AutomotivePlayerViewModel.skipNextAfterError()`, `playSong(...): Boolean`, `shufflePlay(...): Boolean` (Task 3), `PlayerError(title, message, isPlaybackError, isRetryable)`.
 - Produces: `CarErrorOverlay(error, onDismiss, onRetry, modifier, onSkipNext: (() -> Unit)? = null)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Conventions from `CarModalTest`: `@RunWith(RobolectricTestRunner::class)`, `createComposeRule()`, back-ticked names.
 
@@ -631,12 +631,12 @@ class CarErrorOverlayTest {
 }
 ```
 
-- [ ] **Step 2: Run it to see it fail**
+- [x] **Step 2: Run it to see it fail**
 
 Run: `./gradlew :automotive:testOemDebugUnitTest --tests '*CarErrorOverlayTest*'`
 Expected: compilation fails — no parameter named `onSkipNext`.
 
-- [ ] **Step 3: Add the parameter and thread it through**
+- [x] **Step 3: Add the parameter and thread it through**
 
 In `CarErrorOverlay`, add the parameter **last**, so existing callers compile unchanged:
 
@@ -662,7 +662,7 @@ and pass it to the actions:
             )
 ```
 
-- [ ] **Step 4: Rebuild the actions on `CarPillButton`**
+- [x] **Step 4: Rebuild the actions on `CarPillButton`**
 
 Replace the whole `private fun ErrorActions(...)` with:
 
@@ -697,7 +697,7 @@ private fun ErrorActions(
 
 The Retry refresh icon goes with the hand-rolled box; `CarPillButton` is label-only. Accepted: the label carries the meaning.
 
-- [ ] **Step 5: Drop the imports that no longer have users**
+- [x] **Step 5: Drop the imports that no longer have users**
 
 Remove exactly these from `CarErrorOverlay.kt` (each had users only in the old `ErrorActions`):
 
@@ -712,7 +712,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 
 `background`, `clip`, `Box`, `Icon`, `FontWeight` stay — `ErrorIcon` and `ErrorText` still use them. If the compiler flags another as unused, remove it too and say so in your report.
 
-- [ ] **Step 6: Pass Skip next from the shell**
+- [x] **Step 6: Pass Skip next from the shell**
 
 In `AutomotiveApp.kt`, the existing call is:
 
@@ -744,7 +744,7 @@ Add one argument after `onRetry`:
                 },
 ```
 
-- [ ] **Step 7: Open the full player only when playback started**
+- [x] **Step 7: Open the full player only when playback started**
 
 Six call sites in `AutomotiveApp.kt` call `playerViewModel.playSong(...)` or `.shufflePlay(...)` and
 then `openFullPlayer()` unconditionally. Find them with
@@ -767,12 +767,12 @@ keeping each site's own arguments (`tracks, first` in `onPlayTracks`; `shufflePl
 changes; its `else` still calls `reportEmptyGenrePlayback()`. Afterwards no `openFullPlayer()` may sit
 on the line after a play call.
 
-- [ ] **Step 8: Run the tests**
+- [x] **Step 8: Run the tests**
 
 Run: `./gradlew :automotive:testOemDebugUnitTest detekt`
 Expected: BUILD SUCCESSFUL; the 4 new tests pass with the rest.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add automotive/src/main/java/com/example/nyasaplayer/auto/ui/components/CarErrorOverlay.kt \
@@ -795,7 +795,7 @@ online. A refused play no longer opens the full player."
 
 Line numbers are as of `93b5bee`; match on content, not numbers. Edit by exact row text — never splice on a repeating heading.
 
-- [ ] **Step 1: PRD §6.3**
+- [x] **Step 1: PRD §6.3**
 
 Keep each row's column count. Replace the four rows' contents:
 
@@ -804,7 +804,7 @@ Keep each row's column count. Replace the four rows' contents:
 - **18** — Screen `CarLoadingScreen` → `CarLoadingScreen — *satisfied by the per-screen skeletons in Home, Browse and Library (D71)*`; Primary actions stay `none`.
 - **19** `CarPlaybackErrorOverlay` — Primary actions `Try again, skip to next` → `Retry, Skip next, Dismiss`.
 
-- [ ] **Step 2: PRD §9 and glossary**
+- [x] **Step 2: PRD §9 and glossary**
 
 A8 row becomes:
 
@@ -820,7 +820,7 @@ Fill `<n>` once the PR exists (Task 7). Add directly below it:
 
 Glossary: `| **A1–A8** | Implementation phases |` → `A1–A9`; `independent of A1–A8` → `A1–A9`. §1's "nine phases" sentence names A1–A8 plus Project B — make it `ten phases`, `Phases A2–A9 deliver the AAOS screens`.
 
-- [ ] **Step 3: Screen contract rows**
+- [x] **Step 3: Screen contract rows**
 
 In `AAOS_SCREEN_CONTRACT.md`:
 
@@ -829,11 +829,11 @@ In `AAOS_SCREEN_CONTRACT.md`:
 - **18** — Content → `Satisfied by per-screen skeletons (Home, Browse, Library); parked-only shimmer not built`.
 - **19** — Content `Error message, Try again, Skip next, Dismiss` → `Error message, Retry, Skip next (current-item errors, another track queued, online), Dismiss`.
 
-- [ ] **Step 4: D71**
+- [x] **Step 4: D71**
 
 Insert after D70's last line, before the blank line and `## Components`, copying the text from the spec's "Decisions to record" section verbatim as a `- **D71 — …**` bullet in the house format (two-space continuation indent, wrapped at 100).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/AAOS_PRD.md docs/AAOS_SCREEN_CONTRACT.md docs/aaos-DESIGN.md
@@ -848,16 +848,16 @@ overlay row gains Skip next, and car downloads move to a new A9 phase."
 **Files:**
 - Create: `docs/AAOS_A8_VERIFICATION.md` — dated, in the shape of `docs/AAOS_A6_VERIFICATION.md` (read it first)
 
-- [ ] **Step 1: Full gate**
+- [x] **Step 1: Full gate**
 
 Run: `./gradlew test detekt :app:assembleDebug :automotive:assembleOemDebug`
 Expected: BUILD SUCCESSFUL. Record the test count. `git diff --stat main...HEAD -- app/` must print nothing.
 
-- [ ] **Step 2: Emulator setup**
+- [x] **Step 2: Emulator setup**
 
 Read `docs/AAOS_DRIVING_STATE_TESTING.md`. Use the **`AAOS_AOSP_33_userdebug`** AVD (driving injection works there), **one emulator at a time**, driver is **user 10**. Install `oemDebug`. Wait for Compose to lay out before tapping — taps within a second of focus are swallowed.
 
-- [ ] **Step 3: Establish an offline method that leaves the car stack alive**
+- [x] **Step 3: Establish an offline method that leaves the car stack alive**
 
 **Do not use `svc wifi disable` / `svc data disable`** — on this emulator they crashed `car_service`, `CarLauncher` and `audioserver`.
 
@@ -869,7 +869,7 @@ adb shell cmd connectivity airplane-mode enable
 
 Record the PIDs again. Pass: all three unchanged, and the app's offline banner appears. Restore with `airplane-mode disable`. If the stack crashes, try one alternative, then **stop and report** rather than trying a third — record what failed.
 
-- [ ] **Step 4: Offline passes**
+- [x] **Step 4: Offline passes**
 
 Each with a screenshot and the PIDs in the record:
 
@@ -878,7 +878,7 @@ Each with a screenshot and the PIDs in the record:
 3. Online, start a track; go offline mid-track → buffering, then the overlay **with** Retry. Back online, Retry → plays.
 4. With a session saved, go offline, kill and relaunch (stop playback first, compare PIDs — see the emulator notes) → the restored session shows **no** overlay until play is pressed; pressing play offline → overlay with Retry.
 
-- [ ] **Step 5: Skip next**
+- [x] **Step 5: Skip next**
 
 This is the spec's open item 1: does an errored player stay idle after a seek? Produce a non-network error with a next track queued. Suggested method — decide at execution time, and record which you used:
 
@@ -889,15 +889,15 @@ Pass: Skip next is visible, and tapping it plays the next track. Then the negati
 
 Restore the edited row (or clear app data for user 10) afterwards.
 
-- [ ] **Step 6: Driving pass**
+- [x] **Step 6: Driving pass**
 
 Inject driving per `AAOS_DRIVING_STATE_TESTING.md` (`inject-vhal-event 0x11400400 8` plus `inject-continuous-events 0x11600207 40 -s 5 -d 60`; oracle `Current Driving State: 2` / `DO: true UxR: 255`). With the overlay up: Dismiss, Retry and Skip next all work; the overlay is not evicted.
 
-- [ ] **Step 7: Contrast**
+- [x] **Step 7: Contrast**
 
 Read the measured-contrast table in `docs/aaos-DESIGN.md`. Sample the outlined pills' label and border on the overlay card from a screenshot and record the ratios. A gold label on gold has been shipped invisible in this repo before.
 
-- [ ] **Step 8: Write and commit the record**
+- [x] **Step 8: Write and commit the record**
 
 Everything observed goes in `docs/AAOS_A8_VERIFICATION.md`: date, AVD, user, PIDs, method used for offline and for the non-network error, pass/fail per step, screenshots path, and any finding. A step that could not be run is written down as not run, with why.
 
@@ -910,18 +910,18 @@ git commit -m "A8: device verification record"
 
 ### Task 7: Review and PR
 
-- [ ] **Step 1: Simplify before anything else**
+- [x] **Step 1: Simplify before anything else**
 
 Dispatch `pr-review-toolkit:code-simplifier` on `git diff main...HEAD`. Apply what holds; a declined suggestion gets a reason in the PR body or a `ponytail:` comment.
 
-- [ ] **Step 2: Review**
+- [x] **Step 2: Review**
 
 Dispatch `correctness-reviewer` and `quality-reviewer` in parallel on the diff. Verify each finding against the code before acting. Re-run `./gradlew test detekt` after changes.
 
-- [ ] **Step 3: Open the PR**
+- [x] **Step 3: Open the PR**
 
 `gh pr create --base main`, title ≤72 chars, body: what changed per task, the verification record's link and summary, the `:app`-untouched statement with the empty `git diff --stat main...HEAD -- app/`, T28 as the mobile follow-up, and any declined review findings with reasons. No AI attribution.
 
-- [ ] **Step 4: Fill the PR number**
+- [x] **Step 4: Fill the PR number**
 
 Set `<n>` in PRD §9's A8 row to the new PR number, commit (`A8: link the PR from the phase table`), push.

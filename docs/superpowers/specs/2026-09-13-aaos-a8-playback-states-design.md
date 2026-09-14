@@ -80,31 +80,29 @@ network failure: title **"No Connection"**, message **"Check your vehicle's inte
 |---|---|---|
 | `playSong(songs, song)`, before `setQueue` | the tapped `song` is not `isPlayableNow` — it is what starts, and a mixed list must not wave it through | **false** |
 | `shufflePlay(songs)`, before the transport call | no song in `songs` is `isPlayableNow` | **false** |
-| `togglePlayPause()`, when about to play | the current song (`uiState.playback.currentSong`) is not `isPlayableNow` | true |
-| the snapshot observer in `observePlaybackSnapshot()` | `snapshot.isBuffering && snapshot.playWhenReady && isOffline` — pause through the transport, then raise | true |
+| the stall guard, confirmed after 1.5 s | `isStreamStalledOffline` — offline, buffering, trying to play, and the current song is not `isPlayableNow` | true |
 
-**Why the buffering guard needs `playWhenReady`.** Buffering alone is not a play attempt. A restore
-runs `applyQueueToPlayer()` — which calls `exoPlayer.prepare()` — and only then sets
-`playWhenReady = false` (`PlaybackService`'s restore handler), so a restored-but-paused session
-buffers. Offline, a guard on `isBuffering` alone would put an overlay in front of a driver who has
-pressed nothing, which T3's D-T3.5 rules out. `isPlaying` cannot stand in: it is false *while*
-buffering. So `PlaybackSnapshot` gains `playWhenReady: Boolean = false`, which the collector keeps
-current from `Player.Listener.onPlayWhenReadyChanged`, sets in `syncSnapshotFromPlayer`, and sets to
-`false` in `applyRestored`. The listener is an object member, so `BasePlayerStateCollector`'s
-detekt function ceiling is not touched.
+**`togglePlayPause()` is not guarded.** It stays the pre-A8 one-liner and plays whatever is already
+buffered offline; the stall guard is what pauses it if that turns out to be nothing. Guarding the
+toggle too would refuse a resume that already has audio to play.
+
+**Why the stall guard needs `playWhenReady`, and needs confirming.** Buffering alone is not a play
+attempt. A restore runs `applyQueueToPlayer()` — which calls `exoPlayer.prepare()` — and only
+then sets `playWhenReady = false` (`PlaybackService`'s restore handler), so a restored-but-paused
+session buffers. Offline, a guard on `isBuffering` alone would put an overlay in front of a driver
+who has pressed nothing, which T3's D-T3.5 rules out. `isPlaying` cannot stand in: it is false
+*while* buffering. So `PlaybackSnapshot` gains `playWhenReady: Boolean = false`, which the
+collector keeps current from `Player.Listener.onPlayWhenReadyChanged`, sets in
+`syncSnapshotFromPlayer`, and sets to `false` in `applyRestored`. The listener is an object
+member, so `BasePlayerStateCollector`'s detekt function ceiling is not touched. Media3 also masks
+the controller to `STATE_BUFFERING` on every seek from a non-idle player, so the guard confirms
+`isStreamStalledOffline` again after 1.5 s before pausing — a seek inside audio already buffered
+must keep playing.
 
 **Why a refused play offers no Retry.** The refused song was never queued. Retry is
 `togglePlayPause()`, which would act on whatever *else* is current, and `PlayerError.isRetryable`'s
 KDoc forbids exactly that: *"must not offer a Retry that pauses/resumes someone else's queue."* The
 driver taps the song again.
-
-**`togglePlayPause()` must copy mobile's structure, not just gain a check.** Today the car's version
-is one line, `stateCollector.transport.togglePlayPause()`, and never learns whether it is about to
-play. To guard only the play half it has to read `transport.isPlaying()` first, as mobile does, and
-keep mobile's `null` branch: when `isPlaying()` is `null` it calls `transport.togglePlayPause()` anyway
-and returns, because a query cannot trigger a rebuild and the toggle can (T14, D65). Dropping that
-branch would make play the one car control that gives up on a lost controller instead of rebuilding
-it.
 
 `isOffline` is already in `AutomotiveUiState`; no new dependency.
 

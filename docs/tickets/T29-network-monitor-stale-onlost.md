@@ -25,6 +25,10 @@ answers "online", and nothing corrects it until the next callback.
 It matters more after A8. The car's fail-fast offline guards (D71) and mobile's own offline checks
 read `isOnline`; when it is wrong, both fall back to streaming and failing slowly.
 
+The same staleness cuts the other way, too: a network not yet `VALIDATED` after boot or
+reconnect, one that never validates, or a stale capabilities read can leave `isOnline` false when
+the vehicle is actually online. Since A8 that blocks every play the car's custom UI attempts.
+
 ## Scope
 
 - **Reproduce first**, on the AAOS emulator and a phone: toggle airplane mode repeatedly with the app
@@ -44,6 +48,7 @@ read `isOnline`; when it is wrong, both fall back to streaming and failing slowl
 - Given the app is in the foreground, when the network goes away, then `isOnline` becomes false
   every time across repeated toggles, on both surfaces.
 - Given the network returns and validates, then `isOnline` becomes true.
+- Given a validated network, then `isOnline` is true within a bounded time, including after boot.
 
 ## Notes
 

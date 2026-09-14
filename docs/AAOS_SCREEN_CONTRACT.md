@@ -111,7 +111,7 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | 16 | `CarNoConnectionScreen` | No screen: offline play fails fast into the error overlay; offline banner stays | offline | Allowed | A8 |
 | 17 | `CarEmptyFavouritesScreen` | Empty heart state, Browse Music CTA | empty | Allowed; CTA routes to Browse root | A4 |
 | 18 | `CarLoadingScreen` | Satisfied by per-screen skeletons (Home, Browse, Library); parked-only shimmer not built | initial load, section load | Allowed; no distracting animation | A8 |
-| 19 | `CarPlaybackErrorOverlay` | Error message, Retry, Skip next (current-item errors, another track queued, online), Dismiss | recoverable, fatal | Allowed and dismissible while driving | A8 |
+| 19 | `CarErrorOverlay` (contract name `CarPlaybackErrorOverlay`) | Error message, Retry, Skip next (current-item errors, another track queued, online), Dismiss | recoverable, fatal | Allowed and dismissible while driving | A8 |
 | 20 | `CarProfileSwitcherScreen` | Current account, close, and sign-out as the way to use a different one — no picker and no add-profile, because the app remembers one account (D66) | account, no display name | Refused by `NO_SETUP`, as a sheet rather than a destination (D69) | A7 |
 | 21 | `CarArtistScreen` | Catalogue artist hero, Play, Shuffle, track rows, no like affordance | loading, empty, error, artist missing | Refused when beyond depth cap | T4 |
 

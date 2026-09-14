@@ -51,5 +51,5 @@ the A8 spec found the same trigger on the car side.
 ## Notes
 
 `PlayerViewModel` has no unit tests; `:app`'s only test is `SongMediaItemMapperTest`. Every acceptance
-criterion above is a phone check. The T14 mobile pass that `docs/T14_VERIFICATION.md` still owes needs
-the same device and the same back-out-and-return gestures, so the two are worth running together.
+criterion above is a phone check. The T14 mobile pass (see `docs/T14_VERIFICATION.md`) needs the same
+device and the same back-out-and-return gestures, so the two are worth running together.

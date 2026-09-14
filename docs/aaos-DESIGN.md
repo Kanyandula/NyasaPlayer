@@ -398,6 +398,8 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   and `AutomotiveApp` already composes the overlay after both player overlays, so it draws above
   them. Adding a destination would put a failure message behind `gate()` and `maxContentDepth`,
   which can refuse it — the same reasoning as D21. A8 owns the dedicated playback-error visual.
+  **Closed by D71:** A8 kept `CarErrorOverlay` as screen 19; there is no separate playback-error
+  visual.
 - **D28 — Driving truncation is a display window over the queue, never a mutation of it.**
   `maxCumulativeContentItems` restricts what the driver may *see*; changing Media3's queue or the
   persisted playback order to achieve that would corrupt state the driver never asked to change,
@@ -805,8 +807,11 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   play offers no Retry, because the refused song was never queued. Retry needs no change: Media3
   re-prepares an idle player on a controller's `play()`. Car downloads move to A9. A8 leaves `:app`
   untouched — surfaces differ by module, not by `isMobileApp`-style checks in shared code — and
-  mobile adopts the rule in T28. Known gap: playback started from the OEM template or Assistant
-  still fails slowly offline.
+  mobile adopts the rule in T28. An error on a player not trying to play raises nothing (the
+  offline restore). Play is never refused offline: buffered audio plays, and a stall is paused
+  after a 1.5 s confirmation because every seek masks the controller to buffering. Known gap:
+  playback started from the OEM template or Assistant fails slowly offline only when the car app
+  is not running; when it is, the stall guard pauses it and the overlay waits for the car app.
 
 ## Components
 
