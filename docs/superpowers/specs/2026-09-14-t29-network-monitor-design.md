@@ -143,12 +143,14 @@ capabilities and hand the two booleans to the tracker.
 - seed with no network → offline
 
 **Reproduce first, then compare — AAOS emulator** (`AAOS_AOSP_33_userdebug`, user 10, `oem` debug):
-with the app in the foreground on Home, toggle `cmd connectivity airplane-mode enable/disable` ten
-times, waiting ten seconds each way, and after each transition record whether the offline banner
-matches `dumpsys connectivity`'s default network. Run it on `main` before any change, then on the fix.
-Not `svc wifi/data disable` (it crashed this emulator's car stack). Pass: ten of ten on the fix. The
-baseline is recorded as found, whatever it is — a zero-miss baseline does not weaken the fix, which
-follows the platform's documented contract, but it does mean the reproduction did not reproduce.
+with the app in the foreground on Home and playback stopped (a moving player makes `uiautomator dump`
+fail silently), toggle `cmd connectivity airplane-mode enable/disable` ten times. After each toggle:
+wait until `dumpsys connectivity` reports the new state (reconnecting takes this emulator 15–25 s), let
+it settle 5 s, then read system → banner → system. A transition counts only when both system reads
+agree; it is a miss when the banner disagrees with them. Run it on `main` before any change, then on the
+fix, with the same script. Not `svc wifi/data disable` (it crashed this emulator's car stack). Pass: no
+misses on the fix. A first attempt with a fixed 10 s wait was invalid — the system had not reconnected
+— and is not used.
 
 **Phone pass** — `Medium_Phone_API_35`, one emulator at a time: the same ten toggles against mobile's
 banner; offline play of a streamed song refused, a downloaded one plays; downloads refuse to start
