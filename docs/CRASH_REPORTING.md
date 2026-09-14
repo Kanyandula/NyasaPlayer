@@ -1,8 +1,9 @@
 # Crash Reporting — What Crashlytics Sends
 
-- **Applies to** `:core:data`'s `firebase-crashlytics` SDK (T25), used by `:app` and `:automotive`
-- **Status** Accurate for the default configuration T25 ships: no custom keys, no logging, no user ID
-- **Sources read** 2026-09-14 — see each row below
+| | |
+|---|---|
+| **Applies to** | `:core:data`'s `firebase-crashlytics` SDK (T25), used by `:app` and `:automotive` |
+| **Sources read** | 2026-09-14 — see each row below |
 
 This is the inventory T24 D8 asks for: what this configuration sends, what it never sends, how
 collection is switched, and how long Firebase keeps it.
@@ -13,30 +14,46 @@ Nothing in this codebase calls `setCustomKey`, `setUserId` or `FirebaseCrashlyti
 SDK's own defaults apply. Crashlytics pulls in Firebase Sessions as a dependency, so its collection
 applies too.
 
-| Item | Source |
-|---|---|
-| Stack traces, at the point of a crash | https://firebase.google.com/docs/android/play-data-disclosure ("Crashlytics" section) |
-| Relevant application state at crash time | https://firebase.google.com/docs/android/play-data-disclosure ("Crashlytics" section) |
-| Relevant device metadata at crash time | https://firebase.google.com/docs/android/play-data-disclosure ("Crashlytics" section) |
-| Crashlytics installation UUID (identifies the install, used to measure affected users) | https://firebase.google.com/docs/android/play-data-disclosure ("Crashlytics" section) |
-| RFC-4122 UUID used to deduplicate crashes | https://firebase.google.com/support/privacy ("Data processing information") |
-| Firebase installations ID (FID) | https://firebase.google.com/support/privacy ("Data processing information") |
-| Firebase session ID (random UUID tagging events to a session) | https://firebase.google.com/support/privacy ("Data processing information") |
-| Device specs: model name, CPU architecture, RAM, disk space | https://firebase.google.com/support/privacy ("Data processing information") |
-| Timestamp of the crash | https://firebase.google.com/support/privacy ("Data processing information") |
-| App bundle identifier and version number | https://firebase.google.com/support/privacy ("Data processing information") |
-| Device OS name and version | https://firebase.google.com/support/privacy ("Data processing information") |
-| Exception details, binary image information, runtime method/function names | https://firebase.google.com/support/privacy ("Data processing information") |
-| Screen rotation, proximity sensor status, app background state | https://firebase.google.com/support/privacy ("Data processing information") |
-| A boolean indicating whether the device was jailbroken/rooted | https://firebase.google.com/support/privacy ("Data processing information") |
-| Version-control info: the git commit SHA of the build, and a placeholder root path (`$PROJECT_DIR`), not a real filesystem path — from `META-INF/version-control-info.textproto`, which AGP writes into every release APK and the Crashlytics plugin copies into the `com.google.firebase.crashlytics.version_control_info` string resource | https://firebase.google.com/support/privacy ("Data processing information") |
-| App metadata: package name, OS info, SDK version, network type (Firebase Sessions) | https://firebase.google.com/docs/android/play-data-disclosure ("Firebase sessions" section) |
-| Device metadata: manufacturer and model (Firebase Sessions) | https://firebase.google.com/docs/android/play-data-disclosure ("Firebase sessions" section) |
-| Application metrics: app usage and session timing (Firebase Sessions) | https://firebase.google.com/docs/android/play-data-disclosure ("Firebase sessions" section) |
+### Per the privacy page (https://firebase.google.com/support/privacy, "Data processing information")
+
+- RFC-4122 UUID used to deduplicate crashes
+- Firebase installations ID (FID)
+- Firebase session ID (random UUID tagging events to a session)
+- Device specs: model name, CPU architecture, RAM, disk space
+- Timestamp of the crash
+- App bundle identifier and version number
+- Device OS name and version
+- Exception details, binary image information, runtime method/function names
+- Screen rotation, proximity sensor status, app background state
+- A boolean indicating whether the device was jailbroken/rooted
+- Git commit SHA of the build (root path is the `$PROJECT_DIR` placeholder) — privacy page;
+  observed in the release APK, `docs/T25_VERIFICATION.md`
+
+### Per the Play data-disclosure page (https://firebase.google.com/docs/android/play-data-disclosure)
+
+- Stack traces, at the point of a crash ("Crashlytics" section)
+- Relevant application state at crash time ("Crashlytics" section)
+- Relevant device metadata at crash time ("Crashlytics" section)
+- Crashlytics installation UUID (identifies the install, used to measure affected users)
+  ("Crashlytics" section)
+- App metadata: package name, OS info, SDK version, network type ("Firebase sessions" section) —
+  "network type" is this page's category; it is not a field in the Sessions 2.1.2 encoder read for
+  "Observed in this build" below
+- Device metadata: manufacturer and model (Firebase Sessions) ("Firebase sessions" section)
+- Application metrics: app usage and session timing (Firebase Sessions) ("Firebase sessions" section)
 
 The Play data-disclosure page also lists conditional collection — custom keys, logs, free-text user
 IDs, custom non-fatal stack traces, and (with Analytics present) breadcrumb logs of user actions.
 None of that applies here: see "What is never sent" below.
+
+### Observed in this build (device settings via `docs/T25_VERIFICATION.md`; firebase-crashlytics 19.4.4 / firebase-sessions 2.1.2, read from the AAR)
+
+- ANR reports: the device's cached settings carry `"collect_anrs":true` (`docs/T25_VERIFICATION.md`,
+  "The car"), and Crashlytics 19.4.4 reports ANRs from `ApplicationExitInfo` on API 30+, not just
+  crashes.
+- Firebase Sessions events also carry a Firebase Installations auth token and process details
+  (process name, pid, importance). The token is the installation's own token, not the signed-in
+  user's Firebase Auth token — D8 still holds.
 
 ## What is never sent
 
@@ -53,20 +70,22 @@ None of that applies here: see "What is never sent" below.
 
 - Debug builds: `core/data/src/debug/AndroidManifest.xml` sets
   `firebase_crashlytics_collection_enabled` to `false`. Every debug variant of `:app` and
-  `:automotive` consumes `:core:data`'s debug source set, so one file covers all of them.
+  `:automotive` consumes `:core:data`'s debug variant, so one file covers all of them.
 - Release builds: no override is set, so collection defaults on.
 - To check what the SDK is doing on a device:
   ```
   adb shell setprop log.tag.FirebaseCrashlytics DEBUG
-  adb logcat -s FirebaseCrashlytics
+  adb logcat -s FirebaseCrashlytics TRuntime.CctTransportBackend
   ```
-  With collection on, it logs the upload; in debug, it logs that automatic collection is disabled.
+  `FirebaseCrashlytics` logs the enqueue to DataTransport; the HTTP upload shows under tag
+  `TRuntime.CctTransportBackend` (Info level, no `setprop` needed for it). In debug,
+  `FirebaseCrashlytics` logs that automatic collection is disabled.
 - While collection is off, a debug build still records its crashes on the device, unsent — a
   report file exists under `files/.crashlytics.v3/com.example.nyasaplayer/priority-reports/<id>`,
-  and no upload happens. Those stored reports are sent once a build with collection on runs in the
-  same data directory, so uninstall the debug build before installing a release build signed with
-  the same key on top of it (`docs/tickets/T25-crashlytics-in-core-data.md`, Notes — "Signing a
-  release build to test with").
+  observed at that path (`docs/T25_VERIFICATION.md`, "The car"), and no upload happens. Those stored
+  reports are sent once a build with collection on runs in the same data directory, so uninstall the
+  debug build before installing a release build signed with the same key on top of it
+  (`docs/tickets/T25-crashlytics-in-core-data.md`, Notes — "Signing a release build to test with").
 
 ## Retention
 

@@ -2,7 +2,7 @@
 
 - **Slice:** observability, build config — story T24
 - **Depends on:** —
-- **Status:** Implemented; car device-verified, phone pass owed — see `docs/T25_VERIFICATION.md`
+- **Status:** Implemented; car upload verified, dashboard check and phone pass owed — see Outcome and `docs/T25_VERIFICATION.md`
 - **Verification Command:** `./gradlew :app:assembleDebug :app:assembleRelease :automotive:assembleOemDebug :automotive:assembleOemRelease :automotive:assemblePlaystoreDebug :automotive:assemblePlaystoreRelease`
 - **Design Reference:** T24 D2, D3, D4, D5, D8
 - **Risk Tags:** new SDK, build config, manifest merge, dependency resolution, privacy
@@ -77,10 +77,27 @@ Kotlin.
   confirm the result reaches the uncaught-exception handler as a Java exception (it shows up in
   the dashboard). If it doesn't, use a local, uncommitted `throw` behind a button.
 - **Seeing what the SDK does.** Run `adb shell setprop log.tag.FirebaseCrashlytics DEBUG`, then
-  `adb logcat -s FirebaseCrashlytics`. With collection on it logs the upload; in debug it logs that
-  automatic collection is disabled.
+  `adb logcat -s FirebaseCrashlytics TRuntime.CctTransportBackend`. `FirebaseCrashlytics` logs the
+  enqueue to DataTransport; the HTTP upload shows under tag `TRuntime.CctTransportBackend` (Info
+  level, no `setprop` needed for it). In debug, `FirebaseCrashlytics` logs that automatic collection
+  is disabled.
 - **Timing.** A fatal is sent on the next launch, not at the moment of the crash, so relaunch before
   looking. The dashboard can take a few minutes to show the first report.
 - **The check for the first criterion:**
   `./gradlew :app:dependencyInsight --dependency com.google.firebase:firebase-common --configuration releaseRuntimeClasspath`.
   It read 21.0.0 on 2026-09-13, before this change.
+
+## Outcome
+
+Crashlytics 19.4.4 is wired into `:core:data` as an `implementation` dependency (non-`-ktx`), with
+the Crashlytics Gradle plugin applied in `:app` and `:automotive` only; `core/data/src/debug/
+AndroidManifest.xml` turns collection off for every debug variant. `docs/CRASH_REPORTING.md` records
+what the SDK sends in this configuration.
+
+Deviation from the Notes above: builds were swapped with `adb install -r` instead of uninstalling
+first. Harmless here — the debug build it replaced predated the SDK, so nothing was cached to send
+falsely — but this emulator's car install now holds a stored debug report of its own
+(`priority-reports/6AA83C7F02A1000146CE9B898F544179`); uninstall before the next release test on it.
+
+Owed: the owner's dashboard check, and the phone pass on `Medium_Phone_API_35`, blocked by low
+storage. See `docs/T25_VERIFICATION.md` for the device evidence.

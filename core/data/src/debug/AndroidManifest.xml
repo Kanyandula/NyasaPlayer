@@ -5,7 +5,7 @@
         Crashlytics collects in release only. Every debug variant of both apps consumes this
         library's debug variant, so this one flag covers debug, oemDebug and playstoreDebug.
         A manifest flag, not setCrashlyticsCollectionEnabled(): a runtime false only takes effect
-        on the next launch and outlives a reinstall (T24 D4).
+        on the next launch and outlives an in-place reinstall (T24 D4).
     -->
     <application>
         <meta-data
