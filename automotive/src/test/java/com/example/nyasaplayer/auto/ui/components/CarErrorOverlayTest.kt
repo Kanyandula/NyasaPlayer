@@ -41,8 +41,19 @@ class CarErrorOverlayTest {
         }
 
         composeRule.onNodeWithText("Skip next").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Retry").assertIsDisplayed()
+        composeRule.onNodeWithText("Dismiss").assertIsDisplayed()
 
         composeRule.runOnIdle { assertEquals(1, skips) }
+    }
+
+    @Test
+    fun `retry is offered for a retryable error`() {
+        composeRule.setContent {
+            CarErrorOverlay(error = retryable, onDismiss = {}, onRetry = {})
+        }
+
+        composeRule.onNodeWithText("Retry").assertIsDisplayed()
     }
 
     @Test

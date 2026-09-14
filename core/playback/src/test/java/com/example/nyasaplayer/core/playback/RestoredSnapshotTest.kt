@@ -87,6 +87,15 @@ class RestoredSnapshotTest {
         assertFalse(collector.playbackState.value.isPlaying)
     }
 
+    @Test
+    fun applyRestored_isNotTryingToPlay() {
+        collector.updateSnapshot { it.copy(playWhenReady = true) }
+
+        collector.applyRestored(restored(listOf(song("a")), index = 0))
+
+        assertFalse(collector.playbackState.value.playWhenReady)
+    }
+
     // ── hasNext / hasPrevious come from the restored value, never from the controller ──
 
     @Test

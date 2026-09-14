@@ -301,7 +301,7 @@ private fun AuthenticatedApp(
                 onSkipNext = playerViewModel::skipNext,
                 onSkipPrevious = playerViewModel::skipPrevious,
                 onSongClick = { songs, song ->
-                    openIfStarted(playerViewModel.playSong(songs, song), openFullPlayer)
+                    openFullPlayerIfStarted(playerViewModel.playSong(songs, song), openFullPlayer)
                 },
                 onRetry = contentViewModel::retryLoad,
                 onRetryDetail = { drillDown?.let(contentViewModel::openDetail) },
@@ -316,21 +316,21 @@ private fun AuthenticatedApp(
                 drillDown = drillDown,
                 onBackFromDetail = { drillDown = null },
                 onArtistSongClick = { songs, song ->
-                    openIfStarted(playerViewModel.playSong(songs, song), openFullPlayer)
+                    openFullPlayerIfStarted(playerViewModel.playSong(songs, song), openFullPlayer)
                 },
                 onShuffleTracks = { songs ->
-                    openIfStarted(playerViewModel.shufflePlay(songs), openFullPlayer)
+                    openFullPlayerIfStarted(playerViewModel.shufflePlay(songs), openFullPlayer)
                 },
                 onPlayTracks = { tracks ->
                     tracks.firstOrNull()?.let { first ->
-                        openIfStarted(playerViewModel.playSong(tracks, first), openFullPlayer)
+                        openFullPlayerIfStarted(playerViewModel.playSong(tracks, first), openFullPlayer)
                     }
                 },
                 onGenreClick = { genre ->
                     scope.launch {
                         val songs = contentViewModel.getSongsByGenre(genre.id)
                         if (songs.isNotEmpty()) {
-                            openIfStarted(playerViewModel.shufflePlay(songs), openFullPlayer)
+                            openFullPlayerIfStarted(playerViewModel.shufflePlay(songs), openFullPlayer)
                         } else {
                             playerViewModel.reportEmptyGenrePlayback()
                         }
@@ -380,7 +380,7 @@ private fun AuthenticatedApp(
                         // containing rows the cap hid.
                         songQueue = visibleResults.songQueue,
                         onPlay = { songs, song ->
-                            openIfStarted(playerViewModel.playSong(songs, song), openFullPlayer)
+                            openFullPlayerIfStarted(playerViewModel.playSong(songs, song), openFullPlayer)
                         },
                         onOpenDetail = openFromSearch,
                     )
@@ -438,15 +438,18 @@ private fun AuthenticatedApp(
 }
 
 /** Opens the full player only when playback actually started; a refused play has nothing to show. */
-private fun openIfStarted(started: Boolean, openFullPlayer: () -> Unit) {
+private fun openFullPlayerIfStarted(started: Boolean, openFullPlayer: () -> Unit) {
     if (started) openFullPlayer()
 }
 
 /**
  * Only when there is another track: `hasNext` is true under repeat-all even for a queue of one,
  * which would replay the item that just failed. Offline, skipping just raises the next error.
+ *
+ * Internal rather than private so SkipNextGateTest can exercise the gate directly; it stays
+ * extracted because inlining it re-trips detekt's complexity limit on `AuthenticatedApp`.
  */
-private fun skipNextOrNull(state: AutomotiveUiState, skipNextAfterError: () -> Unit): (() -> Unit)? =
+internal fun skipNextOrNull(state: AutomotiveUiState, skipNextAfterError: () -> Unit): (() -> Unit)? =
     if (state.playback.hasNext && state.playback.queueSize > 1 && !state.isOffline) skipNextAfterError else null
 
 /**

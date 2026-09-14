@@ -6,7 +6,6 @@ import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.session.MediaSession
 import androidx.test.core.app.ApplicationProvider
-import com.example.nyasaplayer.core.common.models.Song
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.test.TestScope
@@ -61,25 +60,6 @@ class PlayWhenReadySnapshotTest {
 
         collector.transport.pause()
         idle()
-        assertFalse(collector.playbackState.value.playWhenReady)
-    }
-
-    @Test
-    fun applyRestored_publishesANotPlayingSession() {
-        collector.transport.play()
-        idle()
-
-        val song = Song(mediaId = "a", title = "A")
-        collector.applyRestored(
-            RestoredPlayback(
-                queue = listOf(song),
-                index = 0,
-                song = song,
-                positionMs = 0L,
-                repeatMode = RepeatMode.Off,
-            ),
-        )
-
         assertFalse(collector.playbackState.value.playWhenReady)
     }
 }
