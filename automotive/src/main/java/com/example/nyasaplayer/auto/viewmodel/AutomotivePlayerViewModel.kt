@@ -167,9 +167,10 @@ class AutomotivePlayerViewModel @Inject constructor(
      * inside audio already buffered must keep playing.
      *
      * ponytail: pause() leaves ExoPlayer retrying the load, so the buffering ring can spin until the load
-     * gives up; stop() needs a transport op PlayerTransport has no room for. And syncSnapshotFromPlayer
-     * never sets isBuffering, so a stream already buffering when a T14 rebuild attaches is missed until its
-     * next state change.
+     * gives up; stop() would need a transport op that stops without clearing the queue, which does not
+     * exist yet. And syncSnapshotFromPlayer never sets isBuffering, so a stream already buffering when a
+     * T14 rebuild attaches is missed until its next state change; the same gap can carry a stale
+     * `isBuffering = true` across a rebuild and pause a stream that is playing.
      */
     private fun pauseIfStreamingOffline() {
         if (!stateCollector.playbackState.value.isStreamStalledOffline(isOnline)) return
@@ -244,6 +245,9 @@ class AutomotivePlayerViewModel @Inject constructor(
     }
 
     fun seekTo(positionMs: Long) {
+        // A drag seeks on every movement and each seek masks the controller to buffering, so restart the
+        // stall confirmation at the latest seek: scrubbing through buffered audio must not trip it (A8).
+        stallCheck?.cancel()
         stateCollector.transport.seekTo(positionMs)
     }
 
