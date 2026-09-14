@@ -424,7 +424,7 @@ option, not an actively shipped artifact.
 | **A5** | FullPlayer, Queue | A2 | Merged and device-verified — PR #24; retryable-error and restore follow-ups recorded |
 | **A6** | Search, SearchResults | A2 + A6 design | Merged and device-verified — PR #27; `docs/AAOS_A6_VERIFICATION.md`; T5-T8 follow-ups recorded |
 | **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Merged and device-verified — PR #51 (parked and driving pass in the PR); PinOptIn deferred (D67, T18), phone and email sign-in deferred (T19) |
-| **A8** | PlaybackError, NoConnection (behaviour), Loading (satisfied) — Downloads moved to A9 | A2 | Merged and device-verified — PR #<n>; `docs/AAOS_A8_VERIFICATION.md` |
+| **A8** | PlaybackError, NoConnection (behaviour), Loading (satisfied) — Downloads moved to A9 | A2 | Merged and device-verified — PR #59; `docs/AAOS_A8_VERIFICATION.md` |
 | **A9** | Car downloads: `SongDownloadManager` into a shared module, local-URI resolution in shared code (restore included), parked-only download actions, Downloads screen, Library row | A8 | Not started |
 | **Project B** | Mobile brand migration — **separate PRD, non-blocking** | A1 tokens | Not started |
 
