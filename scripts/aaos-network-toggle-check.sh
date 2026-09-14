@@ -1,13 +1,16 @@
 #!/bin/zsh
-# T29: does the car app's offline banner follow the system through ten airplane-mode round trips?
+# T29: does the app's offline banner follow the system through ten airplane-mode round trips?
+# Drives the car by default; set NT_USER and NT_LAUNCH (see below) to drive the phone instead.
 # Needs the AAOS_AOSP_33_userdebug emulator as emulator-5554 with the oem debug build installed for
 # user 10, signed in, and playback stopped. Waits for the system to reach each state, settles 5 s, and
 # counts a transition only when two system reads agree. Prints each transition and a total.
 export ANDROID_SERIAL=${ANDROID_SERIAL:-emulator-5554}
-# The phone pass overrides these: NT_USER=0 NT_LAUNCH="monkey -p com.example.nyasaplayer -c android.intent.category.LAUNCHER 1"
+# The phone pass overrides these: NT_USER=0 NT_LAUNCH="monkey -p com.example.nyasaplayer -c
+# android.intent.category.LAUNCHER 1"
 NT_USER=${NT_USER:-10}
-NT_LAUNCH=${NT_LAUNCH:-"am start --user $NT_USER -n com.example.nyasaplayer/com.example.nyasaplayer.auto.ui.AutomotiveActivity"}
-banner(){ adb shell rm -f /sdcard/ui.xml; adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; if adb shell ls /sdcard/ui.xml >/dev/null 2>&1; then adb shell cat /sdcard/ui.xml | grep -c 'No internet connection'; else echo DUMPFAIL; fi; }
+NT_LAUNCH=${NT_LAUNCH:-"am start --user $NT_USER -n \
+com.example.nyasaplayer/com.example.nyasaplayer.auto.ui.AutomotiveActivity"}
+banner(){ adb shell rm -f /sdcard/ui.xml; adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; if adb shell ls /sdcard/ui.xml >/dev/null 2>&1; then adb shell cat /sdcard/ui.xml | grep -q 'No internet connection' && echo 1 || echo 0; else echo DUMPFAIL; fi; }
 net(){ adb shell dumpsys connectivity | grep -q '^Active default network: [0-9]' && echo online || echo offline; }
 waitfor(){ for k in $(seq 1 30); do [ "$(net)" = "$1" ] && return 0; sleep 2; done; return 1; }
 adb shell cmd connectivity airplane-mode disable; waitfor online

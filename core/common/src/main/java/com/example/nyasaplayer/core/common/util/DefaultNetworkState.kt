@@ -1,9 +1,9 @@
 package com.example.nyasaplayer.core.common.util
 
 /**
- * Whether the default network can carry traffic: it has `INTERNET` and is not a `CAPTIVE_PORTAL` (T29,
- * D72). Driven only by what the default-network callbacks report about the network they report on, so it
- * cannot read a stale answer, and ignores events about any network that is no longer the default.
+ * The online rule (D72), driven by what the default-network callbacks report about the network they
+ * report on — so it cannot read a stale answer — and ignoring events about any network that is no
+ * longer the default. A one-off seed fills in until the first callback.
  *
  * Not thread-safe on its own; `NetworkMonitor` calls it under one lock.
  */

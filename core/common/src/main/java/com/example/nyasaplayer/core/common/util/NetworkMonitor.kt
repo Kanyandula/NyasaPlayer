@@ -12,11 +12,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Whether the default network can carry traffic: `INTERNET` and not a `CAPTIVE_PORTAL` (D72).
- *
- * Every answer comes from the callbacks' own arguments. The platform documents that synchronous
- * `ConnectivityManager` reads inside these callbacks may be stale; doing exactly that missed about one
- * network loss in ten on the AAOS emulator (T29).
+ * Online per [DefaultNetworkState] (D72), fed from the callbacks' own arguments: synchronous
+ * `ConnectivityManager` reads inside callbacks may be stale (T29).
  */
 @Singleton
 class NetworkMonitor @Inject constructor(context: Context) {
@@ -36,7 +33,7 @@ class NetworkMonitor @Inject constructor(context: Context) {
                     state.available(network.networkHandle)
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
                         // API 24–25 do not promise onCapabilitiesChanged after onAvailable, so read it —
-                        // the one synchronous read left. Null counts as online: onAvailable has just
+                        // the one synchronous read left inside a callback. Null counts as online: onAvailable has just
                         // declared this network the default and ready for use.
                         val caps = connectivityManager.getNetworkCapabilities(network)
                         state.capabilities(
@@ -63,8 +60,10 @@ class NetworkMonitor @Inject constructor(context: Context) {
                 }
             },
         )
-        // Seed after registering: a network lost before registration can never reach onLost, so a seed
-        // read earlier could stay "online" indefinitely. Any callback that has already arrived wins.
+        // Seed after registering, and let any callback outrank it. This narrows, but does not close, the
+        // window in which a network lost around startup is seeded "online": registration is processed
+        // asynchronously, so a loss already queued can land after the read.
+        // ponytail: startup-only, and it clears on the next default network; no fix unless it is seen.
         val active = connectivityManager.activeNetwork
         val caps = active?.let { connectivityManager.getNetworkCapabilities(it) }
         update {
@@ -85,5 +84,4 @@ class NetworkMonitor @Inject constructor(context: Context) {
 
 private fun NetworkCapabilities.hasInternet() = hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 
-private fun NetworkCapabilities.isCaptivePortal() =
-    hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)
+private fun NetworkCapabilities.isCaptivePortal() = hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)
