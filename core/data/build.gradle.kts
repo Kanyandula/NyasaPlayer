@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.database)
+    implementation(libs.firebase.crashlytics)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)

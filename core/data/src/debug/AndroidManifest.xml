@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Crashlytics collects in release only. Every debug variant of both apps consumes this
+        library's debug variant, so this one flag covers debug, oemDebug and playstoreDebug.
+        A manifest flag, not setCrashlyticsCollectionEnabled(): a runtime false only takes effect
+        on the next launch and outlives an in-place reinstall (T24 D4).
+    -->
+    <application>
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="false" />
+    </application>
+
+</manifest>
