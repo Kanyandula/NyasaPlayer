@@ -50,6 +50,8 @@ References:
 The `oem` flavor is intentionally not the Play media submission artifact. The `playstore`
 flavor exists so that a future Play path remains viable without contaminating the product UI.
 
+Crash reporting and what it sends are inventoried in `docs/CRASH_REPORTING.md` (T24, T25).
+
 ## `oem` Gates
 
 Run these against the merged `oem` APK manifest and emulator behavior.
