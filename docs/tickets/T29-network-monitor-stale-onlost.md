@@ -65,7 +65,8 @@ offline is now worse than a false online, which only falls back to the slow fail
 
 Baseline, measured on `main` on 2026-09-14 with the protocol in the spec's Testing section: 1 miss in
 20 valid transitions (an offline transition where the system settled offline and the app stayed
-online).
+online). With the fix, the same script on the same emulator: 0 misses in 20. The phone pass was not
+run — the phone emulator's storage was full — and is owed; see `docs/T29_VERIFICATION.md`.
 
 Mobile's behaviour changes too: more networks now read online, since an unvalidated network no
 longer shows the banner or blocks offline checks.
