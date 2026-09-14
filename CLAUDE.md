@@ -157,7 +157,7 @@ Requires `app/google-services.json`. Firebase console must have:
 ### Error handling that IS in place
 
 - **`CoroutineExceptionHandler`** — all 7 ViewModels have a `private val exceptionHandler` CEH as a safety net for uncaught exceptions in `viewModelScope.launch`; maps errors to the ViewModel's error state (existing try/catch and `.catch {}` remain as primary handling)
-- **`NetworkMonitor`** (`:core:common` `util/`) — singleton using `ConnectivityManager.registerDefaultNetworkCallback` exposing `isOnline: StateFlow<Boolean>`; used by `PlayerViewModel` (fail-fast offline playback, offline banner) and `ProfileViewModel`
+- **`NetworkMonitor`** (`:core:common` `util/`) — singleton on `registerDefaultNetworkCallback` exposing `isOnline: StateFlow<Boolean>`: the default network has `INTERNET` and is not a `CAPTIVE_PORTAL`, decided from the callbacks' own arguments by `DefaultNetworkState` (D72); used by `PlayerViewModel`, `ProfileViewModel`, `SongDownloadManager` and the car's `AutomotivePlayerViewModel`
 - **Offline banner** — persistent `OfflineBanner` composable shown at top of all screens when offline; driven by `PlayerUiState.isOffline` which observes `NetworkMonitor`
 - **Fail-fast offline playback** — `PlayerViewModel` checks `isOnline` before streaming; shows error instead of infinite buffering spinner. The car does the same through the shared `Song.isPlayableNow` / `isStreamStalledOffline` rules in `AutomotivePlayerViewModel`.
 - **`ErrorMessages.kt`** — `isNetworkError()` extension distinguishes `FirebaseNetworkException`/`UnknownHostException` from other errors

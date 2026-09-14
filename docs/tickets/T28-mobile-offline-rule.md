@@ -52,4 +52,7 @@ the A8 spec found the same trigger on the car side.
 
 `PlayerViewModel` has no unit tests; `:app`'s only test is `SongMediaItemMapperTest`. Every acceptance
 criterion above is a phone check. The T14 mobile pass (see `docs/T14_VERIFICATION.md`) needs the same
-device and the same back-out-and-return gestures, so the two are worth running together.
+device and the same back-out-and-return gestures, so the two are worth running together, along with
+T29's owed phone pass — `scripts/aaos-network-toggle-check.sh` with `NT_USER=0 NT_LAUNCH="monkey -p
+com.example.nyasaplayer -c android.intent.category.LAUNCHER 1"`, plus its offline checks (see
+`docs/T29_VERIFICATION.md`).
