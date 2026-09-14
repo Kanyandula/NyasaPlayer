@@ -292,7 +292,8 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   button that permanently claims a download is in progress. Extracting the manager into a shared
   module touches seven `:app` files — `NyasaPlayerNavigation`, `PlayerViewModel`,
   `SongOverflowWithDownload`, `DownloadsViewModel`, `LibraryScreen`, `PlaylistDetailScreen`,
-  `SearchScreen` — and belongs to A8, which owns downloads and needs it anyway.
+  `SearchScreen` — and belongs to A9, which owns car downloads and needs it anyway
+  (moved from A8 by D71).
 - **D14 — Sign-out stays on `CarLibraryScreen`** with its confirmation overlay, marked for
   deletion in A7. It belongs on screen 14, but removing it in A3 leaves no way to sign out of the
   vehicle at all, since the system bar's avatar is disabled until A7 (A2 D3).
@@ -397,6 +398,8 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   and `AutomotiveApp` already composes the overlay after both player overlays, so it draws above
   them. Adding a destination would put a failure message behind `gate()` and `maxContentDepth`,
   which can refuse it — the same reasoning as D21. A8 owns the dedicated playback-error visual.
+  **Closed by D71:** A8 kept `CarErrorOverlay` as screen 19; there is no separate playback-error
+  visual.
 - **D28 — Driving truncation is a display window over the queue, never a mutation of it.**
   `maxCumulativeContentItems` restricts what the driver may *see*; changing Media3's queue or the
   persisted playback order to achieve that would corrupt state the driver never asked to change,
@@ -797,6 +800,19 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   when a reader does. The same rule kept phone and email sign-in off `CarAuthScreen`: both need
   text entry that `NO_KEYBOARD` refuses while driving, phone sign-in needs an SMS round trip on a
   head unit that may have no SIM, and Google sign-in already works.
+
+- **D71 — A8 is three states, not four screens.** NoConnection is a behaviour: offline play fails
+  before the attempt, with the existing overlay, because offline-first lists still work and a
+  full-screen blocker would hide them. Loading is satisfied by the per-screen skeletons. A refused
+  play offers no Retry, because the refused song was never queued. Retry needs no change: Media3
+  re-prepares an idle player on a controller's `play()`. Car downloads move to A9. A8 leaves `:app`
+  untouched — surfaces differ by module, not by `isMobileApp`-style checks in shared code — and
+  mobile adopts the rule in T28. An error on a player not trying to play raises nothing (the
+  offline restore). Resuming with play/pause is never refused offline: buffered audio plays,
+  and a stall is paused after a 1.5 s confirmation because every seek masks the controller to
+  buffering. Known gap: playback started from the OEM template or Assistant fails slowly offline
+  only when the car app is not running; when it is, the stall guard pauses it and the overlay
+  waits for the car app.
 
 ## Components
 

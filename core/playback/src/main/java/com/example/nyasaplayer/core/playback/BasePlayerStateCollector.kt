@@ -170,6 +170,10 @@ abstract class BasePlayerStateCollector(
             _playbackState.update { it.copy(isPlaying = isPlaying) }
         }
 
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            _playbackState.update { it.copy(playWhenReady = playWhenReady) }
+        }
+
         override fun onPlaybackStateChanged(playbackState: Int) {
             val mc = controller ?: return
             _playbackState.update {
@@ -236,6 +240,7 @@ abstract class BasePlayerStateCollector(
             it.copy(
                 currentSong = song,
                 isPlaying = mc.isPlaying,
+                playWhenReady = mc.playWhenReady,
                 currentPositionMs = mc.currentPosition,
                 durationMs = mc.duration.coerceAtLeast(0L),
                 hasPrevious = mc.hasPreviousMediaItem(),
@@ -292,6 +297,7 @@ abstract class BasePlayerStateCollector(
             it.copy(
                 currentSong = restored.song,
                 isPlaying = false,
+                playWhenReady = false,
                 currentPositionMs = restored.positionMs,
                 // The position poller only runs while playing, so nothing else fills the
                 // scrubber's total on a restored-and-paused session.

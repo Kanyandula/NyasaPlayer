@@ -1,7 +1,6 @@
 package com.example.nyasaplayer.auto.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,10 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,12 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.theme.CarGradientOrange
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
-import com.example.nyasaplayer.core.common.ui.icons.RefreshIcon
 import com.example.nyasaplayer.core.common.ui.icons.WarningIcon
 import com.example.nyasaplayer.core.common.ui.icons.WifiOffIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaError
-import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
-import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import com.example.nyasaplayer.core.playback.PlayerError
 
 private val IconCircleSize = 128.dp
@@ -44,6 +38,7 @@ fun CarErrorOverlay(
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    onSkipNext: (() -> Unit)? = null,
 ) {
     CarModalScrim(onDismiss = onDismiss, modifier = modifier) {
         CarModalCard {
@@ -51,7 +46,12 @@ fun CarErrorOverlay(
             Spacer(modifier = Modifier.height(32.dp))
             ErrorText(title = error.title, message = error.message)
             Spacer(modifier = Modifier.height(32.dp))
-            ErrorActions(isRetryable = error.isRetryable, onDismiss = onDismiss, onRetry = onRetry)
+            ErrorActions(
+                isRetryable = error.isRetryable,
+                onDismiss = onDismiss,
+                onRetry = onRetry,
+                onSkipNext = onSkipNext,
+            )
         }
     }
 }
@@ -102,62 +102,44 @@ private fun ErrorText(
 }
 
 /**
- * Retry only renders for [isRetryable] errors — ones where re-attempting means resuming the
- * same thing that failed. Everything else (a dead controller connection, a failed like sync,
- * an unresolved genre) offers Dismiss alone, so Retry never ends up acting on unrelated
- * playback.
+ * Retry and Skip next only for an error about the current item (`PlayerError.isRetryable`). On
+ * [CarPillButton] for its 76dp target and contrast rule. Three pills do not fit one row of the
+ * half-width card, so with Skip next shown, Dismiss takes its own row.
  */
 @Composable
 private fun ErrorActions(
     isRetryable: Boolean,
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
+    onSkipNext: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    val skipNext = onSkipNext.takeIf { isRetryable }
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.White.copy(alpha = 0.1f))
-                .clickable(onClick = onDismiss)
-                .padding(vertical = 20.dp),
-            contentAlignment = Alignment.Center,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = "Dismiss",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
+            CarPillButton(
+                label = if (skipNext != null) "Skip next" else "Dismiss",
+                onClick = skipNext ?: onDismiss,
+                modifier = Modifier.weight(1f),
+                filled = false,
             )
-        }
-
-        if (isRetryable) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(NyasaGold)
-                    .clickable(onClick = onRetry)
-                    .padding(vertical = 20.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(RefreshIcon, null, tint = NyasaOnGold, modifier = Modifier.size(24.dp))
-                    Text(
-                        text = "Retry",
-                        color = NyasaOnGold,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
+            if (isRetryable) {
+                CarPillButton(label = "Retry", onClick = onRetry, modifier = Modifier.weight(1f))
             }
+        }
+        if (skipNext != null) {
+            CarPillButton(
+                label = "Dismiss",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                filled = false,
+            )
         }
     }
 }

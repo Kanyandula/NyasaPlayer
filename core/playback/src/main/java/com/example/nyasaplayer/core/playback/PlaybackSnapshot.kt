@@ -15,4 +15,6 @@ data class PlaybackSnapshot(
     val queueSize: Int = 0,
     val queue: List<Song> = emptyList(),
     val currentQueueIndex: Int = -1,
+    /** Trying to play. True through buffering, unlike [isPlaying]; false for a restored-but-paused session. */
+    val playWhenReady: Boolean = false,
 )

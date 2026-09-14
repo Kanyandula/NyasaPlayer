@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Applies to** | 20-screen `oem` AAOS launcher |
-| **Status** | Binding implementation contract for A2-A8 |
+| **Status** | Binding implementation contract for A2-A9 |
 | **Date** | 2026-08-03 |
 | **Primary PRD** | `docs/AAOS_PRD.md` |
 | **Design system** | `docs/aaos-DESIGN.md` |
@@ -107,11 +107,11 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | 12 | `CarFullPlayerScreen` | Large artwork, title/artist, play/pause, prev/next, seek, like, shuffle, repeat, queue | buffering, paused, playing, error overlay | Allowed; playback control remains available | A5 |
 | 13 | `CarQueueScreen` | Up Next, skip-to row tap, close, clear, remove controls while parked | empty, current track, playing indicator | View/skip-to allowed; remove/clear refused, list truncated | A5 |
 | 14 | `CarSettingsScreen` | Account, sign out, about — no parked badge and no audio quality (D69, D70) | account, no display name | Refused by `NO_SETUP`, as a sheet rather than a destination (D69) | A7 |
-| 15 | `CarDownloadsScreen` | Downloaded content rows, storage bar, remove one, remove all, retry failed | empty, in-progress, failed, offline | View allowed; delete/remove refused | A8 |
-| 16 | `CarNoConnectionScreen` | Offline illustration/state, Retry, Browse Downloads | no network, retrying | Allowed; Browse Downloads remains available | A8 |
+| 15 | `CarDownloadsScreen` | Downloaded content rows, storage bar, remove one, remove all, retry failed | empty, in-progress, failed, offline | View allowed; delete/remove refused | A9 |
+| 16 | `CarNoConnectionScreen` | No screen: offline play fails fast into the error overlay; offline banner stays | offline | Allowed | A8 |
 | 17 | `CarEmptyFavouritesScreen` | Empty heart state, Browse Music CTA | empty | Allowed; CTA routes to Browse root | A4 |
-| 18 | `CarLoadingScreen` | Shared static skeletons and optional parked-only shimmer | initial load, section load | Allowed; no distracting animation | A8 |
-| 19 | `CarPlaybackErrorOverlay` | Error message, Try again, Skip next, Dismiss | recoverable, fatal | Allowed and dismissible while driving | A8 |
+| 18 | `CarLoadingScreen` | Satisfied by per-screen skeletons (Home, Browse, Library); parked-only shimmer not built | initial load, section load | Allowed; no distracting animation | A8 |
+| 19 | `CarErrorOverlay` (contract name `CarPlaybackErrorOverlay`) | Error message, Retry, Skip next (current-item errors, another track queued, online), Dismiss | recoverable, fatal | Allowed and dismissible while driving | A8 |
 | 20 | `CarProfileSwitcherScreen` | Current account, close, and sign-out as the way to use a different one — no picker and no add-profile, because the app remembers one account (D66) | account, no display name | Refused by `NO_SETUP`, as a sheet rather than a destination (D69) | A7 |
 | 21 | `CarArtistScreen` | Catalogue artist hero, Play, Shuffle, track rows, no like affordance | loading, empty, error, artist missing | Refused when beyond depth cap | T4 |
 
