@@ -113,17 +113,44 @@ private fun ErrorActions(
     onSkipNext: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    // Same rule as Retry: only an error about the current item has anything to skip past.
+    val skipNext = onSkipNext.takeIf { isRetryable }
+    // Three pills do not fit one row of a half-width card at the car's label size: on the 1024x768
+    // emulator they wrapped mid-word. Skip next and Retry share a row; Dismiss gets its own (A8).
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        CarPillButton(label = "Dismiss", onClick = onDismiss, modifier = Modifier.weight(1f), filled = false)
-        // Same rule as Retry: only an error about the current item has anything to skip past.
-        if (isRetryable && onSkipNext != null) {
-            CarPillButton(label = "Skip next", onClick = onSkipNext, modifier = Modifier.weight(1f), filled = false)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            if (skipNext != null) {
+                CarPillButton(
+                    label = "Skip next",
+                    onClick = skipNext,
+                    modifier = Modifier.weight(1f),
+                    filled = false,
+                )
+            } else {
+                CarPillButton(
+                    label = "Dismiss",
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    filled = false,
+                )
+            }
+            if (isRetryable) {
+                CarPillButton(label = "Retry", onClick = onRetry, modifier = Modifier.weight(1f))
+            }
         }
-        if (isRetryable) {
-            CarPillButton(label = "Retry", onClick = onRetry, modifier = Modifier.weight(1f))
+        if (skipNext != null) {
+            CarPillButton(
+                label = "Dismiss",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                filled = false,
+            )
         }
     }
 }
