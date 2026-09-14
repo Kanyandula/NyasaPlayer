@@ -11,7 +11,7 @@ network callback and exposes `isOnline: StateFlow<Boolean>`. Every callback — 
 `connectivityManager.activeNetwork` and `getNetworkCapabilities(...)` synchronously and answers
 `INTERNET && VALIDATED`.
 
-Five consumers read it: the car's `AutomotivePlayerViewModel` (A8's offline guards) and, on mobile,
+Four consumers read it: the car's `AutomotivePlayerViewModel` (A8's offline guards) and, on mobile,
 `PlayerViewModel`, `ProfileViewModel` and `SongDownloadManager`.
 
 **The platform says not to do this.** From `ConnectivityManager.NetworkCallback.onAvailable`'s own
@@ -52,18 +52,29 @@ New `internal` class beside `NetworkMonitor` in `core/common/.../util/`:
 ```kotlin
 internal class DefaultNetworkState {
     private var current: Long? = null
+    private var heardFromCallback = false
     var isOnline: Boolean = false
         private set
 
+    /** The starting value, applied only if no callback has spoken yet — a callback is newer. */
+    fun seed(network: Long?, hasInternet: Boolean, isCaptivePortal: Boolean) {
+        if (heardFromCallback) return
+        current = network
+        isOnline = network != null && hasInternet && !isCaptivePortal
+    }
+
     fun available(network: Long) {
+        heardFromCallback = true
         current = network
     }
 
     fun capabilities(network: Long, hasInternet: Boolean, isCaptivePortal: Boolean) {
+        heardFromCallback = true
         if (network == current) isOnline = hasInternet && !isCaptivePortal
     }
 
     fun lost(network: Long) {
+        heardFromCallback = true
         if (network == current) {
             current = null
             isOnline = false
@@ -84,21 +95,29 @@ internal class DefaultNetworkState {
 Public surface unchanged: `isOnline: StateFlow<Boolean>`. No consumer changes.
 
 - `onAvailable(network)` → `state.available(network.networkHandle)`. **On API 24–25 only**, it then
-  reads `connectivityManager.getNetworkCapabilities(network)` and feeds it to `state.capabilities(...)`:
+  reads `connectivityManager.getNetworkCapabilities(network)` and feeds `state.capabilities(...)`:
   those versions do not guarantee the capabilities callback that follows, and without it an old phone
-  could stay offline after reconnecting. It is the one synchronous read left, confined to the versions
-  where it is the only source. The car is API 29+ and never takes this path.
+  could stay offline after reconnecting. The read can itself be stale or `null` (the same platform
+  warning), so a `null` result is fed as *has internet, not a captive portal*: `onAvailable` means the
+  framework has just declared this network the default and ready for use. Cost: on API 24–25 a
+  captive portal can read online until its next capabilities change. The car is API 29+ and never takes
+  this path.
 - `onCapabilitiesChanged(network, caps)` →
   `state.capabilities(network.networkHandle, caps.hasCapability(INTERNET), caps.hasCapability(CAPTIVE_PORTAL))`.
 - `onLost(network)` → `state.lost(network.networkHandle)`.
 - After each, `_isOnline.value = state.isOnline`.
-- **Starting value**, before registration: the same rule applied to `activeNetwork`'s capabilities, and
-  the tracker seeded with that network. This read is outside any callback, so the warning does not apply;
-  registration then delivers the current default network at once and corrects it if it moved.
+- **Starting value — register first, then seed.** After `registerDefaultNetworkCallback`, read
+  `activeNetwork` and its capabilities and call `state.seed(...)`; `seed` does nothing if a callback has
+  already been applied. Reading *after* registering closes the gap the Codex review found: a network
+  lost before registration can never be reported by `onLost` (the callback never saw it), so a seed read
+  before registering could stay "online" indefinitely. Now a loss before the read reads offline, a loss
+  after registration arrives as `onLost`, and a callback that beats the seed wins.
+- **One lock.** Callbacks run on `ConnectivityThread`; the seed runs on whichever thread constructs the
+  singleton. Every tracker call and its `_isOnline` publish happen inside one `synchronized` block.
 
-`checkCurrentConnectivity()` is replaced by one private helper that takes a `Network`, reads its
-capabilities synchronously and feeds `state.available` + `state.capabilities` — used for the starting
-value (with `activeNetwork`) and on the API 24–25 path (with the callback's network), and nowhere else.
+`checkCurrentConnectivity()` goes. Its two remaining synchronous reads — the seed (with
+`activeNetwork`) and the API 24–25 path (with the callback's network) — each read one network's
+capabilities and hand the two booleans to the tracker.
 
 ## Out of scope
 
@@ -119,6 +138,9 @@ value (with `activeNetwork`) and on the API 24–25 path (with the callback's ne
 - capabilities for a network that is not current → ignored
 - lost for a network that is not current → ignored
 - nothing yet → offline
+- seed online, then a callback says offline → offline
+- a callback first, then a seed → the seed is ignored
+- seed with no network → offline
 
 **Reproduce first, then compare — AAOS emulator** (`AAOS_AOSP_33_userdebug`, user 10, `oem` debug):
 with the app in the foreground on Home, toggle `cmd connectivity airplane-mode enable/disable` ten
@@ -147,6 +169,7 @@ offline; reconnection clears the banner and the error path.
 
 - **Mobile's behaviour changes.** More networks read online: an unvalidated network no longer shows the
   banner or blocks offline checks. Intended; verified on a phone.
-- **API 24–25 keeps one synchronous read.** Old phones only; the platform offers nothing else there.
+- **API 24–25 keeps one synchronous read**, and treats a `null` answer as online. Old phones only; the
+  platform offers nothing else there.
 - **The reproduction may not reproduce.** One miss in two is thin evidence. The fix stands on the
   platform's documented contract either way; the record says which happened.
