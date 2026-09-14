@@ -17,8 +17,10 @@ import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.isPlayableNow
+import com.example.nyasaplayer.core.playback.isStreamStalledOffline
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,20 +35,7 @@ import kotlin.coroutines.cancellation.CancellationException
 
 private const val AutoPositionPollIntervalMs = 500L
 private const val TAG = "AutoPlayerVM"
-private const val NoConnectionTitle = "No Connection"
-private const val NoConnectionMessage = "Check your vehicle's internet connection"
-
-/**
- * The offline error, one shape for the slow path and the fast one (A8). `isPlaybackError = false`
- * selects the overlay's Wi-Fi-off icon. Retry only when the failing thing is the current item —
- * see [PlayerError.isRetryable].
- */
-private fun noConnectionError(isRetryable: Boolean) = PlayerError(
-    title = NoConnectionTitle,
-    message = NoConnectionMessage,
-    isPlaybackError = false,
-    isRetryable = isRetryable,
-)
+private const val StallConfirmMs = 1_500L
 
 @UnstableApi
 @HiltViewModel
@@ -65,6 +54,7 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     private val userId get() = authRepository.currentUserId
     private var likeObserverJob: Job? = null
+    private var stallCheck: Job? = null
     private val isOnline: Boolean get() = networkMonitor.isOnline.value
 
     private val stateCollector = object : BasePlayerStateCollector(
@@ -86,25 +76,24 @@ class AutomotivePlayerViewModel @Inject constructor(
         }
 
         override fun onPlaybackError(error: PlaybackException) {
-            // Not trying to play — a restore that prepared its queue paused and could not load it, or a
-            // player the offline guard already paused — leaves the driver nothing to act on (T3,
-            // D-T3.5). Raise nothing: pressing play re-prepares it online, or meets togglePlayPause's
-            // offline guard (A8).
+            // A player not trying to play (a paused restore, a guard-paused stream) leaves the driver
+            // nothing to act on (T3, D-T3.5); pressing play re-prepares it.
+            // ponytail: relies on PlaybackService calling play() before a load can fail; a command
+            // path that sets playWhenReady after starting a load would swallow its error.
             if (!playbackState.value.playWhenReady) return
-            val isNetwork = error.cause is IOException
+            if (error.cause is IOException) {
+                showNoConnection(isRetryable = true)
+                return
+            }
             _uiState.update {
                 it.copy(
                     // The current item is what failed, so Retry re-attempting it via
                     // togglePlayPause() acts on the thing the error is actually about.
-                    error = if (isNetwork) {
-                        noConnectionError(isRetryable = true)
-                    } else {
-                        PlayerError(
-                            title = "Playback Error",
-                            message = error.message ?: "Playback error",
-                            isRetryable = true,
-                        )
-                    },
+                    error = PlayerError(
+                        title = "Playback Error",
+                        message = error.message ?: "Playback error",
+                        isRetryable = true,
+                    ),
                 )
             }
         }
@@ -152,7 +141,7 @@ class AutomotivePlayerViewModel @Inject constructor(
     private fun observePlaybackSnapshot() {
         stateCollector.playbackState.onEach { snapshot ->
             _uiState.update { it.copy(playback = snapshot) }
-            stopIfStreamingOffline(snapshot)
+            pauseIfStreamingOffline()
         }.catch { /* Snapshot flow is internal — errors are non-fatal */ }
             .launchIn(viewModelScope)
     }
@@ -167,21 +156,31 @@ class AutomotivePlayerViewModel @Inject constructor(
     private fun observeNetworkState() {
         networkMonitor.isOnline.onEach { online ->
             _uiState.update { it.copy(isOffline = !online) }
-            if (!online) stopIfStreamingOffline(_uiState.value.playback)
+            pauseIfStreamingOffline()
         }.catch { /* Network state flow is internal — errors are non-fatal */ }
             .launchIn(viewModelScope)
     }
 
     /**
-     * Buffering, trying to play, offline, and not a local file: the stream cannot recover, so stop
-     * it now rather than after ExoPlayer's timeout (A8). `playWhenReady` is what keeps a
-     * restored-but-paused session — which buffers too — from raising anything (T3, D-T3.5).
+     * A stream that cannot load offline: pause it rather than wait for ExoPlayer's timeout (A8). Confirmed
+     * after [StallConfirmMs], because every seek masks the controller to buffering for a moment and a seek
+     * inside audio already buffered must keep playing.
+     *
+     * ponytail: pause() leaves ExoPlayer retrying the load, so the buffering ring can spin until the load
+     * gives up; stop() needs a transport op PlayerTransport has no room for. And syncSnapshotFromPlayer
+     * never sets isBuffering, so a stream already buffering when a T14 rebuild attaches is missed until its
+     * next state change.
      */
-    private fun stopIfStreamingOffline(snapshot: PlaybackSnapshot) {
-        if (isOnline || !snapshot.isBuffering || !snapshot.playWhenReady) return
-        if (snapshot.currentSong?.isPlayableNow(isOnline = false) == true) return
-        stateCollector.transport.pause()
-        _uiState.update { it.copy(error = noConnectionError(isRetryable = true)) }
+    private fun pauseIfStreamingOffline() {
+        if (!stateCollector.playbackState.value.isStreamStalledOffline(isOnline)) return
+        if (stallCheck?.isActive == true) return
+        stallCheck = viewModelScope.launch {
+            delay(StallConfirmMs)
+            if (stateCollector.playbackState.value.isStreamStalledOffline(isOnline)) {
+                stateCollector.transport.pause()
+                showNoConnection(isRetryable = true)
+            }
+        }
     }
 
     // ── Playback State Restore ──
@@ -204,25 +203,26 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     // ── Playback Controls ──
 
+    /** `isPlaybackError = false` selects the overlay's Wi-Fi-off icon. */
+    private fun showNoConnection(isRetryable: Boolean) {
+        _uiState.update {
+            it.copy(
+                error = PlayerError(
+                    title = "No Connection",
+                    message = "Check your vehicle's internet connection",
+                    isPlaybackError = false,
+                    isRetryable = isRetryable,
+                ),
+            )
+        }
+    }
+
+    /**
+     * Offline, this still plays whatever is buffered; [pauseIfStreamingOffline] stops it if nothing is.
+     * The transport's own toggle keeps T14's rebuild on a lost controller.
+     */
     fun togglePlayPause() {
-        val transport = stateCollector.transport
-        // Reads the live player: the snapshot's isPlaying lags a listener callback behind it.
-        val isPlaying = transport.isPlaying() ?: run {
-            // Silent query, no rebuild. Ask for the toggle and let it fail, so play reconnects like
-            // every other control (T14).
-            transport.togglePlayPause()
-            return
-        }
-        if (isPlaying) {
-            transport.pause()
-            return
-        }
-        val current = _uiState.value.playback.currentSong
-        if (current != null && !current.isPlayableNow(isOnline)) {
-            _uiState.update { it.copy(error = noConnectionError(isRetryable = true)) }
-            return
-        }
-        transport.play()
+        stateCollector.transport.togglePlayPause()
     }
 
     fun skipNext() {
@@ -264,7 +264,7 @@ class AutomotivePlayerViewModel @Inject constructor(
         // The tapped song is what starts. It was never queued, so Retry would act on someone else's
         // queue — hence no Retry (PlayerError.isRetryable).
         if (!song.isPlayableNow(isOnline)) {
-            _uiState.update { it.copy(error = noConnectionError(isRetryable = false)) }
+            showNoConnection(isRetryable = false)
             return false
         }
         val startIndex = songs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
@@ -283,8 +283,10 @@ class AutomotivePlayerViewModel @Inject constructor(
     /** True only when the shuffle reached a connected player. */
     fun shufflePlay(songs: List<Song>): Boolean {
         if (songs.isEmpty()) return false
+        // ponytail: any-playable lets a mixed list start on a streamed song offline; unreachable until A9
+        // gives the car local files.
         if (songs.none { it.isPlayableNow(isOnline) }) {
-            _uiState.update { it.copy(error = noConnectionError(isRetryable = false)) }
+            showNoConnection(isRetryable = false)
             return false
         }
         if (!stateCollector.transport.shufflePlay(songs)) return false

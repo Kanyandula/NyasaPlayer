@@ -11,3 +11,10 @@ import com.example.nyasaplayer.core.common.models.Song
  */
 fun Song.isPlayableNow(isOnline: Boolean): Boolean =
     isOnline || resolvedAudioUrl.startsWith("file:")
+
+/**
+ * Trying to play, buffering, offline, and not a local file: a stream that cannot load. Decides the car's
+ * stall guard (A8); a pure function so it is testable without a ViewModel.
+ */
+fun PlaybackSnapshot.isStreamStalledOffline(isOnline: Boolean): Boolean =
+    !isOnline && isBuffering && playWhenReady && currentSong?.isPlayableNow(isOnline = false) != true
