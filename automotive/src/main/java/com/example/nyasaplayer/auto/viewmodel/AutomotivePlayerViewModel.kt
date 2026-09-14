@@ -86,6 +86,11 @@ class AutomotivePlayerViewModel @Inject constructor(
         }
 
         override fun onPlaybackError(error: PlaybackException) {
+            // Not trying to play — a restore that prepared its queue paused and could not load it, or a
+            // player the offline guard already paused — leaves the driver nothing to act on (T3,
+            // D-T3.5). Raise nothing: pressing play re-prepares it online, or meets togglePlayPause's
+            // offline guard (A8).
+            if (!playbackState.value.playWhenReady) return
             val isNetwork = error.cause is IOException
             _uiState.update {
                 it.copy(
