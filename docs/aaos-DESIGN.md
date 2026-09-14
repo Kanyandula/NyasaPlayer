@@ -808,10 +808,11 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   re-prepares an idle player on a controller's `play()`. Car downloads move to A9. A8 leaves `:app`
   untouched — surfaces differ by module, not by `isMobileApp`-style checks in shared code — and
   mobile adopts the rule in T28. An error on a player not trying to play raises nothing (the
-  offline restore). Play is never refused offline: buffered audio plays, and a stall is paused
-  after a 1.5 s confirmation because every seek masks the controller to buffering. Known gap:
-  playback started from the OEM template or Assistant fails slowly offline only when the car app
-  is not running; when it is, the stall guard pauses it and the overlay waits for the car app.
+  offline restore). Resuming with play/pause is never refused offline: buffered audio plays,
+  and a stall is paused after a 1.5 s confirmation because every seek masks the controller to
+  buffering. Known gap: playback started from the OEM template or Assistant fails slowly offline
+  only when the car app is not running; when it is, the stall guard pauses it and the overlay
+  waits for the car app.
 
 ## Components
 

@@ -27,7 +27,8 @@ read `isOnline`; when it is wrong, both fall back to streaming and failing slowl
 
 The same staleness cuts the other way, too: a network not yet `VALIDATED` after boot or
 reconnect, one that never validates, or a stale capabilities read can leave `isOnline` false when
-the vehicle is actually online. Since A8 that blocks every play the car's custom UI attempts.
+the vehicle is actually online. Since A8 that refuses every song tap and shuffle from the car's
+custom UI.
 
 ## Scope
 
