@@ -2,7 +2,7 @@
 
 - **Slice:** observability, build config — story T24
 - **Depends on:** —
-- **Status:** Specced, not started
+- **Status:** Implemented; car device-verified, phone pass owed — see `docs/T25_VERIFICATION.md`
 - **Verification Command:** `./gradlew :app:assembleDebug :app:assembleRelease :automotive:assembleOemDebug :automotive:assembleOemRelease :automotive:assemblePlaystoreDebug :automotive:assemblePlaystoreRelease`
 - **Design Reference:** T24 D2, D3, D4, D5, D8
 - **Risk Tags:** new SDK, build config, manifest merge, dependency resolution, privacy
