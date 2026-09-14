@@ -24,10 +24,12 @@ applies too.
 | Firebase session ID (random UUID tagging events to a session) | https://firebase.google.com/support/privacy ("Data processing information") |
 | Device specs: model name, CPU architecture, RAM, disk space | https://firebase.google.com/support/privacy ("Data processing information") |
 | Timestamp of the crash | https://firebase.google.com/support/privacy ("Data processing information") |
-| App bundle identifier and full version number | https://firebase.google.com/support/privacy ("Data processing information") |
+| App bundle identifier and version number | https://firebase.google.com/support/privacy ("Data processing information") |
 | Device OS name and version | https://firebase.google.com/support/privacy ("Data processing information") |
 | Exception details, binary image information, runtime method/function names | https://firebase.google.com/support/privacy ("Data processing information") |
 | Screen rotation, proximity sensor status, app background state | https://firebase.google.com/support/privacy ("Data processing information") |
+| A boolean indicating whether the device was jailbroken/rooted | https://firebase.google.com/support/privacy ("Data processing information") |
+| Version-control info: the git commit SHA of the build, and a placeholder root path (`$PROJECT_DIR`), not a real filesystem path — from `META-INF/version-control-info.textproto`, which AGP writes into every release APK and the Crashlytics plugin copies into the `com.google.firebase.crashlytics.version_control_info` string resource | https://firebase.google.com/support/privacy ("Data processing information") |
 | App metadata: package name, OS info, SDK version, network type (Firebase Sessions) | https://firebase.google.com/docs/android/play-data-disclosure ("Firebase sessions" section) |
 | Device metadata: manufacturer and model (Firebase Sessions) | https://firebase.google.com/docs/android/play-data-disclosure ("Firebase sessions" section) |
 | Application metrics: app usage and session timing (Firebase Sessions) | https://firebase.google.com/docs/android/play-data-disclosure ("Firebase sessions" section) |
@@ -59,6 +61,12 @@ None of that applies here: see "What is never sent" below.
   adb logcat -s FirebaseCrashlytics
   ```
   With collection on, it logs the upload; in debug, it logs that automatic collection is disabled.
+- While collection is off, a debug build still records its crashes on the device, unsent — a
+  report file exists under `files/.crashlytics.v3/com.example.nyasaplayer/priority-reports/<id>`,
+  and no upload happens. Those stored reports are sent once a build with collection on runs in the
+  same data directory, so uninstall the debug build before installing a release build signed with
+  the same key on top of it (`docs/tickets/T25-crashlytics-in-core-data.md`, Notes — "Signing a
+  release build to test with").
 
 ## Retention
 
