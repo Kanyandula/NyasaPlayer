@@ -4,7 +4,7 @@ Records the device pass required by `docs/superpowers/specs/2026-09-13-aaos-a8-p
 (Testing) and Task 6 of `docs/superpowers/plans/2026-09-13-aaos-a8-playback-states.md`.
 
 - **Date:** 2026-09-14
-- **Branch:** `ek/aaos-a8-spec`, final pass at `c651fde`
+- **Branch:** `ek/aaos-a8-spec` — first pass at `c651fde`, re-checked at `ae3d0b0` (see the last section)
 - **AVD:** `AAOS_AOSP_33_userdebug` (API 33, `userdebug`), 1024x768 at 160 dpi, one emulator only
 - **Build:** `oem` debug APK, installed for user 10 (the driver)
 - **Account:** the real signed-in user, against live Firestore, with a restored session from an earlier run
@@ -72,6 +72,24 @@ from `onPlaybackError`, with the same wording, icon and Retry.
   128 dp each, 56 dp of it for a 20 sp label, so "Dismiss" rendered as "Dismi / ss". With Skip next
   shown, Skip next and Retry now share a row and Dismiss takes its own. Re-checked on the device:
   every label on one line.
+
+## Re-check at `ae3d0b0`, after the final review
+
+The final review changed two behaviours this record first checked: the stall guard now confirms
+after 1.5 s before pausing, and play/pause is no longer refused offline (it plays whatever is
+buffered). Re-checked on the same AVD, user 10:
+
+| Check | Result |
+|---|---|
+| Offline, tap-seek to 1:00 inside the buffer | **Pass.** Kept playing (state 3, position advancing), no overlay. |
+| Offline, pause then play mid-track | **Pass.** Resumed at 1:31 from the buffer, no overlay. |
+| Offline, Skip next to an unbuffered track | **Pass — the stall guard, observed firing.** Buffering, then paused at ~1.5–2.2 s, then the overlay with Retry; ExoPlayer's own error followed at ~3.6 s and raised nothing. Dismissed, it stayed dismissed for 12 s. Online, play resumed. |
+| Offline relaunch onto the restored session | **Pass.** No overlay at launch. |
+| …then press play | **Pass.** Buffering, paused by the guard at ~1.5 s, overlay with Retry. (A first tap during Home's skeleton load was swallowed; the re-tap is the one recorded.) |
+| Offline, a 2.5 s scrubber drag inside the buffer | **Fails — open.** Paused, overlay raised. The slider seeks on every movement, every seek masks the controller to buffering, and the confirmation counts from the first seek, so a drag longer than 1.5 s trips it. A single tap-seek does not. Proposed fix: cancel the pending check in `seekTo` so the window restarts at the last seek. |
+
+Also seen, not A8: after a track change while paused, the scrubber keeps the previous track's
+position (1:52 on a track at 0) until playback starts.
 
 ## Findings recorded, not fixed here
 
