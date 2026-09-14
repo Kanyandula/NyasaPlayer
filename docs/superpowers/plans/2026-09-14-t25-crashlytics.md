@@ -43,7 +43,7 @@
 ./gradlew :app:processDebugMainManifest :app:processReleaseMainManifest \
   :automotive:processOemDebugMainManifest :automotive:processOemReleaseMainManifest \
   :automotive:processPlaystoreDebugMainManifest :automotive:processPlaystoreReleaseMainManifest -q
-for f in $(find app/build automotive/build -path '*intermediates/merged_manifest*/AndroidManifest.xml'); do
+for f in $(find app/build automotive/build -path '*intermediates/merged_manifest/*/AndroidManifest.xml'); do
   echo "$f: $(grep -c '<activity' $f) activities"; done
 ```
 
@@ -131,11 +131,11 @@ for apk in app/build/outputs/apk/release/*.apk automotive/build/outputs/apk/*/re
   echo "$apk: $($B/aapt2 dump resources $apk | grep -A1 'mapping_file_id' | tail -1)"; done
 
 # 3. Debug variants have the flag false, release variants do not
-for f in $(find app/build automotive/build -path '*intermediates/merged_manifest*/AndroidManifest.xml'); do
+for f in $(find app/build automotive/build -path '*intermediates/merged_manifest/*/AndroidManifest.xml'); do
   echo "$f: $(grep -A1 'firebase_crashlytics_collection_enabled' $f | tr -d '\n ' )"; done
 
 # 4. No new activity: compare with Step 1's counts
-for f in $(find app/build automotive/build -path '*intermediates/merged_manifest*/AndroidManifest.xml'); do
+for f in $(find app/build automotive/build -path '*intermediates/merged_manifest/*/AndroidManifest.xml'); do
   echo "$f: $(grep -c '<activity' $f) activities"; done
 ```
 
