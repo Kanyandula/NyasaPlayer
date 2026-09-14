@@ -25,7 +25,9 @@ about other networks"*.
 
 **It was seen failing.** During A8's device pass, the first airplane-mode toggle left the car app
 "online" — no banner — while `dumpsys connectivity` reported no default network. One miss in two live
-transitions (`docs/AAOS_A8_VERIFICATION.md`, findings).
+transitions (`docs/AAOS_A8_VERIFICATION.md`, findings). Measured on `main` on 2026-09-14 with the protocol in Testing:
+**1 miss in 20 valid transitions** — an offline transition where the system settled offline and the app
+stayed "online"; all ten back-online transitions were correct. About one missed loss in ten.
 
 **A8 raised the stakes.** A false "online" makes a car song tap stream and fail slowly; a false
 "offline" refuses every song tap and shuffle from the car's custom UI.
@@ -148,7 +150,7 @@ fail silently), toggle `cmd connectivity airplane-mode enable/disable` ten times
 wait until `dumpsys connectivity` reports the new state (reconnecting takes this emulator 15–25 s), let
 it settle 5 s, then read system → banner → system. A transition counts only when both system reads
 agree; it is a miss when the banner disagrees with them. Run it on `main` before any change, then on the
-fix, with the same script. Not `svc wifi/data disable` (it crashed this emulator's car stack). Pass: no
+fix, with the same script: `scripts/aaos-network-toggle-check.sh`. Not `svc wifi/data disable` (it crashed this emulator's car stack). Pass: no
 misses on the fix. A first attempt with a fixed 10 s wait was invalid — the system had not reconnected
 — and is not used.
 
