@@ -820,7 +820,8 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   validates — an OEM or telematics APN that blocks Google's probe — as offline forever, and since D71
   that refuses every song tap on the car. A false offline is now worse than a false online, which only
   falls back to the slow failure. A pure tracker keyed by network handle holds the rule; the monitor
-  registers before it seeds, and only API 24–25 keep a synchronous read. Mobile changes with it.
+  registers before it seeds, and only API 24–25 keep a synchronous read inside a callback. Mobile
+  changes with it.
 
 ## Components
 

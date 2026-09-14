@@ -2,9 +2,9 @@
 
 - **Slice:** correctness, shared by both surfaces
 - **Depends on:** —
-- **Status:** Done — see Outcome and `docs/T29_VERIFICATION.md`
+- **Status:** Implemented; car device-verified, phone pass owed — see Outcome and `docs/T29_VERIFICATION.md`
 - **Verification Command:** `./gradlew :core:common:testDebugUnitTest`, plus a device pass
-- **Design Reference:** `docs/AAOS_A8_VERIFICATION.md` (findings); D71
+- **Design Reference:** `docs/AAOS_A8_VERIFICATION.md` (findings); D71; D72
 - **Risk Tags:** shared module, both surfaces, mobile behaviour change
 - **Affected Modules:** `:core:common` (and every consumer of `NetworkMonitor.isOnline`)
 
@@ -12,8 +12,7 @@
 
 During the A8 device pass, the first airplane-mode toggle left the car app believing it was online:
 no offline banner, `isOffline` false, while `dumpsys connectivity` reported no default network. A
-relaunch, and a second toggle, both flipped it correctly. One miss in two live transitions; not yet
-reproduced on demand.
+relaunch, and a second toggle, both flipped it correctly. One miss in two live transitions.
 
 The likely cause is in `NetworkMonitor`: every callback — `onAvailable`, `onLost`,
 `onCapabilitiesChanged` — answers by calling `checkCurrentConnectivity()`, which reads
@@ -65,8 +64,8 @@ offline is now worse than a false online, which only falls back to the slow fail
 
 Baseline, measured on `main` on 2026-09-14 with the protocol in the spec's Testing section: 1 miss in
 20 valid transitions (an offline transition where the system settled offline and the app stayed
-online). With the fix, the same script on the same emulator: 0 misses in 20. The phone pass was not
-run — the phone emulator's storage was full — and is owed; see `docs/T29_VERIFICATION.md`.
+online). With the fix, the same script on the same emulator: 0 misses in 20. The phone pass is owed;
+see `docs/T29_VERIFICATION.md`.
 
 Mobile's behaviour changes too: more networks now read online, since an unvalidated network no
 longer shows the banner or blocks offline checks.

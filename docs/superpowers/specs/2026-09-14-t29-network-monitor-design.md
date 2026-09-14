@@ -25,9 +25,10 @@ about other networks"*.
 
 **It was seen failing.** During A8's device pass, the first airplane-mode toggle left the car app
 "online" — no banner — while `dumpsys connectivity` reported no default network. One miss in two live
-transitions (`docs/AAOS_A8_VERIFICATION.md`, findings). Measured on `main` on 2026-09-14 with the protocol in Testing:
-**1 miss in 20 valid transitions** — an offline transition where the system settled offline and the app
-stayed "online"; all ten back-online transitions were correct. About one missed loss in ten.
+transitions (`docs/AAOS_A8_VERIFICATION.md`, findings). Measured on `main` on 2026-09-14 with the
+protocol in Testing: **1 miss in 20 valid transitions** — an offline transition where the system settled
+offline and the app stayed "online"; all ten back-online transitions were correct. About one missed loss
+in ten.
 
 **A8 raised the stakes.** A false "online" makes a car song tap stream and fail slowly; a false
 "offline" refuses every song tap and shuffle from the car's custom UI.
@@ -110,10 +111,10 @@ Public surface unchanged: `isOnline: StateFlow<Boolean>`. No consumer changes.
 - After each, `_isOnline.value = state.isOnline`.
 - **Starting value — register first, then seed.** After `registerDefaultNetworkCallback`, read
   `activeNetwork` and its capabilities and call `state.seed(...)`; `seed` does nothing if a callback has
-  already been applied. Reading *after* registering closes the gap the Codex review found: a network
-  lost before registration can never be reported by `onLost` (the callback never saw it), so a seed read
-  before registering could stay "online" indefinitely. Now a loss before the read reads offline, a loss
-  after registration arrives as `onLost`, and a callback that beats the seed wins.
+  already been applied. Reading *after* registering narrows, but does not close, the gap the Codex
+  review found: registration is processed asynchronously, so a loss already queued can still land after
+  the read and be seeded "online". The window is startup-only and clears on the next default network; a
+  callback that beats the seed wins in the meantime.
 - **One lock.** Callbacks run on `ConnectivityThread`; the seed runs on whichever thread constructs the
   singleton. Every tracker call and its `_isOnline` publish happen inside one `synchronized` block.
 
@@ -123,8 +124,9 @@ capabilities and hand the two booleans to the tracker.
 
 ## Out of scope
 
-- `onBlockedStatusChanged` (API 29) — an app blocked by data saver or background restrictions still reads
-  online. Not seen; a separate ticket if it is.
+- An app blocked by data saver or background restrictions: `activeNetwork` is null when blocked, so the
+  seed reads it offline, but the callbacks do not report it. Consumers cannot observe it — playback holds a
+  foreground service. Not seen; a separate ticket if it is.
 - The car classifying every `IOException` as "No Connection" (A8 record, findings).
 - A `PlayerViewModel` test harness. Mobile is verified on a device, as before.
 
@@ -144,15 +146,15 @@ capabilities and hand the two booleans to the tracker.
 - a callback first, then a seed → the seed is ignored
 - seed with no network → offline
 
-**Reproduce first, then compare — AAOS emulator** (`AAOS_AOSP_33_userdebug`, user 10, `oem` debug):
-with the app in the foreground on Home and playback stopped (a moving player makes `uiautomator dump`
-fail silently), toggle `cmd connectivity airplane-mode enable/disable` ten times. After each toggle:
-wait until `dumpsys connectivity` reports the new state (reconnecting takes this emulator 15–25 s), let
-it settle 5 s, then read system → banner → system. A transition counts only when both system reads
-agree; it is a miss when the banner disagrees with them. Run it on `main` before any change, then on the
-fix, with the same script: `scripts/aaos-network-toggle-check.sh`. Not `svc wifi/data disable` (it crashed this emulator's car stack). Pass: no
-misses on the fix. A first attempt with a fixed 10 s wait was invalid — the system had not reconnected
-— and is not used.
+**Reproduce first, then compare — AAOS emulator** (`AAOS_AOSP_33_userdebug`, user 10, `oem` debug): with
+the app in the foreground on Home and playback stopped (a moving player makes `uiautomator dump` fail
+silently), toggle `cmd connectivity airplane-mode enable/disable` ten times. After each toggle: wait
+until `dumpsys connectivity` reports the new state (reconnecting takes this emulator 15–25 s), let it
+settle 5 s, then read system → banner → system. A transition counts only when both system reads agree; it
+is a miss when the banner disagrees with them. Run it on `main` before any change, then on the fix, with
+the same script: `scripts/aaos-network-toggle-check.sh`. Not `svc wifi/data disable` (it crashed this
+emulator's car stack). Pass: no misses on the fix. A first attempt with a fixed 10 s wait was invalid —
+the system had not reconnected — and is not used.
 
 **Phone pass** — `Medium_Phone_API_35`, one emulator at a time: the same ten toggles against mobile's
 banner; offline play of a streamed song refused, a downloaded one plays; downloads refuse to start
@@ -175,5 +177,5 @@ offline; reconnection clears the banner and the error path.
   banner or blocks offline checks. Intended; verified on a phone.
 - **API 24–25 keeps one synchronous read**, and treats a `null` answer as online. Old phones only; the
   platform offers nothing else there.
-- **The reproduction may not reproduce.** One miss in two is thin evidence. The fix stands on the
-  platform's documented contract either way; the record says which happened.
+- **The reproduction did reproduce.** 1 miss in 20 on `main`, 0 in 20 with the fix; twenty is a small
+  sample, and the fix rests on the platform's documented contract either way.

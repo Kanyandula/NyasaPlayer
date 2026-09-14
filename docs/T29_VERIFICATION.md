@@ -51,8 +51,8 @@ the same device as the T28 and T14 mobile passes.
 
 ## Also noted
 
-The review of `be3943e` found a startup window of microseconds: on API 31+ `onAvailable` and
-`onCapabilitiesChanged` arrive in one handler message but take the lock separately, so a seed landing
+The review of `be3943e` found a startup window of microseconds: from API 26 `onCapabilitiesChanged`
+always follows `onAvailable` immediately, but each takes the lock separately, so a seed landing
 between them is ignored and `isOnline` reads `false` until capabilities publish. That is the spec's
 own rule (a callback outranks the seed) and it corrects itself; worth remembering if a startup banner
 flicker is ever seen.
