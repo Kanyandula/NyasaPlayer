@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
@@ -153,10 +154,22 @@ internal fun AndroidComposeTestRule<*, ComponentActivity>.forEachCarUiCase(
         if (case.lowestDrift) mainClock.advanceTimeBy(DriftDurationMs.toLong())
         case.interact(this)
         waitForIdle()
+        requireScopeMatches(case)
         measure(case)
         if (case.scrollsList) measureEachScrollStep(case, measure)
     }
     mainClock.autoAdvance = true
+}
+
+/**
+ * A scoped case whose [CarUiCase.interact] opened nothing would measure no nodes and pass, so an empty
+ * scope fails the run instead.
+ */
+private fun AndroidComposeTestRule<*, ComponentActivity>.requireScopeMatches(case: CarUiCase) {
+    val scope = case.scope ?: return
+    check(onAllNodes(scope, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()) {
+        "${case.name}: its scope matched no node, so it would measure nothing"
+    }
 }
 
 /**
@@ -172,14 +185,24 @@ private fun AndroidComposeTestRule<*, ComponentActivity>.measureEachScrollStep(
     measure: (CarUiCase) -> Unit,
 ) {
     val list = onAllNodes(hasScrollToIndexAction())[0]
-    // The semantics publish no item count, and the action refuses an index past the end.
     var index = 1
-    while (runCatching { list.performScrollToIndex(index) }.isSuccess) {
+    while (list.scrolledTo(index)) {
         waitForIdle()
         measure(case.copy(name = "${case.name}, scrolled to item $index", scrollsList = false))
         index++
     }
     check(index > 2) { "${case.name} scrolled no further than item ${index - 1}: is its list still lazy?" }
+}
+
+/**
+ * The semantics publish no item count, so the walk stops where the action refuses an index past the
+ * end. Only that refusal ends it; any other failure is a real one and propagates.
+ */
+private fun SemanticsNodeInteraction.scrolledTo(index: Int): Boolean = try {
+    performScrollToIndex(index)
+    true
+} catch (e: IllegalArgumentException) {
+    if (e.message?.contains("out of bounds") == true) false else throw e
 }
 
 /** The root background, and the ambient layer on it where the app paints one. */

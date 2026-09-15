@@ -60,9 +60,11 @@ class CarTextContrastMeasurementTest {
         var measured = 0
         var exempt = 0
         var frames = 0
-        // Text seen only partly in view, and text measured whole, by (screen state, text).
-        val clipped = mutableSetOf<Pair<String, String>>()
-        val whole = mutableSetOf<Pair<String, String>>()
+        // Text seen only partly in view, and text measured whole, by (screen state, text, layout x in px).
+        // The x keeps one whole instance of a text from excusing a clipped one in another component. It is
+        // the unclipped layout position (clipped bounds collapse to 0), and lists scroll vertically.
+        val clipped = mutableSetOf<Triple<String, String, Int>>()
+        val whole = mutableSetOf<Triple<String, String, Int>>()
 
         composeRule.forEachCarUiCase { case ->
             frames++
@@ -75,12 +77,13 @@ class CarTextContrastMeasurementTest {
                     exempt++
                     return@forEach
                 }
+                val key = Triple(case.family, text, node.positionInWindow.x.roundToInt())
                 val pair = window.measure(node) ?: run {
-                    clipped += case.family to text
+                    clipped += key
                     return@forEach
                 }
                 measured++
-                whole += case.family to text
+                whole += key
                 if (pair.ratio < AaaRatio && !isRecordedAaPair(pair)) {
                     violations += "${case.name} | \"$text\" | fg ${hex(pair.fg)} | bg ${hex(pair.bg)} | " +
                         "%.2f:1".format(pair.ratio)
@@ -89,7 +92,7 @@ class CarTextContrastMeasurementTest {
         }
 
         // A text only ever seen clipped was never measured at all.
-        val neverWhole = (clipped - whole).map { (family, text) -> "$family | \"$text\"" }
+        val neverWhole = (clipped - whole).map { (family, text, left) -> "$family | \"$text\" at x=$left px" }
         println(
             "Contrast: ${carUiCases.size} cases in $frames frames, $measured text nodes measured, " +
                 "$exempt disabled (exempt), ${clipped.size} seen partly out of view, " +
