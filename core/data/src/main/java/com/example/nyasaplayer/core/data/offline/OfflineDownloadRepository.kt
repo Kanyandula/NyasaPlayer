@@ -13,6 +13,9 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// Mirrors DownloadRepository, which carries the same suppression: this class is the one
+// implementation of that interface, so it is exactly as wide as the contract it fills.
+@Suppress("TooManyFunctions")
 @Singleton
 class OfflineDownloadRepository @Inject constructor(
     private val downloadDao: DownloadDao,
@@ -34,6 +37,9 @@ class OfflineDownloadRepository @Inject constructor(
 
     override fun getCompletedDownloads(): Flow<List<DownloadEntity>> =
         downloadDao.getCompleted()
+
+    override fun getAllDownloads(): Flow<List<DownloadEntity>> =
+        downloadDao.getAll()
 
     override fun observeDownload(mediaId: String): Flow<DownloadEntity?> =
         downloadDao.observeByMediaId(mediaId)

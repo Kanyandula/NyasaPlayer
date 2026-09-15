@@ -29,6 +29,7 @@ import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,9 @@ import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarArtistScreen
 import com.example.nyasaplayer.auto.ui.screens.CarAuthScreen
 import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
+import com.example.nyasaplayer.auto.ui.screens.CarDetailDownload
+import com.example.nyasaplayer.auto.ui.screens.CarDownloadItem
+import com.example.nyasaplayer.auto.ui.screens.CarDownloadsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFavouriteMusicScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
@@ -78,6 +82,7 @@ import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.local.entity.DownloadStatus
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
@@ -332,6 +337,16 @@ private val SearchAlbumResults = AutomotiveSearchResults(
     songs = listOf(Songs[5]).map(AutomotiveSearchResult::SongResult),
 )
 
+/** One row per status, so every status line the row can draw is measured. */
+private val DownloadItems = listOf(
+    CarDownloadItem(Songs[0], DownloadStatus.Completed, sizeBytes = 4_800_000L),
+    CarDownloadItem(NowPlaying, DownloadStatus.Completed, sizeBytes = 7_200_000L),
+    CarDownloadItem(Songs[2], DownloadStatus.Downloading, progress = 62),
+    CarDownloadItem(Songs[3], DownloadStatus.Pending),
+    CarDownloadItem(Songs[4], DownloadStatus.Failed),
+    CarDownloadItem(Songs[5], DownloadStatus.Completed, sizeBytes = 1_400_000_000L),
+)
+
 private const val LoadError = "Couldn't reach Nyasa Music. Check your connection."
 private const val DriverName = "Ada Lovelace"
 
@@ -339,7 +354,7 @@ private const val DriverName = "Ada Lovelace"
 
 internal val carUiCases: List<CarUiCase> =
     chromeCases() + modalCases() + (componentCases() + authCases() + tabCases() + detailCases()).withLowestDrift() +
-        playerCases() + queueCases() + sheetCases() + searchCases()
+        playerCases() + queueCases() + downloadsCases() + sheetCases() + searchCases()
 
 /** Only the content slot on the ambient layer, at the first and the lowest drift frame. */
 internal val ambientCases: List<CarUiCase> = listOf(
@@ -509,7 +524,9 @@ private fun tabCases(): List<CarUiCase> = listOf(
     browseCase("error", error = LoadError),
     libraryCase("loaded, playing", loaded = true).scrolling(),
     libraryCase("loading", isLoading = true),
-    libraryCase("empty"),
+    // Scrolled: the Downloads card sits below the empty state, and text never seen whole is
+    // text never measured.
+    libraryCase("empty").scrolling(),
     libraryCase("error", error = LoadError),
     favouritesCase("loaded, playing, one pending unlike", songs = Songs.take(4)).scrolling(),
     favouritesCase("loading", isLoading = true),
@@ -579,6 +596,7 @@ private fun libraryCase(
             onArtistClick = {},
             onFavouritesClick = {},
             onBrowseClick = {},
+            onDownloadsClick = {},
             currentlyPlayingMediaId = NowPlaying.mediaId,
             isPlaying = true,
             isLoading = isLoading,
@@ -650,11 +668,40 @@ private fun detailCases(): List<CarUiCase> {
         ).map { (state, detail) ->
             CarUiCase("$screen/$state") { InContentSlot { Detail(screen, detail) } }
         }
+    } + albumDownloadCases()
+}
+
+/**
+ * The album Download pill in each label it can carry (A9).
+ *
+ * A disabled pill's label is exempt from the contrast floor but not from the 76dp floor, and
+ * "Downloading" is the longest of the four, so the row's widths are measured at their widest.
+ */
+private fun albumDownloadCases(): List<CarUiCase> {
+    val loaded = CarDetailState(
+        destination = CarDestination.Album("al1"),
+        title = "After Hours",
+        subtitle = "The Weeknd",
+        tracks = listOf(NowPlaying, Songs[5]),
+        isLoading = false,
+    )
+    return listOf(
+        CarDetailDownload("Downloaded", enabled = false),
+        CarDetailDownload("Downloading", enabled = false),
+        CarDetailDownload("Parked only", enabled = false),
+    ).map { download ->
+        CarUiCase("CarAlbumScreen/download ${download.label}") {
+            InContentSlot { Detail("CarAlbumScreen", loaded, download) }
+        }
     }
 }
 
 @Composable
-private fun Detail(screen: String, detail: CarDetailState) {
+private fun Detail(
+    screen: String,
+    detail: CarDetailState,
+    albumDownload: CarDetailDownload? = CarDetailDownload("Download", enabled = true),
+) {
     when (screen) {
         "CarAlbumScreen" -> CarAlbumScreen(
             detail = detail,
@@ -664,6 +711,8 @@ private fun Detail(screen: String, detail: CarDetailState) {
             onSongClick = { _, _ -> },
             currentlyPlayingMediaId = NowPlaying.mediaId,
             isPlaying = true,
+            download = albumDownload,
+            onDownload = {},
         )
 
         "CarPlaylistScreen" -> CarPlaylistScreen(
@@ -739,6 +788,56 @@ private fun Queue(queue: List<Song>, isDriving: Boolean, currentIndex: Int) {
         onClearQueue = {},
         isPlaying = true,
     )
+}
+
+/**
+ * Screen 15 — Downloads (A9).
+ *
+ * Parked and driving, because the two differ in more than a disabled tint: driving adds the helper
+ * banner, changes the Remove All label to "Locked" and truncates the list. Every download status
+ * is represented, since each draws a different status line, and the confirmation is a case of its
+ * own because it is drawn over the list.
+ */
+private fun downloadsCases(): List<CarUiCase> {
+    val removeAllDialog = hasClickAction() and hasAnyDescendant(hasText("Remove all downloads?"))
+    return listOf(
+        downloadsCase("parked, every status", DownloadItems, isDriving = false),
+        downloadsCase("parked, every status", DownloadItems, isDriving = false).scrolling(),
+        downloadsCase("driving, locked, capped to 3", DownloadItems, isDriving = true, maxItems = 3),
+        downloadsCase("parked, nothing downloaded", emptyList(), isDriving = false),
+        downloadsCase("parked, one finished download", DownloadItems.take(1), isDriving = false),
+        CarUiCase(
+            name = "CarDownloadsScreen/parked, remove-all confirmation open",
+            scope = removeAllDialog or hasAnyAncestor(removeAllDialog),
+            interact = { rule -> rule.onAllNodesWithText("Remove All")[0].performClick() },
+        ) { Downloads(DownloadItems, isDriving = false, maxItems = 21) },
+    )
+}
+
+private fun downloadsCase(
+    state: String,
+    items: List<CarDownloadItem>,
+    isDriving: Boolean,
+    maxItems: Int = 21,
+) = CarUiCase("CarDownloadsScreen/$state") { Downloads(items, isDriving, maxItems) }
+
+@Composable
+private fun Downloads(items: List<CarDownloadItem>, isDriving: Boolean, maxItems: Int) {
+    InContentSlot {
+        CarDownloadsScreen(
+            items = items,
+            isDriving = isDriving,
+            maxItems = maxItems,
+            onBackClick = {},
+            onSongClick = { _, _ -> },
+            onRemove = {},
+            onRemoveAll = {},
+            onRetry = {},
+            onBrowseClick = {},
+            currentlyPlayingMediaId = NowPlaying.mediaId,
+            isPlaying = true,
+        )
+    }
 }
 
 private fun sheetCases(): List<CarUiCase> = listOf(

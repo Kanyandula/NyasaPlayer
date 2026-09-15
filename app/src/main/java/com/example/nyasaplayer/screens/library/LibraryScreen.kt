@@ -58,7 +58,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimary
 import com.example.nyasaplayer.core.common.ui.theme.NyasaPrimaryDark
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface2
 import com.example.nyasaplayer.core.common.ui.theme.NyasaTextSecondary
-import com.example.nyasaplayer.download.SongDownloadManager
+import com.example.nyasaplayer.core.data.download.SongDownloadManager
 import com.example.nyasaplayer.screens.common.SongOverflowWithDownload
 import com.example.nyasaplayer.screens.common.SongRow
 import com.example.nyasaplayer.screens.playlist.PlaylistViewModel

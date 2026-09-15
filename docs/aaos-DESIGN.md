@@ -863,7 +863,8 @@ rule: a one-off button is how a 76dp target or contrast rule regresses.
 | `CarRestrictionDialog` | Shared refusal/eviction explanation for every driving restriction |
 | `CarEmptyState` | Shared empty-state layout with optional CTA |
 | `CarRowSkeleton` | Shared loading placeholder for row lists: four blocks at `CarListRowHeight`, always static. Built by T7 — this row said `CarLoadingSkeleton` and named a component that did not exist, which is how four screens ended up drawing their own |
-| `CarDownloadRow` | Shared downloads row with parked-only remove actions |
+| `CarDownloadRow` | Shared downloads row with parked-only remove actions. Built by A9 |
+| `CarDrivingHelperChip` | Shared "why is this locked" chip for the queue and Downloads. Built by A9, which found the queue and Downloads each carrying a copy. Its fill is opaque `#181824`, not a gold wash: over the ambient layer a 12% wash measured 6.94:1, under NFR-2, while the same chip over the queue passed |
 
 - **Primary CTA:** gold `#C9A84C` fill, `#0A0A0C` text, 20px weight 600, 14px radius, 76px tall.
 - **Secondary button:** transparent fill, 1px `rgba(255,255,255,0.12)` border, white text, 76px tall.

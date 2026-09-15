@@ -28,3 +28,4 @@ out to be a bug a driver or user would hit, or a safety gap.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
 - The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:335`), not as a modal over the queue.
 - Nav-rail labels are 13sp (`CarNavRail.kt:41`), under NFR-3's 14sp floor.
+- `AutomotiveContentViewModel` is past detekt's function threshold and now owns downloads too; its file-level `TooManyFunctions` note says the next slice to touch it should split it, and A9 added to it instead (PRD §6.3 names the content VM as screen 15's data source).

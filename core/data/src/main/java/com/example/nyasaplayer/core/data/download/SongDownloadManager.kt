@@ -1,6 +1,7 @@
-package com.example.nyasaplayer.download
+package com.example.nyasaplayer.core.data.download
 
 import android.content.Context
+import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
@@ -32,7 +33,7 @@ class SongDownloadManager @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val songRepository: SongRepository,
     private val networkMonitor: NetworkMonitor,
-) {
+) : SongDownloads {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val downloadsDir: File = File(context.filesDir, "downloads").apply { mkdirs() }
 
@@ -43,7 +44,7 @@ class SongDownloadManager @Inject constructor(
         scope.launch { downloadRepository.resetStaleDownloads() }
     }
 
-    fun downloadSong(mediaId: String) {
+    override fun downloadSong(mediaId: String) {
         if (_activeDownloads.value.contains(mediaId)) return
         scope.launch {
             try {
@@ -74,7 +75,7 @@ class SongDownloadManager @Inject constructor(
         }
     }
 
-    // Used by future download-in-progress UI
+    /** Not on [SongDownloads]: no screen offers it. Cancelling mid-flight is still phone-only. */
     fun cancelDownload(mediaId: String) {
         scope.launch {
             _activeDownloads.update { it - mediaId }
@@ -84,7 +85,7 @@ class SongDownloadManager @Inject constructor(
         }
     }
 
-    fun removeDownload(mediaId: String) {
+    override fun removeDownload(mediaId: String) {
         scope.launch {
             val download = downloadRepository.getDownload(mediaId)
             if (download != null) {
@@ -95,23 +96,21 @@ class SongDownloadManager @Inject constructor(
         }
     }
 
-    fun removeAllDownloads() {
+    override fun removeAllDownloads() {
         scope.launch {
             downloadsDir.listFiles()?.forEach { it.delete() }
             downloadRepository.removeAllDownloads()
         }
     }
 
-    // Used by future failed-download retry UI
-    fun retryDownload(mediaId: String) {
+    override fun retryDownload(mediaId: String) {
         downloadSong(mediaId)
     }
 
-    fun getLocalFileUri(mediaId: String): String? {
-        val path = downloadRepository.getLocalFilePath(mediaId) ?: return null
-        val file = File(path)
-        return if (file.exists()) file.toURI().toString() else null
-    }
+    fun getLocalFileUri(mediaId: String): String? = downloadRepository.localUriFor(mediaId)
+
+    /** [DownloadRepository.resolveLocalUri], for callers that already hold the manager. */
+    fun resolveLocalUri(song: Song): Song = downloadRepository.resolveLocalUri(song)
 
     @Suppress("NestedBlockDepth")
     private suspend fun performDownload(mediaId: String, audioUrl: String) {
