@@ -47,6 +47,7 @@ import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
 import com.example.nyasaplayer.auto.ui.components.CarSignOutConfirmation
 import com.example.nyasaplayer.auto.ui.components.CarSystemBar
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
+import com.example.nyasaplayer.auto.ui.components.DriftDurationMs
 import com.example.nyasaplayer.auto.ui.navigation.CarDestination
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
 import com.example.nyasaplayer.auto.ui.screens.CarAlbumScreen
@@ -95,18 +96,35 @@ import org.robolectric.Shadows.shadowOf
  * above the mini-player, inside the screen margin — so it lays out at the width it really gets.
  *
  * [scope], when set, limits both measurements to what the case is about: the queue's remove
- * confirmation is drawn over the queue, and the rows under its scrim are occluded, not on show.
+ * confirmation is the one thing the case opens, so the rows around it are left to the other queue
+ * cases. (It renders inline inside its lazy item rather than as a modal over the queue.)
  *
  * [lowestDrift] runs the ambient layer's parked drift to the frame where its blue centre sits
  * lowest — furthest into the content region — instead of freezing it at the first frame.
+ *
+ * [scrollsList] measures the case again after every step of scrolling its outermost lazy list, so
+ * the middle of a long list is measured as well as its ends. [onGlow] is false where the app paints
+ * no ambient layer: `AuthGate` draws the auth screen on the bare root background. [family] names the
+ * screen state a case belongs to, the same across its drift and scroll variants.
  */
 internal class CarUiCase(
     val name: String,
     val scope: SemanticsMatcher? = null,
     val interact: (AndroidComposeTestRule<*, ComponentActivity>) -> Unit = {},
     val lowestDrift: Boolean = false,
+    val scrollsList: Boolean = false,
+    val onGlow: Boolean = true,
+    val family: String = name,
     val content: @Composable () -> Unit,
 )
+
+private fun CarUiCase.copy(
+    name: String = this.name,
+    lowestDrift: Boolean = this.lowestDrift,
+    scrollsList: Boolean = this.scrollsList,
+) = CarUiCase(name, scope, interact, lowestDrift, scrollsList, onGlow, family, content)
+
+private fun CarUiCase.scrolling() = copy(scrollsList = true)
 
 /**
  * The shared head-unit canvas from robolectric.properties, at 2x rather than 1x: layout in dp is
@@ -131,21 +149,40 @@ internal fun AndroidComposeTestRule<*, ComponentActivity>.forEachCarUiCase(
         runOnUiThread {
             activity.setContentView(ComposeView(activity).apply { setContent { CarUiFrame(case) } })
         }
-        if (case.lowestDrift) mainClock.advanceTimeBy(AmbientDriftLegMs)
+        // One leg of the drift runs from the first frame to the far end, where the blue centre is lowest.
+        if (case.lowestDrift) mainClock.advanceTimeBy(DriftDurationMs.toLong())
         case.interact(this)
         waitForIdle()
         measure(case)
+        if (case.scrollsList) measureEachScrollStep(case, measure)
     }
     mainClock.autoAdvance = true
 }
 
 /**
- * One leg of `CarAmbientBackground`'s drift (its private `DriftDurationMs`): the tween from the
- * first frame to the far end, where the blue centre is lowest. Keep in step with that constant.
+ * Scrolls the case's outermost lazy list one item at a time and measures after every step.
+ *
+ * By index rather than `performScrollToNode`, which scrolls by deltas: under native graphics that
+ * left Compose's `AndroidPrefetchScheduler` re-posting itself to the Choreographer indefinitely
+ * (`View.drawingTime` stays 0 — Robolectric never draws through `ViewRootImpl`), so the looper never
+ * went idle and the test hung. Jumping index by index does not.
  */
-private const val AmbientDriftLegMs = 24_000L
+private fun AndroidComposeTestRule<*, ComponentActivity>.measureEachScrollStep(
+    case: CarUiCase,
+    measure: (CarUiCase) -> Unit,
+) {
+    val list = onAllNodes(hasScrollToIndexAction())[0]
+    // The semantics publish no item count, and the action refuses an index past the end.
+    var index = 1
+    while (runCatching { list.performScrollToIndex(index) }.isSuccess) {
+        waitForIdle()
+        measure(case.copy(name = "${case.name}, scrolled to item $index", scrollsList = false))
+        index++
+    }
+    check(index > 2) { "${case.name} scrolled no further than item ${index - 1}: is its list still lazy?" }
+}
 
-/** The root background and the frozen ambient layer every case sits on, as `AuthGate` and the shell paint them. */
+/** The root background, and the ambient layer on it where the app paints one. */
 @Composable
 private fun CarUiFrame(case: CarUiCase) {
     AppTheme {
@@ -154,7 +191,7 @@ private fun CarUiFrame(case: CarUiCase) {
                 .fillMaxSize()
                 .background(NyasaBackground),
         ) {
-            CarAmbientBackground(animate = case.lowestDrift)
+            if (case.onGlow) CarAmbientBackground(animate = case.lowestDrift)
             case.content()
         }
     }
@@ -178,35 +215,12 @@ internal fun AndroidComposeTestRule<*, ComponentActivity>.captureWindow(): Bitma
     return bitmap
 }
 
-/**
- * The same case with its outermost lazy list scrolled to its last item. A lazy list composes only
- * what is in view, so without this everything below the fold would go unmeasured.
- *
- * By index rather than `performScrollToNode`, which scrolls by deltas: under native graphics that
- * left Compose's `AndroidPrefetchScheduler` re-posting itself to the Choreographer indefinitely
- * (`View.drawingTime` stays 0 — Robolectric never draws through `ViewRootImpl`), so the looper never
- * went idle and the test hung. Jumping index by index does not.
- */
-private fun CarUiCase.scrolledToEnd() = CarUiCase(
-    name = "$name$ScrolledSuffix",
-    scope = scope,
-    interact = { rule ->
-        val list = rule.onAllNodes(hasScrollToIndexAction())[0]
-        // The semantics publish no item count, and the action refuses an index past the end.
-        var index = 0
-        while (runCatching { list.performScrollToIndex(index) }.isSuccess) index++
-    },
-    content = content,
-)
-
-private const val ScrolledSuffix = ", scrolled to end"
-
-/** Each case, then the same case at the drift's lowest frame. Scrolled cases are left frozen. */
+/** Each case, then — where it sits on the glow — the same case at the drift's lowest frame, unscrolled. */
 private fun List<CarUiCase>.withLowestDrift(): List<CarUiCase> = flatMap { case ->
-    if (case.name.endsWith(ScrolledSuffix)) {
-        listOf(case)
+    if (case.onGlow) {
+        listOf(case, case.copy(name = "${case.name}, drift lowest", lowestDrift = true, scrollsList = false))
     } else {
-        listOf(case, CarUiCase("${case.name}, drift lowest", case.scope, case.interact, true, case.content))
+        listOf(case)
     }
 }
 
@@ -455,28 +469,26 @@ private fun authCases(): List<CarUiCase> = listOf(
     "loading" to CarAuthUiState(isLoading = true),
     "error" to CarAuthUiState(errorMessage = "Google sign-in failed (code 7)"),
 ).map { (state, uiState) ->
-    CarUiCase("CarAuthScreen/$state") { CarAuthScreen(uiState = uiState, onGoogleToken = {}, onGoogleError = {}) }
+    CarUiCase("CarAuthScreen/$state", onGlow = false) {
+        CarAuthScreen(uiState = uiState, onGoogleToken = {}, onGoogleError = {})
+    }
 }
 
 @Suppress("LongMethod")
 private fun tabCases(): List<CarUiCase> = listOf(
-    homeCase("loaded, playing", recent = Songs.take(3), popular = Songs.drop(3)),
-    homeCase("loaded, playing", recent = Songs.take(3), popular = Songs.drop(3)).scrolledToEnd(),
+    homeCase("loaded, playing", recent = Songs.take(3), popular = Songs.drop(3)).scrolling(),
     homeCase("loading", isLoading = true),
     homeCase("empty"),
     homeCase("error", error = LoadError),
-    browseCase("loaded", genres = Genres),
-    browseCase("loaded", genres = Genres).scrolledToEnd(),
+    browseCase("loaded", genres = Genres).scrolling(),
     browseCase("loading", isLoading = true),
     browseCase("empty"),
     browseCase("error", error = LoadError),
-    libraryCase("loaded, playing", loaded = true),
-    libraryCase("loaded, playing", loaded = true).scrolledToEnd(),
+    libraryCase("loaded, playing", loaded = true).scrolling(),
     libraryCase("loading", isLoading = true),
     libraryCase("empty"),
     libraryCase("error", error = LoadError),
-    favouritesCase("loaded, playing, one pending unlike", songs = Songs.take(4)),
-    favouritesCase("loaded, playing, one pending unlike", songs = Songs.take(4)).scrolledToEnd(),
+    favouritesCase("loaded, playing, one pending unlike", songs = Songs.take(4)).scrolling(),
     favouritesCase("loading", isLoading = true),
     favouritesCase("empty (CarEmptyFavouritesScreen)"),
     favouritesCase("error", error = LoadError),
@@ -676,8 +688,7 @@ private fun playerCases(): List<CarUiCase> = listOf(
 private fun queueCases(): List<CarUiCase> {
     val removeConfirmDialog = hasClickAction() and hasAnyDescendant(hasText("Remove from queue?"))
     return listOf(
-        queueCase("parked, playing", Songs, isDriving = false),
-        queueCase("parked, playing", Songs, isDriving = false).scrolledToEnd(),
+        queueCase("parked, playing", Songs, isDriving = false).scrolling(),
         queueCase("driving, locked, capped to 4", Songs, isDriving = true),
         queueCase("parked, one item (clear disabled)", listOf(NowPlaying), isDriving = false, currentIndex = 0),
         queueCase("parked, empty", emptyList(), isDriving = false, currentIndex = -1),
@@ -727,8 +738,7 @@ private fun searchCases(): List<CarUiCase> = listOf(
     searchCase("parked, idle, no recent searches", query = "", recent = emptyList(), canType = true),
     searchCase("parked, query typed", query = "midnight", recent = listOf("weeknd"), canType = true),
     searchCase("driving, typing refused (voice prompt)", query = "", recent = listOf("weeknd"), canType = false),
-    resultsCase("song top result, playing", SearchSongResults),
-    resultsCase("song top result, playing", SearchSongResults).scrolledToEnd(),
+    resultsCase("song top result, playing", SearchSongResults).scrolling(),
     resultsCase("album top result", SearchAlbumResults),
     resultsCase("loading", AutomotiveSearchResults(), isLoading = true),
     resultsCase("no results", AutomotiveSearchResults()),

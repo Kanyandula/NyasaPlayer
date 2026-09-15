@@ -21,5 +21,8 @@ out to be a bug a driver or user would hit, or a safety gap.
 
 ## Known, not fixed
 
-- A 404 is called "No Connection" on the car (`docs/AAOS_A8_VERIFICATION.md`, "Also noted").
+- A 404 is called "No Connection" on the car (`docs/AAOS_A8_VERIFICATION.md`, "Findings recorded, not fixed here").
 - `CLAUDE.md` doesn't mention Crashlytics or `CrashReporter`.
+- The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
+- The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:335`), not as a modal over the queue.
+- Nav-rail labels are 13sp (`CarNavRail.kt:41`), under NFR-3's 14sp floor.

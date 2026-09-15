@@ -41,8 +41,10 @@ class CarTouchTargetMeasurementTest {
         val density = composeRule.density.density
         val violations = mutableListOf<String>()
         var measured = 0
+        var frames = 0
 
         composeRule.forEachCarUiCase { case ->
+            frames++
             val matcher = case.scope?.let { Interactive and it } ?: Interactive
             val nodes = listOf(false, true)
                 .flatMap { unmerged -> composeRule.onAllNodes(matcher, unmerged).fetchSemanticsNodes() }
@@ -55,7 +57,10 @@ class CarTouchTargetMeasurementTest {
             }
         }
 
-        println("Touch targets: ${carUiCases.size} cases, $measured interactive nodes, ${violations.size} below 76dp")
+        println(
+            "Touch targets: ${carUiCases.size} cases in $frames frames, $measured interactive nodes, " +
+                "${violations.size} below 76dp",
+        )
         assertTrue(
             "${violations.size} interactive controls below 76dp across ${carUiCases.size} cases " +
                 "(case | node | width x height):\n" + violations.joinToString("\n"),

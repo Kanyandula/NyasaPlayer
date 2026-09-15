@@ -42,9 +42,10 @@ private val RailLabelSize = 13.sp
 private val RailPillInset = 8.dp
 private val RailPillRadius = 20.dp
 
-// The gold label sits on this wash: 7.07:1 over CarChrome at 0.10, 6.93:1 at 0.11, 6.75:1 at the
-// old 0.12, measured from rendered pixels. Do not raise it past AAA.
-private const val ActivePillAlpha = 0.10f
+// The gold label sits on this wash: 7.33:1 over CarChrome at 0.08, measured from rendered pixels.
+// 0.10 gave 7.07:1 — a one-level rendering drift from failing — and the old 0.12 gave 6.75:1.
+// Keep a margin off 7:1 rather than raising it back.
+private const val ActivePillAlpha = 0.08f
 
 private const val PillSlideDurationMs = 220
 

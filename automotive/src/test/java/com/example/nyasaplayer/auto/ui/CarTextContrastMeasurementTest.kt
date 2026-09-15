@@ -37,13 +37,14 @@ import kotlin.math.roundToInt
  *
  * Measured from rendered pixels, not from tokens, because a token table cannot see what text
  * actually lands on — alpha, washes, gradients and the ambient layer. For each text node on every
- * case in [carUiCases]: the background is the most frequent colour inside the node's bounds, the
- * foreground is the pixel with the highest contrast against it (anti-aliasing only ever lowers
- * contrast, so that pixel is the glyph colour), and the ratio is WCAG 2.x's.
+ * case in [carUiCases]: the background is the most frequent colour on the edge of the node's bounds,
+ * the foreground is the pixel inside them with the highest contrast against it (anti-aliasing only
+ * ever lowers contrast, so that pixel is the glyph colour), and the ratio is WCAG 2.x's.
  *
  * Text on a disabled node or under one is exempt, as the design exempts disabled text. The only
  * other exceptions are the two destructive pairs the design records at AA — see [isRecordedAaPair].
- * Cases that sit on the ambient glow also run at the drift's lowest frame, not only the first.
+ * Cases that sit on the ambient glow also run at the drift's lowest frame, not only the first, and
+ * long lists are measured after every scroll step. Text only ever seen partly in view fails the run.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -58,9 +59,13 @@ class CarTextContrastMeasurementTest {
         val violations = mutableListOf<String>()
         var measured = 0
         var exempt = 0
-        var clipped = 0
+        var frames = 0
+        // Text seen only partly in view, and text measured whole, by (screen state, text).
+        val clipped = mutableSetOf<Pair<String, String>>()
+        val whole = mutableSetOf<Pair<String, String>>()
 
         composeRule.forEachCarUiCase { case ->
+            frames++
             val window = composeRule.captureWindow()
             val matcher = case.scope?.let { HasText and it } ?: HasText
             composeRule.onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().forEach { node ->
@@ -71,10 +76,11 @@ class CarTextContrastMeasurementTest {
                     return@forEach
                 }
                 val pair = window.measure(node) ?: run {
-                    clipped++
+                    clipped += case.family to text
                     return@forEach
                 }
                 measured++
+                whole += case.family to text
                 if (pair.ratio < AaaRatio && !isRecordedAaPair(pair)) {
                     violations += "${case.name} | \"$text\" | fg ${hex(pair.fg)} | bg ${hex(pair.bg)} | " +
                         "%.2f:1".format(pair.ratio)
@@ -82,14 +88,19 @@ class CarTextContrastMeasurementTest {
             }
         }
 
+        // A text only ever seen clipped was never measured at all.
+        val neverWhole = (clipped - whole).map { (family, text) -> "$family | \"$text\"" }
         println(
-            "Contrast: ${carUiCases.size} cases, $measured text nodes measured, $exempt disabled (exempt), " +
-                "$clipped partly out of view (skipped), ${violations.size} below 7:1",
+            "Contrast: ${carUiCases.size} cases in $frames frames, $measured text nodes measured, " +
+                "$exempt disabled (exempt), ${clipped.size} seen partly out of view, " +
+                "${neverWhole.size} never measured whole, ${violations.size} below 7:1",
         )
         assertTrue(
             "${violations.size} text/surface pairs below 7:1 across ${carUiCases.size} cases " +
-                "(case | text | foreground | background | ratio):\n" + violations.joinToString("\n"),
-            violations.isEmpty(),
+                "(case | text | foreground | background | ratio):\n" + violations.joinToString("\n") +
+                "\n${neverWhole.size} texts only ever partly in view, so never measured (screen state | text):\n" +
+                neverWhole.joinToString("\n"),
+            violations.isEmpty() && neverWhole.isEmpty(),
         )
     }
 
@@ -138,8 +149,9 @@ class CarTextContrastMeasurementTest {
         val top = bounds.top.roundToInt().coerceIn(0, height)
         val right = bounds.right.roundToInt().coerceIn(0, width)
         val bottom = bounds.bottom.roundToInt().coerceIn(0, height)
-        // Partly scrolled out of view: the visible sliver may hold no glyph at all. Every such node is
-        // measured whole in another case — the unscrolled one or the scrolled-to-end one.
+        // Partly out of view: the visible sliver may hold no glyph at all, so it is not measured here.
+        // The caller records it, and fails the run unless the same text is measured whole in another
+        // frame of the same screen state — another scroll step, or the unscrolled frame.
         if (right - left < node.size.width - 1 || bottom - top < node.size.height - 1) return null
 
         val w = right - left
