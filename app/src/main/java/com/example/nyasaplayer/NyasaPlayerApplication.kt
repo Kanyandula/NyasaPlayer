@@ -4,6 +4,7 @@ import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
+import com.example.nyasaplayer.core.data.crash.CrashReporter
 import com.example.nyasaplayer.core.data.sync.FirebaseSyncManager
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -12,10 +13,14 @@ import javax.inject.Inject
 class NyasaPlayerApplication : Application(), ImageLoaderFactory {
 
     @Inject
+    lateinit var crashReporter: CrashReporter
+
+    @Inject
     lateinit var firebaseSyncManager: FirebaseSyncManager
 
     override fun onCreate() {
         super.onCreate()
+        crashReporter.start()
         firebaseSyncManager.start()
     }
 

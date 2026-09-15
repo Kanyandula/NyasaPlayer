@@ -10,9 +10,9 @@ collection is switched, and how long Firebase keeps it.
 
 ## What is sent
 
-Nothing in this codebase calls `setCustomKey`, `setUserId` or `FirebaseCrashlytics.log`, so only the
-SDK's own defaults apply. Crashlytics pulls in Firebase Sessions as a dependency, so its collection
-applies too.
+The code sets one custom key, `surface` (see "Custom keys" below), and never calls `setUserId` or
+`FirebaseCrashlytics.log`; everything else is the SDK's own defaults. Crashlytics pulls in Firebase
+Sessions as a dependency, so its collection applies too.
 
 ### Per the privacy page (https://firebase.google.com/support/privacy, "Data processing information")
 
@@ -44,7 +44,7 @@ applies too.
 
 The Play data-disclosure page also lists conditional collection — custom keys, logs, free-text user
 IDs, custom non-fatal stack traces, and (with Analytics present) breadcrumb logs of user actions.
-None of that applies here: see "What is never sent" below.
+Of those, only the one custom key below applies here; for the rest see "What is never sent".
 
 ### Observed in this build (device settings via `docs/T25_VERIFICATION.md`; firebase-crashlytics 19.4.4 / firebase-sessions 2.1.2, read from the AAR)
 
@@ -54,6 +54,15 @@ None of that applies here: see "What is never sent" below.
 - Firebase Sessions events also carry a Firebase Installations auth token and process details
   (process name, pid, importance). The token is the installation's own token, not the signed-in
   user's Firebase Auth token — D8 still holds.
+
+### Custom keys
+
+| Key | Values | Set by |
+|---|---|---|
+| `surface` | `car` when the device has `PackageManager.FEATURE_AUTOMOTIVE`, otherwise `mobile` | `CrashReporter.start()` (`core/data/.../crash/CrashReporter.kt`), first thing in each app's `Application.onCreate`, once per process (T24 D6, T26) |
+
+`surface` describes the device, not the APK: the phone app sideloaded onto a head unit reports
+`car`. No other key is set.
 
 ## What is never sent
 
@@ -86,6 +95,10 @@ None of that applies here: see "What is never sent" below.
   reports are sent once a build with collection on runs in the same data directory, so uninstall the
   debug build before installing a release build signed with the same key on top of it
   (`docs/tickets/T25-crashlytics-in-core-data.md`, Notes — "Signing a release build to test with").
+- Custom keys are recorded on the device whether or not collection is on, so a debug build shows
+  them: `adb shell run-as com.example.nyasaplayer cat
+  files/.crashlytics.v3/com.example.nyasaplayer/open-sessions/<session-id>/keys` (add `--user 10` on
+  the car).
 
 ## Retention
 
@@ -103,5 +116,5 @@ declaration.
 
 ## Extending this file
 
-T26 (the `surface` key) and T27 (the `disconnected` non-fatal) extend this inventory as they add
-what they send.
+T26 added the `surface` key. T27 (the `disconnected` non-fatal) extends this inventory as it adds
+what it sends.
