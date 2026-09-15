@@ -3,16 +3,16 @@
 | | |
 |---|---|
 | **Applies to** | `:core:data`'s `firebase-crashlytics` SDK (T25), used by `:app` and `:automotive` |
-| **Sources read** | 2026-09-14 — see each row below |
+| **Sources read** | Firebase pages 2026-09-14; the firebase-crashlytics 19.4.4 AAR 2026-09-15 — see each row below |
 
 This is the inventory T24 D8 asks for: what this configuration sends, what it never sends, how
 collection is switched, and how long Firebase keeps it.
 
 ## What is sent
 
-Nothing in this codebase calls `setCustomKey`, `setUserId` or `FirebaseCrashlytics.log`, so only the
-SDK's own defaults apply. Crashlytics pulls in Firebase Sessions as a dependency, so its collection
-applies too.
+The code sets one custom key, `surface` (see "Custom keys" below), and never calls `setUserId` or
+`FirebaseCrashlytics.log`; everything else is the SDK's own defaults. Crashlytics pulls in Firebase
+Sessions as a dependency, so its collection applies too.
 
 ### Per the privacy page (https://firebase.google.com/support/privacy, "Data processing information")
 
@@ -44,7 +44,7 @@ applies too.
 
 The Play data-disclosure page also lists conditional collection — custom keys, logs, free-text user
 IDs, custom non-fatal stack traces, and (with Analytics present) breadcrumb logs of user actions.
-None of that applies here: see "What is never sent" below.
+Of those, only the one custom key below applies here; for the rest see "What is never sent".
 
 ### Observed in this build (device settings via `docs/T25_VERIFICATION.md`; firebase-crashlytics 19.4.4 / firebase-sessions 2.1.2, read from the AAR)
 
@@ -55,6 +55,16 @@ None of that applies here: see "What is never sent" below.
   (process name, pid, importance). The token is the installation's own token, not the signed-in
   user's Firebase Auth token — D8 still holds.
 
+### Custom keys
+
+| Key | Values | Set by |
+|---|---|---|
+| `surface` | `car` when the device has `PackageManager.FEATURE_AUTOMOTIVE`, otherwise `mobile` | `CrashReporter.start()` (`core/data/.../crash/CrashReporter.kt`), the first call in each app's `Application.onCreate` after Hilt field injection, once per process (T24 D6, T26) |
+
+`surface` describes the device, not the APK: the phone app sideloaded onto a head unit reports
+`car`. A crash before `start()` (during Hilt injection or content-provider start) carries no key.
+The code sets no other key.
+
 ## What is never sent
 
 - No `setUserId` — nothing identifies the signed-in user.
@@ -63,6 +73,9 @@ None of that applies here: see "What is never sent" below.
 - No song, queue or search text, in custom keys, logs, or exception messages.
 - `FirebaseCrashlytics.log` is not called anywhere in the codebase; existing `Log.w`/`Log.e` calls
   stay in logcat only.
+- No custom non-fatals: nothing calls `recordException`.
+- No breadcrumbs: Firebase Analytics is not a dependency of either app, and the SDK logs
+  "Skipping logging Crashlytics event to Firebase, no Firebase Analytics".
 - The Crashlytics installation UUID identifies the install, not the driver — on a shared head unit
   it does not distinguish who was driving.
 
@@ -86,6 +99,19 @@ None of that applies here: see "What is never sent" below.
   reports are sent once a build with collection on runs in the same data directory, so uninstall the
   debug build before installing a release build signed with the same key on top of it
   (`docs/tickets/T25-crashlytics-in-core-data.md`, Notes — "Signing a release build to test with").
+- Custom keys are recorded on the device whether or not collection is on, so a debug build shows
+  them (file names from the 19.4.4 AAR's `FileStore` and `MetaDataStore`; seen on both emulators,
+  `docs/T26_VERIFICATION.md`). `--user 10` is the car emulator's driver
+  (`adb shell am get-current-user`); leave it out on a phone:
+  ```
+  adb shell run-as --user 10 com.example.nyasaplayer cat \
+    files/.crashlytics.v3/com.example.nyasaplayer/open-sessions/<session-id>/keys
+  ```
+  After a crash the stored report under `priority-reports/` carries them as `customAttributes`.
+- Reading the dashboard: custom keys are not a filter dimension in the Crashlytics reporting API
+  (version, device, OS, form factor, error type, signals, issue, variant), so read `surface` from
+  each event's keys. `topIssues` leaves out closed issues; `topVersions` and event queries still
+  count their events, so an empty `topIssues` does not mean no crashes (owner, 2026-09-15).
 
 ## Retention
 
@@ -103,5 +129,4 @@ declaration.
 
 ## Extending this file
 
-T26 (the `surface` key) and T27 (the `disconnected` non-fatal) extend this inventory as they add
-what they send.
+T27 (the `disconnected` non-fatal) extends this inventory as it adds what it sends.

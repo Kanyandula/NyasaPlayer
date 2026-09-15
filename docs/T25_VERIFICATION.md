@@ -70,22 +70,24 @@ committed.
 
 The debug crash is kept on the device, unsent:
 `files/.crashlytics.v3/com.example.nyasaplayer/priority-reports/6AA83C7F02A1000146CE9B898F544179`. A
-build with collection on, run in the same data directory, sends it. This emulator's car install
-holds that report now. Uninstall it before putting a release build on it.
+build with collection on, run in the same data directory, sends it. That report was deleted, with
+the owner's approval, before T26's release test on 2026-09-15.
 
 Builds were swapped with `adb install -r` rather than uninstalled first, against the ticket's note.
 It didn't affect the release result: the debug build it replaced was from 2026-09-09, before any build
 had the SDK, so nothing could be cached, and the release run enqueued exactly one report.
 
-## The dashboard — not checked, owed
+## The dashboard
 
-The owner has not confirmed the dashboard. In `nyasamusic-5ed31` → Crashlytics →
-`com.example.nyasaplayer`, they should see one `CrashedByAdbException` event near 19:26 IST, and
-none from the debug crash near 19:28 IST. The upload above returned `Status Code: 200`.
+Checked by the owner through the Crashlytics reporting API on 2026-09-15, during T26
+(`docs/T26_VERIFICATION.md` → "The dashboard"): the `CrashedByAdbException` event is there at
+19:26:05 IST on 2026-09-14, and `topVersions` over 2026-09-14 and 2026-09-15 counts two events in
+all, this one and T26's release crash. The debug crash never reached the dashboard.
 
 ## The phone — not run, owed
 
 `Medium_Phone_API_35` refused the release build: `adb install -r` →
 `INSTALL_FAILED_INSUFFICIENT_STORAGE` (`/data` 95% full, 316 MB free). This is the same
 low-storage block that stopped the T29 phone pass (`docs/T29_VERIFICATION.md`). Owed: the release and
-debug pair above, on the phone, alongside the T28, T29 and T14 mobile passes.
+debug pair above, on the phone, alongside the T28, T29 and T14 mobile passes. T26 ran its phone
+checks on `Pixel_9_Pro_Fold_API_35`, which has room.
