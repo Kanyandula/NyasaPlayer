@@ -10,7 +10,9 @@ import androidx.media3.session.MediaController
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
+import com.example.nyasaplayer.core.data.download.resolveLocalUri
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.ControllerConnection
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
@@ -47,6 +49,7 @@ class AutomotivePlayerViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
     private val networkMonitor: NetworkMonitor,
+    private val downloadRepository: DownloadRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AutomotiveUiState())
@@ -265,18 +268,22 @@ class AutomotivePlayerViewModel @Inject constructor(
 
     /** True only when the queue reached a connected player — the caller opens the full player on it. */
     fun playSong(songs: List<Song>, song: Song): Boolean {
+        // Resolved before the playability check, not after: the check reads the resolved URL, so
+        // asking it first would refuse a downloaded song offline (A9).
+        val resolvedSong = downloadRepository.resolveLocalUri(song)
         // The tapped song is what starts. It was never queued, so Retry would act on someone else's
         // queue — hence no Retry (PlayerError.isRetryable).
-        if (!song.isPlayableNow(isOnline)) {
+        if (!resolvedSong.isPlayableNow(isOnline)) {
             showNoConnection(isRetryable = false)
             return false
         }
-        val startIndex = songs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
+        val resolvedSongs = songs.map(downloadRepository::resolveLocalUri)
+        val startIndex = resolvedSongs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
         // Nothing is painted as playing unless the command reached a connected player (T11).
-        if (!stateCollector.transport.setQueue(songs, startIndex)) return false
+        if (!stateCollector.transport.setQueue(resolvedSongs, startIndex)) return false
         stateCollector.updateSnapshot {
             it.copy(
-                currentSong = song,
+                currentSong = resolvedSong,
                 isPlaying = true,
                 isShuffled = false,
             )
@@ -287,16 +294,19 @@ class AutomotivePlayerViewModel @Inject constructor(
     /** True only when the shuffle reached a connected player. */
     fun shufflePlay(songs: List<Song>): Boolean {
         if (songs.isEmpty()) return false
-        // ponytail: any-playable lets a mixed list start on a streamed song offline; unreachable until A9
-        // gives the car local files.
-        if (songs.none { it.isPlayableNow(isOnline) }) {
+        val resolvedSongs = songs.map(downloadRepository::resolveLocalUri)
+        // ponytail: any-playable lets a mixed list start on a streamed song offline, which A9 makes
+        // reachable. The shuffle still begins; a track that cannot load raises the A8 error overlay,
+        // so the driver is told rather than left with silence. Filter to playable songs if that
+        // proves too coarse on the road.
+        if (resolvedSongs.none { it.isPlayableNow(isOnline) }) {
             showNoConnection(isRetryable = false)
             return false
         }
-        if (!stateCollector.transport.shufflePlay(songs)) return false
+        if (!stateCollector.transport.shufflePlay(resolvedSongs)) return false
         stateCollector.updateSnapshot {
             it.copy(
-                currentSong = songs.first(),
+                currentSong = resolvedSongs.first(),
                 isPlaying = true,
                 isShuffled = true,
             )

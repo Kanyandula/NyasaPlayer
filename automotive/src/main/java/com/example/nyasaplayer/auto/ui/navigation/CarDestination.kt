@@ -24,5 +24,15 @@ sealed interface CarDestination : java.io.Serializable {
      */
     data class CatalogArtist(val artistId: String) : CarDestination
     data class Album(val albumId: String) : CarDestination
+
+    /**
+     * Downloads — screen 15, reached from Library.
+     *
+     * Carries no id: the screen is the whole set of downloads on this head unit, so there is
+     * nothing to look up and nothing to lose to process death. It sits at drill depth 1 like every
+     * other Library destination, so the depth cap governs it the same way; it is the *actions*
+     * inside it that are parked-only, not reaching it.
+     */
+    data object Downloads : CarDestination
     data class Playlist(val playlistId: String) : CarDestination
 }

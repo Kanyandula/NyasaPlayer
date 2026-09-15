@@ -44,12 +44,13 @@ private val SubtitleSize = 20.sp
 /**
  * Album detail — screen 11.
  *
- * No Download button: the code that performs a download is `SongDownloadManager`, `@Singleton`
- * in `:app`, which `:automotive` does not and should not depend on. `DownloadRepository` is
- * reachable but is Room bookkeeping only, so wiring it alone would ship a button that
- * permanently claims a download is in progress (D12).
+ * The Download button arrived with A9, which moved `SongDownloadManager` out of `:app` and into
+ * `:core:data`. Until then `:automotive` could reach `DownloadRepository` — Room bookkeeping —
+ * but nothing that fetches a file, so a button here would have claimed a download was in progress
+ * forever (D12). It is parked-only, and stays on screen disabled while driving.
  */
 @Composable
+@Suppress("LongParameterList")
 fun CarAlbumScreen(
     detail: CarDetailState,
     onBackClick: () -> Unit,
@@ -60,6 +61,8 @@ fun CarAlbumScreen(
     currentlyPlayingMediaId: String? = null,
     isPlaying: Boolean = false,
     onRetry: () -> Unit = {},
+    download: CarDetailDownload? = null,
+    onDownload: (List<Song>) -> Unit = {},
 ) {
     CarDetailBody(
         detail = detail,
@@ -72,6 +75,8 @@ fun CarAlbumScreen(
         currentlyPlayingMediaId = currentlyPlayingMediaId,
         isPlaying = isPlaying,
         onRetry = onRetry,
+        download = download,
+        onDownload = onDownload,
     )
 }
 
@@ -154,6 +159,10 @@ private fun CarDetailBody(
     currentlyPlayingMediaId: String? = null,
     isPlaying: Boolean = false,
     onRetry: () -> Unit = {},
+    // Album only. A playlist has no offline concept and a catalogue artist is not a unit you
+    // download, so both leave this null and the hero draws no Download pill.
+    download: CarDetailDownload? = null,
+    onDownload: (List<Song>) -> Unit = {},
 ) {
     val error = detail.errorMessage
     when {
@@ -186,6 +195,8 @@ private fun CarDetailBody(
                     onPlay = { onPlay(detail.tracks) },
                     onShuffle = { onShuffle(detail.tracks) },
                     onBackClick = onBackClick,
+                    download = download,
+                    onDownload = { onDownload(detail.tracks) },
                 )
             }
             items(detail.tracks, key = { it.mediaId }) { song ->
@@ -203,12 +214,15 @@ private fun CarDetailBody(
 }
 
 @Composable
+@Suppress("LongParameterList")
 private fun DetailHero(
     detail: CarDetailState,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    download: CarDetailDownload? = null,
+    onDownload: () -> Unit = {},
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -245,6 +259,14 @@ private fun DetailHero(
             Row(horizontalArrangement = Arrangement.spacedBy(HeroSpacing / 2)) {
                 CarPillButton(label = "Play", onClick = onPlay)
                 CarPillButton(label = "Shuffle", onClick = onShuffle, filled = false)
+                if (download != null) {
+                    CarPillButton(
+                        label = download.label,
+                        onClick = onDownload,
+                        filled = false,
+                        enabled = download.enabled,
+                    )
+                }
                 CarPillButton(label = "Back", onClick = onBackClick, filled = false)
             }
         }

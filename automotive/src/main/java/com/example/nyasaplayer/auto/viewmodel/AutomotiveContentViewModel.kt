@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nyasaplayer.auto.ui.navigation.CarDestination
+import com.example.nyasaplayer.auto.ui.screens.CarDownloadItem
 import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Playlist
@@ -19,10 +20,13 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.data.api.AlbumRepository
 import com.example.nyasaplayer.core.data.api.ArtistRepository
 import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.GenreRepository
 import com.example.nyasaplayer.core.data.api.PlaylistRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
+import com.example.nyasaplayer.core.data.download.SongDownloads
+import com.example.nyasaplayer.core.data.local.entity.DownloadEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
@@ -57,6 +61,8 @@ class AutomotiveContentViewModel @Inject constructor(
     private val playlistRepository: PlaylistRepository,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
+    private val downloadRepository: DownloadRepository,
+    private val downloadManager: SongDownloads,
 ) : ViewModel() {
 
     private val _contentState = MutableStateFlow(AutomotiveContentState())
@@ -70,6 +76,7 @@ class AutomotiveContentViewModel @Inject constructor(
     private var detailJob: Job? = null
     private var detailToken = 0
     private var popularSongsJob: Job? = null
+    private var downloadsJob: Job? = null
     private var currentUserId: String? = null
 
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
@@ -151,6 +158,7 @@ class AutomotiveContentViewModel @Inject constructor(
         observeGenres()
         observeAlbums()
         loadPopularSongs()
+        observeDownloads()
 
         // The user-scoped collectors are only torn down when there is a user to restart them
         // for. Retrying while signed out would otherwise kill three working collectors and
@@ -327,7 +335,9 @@ class AutomotiveContentViewModel @Inject constructor(
         }
         detailJob?.cancel()
         val token = ++detailToken
-        if (destination is CarDestination.Artist) {
+        // Neither has a catalogue detail to fetch: the artist screen filters likedSongs live, and
+        // Downloads renders contentState.downloads. Both would otherwise sit on a loading skeleton.
+        if (destination is CarDestination.Artist || destination is CarDestination.Downloads) {
             _contentState.update { it.copy(detail = null) }
             return
         }
@@ -344,6 +354,69 @@ class AutomotiveContentViewModel @Inject constructor(
                 if (isCurrent) state.copy(detail = loaded) else state
             }
         }
+    }
+
+    // ── Downloads (A9) ──
+
+    /**
+     * Every download, whatever its status, paired with its song.
+     *
+     * Not user-scoped: downloads are files on this head unit, so they survive a profile switch
+     * and are not torn down with the user-scoped collectors.
+     */
+    private fun observeDownloads() {
+        downloadsJob?.cancel()
+        downloadsJob = downloadRepository.getAllDownloads()
+            .onEach { entities -> _contentState.update { it.copy(downloads = toDownloadItems(entities)) } }
+            .catch { e -> Log.e(TAG, "Error observing downloads", e) }
+            .launchIn(viewModelScope)
+    }
+
+    private suspend fun toDownloadItems(entities: List<DownloadEntity>): List<CarDownloadItem> {
+        if (entities.isEmpty()) return emptyList()
+        val songs = songRepository.getSongsByIds(entities.map { it.mediaId }).associateBy { it.mediaId }
+        // A download whose song has left the catalogue has no title, artist or artwork to draw,
+        // so it is dropped rather than rendered as an anonymous row the driver cannot identify.
+        return entities.mapNotNull { entity ->
+            songs[entity.mediaId]?.let { song ->
+                CarDownloadItem(
+                    song = song,
+                    status = entity.status,
+                    progress = entity.progress,
+                    sizeBytes = entity.fileSizeBytes,
+                )
+            }
+        }
+    }
+
+    /**
+     * Parked-only, all three.
+     *
+     * The refusal lives on the screen, which disables the controls and says why, rather than here
+     * silently dropping the call — a mutation that no-ops without telling anyone is exactly what
+     * FR-2.6 prohibits. `CarDownloadsScreen` also closes its confirmation when driving begins, so
+     * a dialog opened at the kerb cannot be confirmed in motion.
+     */
+    fun removeDownload(mediaId: String) {
+        downloadManager.removeDownload(mediaId)
+    }
+
+    fun removeAllDownloads() {
+        downloadManager.removeAllDownloads()
+    }
+
+    fun retryDownload(mediaId: String) {
+        downloadManager.retryDownload(mediaId)
+    }
+
+    /**
+     * Download every track of an album that does not already have a file.
+     *
+     * The manager ignores a mediaId it is already fetching, so a second tap costs nothing; the
+     * screen disables the control once anything is in flight anyway.
+     */
+    fun downloadSongs(songs: List<Song>) {
+        songs.forEach { downloadManager.downloadSong(it.mediaId) }
     }
 
     fun closeDetail() {
@@ -442,7 +515,9 @@ class AutomotiveContentViewModel @Inject constructor(
             is CarDestination.Playlist -> loadPlaylistDetail(destination)
             is CarDestination.CatalogArtist -> loadCatalogArtistDetail(destination)
             // Filtered out by openDetail; a when over a sealed interface must be exhaustive.
-            is CarDestination.Artist -> CarDetailState(destination, isLoading = false)
+            is CarDestination.Artist,
+            is CarDestination.Downloads,
+            -> CarDetailState(destination, isLoading = false)
         }
     } catch (e: CancellationException) {
         throw e
@@ -530,6 +605,8 @@ data class AutomotiveContentState(
     val favourites: List<Song>? = null,
     val pendingUnlikes: Set<String> = emptySet(),
     val detail: CarDetailState? = null,
+    /** Screen 15's rows: every download on this head unit, active work first (A9). */
+    val downloads: List<CarDownloadItem> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     /** Liked-songs failures only. Kept off [errorMessage], which Home/Browse/Library render. */

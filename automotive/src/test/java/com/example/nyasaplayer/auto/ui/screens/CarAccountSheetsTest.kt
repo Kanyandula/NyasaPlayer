@@ -103,6 +103,7 @@ class CarAccountSheetsTest {
                 onArtistClick = {},
                 onFavouritesClick = {},
                 onBrowseClick = {},
+                onDownloadsClick = {},
             )
         }
 

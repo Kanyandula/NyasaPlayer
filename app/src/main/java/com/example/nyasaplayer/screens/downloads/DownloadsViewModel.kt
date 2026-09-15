@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
-import com.example.nyasaplayer.download.SongDownloadManager
+import com.example.nyasaplayer.core.data.download.SongDownloadManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow

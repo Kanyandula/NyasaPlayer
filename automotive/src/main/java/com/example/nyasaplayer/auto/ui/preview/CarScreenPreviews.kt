@@ -214,6 +214,7 @@ private fun LibraryScreenPreview() {
             onArtistClick = {},
             onFavouritesClick = {},
             onBrowseClick = {},
+            onDownloadsClick = {},
             currentlyPlayingMediaId = "1",
             isPlaying = true,
         )

@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.components.CarDrivingHelperChip
 import com.example.nyasaplayer.auto.ui.components.carConsumeTouches
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
@@ -58,15 +58,11 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.common.util.formatDurationLong
 
 private const val DisabledOpacity = 0.4f
-private const val HelperChipFillOpacity = 0.12f
-private const val HelperChipBorderOpacity = 0.3f
 private const val DestructiveFillOpacity = 0.15f
 private val CurrentTrackBorderWidth = 2.dp
 private val QueueRowHeight = 96.dp
 private val QueueRowCornerRadius = 16.dp
 private val ClearButtonCornerRadius = 16.dp
-private val HelperChipHeight = 56.dp
-private val HelperChipCornerRadius = 24.dp
 
 @Suppress("LongParameterList")
 @Composable
@@ -109,7 +105,8 @@ fun CarQueueScreen(
         )
 
         if (isDriving) {
-            DrivingHelperChip(
+            CarDrivingHelperChip(
+                message = "Park the car to remove or clear your queue.",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 8.dp),
@@ -226,34 +223,6 @@ private fun ClearQueuePill(
                 fontWeight = FontWeight.Medium,
             )
         }
-    }
-}
-
-@Composable
-private fun DrivingHelperChip(modifier: Modifier = Modifier) {
-    val chipShape = RoundedCornerShape(HelperChipCornerRadius)
-    Row(
-        modifier = modifier
-            .height(HelperChipHeight)
-            .clip(chipShape)
-            .background(NyasaGold.copy(alpha = HelperChipFillOpacity))
-            .border(1.dp, NyasaGold.copy(alpha = HelperChipBorderOpacity), chipShape)
-            .padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Info,
-            contentDescription = null,
-            tint = NyasaGold,
-            modifier = Modifier.size(20.dp),
-        )
-        Text(
-            text = "Park the car to remove or clear your queue.",
-            color = NyasaGold,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-        )
     }
 }
 
