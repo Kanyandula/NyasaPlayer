@@ -45,13 +45,14 @@ import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.components.carConsumeTouches
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
+import com.example.nyasaplayer.auto.ui.theme.CarSignOutRed
+import com.example.nyasaplayer.auto.ui.theme.CarSignOutRedSolid
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 import com.example.nyasaplayer.core.common.ui.icons.MoreVertIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
-import com.example.nyasaplayer.core.common.ui.theme.NyasaError
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.common.util.formatDurationLong
@@ -203,7 +204,7 @@ private fun ClearQueuePill(
         modifier = modifier
             .height(CarTouchTargetSize)
             .clip(RoundedCornerShape(ClearButtonCornerRadius))
-            .background(NyasaError.copy(alpha = DestructiveFillOpacity * alpha))
+            .background(CarSignOutRed.copy(alpha = DestructiveFillOpacity * alpha))
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
@@ -215,12 +216,12 @@ private fun ClearQueuePill(
             Icon(
                 imageVector = Icons.Filled.Delete,
                 contentDescription = null,
-                tint = NyasaError.copy(alpha = alpha),
+                tint = CarSignOutRed.copy(alpha = alpha),
                 modifier = Modifier.size(24.dp),
             )
             Text(
                 text = if (isDriving) "Locked" else "Clear Queue",
-                color = NyasaError.copy(alpha = alpha),
+                color = CarSignOutRed.copy(alpha = alpha),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
             )
@@ -420,7 +421,7 @@ private fun DialogButton(
             .height(CarTouchTargetSize)
             .width(180.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(if (destructive) NyasaError else Color.White.copy(alpha = 0.1f))
+            .background(if (destructive) CarSignOutRedSolid else Color.White.copy(alpha = 0.1f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

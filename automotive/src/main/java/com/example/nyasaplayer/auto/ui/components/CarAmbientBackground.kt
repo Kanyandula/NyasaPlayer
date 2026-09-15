@@ -17,7 +17,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import com.example.nyasaplayer.auto.ui.theme.CarAmbientBlue
 import com.example.nyasaplayer.auto.ui.theme.CarAmbientPurple
 
-private const val DriftDurationMs = 24_000
+// Internal so the exit measurement can run the drift to its far end (CarUiCases).
+internal const val DriftDurationMs = 24_000
 private const val StartDriftFraction = 0f
 private const val GradientRadiusFactor = 0.9f
 private const val DriftTravelFactor = 0.25f

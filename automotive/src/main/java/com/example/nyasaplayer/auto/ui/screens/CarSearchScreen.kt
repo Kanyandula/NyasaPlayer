@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -237,25 +238,16 @@ private fun SearchField(
             // Remembered because KeyboardActions has no equals: a fresh one each recomposition
             // would keep BasicTextField permanently non-skippable while the driver types.
             keyboardActions = remember(onSubmit) { KeyboardActions(onSearch = { onSubmit() }) },
+            // Full height, so a tap anywhere on the field's 76dp chrome lands on the field itself.
             modifier = Modifier
                 .weight(1f)
+                .fillMaxHeight()
                 .padding(horizontal = FieldPadding)
                 .focusRequester(fieldFocus)
                 // Focus is what the restriction gate means by text entry — not a non-empty
                 // query, which survives a parked search into the next drive.
                 .onFocusChanged { onEditingChange(it.isFocused) },
-            decorationBox = { field ->
-                if (query.isEmpty()) {
-                    Text(
-                        text = FieldPlaceholder,
-                        color = CarTextSecondary,
-                        fontSize = FieldTextSize,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                field()
-            },
+            decorationBox = { field -> FieldDecoration(showPlaceholder = query.isEmpty(), content = field) },
         )
         if (query.isNotEmpty()) {
             IconButton(onClick = onClearQuery, modifier = Modifier.size(CarTouchTargetSize)) {
@@ -267,6 +259,27 @@ private fun SearchField(
                 )
             }
         }
+    }
+}
+
+/** The placeholder and the text, centred vertically in the full-height field. */
+@Composable
+private fun FieldDecoration(
+    showPlaceholder: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.CenterStart) {
+        if (showPlaceholder) {
+            Text(
+                text = FieldPlaceholder,
+                color = CarTextSecondary,
+                fontSize = FieldTextSize,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        content()
     }
 }
 
