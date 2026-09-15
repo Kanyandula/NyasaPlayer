@@ -415,6 +415,10 @@ option, not an actively shipped artifact.
 
 ## 9. Phasing
 
+Scope is fixed until this table is done (owner, 2026-09-15). Order: Exit, A9, T19, T18. Anything
+else found on the way goes to `docs/BACKLOG.md`, unless it is a bug a driver would hit or a safety
+gap.
+
 | Phase | Delivers | Depends on | Status |
 |---|---|---|---|
 | **A1** | Tokens, touch-target primitive, 5 components, `oem`/`playstore` flavors, restriction layer + gate + eviction, re-theme of 10 existing files | — | Merged — PR #14 |
@@ -423,9 +427,10 @@ option, not an actively shipped artifact.
 | **A4** | Favourites, ArtistLikedSongs, EmptyFavourites | A2 | Merged and device-verified — PRs #21-#23 |
 | **A5** | FullPlayer, Queue | A2 | Merged and device-verified — PR #24; retryable-error and restore follow-ups recorded |
 | **A6** | Search, SearchResults | A2 + A6 design | Merged and device-verified — PR #27; `docs/AAOS_A6_VERIFICATION.md`; T5-T8 follow-ups recorded |
-| **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Merged and device-verified — PR #51 (parked and driving pass in the PR); PinOptIn deferred (D67, T18), phone and email sign-in deferred (T19) |
+| **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Merged and device-verified — PR #51 (parked and driving pass in the PR); PinOptIn (T18) and phone and email sign-in (T19) still to do — deferred by D67, back in scope 2026-09-15 |
 | **A8** | PlaybackError, NoConnection (behaviour), Loading (satisfied) — Downloads moved to A9 | A2 | Merged and device-verified — PR #59; `docs/AAOS_A8_VERIFICATION.md` |
 | **A9** | Car downloads: `SongDownloadManager` into a shared module, local-URI resolution in shared code (restore included), parked-only download actions, Downloads screen, Library row | A8 | Not started |
+| **Exit** | §12 criteria 2 and 3: one automated measurement of touch targets (76dp) and text contrast (7:1) across the launcher | A1–A8 | Not started |
 | **Project B** | Mobile brand migration — **separate PRD, non-blocking** | A1 tokens | Not started |
 
 **Why A1 first.** The restriction layer has a live bug and there is no touch-target discipline.

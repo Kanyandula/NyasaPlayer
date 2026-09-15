@@ -2,7 +2,7 @@
 
 - **Slice:** correctness of published state
 - **Depends on:** T11 (merged, PR #47), T14 (merged, PR #50)
-- **Status:** Specced — the original approach is withdrawn, see Notes
+- **Status:** Implemented — merged in PR #53 (the original approach was withdrawn, see Notes)
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest`
 - **Design Reference:** `docs/aaos-DESIGN.md` D63
 - **Risk Tags:** lifecycle, state accuracy
