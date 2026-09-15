@@ -9,6 +9,8 @@ out to be a bug a driver or user would hit, or a safety gap.
 - **T27** — report a controller found disconnected as a non-fatal (`docs/tickets/T27-tripwire-non-fatal.md`).
 - **T28** — mobile uses the shared offline rule (`docs/tickets/T28-mobile-offline-rule.md`).
 - **T20** — audio quality preference (`docs/tickets/T20-audio-quality-preference.md`).
+- **T19** — car phone and email sign-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T19-car-auth-phone-and-email.md`).
+- **T18** — car PIN opt-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T18-car-pin-opt-in.md`).
 - **T8** — search draft-query hoist, deferred on measurement (`docs/tickets/T8-automotive-search-draft-query-hoist.md`).
 
 ## Owed phone checks
