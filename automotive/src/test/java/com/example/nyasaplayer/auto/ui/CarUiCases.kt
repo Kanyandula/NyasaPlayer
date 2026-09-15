@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyDescendant
@@ -95,11 +96,15 @@ import org.robolectric.Shadows.shadowOf
  *
  * [scope], when set, limits both measurements to what the case is about: the queue's remove
  * confirmation is drawn over the queue, and the rows under its scrim are occluded, not on show.
+ *
+ * [lowestDrift] runs the ambient layer's parked drift to the frame where its blue centre sits
+ * lowest — furthest into the content region — instead of freezing it at the first frame.
  */
 internal class CarUiCase(
     val name: String,
     val scope: SemanticsMatcher? = null,
     val interact: (AndroidComposeTestRule<*, ComponentActivity>) -> Unit = {},
+    val lowestDrift: Boolean = false,
     val content: @Composable () -> Unit,
 )
 
@@ -116,17 +121,29 @@ internal const val MeasurementQualifiers = "w1280dp-h800dp-xhdpi"
  * A fresh `ComposeView` per case, so nothing a case remembers — scroll position, an open dialog,
  * the view-scoped lazy-list prefetcher — carries into the next one.
  */
-internal fun AndroidComposeTestRule<*, ComponentActivity>.forEachCarUiCase(measure: (CarUiCase) -> Unit) {
-    carUiCases.forEach { case ->
+internal fun AndroidComposeTestRule<*, ComponentActivity>.forEachCarUiCase(
+    cases: List<CarUiCase> = carUiCases,
+    measure: (CarUiCase) -> Unit,
+) {
+    cases.forEach { case ->
+        // The test clock runs an infinite animation only while it is advanced by hand.
+        mainClock.autoAdvance = !case.lowestDrift
         runOnUiThread {
             activity.setContentView(ComposeView(activity).apply { setContent { CarUiFrame(case) } })
         }
-        waitForIdle()
+        if (case.lowestDrift) mainClock.advanceTimeBy(AmbientDriftLegMs)
         case.interact(this)
         waitForIdle()
         measure(case)
     }
+    mainClock.autoAdvance = true
 }
+
+/**
+ * One leg of `CarAmbientBackground`'s drift (its private `DriftDurationMs`): the tween from the
+ * first frame to the far end, where the blue centre is lowest. Keep in step with that constant.
+ */
+private const val AmbientDriftLegMs = 24_000L
 
 /** The root background and the frozen ambient layer every case sits on, as `AuthGate` and the shell paint them. */
 @Composable
@@ -137,7 +154,7 @@ private fun CarUiFrame(case: CarUiCase) {
                 .fillMaxSize()
                 .background(NyasaBackground),
         ) {
-            CarAmbientBackground(animate = false)
+            CarAmbientBackground(animate = case.lowestDrift)
             case.content()
         }
     }
@@ -171,7 +188,7 @@ internal fun AndroidComposeTestRule<*, ComponentActivity>.captureWindow(): Bitma
  * went idle and the test hung. Jumping index by index does not.
  */
 private fun CarUiCase.scrolledToEnd() = CarUiCase(
-    name = "$name, scrolled to end",
+    name = "$name$ScrolledSuffix",
     scope = scope,
     interact = { rule ->
         val list = rule.onAllNodes(hasScrollToIndexAction())[0]
@@ -181,6 +198,17 @@ private fun CarUiCase.scrolledToEnd() = CarUiCase(
     },
     content = content,
 )
+
+private const val ScrolledSuffix = ", scrolled to end"
+
+/** Each case, then the same case at the drift's lowest frame. Scrolled cases are left frozen. */
+private fun List<CarUiCase>.withLowestDrift(): List<CarUiCase> = flatMap { case ->
+    if (case.name.endsWith(ScrolledSuffix)) {
+        listOf(case)
+    } else {
+        listOf(case, CarUiCase("${case.name}, drift lowest", case.scope, case.interact, true, case.content))
+    }
+}
 
 // ── Placement: where the shell puts each region ──
 
@@ -273,8 +301,17 @@ private const val DriverName = "Ada Lovelace"
 // ── Cases ──
 
 internal val carUiCases: List<CarUiCase> =
-    chromeCases() + modalCases() + componentCases() + authCases() + tabCases() + detailCases() +
+    chromeCases() + modalCases() + (componentCases() + authCases() + tabCases() + detailCases()).withLowestDrift() +
         playerCases() + queueCases() + sheetCases() + searchCases()
+
+/** Only the content slot on the ambient layer, at the first and the lowest drift frame. */
+internal val ambientCases: List<CarUiCase> = listOf(
+    CarUiCase("ambient behind the content slot") {
+        InContentSlot { Box(modifier = Modifier.fillMaxSize().testTag(ContentSlotTag)) }
+    },
+).withLowestDrift()
+
+internal const val ContentSlotTag = "contentSlot"
 
 private fun chromeCases(): List<CarUiCase> = listOf(
     CarUiCase("CarSystemBar") { CarSystemBar(onSearchClick = {}, onSettingsClick = {}, onAvatarClick = {}) },

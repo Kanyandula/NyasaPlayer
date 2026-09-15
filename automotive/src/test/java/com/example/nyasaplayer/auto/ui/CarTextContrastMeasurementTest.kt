@@ -7,6 +7,17 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.test.onNodeWithTag
+import com.example.nyasaplayer.auto.ui.theme.CarChrome
+import com.example.nyasaplayer.auto.ui.theme.CarGlass
+import com.example.nyasaplayer.auto.ui.theme.CarObsidian
+import com.example.nyasaplayer.auto.ui.theme.CarRaised
+import com.example.nyasaplayer.auto.ui.theme.CarSignOutRed
+import com.example.nyasaplayer.auto.ui.theme.CarSignOutRedSolid
+import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -15,6 +26,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -31,6 +43,7 @@ import kotlin.math.roundToInt
  *
  * Text on a disabled node or under one is exempt, as the design exempts disabled text. The only
  * other exceptions are the two destructive pairs the design records at AA — see [isRecordedAaPair].
+ * Cases that sit on the ambient glow also run at the drift's lowest frame, not only the first.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -62,7 +75,7 @@ class CarTextContrastMeasurementTest {
                     return@forEach
                 }
                 measured++
-                if (pair.ratio < AaaRatio && !isRecordedAaPair(case.name, text, pair.ratio)) {
+                if (pair.ratio < AaaRatio && !isRecordedAaPair(pair)) {
                     violations += "${case.name} | \"$text\" | fg ${hex(pair.fg)} | bg ${hex(pair.bg)} | " +
                         "%.2f:1".format(pair.ratio)
                 }
@@ -80,6 +93,30 @@ class CarTextContrastMeasurementTest {
         )
     }
 
+    /**
+     * The ambient glow's brightest pixel behind content, at the first frame and at the drift's lowest,
+     * is no lighter than [CarRaised] — the surface [com.example.nyasaplayer.auto.ui.theme.CarTextSecondary]
+     * is measured on at 7.4:1, so anything no lighter keeps it there.
+     */
+    @Test
+    fun `ambient glow behind content is never lighter than CarRaised`() {
+        val ceiling = luminance(CarRaised.toArgb())
+        val over = mutableListOf<String>()
+        composeRule.forEachCarUiCase(ambientCases) { case ->
+            val window = composeRule.captureWindow()
+            val slot = composeRule.onNodeWithTag(ContentSlotTag).fetchSemanticsNode().boundsInWindow
+            val w = slot.width.roundToInt()
+            val h = slot.height.roundToInt()
+            val pixels = IntArray(w * h)
+            window.getPixels(pixels, 0, w, slot.left.roundToInt(), slot.top.roundToInt(), w, h)
+            val brightest = pixels.distinct().maxBy(::luminance)
+            val l = luminance(brightest)
+            println("Ambient: ${case.name}: brightest ${hex(brightest)}, L %.4f vs %.4f".format(l, ceiling))
+            if (l > ceiling) over += "${case.name}: ${hex(brightest)}"
+        }
+        assertTrue("Ambient lighter than CarRaised behind content: $over", over.isEmpty())
+    }
+
     /** The ratio function checked against values the design doc and WCAG publish. */
     @Test
     fun `contrast ratio matches WCAG reference values`() {
@@ -89,7 +126,7 @@ class CarTextContrastMeasurementTest {
         assertEquals(1.0, contrastRatio(WHITE, WHITE), 0.001)
     }
 
-    private class Measured(val fg: Int, val bg: Int, val ratio: Double)
+    class Measured(val fg: Int, val bg: Int, val ratio: Double)
 
     /**
      * The node's visible pixels. Background is the most frequent colour on the box's edge rather than
@@ -124,17 +161,28 @@ class CarTextContrastMeasurementTest {
         val HasText = SemanticsMatcher.keyIsDefined(SemanticsProperties.Text) or
             SemanticsMatcher.keyIsDefined(SemanticsProperties.EditableText)
 
+        /** The surfaces a destructive wash is laid over. */
+        val Surfaces = listOf(CarObsidian, CarChrome, CarGlass, CarRaised, NyasaBackground)
+
         /**
          * The two destructive pairs `docs/aaos-DESIGN.md` → "Contrast, measured" records at AA rather
-         * than AAA, allowed by owner decision (2026-09-15). Each is one node, named by case and text,
-         * and still has to clear AA — the level the design records for it.
+         * than AAA, allowed wherever a destructive action uses them (owner decision, 2026-09-15). Named
+         * by the measured pair, not by screen, and each still has to clear AA — the level recorded.
          */
-        fun isRecordedAaPair(case: String, text: String, ratio: Double): Boolean = ratio >= AaRatio && (
-            // "Sign-out red #EF5350 on its 15% wash over chrome — 4.6:1, AA": CarSignOutRow in Settings.
-            (case.startsWith("CarSettingsScreen/") && text == "Sign Out") ||
-                // "White on sign-out fill #C62828 — 5.2:1, AA": CarSignOutConfirmation's confirm button.
-                (case.startsWith("CarSignOutConfirmation") && text == "Sign Out")
+        fun isRecordedAaPair(pair: Measured): Boolean = pair.ratio >= AaRatio && (
+            // CarSignOutRed text on its own 15% wash, over whichever surface the wash sits on.
+            (pair.fg == CarSignOutRed.toArgb() && Surfaces.any { pair.bg.isNear(SignOutWash.compositeOver(it)) }) ||
+                // White text on a CarSignOutRedSolid fill.
+                (pair.fg == WHITE && pair.bg == CarSignOutRedSolid.toArgb())
             )
+
+        val SignOutWash = CarSignOutRed.copy(alpha = 0.15f)
+
+        /** Within rounding of the compositor: 2 per channel. */
+        fun Int.isNear(color: Color): Boolean {
+            val other = color.toArgb()
+            return listOf(16, 8, 0).all { shift -> abs((this shr shift and 0xFF) - (other shr shift and 0xFF)) <= 2 }
+        }
 
         fun SemanticsNode.text(): String =
             config.getOrNull(SemanticsProperties.Text)?.joinToString(" ")

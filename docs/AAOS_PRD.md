@@ -430,7 +430,7 @@ gap.
 | **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Merged and device-verified — PR #51 (parked and driving pass in the PR); PinOptIn (T18) and phone and email sign-in (T19) still to do — deferred by D67, back in scope 2026-09-15 |
 | **A8** | PlaybackError, NoConnection (behaviour), Loading (satisfied) — Downloads moved to A9 | A2 | Merged and device-verified — PR #59; `docs/AAOS_A8_VERIFICATION.md` |
 | **A9** | Car downloads: `SongDownloadManager` into a shared module, local-URI resolution in shared code (restore included), parked-only download actions, Downloads screen, Library row | A8 | Not started |
-| **Exit** | §12 criteria 2 and 3: one automated measurement of touch targets (76dp) and text contrast (7:1) across the launcher | A1–A8 | Not started |
+| **Exit** | §12 criteria 2 and 3: one automated measurement of touch targets (76dp) and text contrast (7:1) across the launcher | A1–A8 | Done — measured by CarTouchTargetMeasurementTest and CarTextContrastMeasurementTest (79+ cases); the two destructive pairs are the recorded AA exception |
 | **Project B** | Mobile brand migration — **separate PRD, non-blocking** | A1 tokens | Not started |
 
 **Why A1 first.** The restriction layer has a live bug and there is no touch-target discipline.
@@ -477,7 +477,9 @@ The programme is complete when:
 
 1. All 20 screens are implemented and match `docs/aaos-DESIGN.md`.
 2. Automated measurement returns **zero** interactive controls below 76dp.
-3. Every non-disabled text/surface pair measures **≥ 7:1**.
+3. Every non-disabled text/surface pair measures **≥ 7:1**. The one exception is the two destructive
+   pairs (`CarSignOutRed` on its 15% wash, white on `CarSignOutRedSolid`), which clear AA and are
+   recorded in `docs/aaos-DESIGN.md` → "Contrast, measured".
 4. Every restriction in §6.2 is enforced, including eviction (FR-2.5), and verified against a
    real driving-state transition — or Q1 is answered negatively and recorded.
 5. `oem` and `playstore` variants both build, test and lint green; `oem` passes the

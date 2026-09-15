@@ -20,9 +20,9 @@ import org.robolectric.annotation.GraphicsMode
  * PRD §12 exit criterion 2 (NFR-1): automated measurement returns **zero** interactive controls
  * below 76dp.
  *
- * Every node with a click, long-click or toggle action, in both the merged and the unmerged tree
- * so a clickable nested inside another is not hidden by its parent, on every case in
- * [carUiCases]. Measured on the node's own laid-out size — not its touch bounds, which Compose
+ * Every node with a click, long-click, toggle or set-progress (slider) action, in both the merged
+ * and the unmerged tree so a clickable nested inside another is not hidden by its parent, on every
+ * case in [carUiCases]. Measured on the node's own laid-out size — not its touch bounds, which Compose
  * pads out to 48dp and would pass things the design says are too small.
  *
  * Collects every violation and fails once, so one run is the whole list.
@@ -64,10 +64,11 @@ class CarTouchTargetMeasurementTest {
     }
 
     private companion object {
-        val Interactive = SemanticsMatcher("has a click, long-click or toggle action") {
+        val Interactive = SemanticsMatcher("has a click, long-click, toggle or set-progress action") {
             SemanticsActions.OnClick in it.config ||
                 SemanticsActions.OnLongClick in it.config ||
-                SemanticsProperties.ToggleableState in it.config
+                SemanticsProperties.ToggleableState in it.config ||
+                SemanticsActions.SetProgress in it.config
         }
 
         fun dp(px: Number, density: Float): String = "%.0f".format(px.toFloat() / density)

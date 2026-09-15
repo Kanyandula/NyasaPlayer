@@ -32,12 +32,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.BuildConfig
+import com.example.nyasaplayer.auto.ui.theme.CarErrorText
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.auto.viewmodel.CarAuthUiState
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
-import com.example.nyasaplayer.core.common.ui.theme.NyasaError
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -120,7 +120,7 @@ fun CarAuthScreen(
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
                     text = uiState.errorMessage,
-                    color = NyasaError,
+                    color = CarErrorText,
                     fontSize = 18.sp,
                     textAlign = TextAlign.Center,
                 )

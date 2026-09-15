@@ -188,7 +188,11 @@ typically far larger. Treat 15px as the floor to revisit, not as a target.
 | Secondary `#ACACBC` on chrome `#111118` | 8.4:1 | AAA |
 | Secondary `#ACACBC` on raised `#1E1E2A` | 7.4:1 | AAA |
 | Sign-out red `#EF5350` on its 15% wash over chrome | 4.6:1 | AA |
-| White on sign-out fill `#C62828` | 5.2:1 | AA |
+| Sign-out red `#EF5350` on its 15% wash over base (queue "Clear Queue") | 4.8:1 | AA |
+| White on sign-out fill `#C62828` (sign-out confirm, queue "Remove") | 5.6:1 | AA |
+| Error text `#FF8A80` (`CarErrorText`) on base under the ambient glow, worst drift frame | 7.9:1 | AAA |
+| Secondary `#ACACBC` on the dimmed ambient glow, worst drift frame (`#221835`) | 7.5:1 | AAA |
+| Gold `#C9A84C` nav-rail label on its 10% gold pill over chrome (`#24201E`) | 7.1:1 | AAA |
 | Sign-out fill `#C62828` against card `#181824` (edge, non-text) | 3.4:1 | passes the 3:1 UI bar |
 | Disabled `#555568` on base | 2.7:1 | exempt — disabled text |
 
@@ -197,6 +201,18 @@ pairs**, which clear AA. Red is the constraint: a red dark enough for white text
 at automotive brightness, and a red light enough for AAA as text on a dark wash cannot carry white
 text at all. The two roles therefore take two tokens — `CarSignOutRed` for foreground,
 `CarSignOutRedSolid` for fills — because one value cannot serve both.
+
+By owner decision (2026-09-15) these two pairs are the styling for **every** destructive action,
+not only sign-out: the queue's "Clear Queue" and its "Remove" confirm use them too, and they are
+the only AA exception `CarTextContrastMeasurementTest` allows — identified by the measured pair,
+wherever it appears. `NyasaError` is not used for destructive controls in the car.
+
+Every figure in this table is measured from rendered pixels by `CarTextContrastMeasurementTest`
+(PRD §12 criterion 3), including text on the ambient glow at the frame where its drift carries it
+furthest into the content region. That glow was the surface the flat-surface figures missed: at
+full strength it took secondary text to 5.5:1. Its tints' alphas (`CarAmbientBlue`,
+`CarAmbientPurple`) now cap each centre at no lighter than raised `#1E1E2A`, and the same test
+checks that cap. The nav-rail pill was 12% gold (6.75:1 for its label) and is now 10%.
 
 The solid fill was `#EF5350` from A3 to A7, giving 3.5:1 white-on-red, which failed AA outright.
 Darkening the shared token would have fixed the fill and broken the row: red-on-wash drops to
