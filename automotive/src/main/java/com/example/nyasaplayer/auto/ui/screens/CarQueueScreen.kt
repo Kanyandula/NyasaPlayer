@@ -237,7 +237,9 @@ private fun QueueRow(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showRemoveConfirm by remember { mutableStateOf(false) }
+    // Keyed on isDriving: a confirmation opened at the kerb must not survive into motion, where
+    // its Remove button would run a parked-only mutation that nothing else gates (FR-2.5).
+    var showRemoveConfirm by remember(isDriving) { mutableStateOf(false) }
     val rowShape = remember { RoundedCornerShape(QueueRowCornerRadius) }
     val currentTrackBrush = remember { SolidColor(NyasaGold) }
 
