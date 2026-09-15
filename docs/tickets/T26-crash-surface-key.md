@@ -3,7 +3,7 @@
 - **Slice:** observability, both surfaces — story T24
 - **Depends on:** T25
 - **Status:** Specced, not started
-- **Verification Command:** `./gradlew detekt :app:assembleRelease :automotive:assembleOemRelease :automotive:assemblePlaystoreRelease`
+- **Verification Command:** `./gradlew detekt :app:assembleRelease :automotive:assembleOemRelease :automotive:assemblePlaystoreRelease :app:lintDebug :core:data:lintDebug :automotive:lintOemDebug`
 - **Design Reference:** T24 D1, D2, D6, D8
 - **Risk Tags:** app startup, both surfaces, privacy
 - **Affected Modules:** `:core:data` (new class), `:app` and `:automotive` (`Application.onCreate`)
@@ -23,8 +23,9 @@ on.
   property initializer. T27 injects this class into two ViewModels, and constructing one must not
   touch Firebase.
 - `NyasaPlayerApplication` and `AutomotiveApplication` each inject it and call `start()` first in
-  `onCreate`, ahead of `firebaseSyncManager.start()` and outside the car's `isAuthenticated` gate,
-  so a crash in either sync already carries the key.
+  `onCreate`: on the phone ahead of `firebaseSyncManager.start()`, on the car ahead of and outside
+  the `isAuthenticated` gate around `catalogSync.start()`. A crash in either sync then already
+  carries the key, and so does a signed-out car.
 - Add a `surface` row to `docs/CRASH_REPORTING.md`.
 
 ## Out Of Scope
@@ -47,7 +48,20 @@ on.
 ## Notes
 
 - **Why no unit test.** The logic is one `if` on one platform call. The emulator checks above are
-  the test. Add one if `start()` grows a second decision.
+  the test. Add one if `start()` grows a second decision. No test reaches it by accident either:
+  `:automotive`'s Robolectric tests run on a plain `android.app.Application`
+  (`automotive/src/test/resources/robolectric.properties`), `:app` has no Robolectric tests, and no
+  test constructs either player ViewModel, so T27's injection can't pull Firebase into a test.
+- **Checking the key without the dashboard.** `setCustomKey` records into the session's files even
+  when collection is off, so a debug build shows the key on the device: `run-as
+  com.example.nyasaplayer` (add `--user 10` on the car) and look under `files/.crashlytics.v3/`
+  for `surface` in the open session, and in the stored report after a crash. That covers both
+  surfaces and the media-template start without a release install. The dashboard criterion needs
+  one release crash; before it, uninstall the car's debug build (T25 left a stored debug report
+  there, see `docs/T25_VERIFICATION.md`).
+- **The phone.** `Medium_Phone_API_35` refuses installs (low storage, `docs/T25_VERIFICATION.md`).
+  Use `Pixel_9_Pro_Fold_API_35`. The key is set before sign-in matters, so the phone check needs
+  no signed-in account.
 - **Starting the car without its activity.** Force-stop the app, open the OEM media template
   (`com.android.car.media`; see `docs/AAOS_T3_VERIFICATION.md` → The OEM template surface), pick
   NyasaPlayer as the source and press play. Confirm the session in `dumpsys media_session`,
