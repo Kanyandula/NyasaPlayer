@@ -188,7 +188,8 @@ typically far larger. Treat 15px as the floor to revisit, not as a target.
 | Secondary `#ACACBC` on chrome `#111118` | 8.4:1 | AAA |
 | Secondary `#ACACBC` on raised `#1E1E2A` | 7.4:1 | AAA |
 | Sign-out red `#EF5350` on its 15% wash over chrome | 4.6:1 | AA |
-| Sign-out red `#EF5350` on its 15% wash over base (queue "Clear Queue") | 4.8:1 | AA |
+| Sign-out red `#EF5350` on its 15% wash over base (queue "Clear Queue", Downloads "Remove All") | 4.8:1 | AA |
+| Gold `#C9A84C` driving-banner label on opaque card `#181824` (`CarDrivingHelperChip`) | 7.7:1 | AAA |
 | White on sign-out fill `#C62828` (sign-out confirm, queue "Remove") | 5.6:1 | AA |
 | Error text `#FF8A80` (`CarErrorText`) on the auth screen's root background `#0D0D0D` | 8.5:1 | AAA |
 | Secondary `#ACACBC` on the dimmed ambient glow, worst drift frame (`#121E2B`) | 7.5:1 | AAA |
@@ -216,6 +217,23 @@ it took secondary text to 5.5:1. Its tints' alphas (`CarAmbientBlue`, `CarAmbien
 each centre at no lighter than raised `#1E1E2A`, and the same test checks that cap. The nav-rail
 pill was 12% gold (6.75:1 for its label); it is 8%, not the 10% that first cleared 7:1, to keep a
 margin off the limit.
+
+**A translucent fill has no ratio of its own.** A wash takes its contrast from whatever it is laid
+on, so a washed control that measures fine in one place can fail in another without its own colours
+changing. A9 hit this twice on one screen. The driving banner was a 12% gold wash: 7.1:1 over the
+queue's opaque background, but 6.9:1 — under NFR-2 — over the ambient gradient behind Downloads,
+because the gradient is lighter than the flat surface. And "Remove All" laid the destructive wash
+straight onto that gradient, composing to `#32191C` at 4.66:1 — a colour
+`CarTextContrastMeasurementTest` cannot match against the recorded pair, so it read as a new
+violation rather than the AA exception it was meant to be.
+
+So: **a washed control names the surface underneath it.** Either give the fill an opaque base of
+its own — `CarDrivingHelperChip` is opaque `#181824`, which holds 7.7:1 wherever it is drawn — or
+lay the wash on one of the surfaces the exception knows (`#0A0A0C`, `#111118`, `#181824`, `#1E1E2A`,
+the app background), as "Remove All" now lays its red on the app background, the same base the
+queue's "Clear Queue" uses. Do not widen that surface list to make a new control pass; the list is
+what keeps the exception narrow. Pick the base deliberately, too: the same red wash over card
+`#181824` falls to 4.27:1, which stops clearing AA and so stops being the recorded pair at all.
 
 The solid fill was `#EF5350` from A3 to A7, giving 3.5:1 white-on-red, which failed AA outright.
 Darkening the shared token would have fixed the fill and broken the row: red-on-wash drops to
