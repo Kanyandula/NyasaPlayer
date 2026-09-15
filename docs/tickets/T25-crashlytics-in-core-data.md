@@ -2,7 +2,7 @@
 
 - **Slice:** observability, build config — story T24
 - **Depends on:** —
-- **Status:** Implemented; car upload verified, dashboard check and phone pass owed — see Outcome and `docs/T25_VERIFICATION.md`
+- **Status:** Implemented; car verified through to the dashboard, phone pass owed — see Outcome and `docs/T25_VERIFICATION.md`
 - **Verification Command:** `./gradlew :app:assembleDebug :app:assembleRelease :automotive:assembleOemDebug :automotive:assembleOemRelease :automotive:assemblePlaystoreDebug :automotive:assemblePlaystoreRelease`
 - **Design Reference:** T24 D2, D3, D4, D5, D8
 - **Risk Tags:** new SDK, build config, manifest merge, dependency resolution, privacy
@@ -96,8 +96,7 @@ what the SDK sends in this configuration.
 
 Deviation from the Notes above: builds were swapped with `adb install -r` instead of uninstalling
 first. Harmless here — the debug build it replaced predated the SDK, so nothing was cached to send
-falsely — but this emulator's car install now holds a stored debug report of its own
-(`priority-reports/6AA83C7F02A1000146CE9B898F544179`); uninstall before the next release test on it.
+falsely. The debug run then left a stored report of its own, deleted before T26's release test.
 
-Owed: the owner's dashboard check, and the phone pass on `Medium_Phone_API_35`, blocked by low
-storage. See `docs/T25_VERIFICATION.md` for the device evidence.
+The owner confirmed the dashboard on 2026-09-15 (during T26). Owed: the phone pass, blocked by low
+storage on `Medium_Phone_API_35`. See `docs/T25_VERIFICATION.md` for the device evidence.

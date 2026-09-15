@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Applies to** | `:core:data`'s `firebase-crashlytics` SDK (T25), used by `:app` and `:automotive` |
-| **Sources read** | 2026-09-14 — see each row below |
+| **Sources read** | Firebase pages 2026-09-14; the firebase-crashlytics 19.4.4 AAR 2026-09-15 — see each row below |
 
 This is the inventory T24 D8 asks for: what this configuration sends, what it never sends, how
 collection is switched, and how long Firebase keeps it.
@@ -59,10 +59,11 @@ Of those, only the one custom key below applies here; for the rest see "What is 
 
 | Key | Values | Set by |
 |---|---|---|
-| `surface` | `car` when the device has `PackageManager.FEATURE_AUTOMOTIVE`, otherwise `mobile` | `CrashReporter.start()` (`core/data/.../crash/CrashReporter.kt`), first thing in each app's `Application.onCreate`, once per process (T24 D6, T26) |
+| `surface` | `car` when the device has `PackageManager.FEATURE_AUTOMOTIVE`, otherwise `mobile` | `CrashReporter.start()` (`core/data/.../crash/CrashReporter.kt`), the first call in each app's `Application.onCreate` after Hilt field injection, once per process (T24 D6, T26) |
 
 `surface` describes the device, not the APK: the phone app sideloaded onto a head unit reports
-`car`. No other key is set.
+`car`. A crash before `start()` (during Hilt injection or content-provider start) carries no key.
+The code sets no other key.
 
 ## What is never sent
 
@@ -72,6 +73,9 @@ Of those, only the one custom key below applies here; for the rest see "What is 
 - No song, queue or search text, in custom keys, logs, or exception messages.
 - `FirebaseCrashlytics.log` is not called anywhere in the codebase; existing `Log.w`/`Log.e` calls
   stay in logcat only.
+- No custom non-fatals: nothing calls `recordException`.
+- No breadcrumbs: Firebase Analytics is not a dependency of either app, and the SDK logs
+  "Skipping logging Crashlytics event to Firebase, no Firebase Analytics".
 - The Crashlytics installation UUID identifies the install, not the driver — on a shared head unit
   it does not distinguish who was driving.
 
@@ -96,9 +100,18 @@ Of those, only the one custom key below applies here; for the rest see "What is 
   debug build before installing a release build signed with the same key on top of it
   (`docs/tickets/T25-crashlytics-in-core-data.md`, Notes — "Signing a release build to test with").
 - Custom keys are recorded on the device whether or not collection is on, so a debug build shows
-  them: `adb shell run-as com.example.nyasaplayer cat
-  files/.crashlytics.v3/com.example.nyasaplayer/open-sessions/<session-id>/keys` (add `--user 10` on
-  the car).
+  them (file names from the 19.4.4 AAR's `FileStore` and `MetaDataStore`; seen on both emulators,
+  `docs/T26_VERIFICATION.md`). `--user 10` is the car emulator's driver
+  (`adb shell am get-current-user`); leave it out on a phone:
+  ```
+  adb shell run-as --user 10 com.example.nyasaplayer cat \
+    files/.crashlytics.v3/com.example.nyasaplayer/open-sessions/<session-id>/keys
+  ```
+  After a crash the stored report under `priority-reports/` carries them as `customAttributes`.
+- Reading the dashboard: custom keys are not a filter dimension in the Crashlytics reporting API
+  (version, device, OS, form factor, error type, signals, issue, variant), so read `surface` from
+  each event's keys. `topIssues` leaves out closed issues; `topVersions` and event queries still
+  count their events, so an empty `topIssues` does not mean no crashes (owner, 2026-09-15).
 
 ## Retention
 
@@ -116,5 +129,4 @@ declaration.
 
 ## Extending this file
 
-T26 added the `surface` key. T27 (the `disconnected` non-fatal) extends this inventory as it adds
-what it sends.
+T27 (the `disconnected` non-fatal) extends this inventory as it adds what it sends.
