@@ -47,7 +47,8 @@ val CarOutline = Color(0x1FFFFFFF)
 val CarDivider = Color(0x14FFFFFF)
 
 /**
- * Destructive actions as **foreground** — red text on its own 15% wash (`CarSignOutRow`).
+ * Destructive actions as **foreground** — red text on its own 15% wash (`CarSignOutRow`, the
+ * queue's "Clear Queue").
  *
  * The value `CarLibraryScreen` has shipped privately since A3, promoted here rather than copied when
  * sign-out moved to Settings (A7). Measures 4.59:1 against the washed chrome it lands on, which is
@@ -61,25 +62,41 @@ val CarDivider = Color(0x14FFFFFF)
 val CarSignOutRed = Color(0xFFEF5350)
 
 /**
- * Destructive actions as **background** — the confirm button in `CarSignOutConfirmation`.
+ * Destructive actions as **background** — the confirm button in `CarSignOutConfirmation` and the
+ * queue's "Remove" confirm.
  *
- * White text and icon on this fill measure 5.17:1 (AA). The button's edge against the modal card
- * `#181824` is 3.4:1, clearing the 3:1 that a non-text UI boundary needs, so the fill still reads
- * as a button.
+ * White text and icon on this fill measure 5.62:1 (AA) from rendered pixels. The button's edge
+ * against the modal card `#181824` is 3.13:1, clearing the 3:1 that a non-text UI boundary needs,
+ * so the fill still reads as a button.
  *
  * A3 through A7 used [CarSignOutRed] here, at 3.49:1 — below AA. This token is the fix (T21).
  */
 val CarSignOutRedSolid = Color(0xFFC62828)
 
 /**
+ * Error messages as **foreground** — the sign-in error on `CarAuthScreen`.
+ *
+ * Measures 8.51:1 on the bare root background `#0D0D0D` that `AuthGate` paints behind the auth
+ * screen — the ambient glow exists only inside the signed-in shell.
+ *
+ * **Foreground only, never a fill under white text** — a red light enough to read as text on dark
+ * cannot carry white text at all.
+ */
+val CarErrorText = Color(0xFFFF8A80)
+
+/**
  * Ambient background tints. Never used as a fill on an interactive element.
  *
- * Unused until the ambient-motion work; screens currently draw NyasaBackground. Same for
- * [CarObsidian] and [CarTextDisabled] — declared here so the whole surface ramp is defined
- * in one place rather than arriving piecemeal.
+ * **The alphas are a contrast cap, not a look.** Text sits on these glows, so each one's brightest
+ * point — its centre, which the parked drift carries into the content region — must be no lighter
+ * than [CarRaised], the surface [CarTextSecondary] is measured on at 7.4:1. Measured behind the
+ * content region at the first and the lowest drift frame, the brightest pixel is L 0.0130 (the blue
+ * centre; blue at 0x64, purple at 0x3C) against [CarRaised]'s 0.0137, and the worst secondary text on
+ * either measures 7.53:1. Purple at 0x40 was 0.0133, too close to flip. At full blue (0xFF) secondary
+ * text fell to 5.5:1. Do not raise either without re-running CarTextContrastMeasurementTest.
  */
-val CarAmbientBlue = Color(0xFF1A3A5C)
-val CarAmbientPurple = Color(0x4D643CB4)
+val CarAmbientBlue = Color(0x641A3A5C)
+val CarAmbientPurple = Color(0x3C643CB4)
 
 // Gradient pairs shared across AAOS screens. These are content artwork gradients,
 // not brand — they stay as they are.

@@ -77,6 +77,7 @@ private fun SignOutActions(
         Box(
             modifier = Modifier
                 .weight(1f)
+                .carTouchTarget()
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.White.copy(alpha = 0.1f))
                 .clickable(onClick = onDismiss)
@@ -93,6 +94,7 @@ private fun SignOutActions(
         Box(
             modifier = Modifier
                 .weight(1f)
+                .carTouchTarget()
                 .clip(RoundedCornerShape(16.dp))
                 .background(CarSignOutRedSolid)
                 .clickable(onClick = onConfirm)
