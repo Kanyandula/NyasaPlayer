@@ -219,7 +219,8 @@ private fun ClearQueuePill(
             Text(
                 text = if (isDriving) "Locked" else "Clear Queue",
                 color = CarSignOutRed.copy(alpha = alpha),
-                fontSize = 16.sp,
+                // NFR-3's floor for an interactive label, not the 14sp body floor.
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
             )
         }
