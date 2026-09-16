@@ -172,9 +172,14 @@ Hanken Grotesk throughout. No text may render below 14px, and no interactive lab
 the Android implementation; do not carry over generated negative tracking from the static
 mockups.
 
-The smallest text actually rendered is 15px — artist names in track rows. That satisfies the
-rule above, but 15px is small for a glance from the driver's seat, and car UI body styles are
-typically far larger. Treat 15px as the floor to revisit, not as a target.
+**The 18px label floor means a button or CTA's own label** — the text a driver reads to know what
+the control does. A tab label under an icon in the rail is not one: the rail is 80px wide, and
+"Favourites" at 18px does not fit beside its icon. Those take the 14px text floor (owner, 2026-09-16,
+closing the gap between this rule and the rail spec below, which drew 13px).
+
+The smallest text actually rendered is 14px — the rail's tab labels. Artist names in track rows are
+15px. Both satisfy the rule above, but neither is generous for a glance from the driver's seat, and
+car UI body styles are typically far larger. Treat 14px as the floor to revisit, not as a target.
 
 ### Contrast, measured
 
@@ -283,7 +288,7 @@ substitutions.
 ```
 Width: 80px, background #111118
 Items, top to bottom: Home, Browse, Library, Favourites
-Item height: 88px, icon 28px above a 13px label
+Item height: 88px, icon 28px above a 14px label (was 13px, below the type floor above)
 Rest state:   icon and label #ACACBC
 Active state: icon and label #C9A84C inside a rounded-full pill of
               rgba(201,168,76,0.12) with a soft 32px gold glow

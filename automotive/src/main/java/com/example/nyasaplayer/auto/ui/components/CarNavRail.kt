@@ -38,7 +38,9 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 
 private val RailItemHeight = 88.dp
 private val RailIconSize = 28.dp
-private val RailLabelSize = 13.sp
+
+// 14sp is NFR-3's text floor. The design drew 13px here, which its own type rule forbids; the rule wins.
+private val RailLabelSize = 14.sp
 private val RailPillInset = 8.dp
 private val RailPillRadius = 20.dp
 
