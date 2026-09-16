@@ -89,6 +89,25 @@ pulls declarations from `:core:playback` and libraries.
 | MG-6 | `automotive_app_desc.xml` declares `<uses name="media" />` |
 | MG-7 | No custom browse, playback, queue, search or downloads activity is shipped |
 
+### MG-2's allow-list
+
+Two exported activities ship in both flavors, and both are allowed. Neither is ours: Firebase Auth
+declares them so a browser can return to the app after a web sign-in, and each is exported with a
+`BROWSABLE` intent filter for that redirect.
+
+| Activity | From | Why it is exported |
+|---|---|---|
+| `com.google.firebase.auth.internal.GenericIdpActivity` | `firebase-auth` | Receives the redirect back from a federated sign-in provider |
+| `com.google.firebase.auth.internal.RecaptchaActivity` | `firebase-auth` | Receives the reCAPTCHA result during phone or web sign-in |
+
+They are sign-in entries, which is what MG-2's exception covers. Neither declares
+`distractionOptimized`, so AAOS blocks both while the vehicle is in motion — the behaviour §6.2
+wants for a sign-in flow, and what OG-4 asserts.
+
+Anything else exported fails MG-2 until it is listed here with its reason. Measured against the
+release manifests of both flavors on 2026-09-16: these two are the only exported activities in
+`playstore`, and `oem` adds only `AutomotiveActivity`, which OG-1 requires.
+
 ## Host-Render Smoke Tests
 
 These are manual or emulator smoke tests for the `playstore` path. They run before any Play
