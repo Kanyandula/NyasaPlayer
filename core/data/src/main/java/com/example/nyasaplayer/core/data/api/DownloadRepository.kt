@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.Flow
 interface DownloadRepository {
     fun getCompletedDownloads(): Flow<List<DownloadEntity>>
 
+    /** Every download whatever its status, active work first — the car's Downloads screen (A9). */
+    fun getAllDownloads(): Flow<List<DownloadEntity>>
+
     // Used by future per-song and batch download progress UI
     fun observeDownload(mediaId: String): Flow<DownloadEntity?>
     fun observeDownloads(mediaIds: List<String>): Flow<List<DownloadEntity>>

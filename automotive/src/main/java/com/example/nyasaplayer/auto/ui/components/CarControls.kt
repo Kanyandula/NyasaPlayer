@@ -79,6 +79,10 @@ fun CarChip(
  *
  * The gold variant uses [NyasaOnGold] for its label. Never white — white on gold
  * measures 2.29:1.
+ *
+ * [enabled] false dims the pill and stops it acting, for parked-only work that stays on screen
+ * while driving rather than disappearing (A9). A disabled pill's label is exempt from the contrast
+ * floor, as the design exempts disabled text.
  */
 @Composable
 fun CarPillButton(
@@ -86,32 +90,36 @@ fun CarPillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     filled: Boolean = true,
+    enabled: Boolean = true,
 ) {
+    val alpha = if (enabled) 1f else DisabledPillOpacity
     Box(
         modifier = modifier
             .carTouchTarget()
             .height(CarPillButtonHeight)
             .background(
-                color = if (filled) NyasaGold else Color.Transparent,
+                color = if (filled) NyasaGold.copy(alpha = alpha) else Color.Transparent,
                 shape = PillShape,
             )
             .border(
                 width = if (filled) SelectedBorderWidth else UnselectedBorderWidth,
-                color = if (filled) Color.Transparent else CarOutline,
+                color = if (filled) Color.Transparent else CarOutline.copy(alpha = alpha),
                 shape = PillShape,
             )
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = ButtonPadding),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
-            color = if (filled) NyasaOnGold else Color.White,
+            color = (if (filled) NyasaOnGold else Color.White).copy(alpha = alpha),
             fontSize = ButtonLabelSize,
             fontWeight = FontWeight.SemiBold,
         )
     }
 }
+
+private const val DisabledPillOpacity = 0.4f
 
 /** Section heading above a content row. */
 @Composable

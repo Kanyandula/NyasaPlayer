@@ -10,6 +10,7 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
+import com.example.nyasaplayer.core.data.download.SongDownloadManager
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.ControllerConnection
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
@@ -17,7 +18,6 @@ import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
 import com.example.nyasaplayer.core.playback.toSong
-import com.example.nyasaplayer.download.SongDownloadManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Job
@@ -188,8 +188,8 @@ class PlayerViewModel @Inject constructor(
             showOfflineError(song)
             return
         }
-        val resolvedSongs = songs.map { resolveSongUri(it) }
-        val resolvedSong = resolveSongUri(song)
+        val resolvedSongs = songs.map(downloadManager::resolveLocalUri)
+        val resolvedSong = downloadManager.resolveLocalUri(song)
         val startIndex = resolvedSongs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
         // Nothing is painted as playing unless the command reached a connected player (T11).
         if (!stateCollector.transport.setQueue(resolvedSongs, startIndex)) return
@@ -205,14 +205,9 @@ class PlayerViewModel @Inject constructor(
         logRecentlyPlayedSafe(song.mediaId)
     }
 
-    private fun resolveSongUri(song: Song): Song {
-        val localUri = downloadManager.getLocalFileUri(song.mediaId) ?: return song
-        return song.copy(audioUrl = localUri, songUrl = localUri)
-    }
-
     fun shufflePlay(songs: List<Song>) {
         if (songs.isEmpty()) return
-        val resolvedSongs = songs.map { resolveSongUri(it) }
+        val resolvedSongs = songs.map(downloadManager::resolveLocalUri)
         val hasPlayable = isOnline || resolvedSongs.zip(songs).any { (resolved, original) ->
             resolved.audioUrl != original.audioUrl
         }

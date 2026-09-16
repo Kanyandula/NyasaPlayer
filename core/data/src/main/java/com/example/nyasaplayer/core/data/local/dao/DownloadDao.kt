@@ -14,6 +14,20 @@ interface DownloadDao {
     @Query("SELECT * FROM downloads WHERE status = 'Completed' ORDER BY downloaded_at DESC")
     fun getCompleted(): Flow<List<DownloadEntity>>
 
+    /**
+     * Every download whatever its status, active work first.
+     *
+     * The car's Downloads screen renders in-progress and failed rows, which [getCompleted] cannot
+     * see. `downloaded_at` is 0 until a download completes, so ordering by it alone would bury the
+     * row the driver is waiting on at the bottom of the list.
+     */
+    @Query(
+        "SELECT * FROM downloads ORDER BY CASE status " +
+            "WHEN 'Downloading' THEN 0 WHEN 'Pending' THEN 1 WHEN 'Failed' THEN 2 ELSE 3 END, " +
+            "downloaded_at DESC",
+    )
+    fun getAll(): Flow<List<DownloadEntity>>
+
     @Query("SELECT * FROM downloads WHERE media_id = :mediaId")
     suspend fun getByMediaId(mediaId: String): DownloadEntity?
 

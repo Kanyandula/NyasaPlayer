@@ -62,8 +62,9 @@ private const val SkeletonCardCount = 4
  *
  * Favourites is one card showing the liked count, not a list: it is a shortcut to a rail
  * destination that already renders that list, and two surfaces rendering identical content is a
- * visible bug (A2 D2). Downloads renders visibly disabled rather than hidden, so Library does not
- * change shape when A8 lands (D13). Account chrome is not here: sign-out moved to Settings when
+ * visible bug (A2 D2). Downloads is one card into screen 15, live since A9 — it rendered disabled
+ * from A3 so Library would not change shape when it landed (D13). Account chrome is not here:
+ * sign-out moved to Settings when
  * A7 built screen 14 (D68), closing D14.
  */
 @Suppress("LongParameterList")
@@ -80,6 +81,7 @@ fun CarLibraryScreen(
     onArtistClick: (FavoriteArtist) -> Unit,
     onFavouritesClick: () -> Unit,
     onBrowseClick: () -> Unit,
+    onDownloadsClick: () -> Unit,
     modifier: Modifier = Modifier,
     currentlyPlayingMediaId: String? = null,
     isPlaying: Boolean = false,
@@ -114,6 +116,7 @@ fun CarLibraryScreen(
                 onArtistClick = onArtistClick,
                 onFavouritesClick = onFavouritesClick,
                 onBrowseClick = onBrowseClick,
+                onDownloadsClick = onDownloadsClick,
                 currentlyPlayingMediaId = currentlyPlayingMediaId,
                 isPlaying = isPlaying,
             )
@@ -136,6 +139,7 @@ private fun LibraryRows(
     onArtistClick: (FavoriteArtist) -> Unit,
     onFavouritesClick: () -> Unit,
     onBrowseClick: () -> Unit,
+    onDownloadsClick: () -> Unit,
     currentlyPlayingMediaId: String?,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
@@ -236,16 +240,14 @@ private fun LibraryRows(
             }
         }
 
-        // Never omitted: it carries no data by definition, and hiding it would change
-        // Library's shape when A8 lands (D13).
+        // Never omitted, and no longer disabled: A9 gave it a screen (D13).
         item {
             LibraryRow(title = "Downloads") {
                 item {
                     CarContentCard(
                         title = "Downloads",
-                        onClick = {},
-                        subtitle = "Coming soon",
-                        enabled = false,
+                        onClick = onDownloadsClick,
+                        subtitle = "Offline music",
                     )
                 }
             }
