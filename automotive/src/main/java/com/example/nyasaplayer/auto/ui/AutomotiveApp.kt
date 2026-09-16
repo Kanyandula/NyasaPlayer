@@ -45,6 +45,8 @@ import com.example.nyasaplayer.auto.ui.screens.CarArtistLikedSongsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarArtistScreen
 import com.example.nyasaplayer.auto.ui.screens.CarAuthScreen
 import com.example.nyasaplayer.auto.ui.screens.CarBrowseScreen
+import com.example.nyasaplayer.auto.ui.screens.CarDownloadItem
+import com.example.nyasaplayer.auto.ui.screens.CarDownloadsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFavouriteMusicScreen
 import com.example.nyasaplayer.auto.ui.screens.CarFullPlayerScreen
 import com.example.nyasaplayer.auto.ui.screens.CarHomeScreen
@@ -55,6 +57,7 @@ import com.example.nyasaplayer.auto.ui.screens.CarQueueScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchResultsScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSearchScreen
 import com.example.nyasaplayer.auto.ui.screens.CarSettingsScreen
+import com.example.nyasaplayer.auto.ui.screens.albumDownloadControl
 import com.example.nyasaplayer.auto.ui.screens.artistLikedSongs
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.viewmodel.AutomotiveAuthViewModel
@@ -306,6 +309,11 @@ private fun AuthenticatedApp(
                 onRetry = contentViewModel::retryLoad,
                 onRetryDetail = { drillDown?.let(contentViewModel::openDetail) },
                 onAlbumClick = { album -> drillDown = CarDestination.Album(album.id) },
+                onDownloadsClick = { drillDown = CarDestination.Downloads },
+                onRemoveDownload = contentViewModel::removeDownload,
+                onRemoveAllDownloads = contentViewModel::removeAllDownloads,
+                onRetryDownload = contentViewModel::retryDownload,
+                onDownloadAlbum = contentViewModel::downloadSongs,
                 onPlaylistClick = { playlist -> drillDown = CarDestination.Playlist(playlist.id) },
                 onArtistClick = { favoriteArtist ->
                     drillDown = CarDestination.Artist(
@@ -628,6 +636,11 @@ private fun BrowseShell(
     onRetry: () -> Unit,
     onRetryDetail: () -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onDownloadsClick: () -> Unit,
+    onRemoveDownload: (String) -> Unit,
+    onRemoveAllDownloads: () -> Unit,
+    onRetryDownload: (String) -> Unit,
+    onDownloadAlbum: (List<Song>) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
     onArtistClick: (FavoriteArtist) -> Unit,
     drillDown: CarDestination?,
@@ -726,6 +739,22 @@ private fun BrowseShell(
                             )
                         }
 
+                        is CarDestination.Downloads -> CarDownloadsScreen(
+                            items = contentState.downloads,
+                            // The platform's own answer, not a driving guess: the screen stays
+                            // viewable in motion and only its mutations are refused.
+                            isDriving = restrictions.isDistractionOptimized,
+                            maxItems = restrictions.maxCumulativeContentItems,
+                            onBackClick = onBackFromDetail,
+                            onSongClick = onSongClick,
+                            onRemove = onRemoveDownload,
+                            onRemoveAll = onRemoveAllDownloads,
+                            onRetry = onRetryDownload,
+                            onBrowseClick = { onSelectTab(CarScreen.Browse) },
+                            currentlyPlayingMediaId = currentlyPlayingMediaId,
+                            isPlaying = isPlaying,
+                        )
+
                         is CarDestination.Album,
                         is CarDestination.Playlist,
                         is CarDestination.CatalogArtist,
@@ -740,6 +769,8 @@ private fun BrowseShell(
                             currentlyPlayingMediaId = currentlyPlayingMediaId,
                             isPlaying = isPlaying,
                             onRetry = onRetryDetail,
+                            downloads = contentState.downloads,
+                            onDownloadAlbum = onDownloadAlbum,
                         )
 
                         null -> CarLibraryScreen(
@@ -757,6 +788,7 @@ private fun BrowseShell(
                             onArtistClick = onArtistClick,
                             onFavouritesClick = { onSelectTab(CarScreen.Favourites) },
                             onBrowseClick = { onSelectTab(CarScreen.Browse) },
+                            onDownloadsClick = onDownloadsClick,
                             currentlyPlayingMediaId = currentlyPlayingMediaId,
                             isPlaying = isPlaying,
                             isLoading = contentState.isLoading,
@@ -874,6 +906,8 @@ private fun DetailRoute(
     isPlaying: Boolean,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    downloads: List<CarDownloadItem> = emptyList(),
+    onDownloadAlbum: (List<Song>) -> Unit = {},
 ) {
     val capped = remember(detail, destination, restrictions) {
         detail?.takeIf { it.destination == destination }
@@ -892,6 +926,16 @@ private fun DetailRoute(
             currentlyPlayingMediaId = currentlyPlayingMediaId,
             isPlaying = isPlaying,
             onRetry = onRetry,
+            // Measured against the full track list, not the capped one: an album is downloaded or
+            // it is not, and that does not change because the car is moving and showing 21 rows.
+            download = remember(detail, downloads, restrictions) {
+                albumDownloadControl(
+                    tracks = detail?.tracks.orEmpty(),
+                    downloads = downloads,
+                    isDriving = restrictions.isDistractionOptimized,
+                )
+            },
+            onDownload = onDownloadAlbum,
         )
 
         is CarDestination.Playlist -> CarPlaylistScreen(
@@ -918,9 +962,11 @@ private fun DetailRoute(
             onRetry = onRetry,
         )
 
-        // The liked-songs artist screen, routed by the caller's own branch; a when over a sealed
-        // interface must be exhaustive.
-        is CarDestination.Artist -> Unit
+        // Both are routed by the caller's own branches — the liked-songs artist screen and
+        // Downloads; a when over a sealed interface must be exhaustive.
+        is CarDestination.Artist,
+        is CarDestination.Downloads,
+        -> Unit
     }
 }
 

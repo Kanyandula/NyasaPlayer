@@ -5,7 +5,7 @@ import androidx.compose.runtime.remember
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.SongDownloadState
 import com.example.nyasaplayer.core.common.ui.components.SongOverflowSheet
-import com.example.nyasaplayer.download.SongDownloadManager
+import com.example.nyasaplayer.core.data.download.SongDownloadManager
 
 @Composable
 fun SongOverflowWithDownload(

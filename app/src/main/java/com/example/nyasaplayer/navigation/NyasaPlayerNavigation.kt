@@ -8,7 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.nyasaplayer.core.common.models.Song
-import com.example.nyasaplayer.download.SongDownloadManager
+import com.example.nyasaplayer.core.data.download.SongDownloadManager
 import com.example.nyasaplayer.screens.downloads.DownloadsScreen
 import com.example.nyasaplayer.screens.home.HomeScreen
 import com.example.nyasaplayer.screens.library.LibraryScreen

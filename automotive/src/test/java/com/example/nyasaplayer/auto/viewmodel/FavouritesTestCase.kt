@@ -4,7 +4,9 @@ import com.example.nyasaplayer.auto.MainDispatcherRule
 import com.example.nyasaplayer.auto.fake.FakeAlbumRepository
 import com.example.nyasaplayer.auto.fake.FakeArtistRepository
 import com.example.nyasaplayer.auto.fake.FakeAuthRepository
+import com.example.nyasaplayer.auto.fake.FakeDownloadRepository
 import com.example.nyasaplayer.auto.fake.FakeGenreRepository
+import com.example.nyasaplayer.auto.fake.FakeSongDownloads
 import com.example.nyasaplayer.auto.fake.FakePlaylistRepository
 import com.example.nyasaplayer.auto.fake.FakeSongRepository
 import com.example.nyasaplayer.auto.fake.FakeUserRepository
@@ -29,6 +31,8 @@ abstract class FavouritesTestCase {
     protected val users = FakeUserRepository()
     protected val auth = FakeAuthRepository()
     protected val genres = FakeGenreRepository()
+    protected val downloads = FakeDownloadRepository()
+    protected val downloader = FakeSongDownloads()
 
     protected fun viewModel() = AutomotiveContentViewModel(
         songRepository = songs,
@@ -38,6 +42,8 @@ abstract class FavouritesTestCase {
         playlistRepository = FakePlaylistRepository(),
         userRepository = users,
         authRepository = auth,
+        downloadRepository = downloads,
+        downloadManager = downloader,
     )
 
     protected fun song(id: String) = Song(mediaId = id, title = "Title $id", artistName = "Artist $id")

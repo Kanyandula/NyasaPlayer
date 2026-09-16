@@ -3,8 +3,10 @@ package com.example.nyasaplayer.core.playback
 import com.example.nyasaplayer.core.common.models.PlaybackState
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
+import com.example.nyasaplayer.core.data.download.resolveLocalUri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,6 +29,7 @@ class PlaybackStatePersistence @Inject constructor(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
     private val songRepository: SongRepository,
+    private val downloadRepository: DownloadRepository,
 ) {
     private companion object {
         const val SAVE_FINAL_TIMEOUT_MS = 2000L
@@ -89,7 +92,11 @@ class PlaybackStatePersistence @Inject constructor(
             if (saved.currentSongId.isBlank()) return null
 
             val songMap = songRepository.getSongsByIds(saved.queueSongIds).associateBy { it.mediaId }
+            // Resolved here rather than in each caller: a restore hands the queue straight to the
+            // session, so a downloaded song restored with its streaming URL is one the driver
+            // cannot resume offline. Both surfaces restore through this one function (A9).
             val orderedQueue = saved.queueSongIds.mapNotNull { songMap[it] }
+                .map(downloadRepository::resolveLocalUri)
             if (orderedQueue.isEmpty()) return null
 
             // The saved id wins over the saved index: songs that left the catalogue are dropped

@@ -2,11 +2,18 @@ package com.example.nyasaplayer.core.playback
 
 import com.example.nyasaplayer.core.common.models.PlaybackState
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.api.DownloadRepository
+import com.example.nyasaplayer.core.data.local.entity.DownloadEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 /**
  * The restore contract, which both surfaces depend on and neither could test before T3:
@@ -18,17 +25,23 @@ class PlaybackStatePersistenceTest {
     private lateinit var userRepo: TestUserRepository
     private lateinit var authRepo: TestAuthRepository
     private lateinit var songRepo: TestSongRepository
+    private lateinit var downloadRepo: TestDownloadRepository
     private lateinit var persistence: PlaybackStatePersistence
+
+    @get:Rule
+    val downloadsDir = TemporaryFolder()
 
     @Before
     fun setUp() {
         userRepo = TestUserRepository()
         authRepo = TestAuthRepository().apply { userId = "driver-1" }
         songRepo = TestSongRepository()
-        persistence = PlaybackStatePersistence(userRepo, authRepo, songRepo)
+        downloadRepo = TestDownloadRepository()
+        persistence = PlaybackStatePersistence(userRepo, authRepo, songRepo, downloadRepo)
     }
 
-    private fun song(id: String) = Song(mediaId = id, title = id.uppercase())
+    private fun song(id: String) =
+        Song(mediaId = id, title = id.uppercase(), audioUrl = "https://cdn.example/$id.mp3")
 
     private fun savedState(
         currentSongId: String,
@@ -161,4 +174,58 @@ class PlaybackStatePersistenceTest {
         assertEquals(42_000L, restored.positionMs)
         assertEquals(RepeatMode.All, restored.repeatMode)
     }
+
+    // ── Downloaded songs (A9) ──
+
+    @Test
+    fun restore_downloadedSong_comesBackPointingAtTheLocalFile() = runTest {
+        val file = downloadsDir.newFile("b.audio")
+        downloadRepo.paths["b"] = file.absolutePath
+        userRepo.playbackState = savedState("b", listOf("a", "b"), 1)
+        songRepo.songs.value = listOf(song("a"), song("b"))
+
+        val restored = requireNotNull(persistence.restore())
+
+        val expected = file.toURI().toString()
+        assertEquals(expected, restored.song.resolvedAudioUrl)
+        assertEquals(expected, restored.queue[1].resolvedAudioUrl)
+        // The undownloaded neighbour is untouched, so resolution is not blanket rewriting.
+        assertEquals("https://cdn.example/a.mp3", restored.queue[0].resolvedAudioUrl)
+    }
+
+    @Test
+    fun restore_downloadRecordedButFileDeleted_keepsTheStreamUrl() = runTest {
+        downloadRepo.paths["a"] = downloadsDir.root.resolve("gone.audio").absolutePath
+        userRepo.playbackState = savedState("a", listOf("a"), 0)
+        songRepo.songs.value = listOf(song("a"))
+
+        val restored = requireNotNull(persistence.restore())
+
+        assertEquals("https://cdn.example/a.mp3", restored.song.resolvedAudioUrl)
+        assertTrue(restored.queue.single().resolvedAudioUrl.startsWith("https://"))
+    }
+}
+
+/** Only [getLocalFilePath] is consulted on the restore path; the rest is never reached. */
+private class TestDownloadRepository : DownloadRepository {
+    val paths = mutableMapOf<String, String>()
+
+    override fun getLocalFilePath(mediaId: String): String? = paths[mediaId]
+
+    override fun getCompletedDownloads(): Flow<List<DownloadEntity>> = flowOf(emptyList())
+    override fun getAllDownloads(): Flow<List<DownloadEntity>> = flowOf(emptyList())
+    override fun observeDownload(mediaId: String): Flow<DownloadEntity?> = flowOf(null)
+    override fun observeDownloads(mediaIds: List<String>): Flow<List<DownloadEntity>> =
+        flowOf(emptyList())
+    override fun getDownloadedMediaIds(): Flow<List<String>> = flowOf(emptyList())
+    override fun getDownloadedCount(): Flow<Int> = flowOf(0)
+    override fun getTotalDownloadedSize(): Flow<Long> = flowOf(0L)
+    override suspend fun getDownload(mediaId: String): DownloadEntity? = null
+    override suspend fun addDownload(mediaId: String) = Unit
+    override suspend fun updateProgress(mediaId: String, progress: Int) = Unit
+    override suspend fun markCompleted(mediaId: String, filePath: String, fileSize: Long) = Unit
+    override suspend fun markFailed(mediaId: String) = Unit
+    override suspend fun removeDownload(mediaId: String) = Unit
+    override suspend fun removeAllDownloads() = Unit
+    override suspend fun resetStaleDownloads() = Unit
 }

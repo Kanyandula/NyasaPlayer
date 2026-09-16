@@ -4,7 +4,9 @@ import com.example.nyasaplayer.auto.MainDispatcherRule
 import com.example.nyasaplayer.auto.fake.FakeAlbumRepository
 import com.example.nyasaplayer.auto.fake.FakeArtistRepository
 import com.example.nyasaplayer.auto.fake.FakeAuthRepository
+import com.example.nyasaplayer.auto.fake.FakeDownloadRepository
 import com.example.nyasaplayer.auto.fake.FakeGenreRepository
+import com.example.nyasaplayer.auto.fake.FakeSongDownloads
 import com.example.nyasaplayer.auto.fake.FakePlaylistRepository
 import com.example.nyasaplayer.auto.fake.FakeSongRepository
 import com.example.nyasaplayer.auto.fake.FakeUserRepository
@@ -44,6 +46,8 @@ class DetailLoadingTest {
         userRepository = FakeUserRepository(),
         authRepository = FakeAuthRepository(),
         playlistRepository = playlists,
+        downloadRepository = FakeDownloadRepository(),
+        downloadManager = FakeSongDownloads(),
     )
 
     private fun song(id: String) = Song(
