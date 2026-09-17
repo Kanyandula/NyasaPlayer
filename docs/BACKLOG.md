@@ -26,8 +26,6 @@ out to be a bug a driver or user would hit, or a safety gap.
 - `songs/0CvN4z9xMVoRSi6iTjgp` (`mediaId` 190, "mighty") is 705 bytes of zeros in Firebase Storage
   with `durationMs` 0 — a broken upload in the catalogue, not an app bug
   (`docs/AAOS_A9_VERIFICATION.md`, 2026-09-17).
-- `albums/test_album_a9_downloads` is test data added for A9's download pass; delete it when it is
-  no longer wanted.
 
 - A 404 is called "No Connection" on the car (`docs/AAOS_A8_VERIFICATION.md`, "Findings recorded, not fixed here").
 - `CLAUDE.md` doesn't mention Crashlytics or `CrashReporter`.
