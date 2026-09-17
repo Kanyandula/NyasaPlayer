@@ -18,7 +18,7 @@ criterion, each pointing at the evidence rather than restating it.
 | 1 | All 20 screens implemented, matching the design | **Met, with the recorded exception** | 18 screens ship. Screen 2 (PIN opt-in, T18) and screen 1's phone and email sign-in (T19) are deferred past ship by the owner's exception in §12 itself; screen 1 ships with Google sign-in. The type floors the design sets are now met — see `docs/aaos-DESIGN.md` → Typography |
 | 2 | Zero interactive controls below 76dp | **Met** | `CarTouchTargetMeasurementTest`: 119 cases in 161 frames, **695 interactive nodes, 0 below 76dp** |
 | 3 | Every non-disabled text/surface pair ≥ 7:1 | **Met, with the recorded exception** | `CarTextContrastMeasurementTest`: **1103 text nodes, 0 below 7:1**, 55 disabled and exempt, 0 seen only partly in view. The two destructive pairs clear AA and are recorded in `docs/aaos-DESIGN.md` → "Contrast, measured" |
-| 4 | Every §6.2 restriction enforced, eviction included, verified against a real driving-state transition | **Met, except one action** | Q1 was answered yes: `docs/AAOS_DRIVING_STATE_TESTING.md` has the recipe, and the passes are in `docs/AAOS_A5_VERIFICATION.md`, `AAOS_A6_VERIFICATION.md`, `AAOS_T5_T6_VERIFICATION.md`, `AAOS_A8_VERIFICATION.md` and `AAOS_A9_VERIFICATION.md`. The gap: A9's download action was never exercised on a device — see "What is owed" |
+| 4 | Every §6.2 restriction enforced, eviction included, verified against a real driving-state transition | **Met** | Q1 was answered yes: `docs/AAOS_DRIVING_STATE_TESTING.md` has the recipe, and the passes are in `docs/AAOS_A5_VERIFICATION.md`, `AAOS_A6_VERIFICATION.md`, `AAOS_T5_T6_VERIFICATION.md`, `AAOS_A8_VERIFICATION.md` and `AAOS_A9_VERIFICATION.md`. A9's download action was closed on 2026-09-17 once a test album existed: download, offline playback from the file, remove one and Remove All all ran on the car. The one piece still resting on unit tests is the Download control's own "Parked only" state while driving, which the outer drill-down refusal keeps unreachable |
 | 5 | Both variants build, test and lint green; `oem` passes §8.3, `playstore` passes §8.2 | **Met** | The gate above covers both flavors. Manifest gates re-checked today against the release APKs — see the table below |
 | 6 | Detekt reports zero issues | **Met** | 0 issues in today's run |
 | 7 | `AAOS_UI_REDESIGN_PLAN.md` no longer contradicts the shipped architecture | **Met** | Superseded banner added 2026-08-02 |
@@ -41,10 +41,10 @@ descriptor declares `<uses name="media" />`, and `playstore` ships no app activi
 
 ## What is owed
 
-- **A9's download action, on a device.** Downloading, playing from the downloaded file, removing one
-  download and Remove All with content are covered by unit and Robolectric tests, but were never run
-  on the emulator: the action lives on the album screen and the test catalogue has no albums
-  (`docs/AAOS_A9_VERIFICATION.md` → "Not verified"). It needs one album document in Firestore.
+- **T30** — the Remove-all confirmation's buttons are clipped on a 768dp-tall head unit, found by
+  hand on 2026-09-17 because the measurement suite renders at 800dp
+  (`docs/tickets/T30-remove-all-dialog-clipped.md`). Driver-facing, so it is a ticket rather than a
+  backlog line.
 - **T18 and T19**, deferred past ship by the §12 exception, and parked in `docs/BACKLOG.md`.
 - **The `HR-*` host-render smoke tests** (§8.4) are not part of this release: they run before a Play
   submission decision, which §3.2 makes a later business call.
