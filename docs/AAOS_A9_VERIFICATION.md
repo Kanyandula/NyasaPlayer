@@ -58,7 +58,10 @@ unit tests cover the control itself.
 - **One catalogue song is a broken file.** `mighty` (`mediaId` 190) is 705 bytes of zeros in Firebase
   Storage, and `durationMs` is 0. The app downloaded it faithfully — this is the source, not the
   downloader. Recorded in `docs/BACKLOG.md`.
-- **The test album stays in Firestore** until the owner deletes it: `albums/test_album_a9_downloads`.
+- **The test album is gone.** `albums/test_album_a9_downloads` was deleted at the owner's request on
+  2026-09-17, once the pass was recorded, so the catalogue is back to no albums. Repeating this pass
+  means adding one again: name, `artistId`/`artistName` matching an existing artist, `imageUrl`,
+  `songIds` holding song `mediaId`s, `popularity`, `releaseDate` — the doc ID becomes the album ID.
 
 ## Emulator note
 
