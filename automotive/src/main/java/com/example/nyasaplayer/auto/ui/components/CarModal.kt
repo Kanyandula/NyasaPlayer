@@ -4,12 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +24,11 @@ import com.example.nyasaplayer.auto.ui.theme.CarScrim
 private const val ModalWidthFraction = 0.5f
 private val ModalCornerRadius = 24.dp
 private val ModalPadding = 48.dp
+
+/** Below this much room for the card, the compact values apply (T30). */
+private val CompactModalHeight = 420.dp
+private val CompactModalPadding = 24.dp
+private const val CompactModalWidthFraction = 0.72f
 
 /**
  * The dimmed backdrop every modal in the shell sits on, and the tap that dismisses it.
@@ -50,7 +58,11 @@ fun CarModalScrim(
 }
 
 /**
- * The half-width glass card the sign-out and error modals share.
+ * The glass card the sign-out, error and remove-all modals share: half the slot's width, or
+ * [CompactModalWidthFraction] of it with tighter padding when the slot is short (T30).
+ *
+ * Its content is measured at its own height, so a child must not use `Modifier.weight` — there is
+ * no bounded height to share out.
  *
  * [carConsumeTouches] is what keeps a tap on the card from bubbling to [CarModalScrim] and
  * dismissing the modal underneath the driver's finger. A card with no guard at all does leak that
@@ -69,14 +81,26 @@ fun CarModalCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth(ModalWidthFraction)
-            .clip(RoundedCornerShape(ModalCornerRadius))
-            .background(CarGlass)
-            .carConsumeTouches()
-            .padding(ModalPadding),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        content = content,
-    )
+    BoxWithConstraints(modifier = modifier) {
+        // A short slot buys height twice over: less padding, and a wider card, which costs the
+        // body a line of wrapping.
+        val compact = maxHeight < CompactModalHeight
+        val padding = if (compact) CompactModalPadding else ModalPadding
+        val width = if (compact) CompactModalWidthFraction else ModalWidthFraction
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(width)
+                .clip(RoundedCornerShape(ModalCornerRadius))
+                .background(CarGlass)
+                .carConsumeTouches()
+                // The last resort when even compact padding does not fit. Without it a Column hands
+                // its children whatever height is left, so a 76dp button in a cramped slot is
+                // measured at 28dp and a driver gets a squashed control that still takes a tap
+                // (T30). With it the card keeps every child its own size and moves the overflow.
+                .verticalScroll(rememberScrollState())
+                .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = content,
+        )
+    }
 }

@@ -235,7 +235,8 @@ private fun RemoveAllPill(
             Text(
                 text = if (isDriving) "Locked" else "Remove All",
                 color = CarSignOutRed.copy(alpha = alpha),
-                fontSize = 16.sp,
+                // NFR-3's floor for an interactive label, as on the queue's Clear Queue.
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
             )
         }

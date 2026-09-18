@@ -19,9 +19,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.core.common.ui.icons.CloudOffIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
 
+private val BannerTextSize = 14.sp
 private val BannerIconSize = 16.dp
 
 @Composable
@@ -52,7 +54,9 @@ fun OfflineBanner(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "No internet connection",
-                style = MaterialTheme.typography.labelMedium,
+                // labelMedium is 12sp, under the 14sp floor the car design sets for any text a
+                // driver reads at arm's length (docs/aaos-DESIGN.md, Typography).
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = BannerTextSize),
                 color = Color.White,
             )
         }

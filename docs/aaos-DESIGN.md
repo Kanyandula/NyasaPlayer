@@ -172,6 +172,9 @@ Hanken Grotesk throughout. No text may render below 14px, and no interactive lab
 the Android implementation; do not carry over generated negative tracking from the static
 mockups.
 
+Both floors are measured by `CarTextSizeMeasurementTest` (T30), from what Compose laid out rather
+than from the source, so a size inherited from a theme is judged as the driver sees it.
+
 **The 18px label floor means a button or CTA's own label** — the text a driver reads to know what
 the control does. A tab label under an icon in the rail is not one: the rail is 80px wide, and
 "Favourites" at 18px does not fit beside its icon. Those take the 14px text floor (owner, 2026-09-16,
