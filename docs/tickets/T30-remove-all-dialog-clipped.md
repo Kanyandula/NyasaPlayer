@@ -2,7 +2,7 @@
 
 - **Slice:** AAOS downloads — A9 follow-up
 - **Depends on:** A9 (merged, PR #67)
-- **Status:** Fixed — see Outcome; device re-check owed
+- **Status:** Fixed and device-verified — see Outcome
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest --tests '*CarDownloadsScreenTest*'`
 - **Design Reference:** `docs/aaos-DESIGN.md` → modals; A9's `CarDownloadsScreen`
 - **Risk Tags:** driver-facing, layout, screen height
@@ -60,9 +60,15 @@ live violations — the offline banner at 12sp (`:core:common`, so the phone had
 Downloads screen's Remove All at 16sp. Rail tabs are the design's recorded exception and now carry
 `Role.Tab`, which is also what TalkBack should announce.
 
-**Owed:** the on-device re-check. Reproducing the dialog needs downloads, which needs an album in
-the catalogue; the test album added for A9 was deleted at the owner's request
-(`docs/AAOS_A9_VERIFICATION.md`).
+Compact padding alone did not fit: the body wraps to three lines in a half-width card. The card
+also widens when the slot is short, which costs the body a line, and only falls back to scrolling
+if even that does not fit.
+
+**Device-verified 2026-09-18** on `AAOS_AOSP_33_userdebug`, in the state that failed: offline so the
+banner takes its 36dp, two songs downloaded, the same Downloads screen. Both buttons now render
+whole inside the card at full height with readable labels, and Remove All emptied
+`files/downloads/`. A test album was added to Firestore for the check and deleted afterwards, at the
+owner's request, so the catalogue has no albums again.
 
 ## Notes
 

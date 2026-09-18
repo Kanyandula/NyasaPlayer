@@ -292,7 +292,13 @@ private fun InCrampedContentSlot(content: @Composable BoxScope.() -> Unit) {
     }
 }
 
-private val CrampedSlotHeight = 360.dp
+/**
+ * What the slot came to on the emulator with the offline banner up, screen margins included: the
+ * panel's 768dp less the car's own bars, the app's system bar and its mini-player. Measured from
+ * the screenshots in `docs/tickets/T30-remove-all-dialog-clipped.md`, where the card had 276dp to
+ * live in — not a number chosen to make a point.
+ */
+private val CrampedSlotHeight = 372.dp
 
 // ── Fixture data ──
 
