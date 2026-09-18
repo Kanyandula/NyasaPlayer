@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +77,11 @@ fun CarModalCard(
             .clip(RoundedCornerShape(ModalCornerRadius))
             .background(CarGlass)
             .carConsumeTouches()
+            // Scrolls only when the slot is too short for the card. Without it a Column hands its
+            // children whatever height is left, so a 76dp button in a cramped slot is measured at
+            // 28dp and a driver gets a squashed control that still takes a tap (T30). With it the
+            // card keeps every child its own size and moves the overflow rather than crushing it.
+            .verticalScroll(rememberScrollState())
             .padding(ModalPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         content = content,

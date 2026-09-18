@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -120,7 +121,9 @@ private fun CarNavRailItem(
         modifier = modifier
             .fillMaxWidth()
             .height(RailItemHeight)
-            .clickable(onClick = onClick),
+            // A tab, not a button: TalkBack says so, and the type floor for a button's label does
+            // not apply to a tab label under an icon (docs/aaos-DESIGN.md, Typography).
+            .clickable(onClick = onClick, role = Role.Tab),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

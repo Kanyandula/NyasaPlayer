@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -139,6 +141,8 @@ private fun CarUiCase.scrolling() = copy(scrollsList = true)
  */
 internal const val MeasurementQualifiers = "w1280dp-h800dp-xhdpi"
 
+
+
 /**
  * Renders each case in turn and hands it to [measure] once it is idle.
  *
@@ -263,6 +267,32 @@ private val ContentSlot = Modifier
 private fun InContentSlot(content: @Composable BoxScope.() -> Unit) {
     Box(modifier = ContentSlot, content = content)
 }
+
+/**
+ * The slot at its most cramped: the offline banner above it — the state a driver is in when
+ * Downloads is worth opening — and only [CrampedSlotHeight] of height for the screen itself.
+ *
+ * A modal has to fit the slot it is drawn in, and the slot is not the screen. On the emulator the
+ * car's own bars, the app's chrome and this banner left the Remove-all confirmation less room than
+ * its card needed, and its buttons were cut in half while still taking a tap (T30). The height here
+ * is deliberately tighter than any head unit rather than a guess at one: what it proves is that the
+ * card adapts, not that one panel happens to fit.
+ */
+@Composable
+private fun InCrampedContentSlot(content: @Composable BoxScope.() -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        OfflineBanner(isOffline = true, modifier = Modifier.padding(top = CarSystemBarHeight))
+        Box(
+            modifier = Modifier
+                .height(CrampedSlotHeight)
+                .padding(start = CarNavRailWidth)
+                .padding(CarScreenMargin),
+            content = content,
+        )
+    }
+}
+
+private val CrampedSlotHeight = 360.dp
 
 // ── Fixture data ──
 
@@ -811,6 +841,13 @@ private fun downloadsCases(): List<CarUiCase> {
             scope = removeAllDialog or hasAnyAncestor(removeAllDialog),
             interact = { rule -> rule.onAllNodesWithText("Remove All")[0].performClick() },
         ) { Downloads(DownloadItems, isDriving = false, maxItems = 21) },
+        // The regression case for T30: a slot too short for the card, which is what the emulator
+        // gave it once the car's bars, the chrome and the offline banner had taken their share.
+        CarUiCase(
+            name = "CarDownloadsScreen/cramped slot, remove-all confirmation open",
+            scope = removeAllDialog or hasAnyAncestor(removeAllDialog),
+            interact = { rule -> rule.onAllNodesWithText("Remove All")[0].performClick() },
+        ) { Downloads(DownloadItems, isDriving = false, maxItems = 21, cramped = true) },
     )
 }
 
@@ -822,8 +859,15 @@ private fun downloadsCase(
 ) = CarUiCase("CarDownloadsScreen/$state") { Downloads(items, isDriving, maxItems) }
 
 @Composable
-private fun Downloads(items: List<CarDownloadItem>, isDriving: Boolean, maxItems: Int) {
-    InContentSlot {
+private fun Downloads(
+    items: List<CarDownloadItem>,
+    isDriving: Boolean,
+    maxItems: Int,
+    cramped: Boolean = false,
+) {
+    val slot: @Composable (@Composable BoxScope.() -> Unit) -> Unit =
+        if (cramped) { inner -> InCrampedContentSlot(inner) } else { inner -> InContentSlot(inner) }
+    slot {
         CarDownloadsScreen(
             items = items,
             isDriving = isDriving,

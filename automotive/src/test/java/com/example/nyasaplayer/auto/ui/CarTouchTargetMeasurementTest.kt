@@ -27,19 +27,17 @@ import org.robolectric.annotation.GraphicsMode
  *
  * Collects every violation and fails once, so one run is the whole list.
  */
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = MeasurementQualifiers)
-class CarTouchTargetMeasurementTest {
+abstract class CarTouchTargetMeasurement {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun `no interactive control on any car screen is below 76dp`() {
+    fun `no interactive control on any car screen is below 76dp or clipped`() {
         val minPx = with(composeRule.density) { CarTouchTargetSize.roundToPx() }
         val density = composeRule.density.density
         val violations = mutableListOf<String>()
+        val clipped = mutableListOf<String>()
         var measured = 0
         var frames = 0
 
@@ -55,16 +53,24 @@ class CarTouchTargetMeasurementTest {
                     "${dp(node.size.width, density)} x ${dp(node.size.height, density)} dp " +
                     "at (${dp(node.boundsInWindow.left, density)}, ${dp(node.boundsInWindow.top, density)})"
             }
+            nodes.filter { it.isClipped() }.forEach { node ->
+                clipped += "${case.name} | ${node.label()} | laid out " +
+                    "${dp(node.size.width, density)} x ${dp(node.size.height, density)} dp, " +
+                    "visible ${dp(node.boundsInWindow.width, density)} x " +
+                    "${dp(node.boundsInWindow.height, density)} dp"
+            }
         }
 
         println(
             "Touch targets: ${carUiCases.size} cases in $frames frames, $measured interactive nodes, " +
-                "${violations.size} below 76dp",
+                "${violations.size} below 76dp, ${clipped.size} clipped",
         )
         assertTrue(
             "${violations.size} interactive controls below 76dp across ${carUiCases.size} cases " +
-                "(case | node | width x height):\n" + violations.joinToString("\n"),
-            violations.isEmpty(),
+                "(case | node | width x height):\n" + violations.joinToString("\n") +
+                "\n${clipped.size} interactive controls drawn only in part, so a driver cannot read " +
+                "them whole (case | node | laid out | visible):\n" + clipped.joinToString("\n"),
+            violations.isEmpty() && clipped.isEmpty(),
         )
     }
 
@@ -77,6 +83,29 @@ class CarTouchTargetMeasurementTest {
         }
 
         fun dp(px: Number, density: Float): String = "%.0f".format(px.toFloat() / density)
+
+        /**
+         * True when a container that cannot scroll cuts the node off: its laid-out size is larger
+         * than what the window shows of it. Such a control still takes a tap, so only measurement
+         * catches it — the Remove-all confirmation's buttons were cut in half on a 768dp-tall head
+         * unit and no gate noticed (T30).
+         *
+         * A row half out of a scrolling list is not this: the driver scrolls and sees it whole. Only
+         * clipping with no scroll to undo it counts.
+         */
+        fun SemanticsNode.isClipped(): Boolean {
+            val slack = 1f
+            val cut = boundsInWindow.width < size.width - slack ||
+                boundsInWindow.height < size.height - slack
+            return cut && !inScrollable()
+        }
+
+        fun SemanticsNode.inScrollable(): Boolean = generateSequence(parent) { it.parent }.any {
+            SemanticsActions.ScrollBy in it.config ||
+                SemanticsActions.ScrollToIndex in it.config ||
+                SemanticsProperties.VerticalScrollAxisRange in it.config ||
+                SemanticsProperties.HorizontalScrollAxisRange in it.config
+        }
 
         /** What a reader can find the node by: its own text or description, else its nearest child's. */
         fun SemanticsNode.label(): String {
@@ -97,3 +126,8 @@ class CarTouchTargetMeasurementTest {
         ).joinToString(" ")
     }
 }
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = MeasurementQualifiers)
+class CarTouchTargetMeasurementTest : CarTouchTargetMeasurement()
