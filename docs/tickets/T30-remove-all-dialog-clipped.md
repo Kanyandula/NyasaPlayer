@@ -70,6 +70,20 @@ whole inside the card at full height with readable labels, and Remove All emptie
 `files/downloads/`. A test album was added to Firestore for the check and deleted afterwards, at the
 owner's request, so the catalogue has no albums again.
 
+## Decisions from the review
+
+- **A second canvas was tried and dropped.** Running every case at the emulator's size squeezed the
+  fixtures rather than modelling the car — component cases came out with 68dp rows that no screen
+  has — so the suite keeps one canvas and pins this bug with the cramped *case* instead. Scope item
+  two of this ticket is met that way, not by a second `@Config`.
+- **The scroll fallback cannot stand in for the fix.** The clipping check ignores anything inside a
+  scroll container, and the card always has one, so the cramped case asserts the card's vertical
+  scroll range is zero. Verified by deleting the compact branch and watching it fail.
+- **Left alone, with reasons:** a control whose label is split across two `Text`s falls back to the
+  14sp floor, and `Role.Tab` exempts wholesale — both are the rule working as written, and neither
+  has a case in the app today. `BasicTextField` publishes `EditableText`, so the search field's own
+  text is outside this measurement.
+
 ## Notes
 
 - **Why it is not "just cosmetic".** The dialog is destructive and the labels are the only thing

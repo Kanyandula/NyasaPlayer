@@ -28,7 +28,10 @@ import org.robolectric.annotation.GraphicsMode
  *
  * Collects every violation and fails once, so one run is the whole list.
  */
-abstract class CarTouchTargetMeasurement {
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = MeasurementQualifiers)
+class CarTouchTargetMeasurementTest {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
@@ -167,8 +170,3 @@ abstract class CarTouchTargetMeasurement {
         ).joinToString(" ")
     }
 }
-
-@RunWith(RobolectricTestRunner::class)
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = MeasurementQualifiers)
-class CarTouchTargetMeasurementTest : CarTouchTargetMeasurement()
