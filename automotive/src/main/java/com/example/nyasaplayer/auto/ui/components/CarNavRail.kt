@@ -3,7 +3,6 @@ package com.example.nyasaplayer.auto.ui.components
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +13,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -121,9 +121,10 @@ private fun CarNavRailItem(
         modifier = modifier
             .fillMaxWidth()
             .height(RailItemHeight)
-            // A tab, not a button: TalkBack says so, and the type floor for a button's label does
+            // A tab, and which one is current: announcing the role without the selected state
+            // tells a screen reader less than it needs. The type floor for a button's label does
             // not apply to a tab label under an icon (docs/aaos-DESIGN.md, Typography).
-            .clickable(onClick = onClick, role = Role.Tab),
+            .selectable(selected = selected, onClick = onClick, role = Role.Tab),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -74,7 +75,47 @@ abstract class CarTouchTargetMeasurement {
         )
     }
 
+    /**
+     * The cramped confirmation fits its card **without scrolling**.
+     *
+     * `CarModalCard` scrolls as a last resort, and the clipping check above exempts anything inside
+     * a scroll container — so between them they would report a squashed modal as healthy. This is
+     * the assertion that fails if the compact padding and width stop carrying the card: a card that
+     * has to scroll is the fallback doing the work, not the fix.
+     */
+    @Test
+    fun `the cramped remove-all confirmation fits its card without scrolling`() {
+        val cramped = carUiCases.filter { "cramped slot" in it.name }
+        check(cramped.size == 1) { "expected one cramped case, found ${cramped.map { it.name }}" }
+
+        composeRule.forEachCarUiCase(cramped) { case ->
+            val card = composeRule
+                .onAllNodes(IsModalCard, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .singleOrNull()
+            checkNotNull(card) { "${case.name}: expected one scrollable card holding the dialog" }
+            val range = card.config[SemanticsProperties.VerticalScrollAxisRange]
+            assertEquals(
+                "${case.name}: the card scrolls, so its content does not fit the slot",
+                0f,
+                range.maxValue(),
+                0f,
+            )
+        }
+    }
+
     private companion object {
+        /** The modal card: the one vertically scrollable node holding the dialog's title. */
+        val IsModalCard = SemanticsMatcher("is the scrollable modal card") { node ->
+            SemanticsProperties.VerticalScrollAxisRange in node.config &&
+                generateSequence(listOf(node)) { level -> level.flatMap { it.children }.ifEmpty { null } }
+                    .flatten()
+                    .any { child ->
+                        child.config.getOrNull(SemanticsProperties.Text)
+                            ?.any { "Remove all downloads?" in it.text } == true
+                    }
+        }
+
         val Interactive = SemanticsMatcher("has a click, long-click, toggle or set-progress action") {
             SemanticsActions.OnClick in it.config ||
                 SemanticsActions.OnLongClick in it.config ||

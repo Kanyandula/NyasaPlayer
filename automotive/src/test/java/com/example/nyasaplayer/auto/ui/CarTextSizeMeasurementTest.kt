@@ -2,8 +2,8 @@ package com.example.nyasaplayer.auto.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -17,6 +17,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.util.Locale
 
 /**
  * PRD §12 exit criterion 1, the part of `docs/aaos-DESIGN.md` → Typography that a measurement can
@@ -44,6 +45,7 @@ class CarTextSizeMeasurementTest {
     fun `no car text is below 14sp and no interactive label below 18sp`() {
         val violations = mutableListOf<String>()
         var measured = 0
+        var skipped = 0
         var frames = 0
 
         composeRule.forEachCarUiCase { case ->
@@ -52,14 +54,21 @@ class CarTextSizeMeasurementTest {
             composeRule.onAllNodes(matcher, useUnmergedTree = true).fetchSemanticsNodes().forEach { node ->
                 val text = node.text()
                 if (text.isBlank()) return@forEach
-                val sp = node.fontSizeSp() ?: return@forEach
+                // No layout result, or a size in Em or unspecified: unmeasurable, and counted as
+                // such rather than passing quietly. Compose's own 14sp default would clear the
+                // text floor but not the 18sp one.
+                val sp = node.fontSizeSp() ?: run {
+                    skipped++
+                    return@forEach
+                }
                 measured++
                 val interactive = node.isInteractiveLabel()
                 val floor = if (interactive) InteractiveLabelFloorSp else TextFloorSp
                 if (sp < floor - Slack) {
                     val kind = if (interactive) "interactive label" else "text"
-                    // Built by interpolation, not format(): the text itself can contain a percent.
-                    val shown = "%.1f".format(sp).removeSuffix(".0")
+                    // The message is interpolated, never a format string: the text it quotes can
+                    // contain a percent. Locale.ROOT so a comma-decimal locale still prints "15.5".
+                    val shown = "%.1f".format(Locale.ROOT, sp).removeSuffix(".0")
                     violations += "${case.name} | \"$text\" | $kind at ${shown}sp, floor ${floor.toInt()}sp"
                 }
             }
@@ -67,7 +76,7 @@ class CarTextSizeMeasurementTest {
 
         println(
             "Text size: ${carUiCases.size} cases in $frames frames, $measured text nodes measured, " +
-                "${violations.size} below their floor",
+                "$skipped with no measurable size, ${violations.size} below their floor",
         )
         assertTrue(
             "${violations.size} texts below the type floors across ${carUiCases.size} cases " +

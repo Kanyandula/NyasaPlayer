@@ -58,7 +58,11 @@ fun CarModalScrim(
 }
 
 /**
- * The half-width glass card the sign-out and error modals share.
+ * The glass card the sign-out, error and remove-all modals share: half the slot's width, or
+ * [CompactModalWidthFraction] of it with tighter padding when the slot is short (T30).
+ *
+ * Its content is measured at its own height, so a child must not use `Modifier.weight` — there is
+ * no bounded height to share out.
  *
  * [carConsumeTouches] is what keeps a tap on the card from bubbling to [CarModalScrim] and
  * dismissing the modal underneath the driver's finger. A card with no guard at all does leak that
