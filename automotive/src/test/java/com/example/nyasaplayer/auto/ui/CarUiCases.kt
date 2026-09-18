@@ -141,8 +141,6 @@ private fun CarUiCase.scrolling() = copy(scrollsList = true)
  */
 internal const val MeasurementQualifiers = "w1280dp-h800dp-xhdpi"
 
-
-
 /**
  * Renders each case in turn and hands it to [measure] once it is idle.
  *
@@ -871,9 +869,7 @@ private fun Downloads(
     maxItems: Int,
     cramped: Boolean = false,
 ) {
-    val slot: @Composable (@Composable BoxScope.() -> Unit) -> Unit =
-        if (cramped) { inner -> InCrampedContentSlot(inner) } else { inner -> InContentSlot(inner) }
-    slot {
+    val content: @Composable BoxScope.() -> Unit = {
         CarDownloadsScreen(
             items = items,
             isDriving = isDriving,
@@ -888,6 +884,7 @@ private fun Downloads(
             isPlaying = true,
         )
     }
+    if (cramped) InCrampedContentSlot(content) else InContentSlot(content)
 }
 
 private fun sheetCases(): List<CarUiCase> = listOf(
