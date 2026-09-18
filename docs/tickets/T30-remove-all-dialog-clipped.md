@@ -2,7 +2,7 @@
 
 - **Slice:** AAOS downloads — A9 follow-up
 - **Depends on:** A9 (merged, PR #67)
-- **Status:** Filed, not specced
+- **Status:** Fixed — see Outcome; device re-check owed
 - **Verification Command:** `./gradlew :automotive:testOemDebugUnitTest --tests '*CarDownloadsScreenTest*'`
 - **Design Reference:** `docs/aaos-DESIGN.md` → modals; A9's `CarDownloadsScreen`
 - **Risk Tags:** driver-facing, layout, screen height
@@ -39,6 +39,30 @@ is 32dp shorter.
 - Given a 768dp-tall canvas, when the Remove-all confirmation is shown, then both buttons render
   whole, inside the card.
 - Given the measurement suite, then a control clipped by its own container fails the run.
+
+## Outcome
+
+The cause was not clipping by the card but **squashing inside it**: a `Column` hands each child
+whatever height is left, so `ConfirmButton`'s `Modifier.height(CarTouchTargetSize)` was measured at
+28dp when the slot was short. The buttons were their full width, a third of their height, and still
+took a tap — which is why every gate passed and only a screenshot caught it.
+
+`CarModalCard` now scrolls when the content does not fit, which makes the Column measure its
+children at their own heights and move the overflow instead of crushing it. Every modal that shares
+the card gets the same guarantee.
+
+Measured before and after in `CarUiCases`' "cramped slot, remove-all confirmation open" case:
+Cancel and Remove went from 200 x 28 dp to 200 x 76 dp.
+
+`CarTextSizeMeasurementTest` is the type measurement NFR-3 never had: no text under 14sp, no
+control's own label under 18sp, read from `GetTextLayoutResult` rather than the source. It found two
+live violations — the offline banner at 12sp (`:core:common`, so the phone had it too) and the
+Downloads screen's Remove All at 16sp. Rail tabs are the design's recorded exception and now carry
+`Role.Tab`, which is also what TalkBack should announce.
+
+**Owed:** the on-device re-check. Reproducing the dialog needs downloads, which needs an album in
+the catalogue; the test album added for A9 was deleted at the owner's request
+(`docs/AAOS_A9_VERIFICATION.md`).
 
 ## Notes
 
