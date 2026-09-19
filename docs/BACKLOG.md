@@ -7,7 +7,8 @@ out to be a bug a driver or user would hit, or a safety gap.
 ## Specced or filed tickets, parked
 
 - **T27** — report a controller found disconnected as a non-fatal (`docs/tickets/T27-tripwire-non-fatal.md`).
-- **T28** — mobile uses the shared offline rule (`docs/tickets/T28-mobile-offline-rule.md`).
+- **T31** — a downloaded song played from outside the app ignores its download
+  (`docs/tickets/T31-add-media-items-ignores-downloads.md`). Both surfaces.
 - **T20** — audio quality preference (`docs/tickets/T20-audio-quality-preference.md`).
 - **T19** — car phone and email sign-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T19-car-auth-phone-and-email.md`).
 - **T18** — car PIN opt-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T18-car-pin-opt-in.md`).
@@ -34,11 +35,6 @@ wrap and a driving-state pass (T13, T14).
 - `CLAUDE.md` doesn't mention Crashlytics or `CrashReporter`.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
 - The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:308`), not as a modal over the queue.
-- `PlaybackService.onAddMediaItems` (`PlaybackService.kt:163-182`) maps catalogue songs straight to
-  `MediaItem` without `resolveLocalUri`, so a song the user has downloaded still arrives with its
-  `https:` URI and will not play offline. The path serves external controllers — Assistant,
-  Bluetooth, system media resumption — on both surfaces, and on the car it is also how the OEM
-  template's browse items are played. Found while speccing T28 (2026-09-19), which is `:app`-only.
 - A download refused because the phone is offline tells the user nothing: the overflow sheet closes
   like a download has started, no Snackbar follows, and Downloads still reads "No downloads yet"
   rather than showing a failed row (`docs/T29_VERIFICATION.md`, 2026-09-19).
