@@ -2,7 +2,7 @@
 
 - **Slice:** observability, playback lifecycle — story T24
 - **Depends on:** T26 (the reporter class), T16 (closed; this is its tripwire)
-- **Status:** Specced, not started
+- **Status:** Done — merged as #82 on 2026-09-19, device-proven; see Outcome
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:testDebugUnitTest :app:assembleRelease :automotive:assembleOemRelease`
 - **Design Reference:** T24 D7, D8; T16 Outcome; `docs/aaos-DESIGN.md` D65
 - **Risk Tags:** playback lifecycle, both surfaces, module boundary, privacy
@@ -76,3 +76,47 @@ again.
   `:core:playback` already depends on `:core:data` and could reach the reporter. But that would
   change the collector's constructor, which four places build (two ViewModels, two test classes),
   and it would put Firebase in the collector's tests. The hook changes neither.
+
+## Outcome
+
+`BasePlayerStateCollector.onControllerFoundDisconnected()` fires only when the controller was there
+and disconnected; both surfaces override it and call
+`CrashReporter.reportControllerFoundDisconnected()`, which records a non-fatal with a fixed message.
+`:core:playback` gained no reference to the reporter and no Firebase dependency — criterion 3 — which
+is the whole reason the hook exists rather than the collector reporting for itself.
+
+It fires **after** `connection.reconnect()`, inside a guard. Called before it, an override that threw
+would have left `reconnecting` set with nothing to clear it, and the surface would have stopped
+recovering for the life of the process. Review caught that.
+
+### The staged device check (criterion 4)
+
+Run 2026-09-19 on `Pixel_9_Pro_Fold_API_35`, signed release build, with a local uncommitted line
+firing the hook from a control — reverted immediately, and absent from the merged diff. The detail
+is in PR #82 as the ticket asked; what the dashboard returned:
+
+- `java.lang.IllegalStateException: T16 tripwire: transport command found a disconnected controller`
+- `NON_FATAL`, one event, one user, state OPEN
+- `customKeys: surface: mobile`
+- build stamp naming the commit under test
+
+**It corrected a claim in the docs.** The issue came back titled after the *calling frame*, not the
+message, so Crashlytics groups by stack. `docs/CRASH_REPORTING.md` said the opposite and now says
+what the check showed; a fixed message is still right, because a unique one churns the issue title.
+
+### What the tests do and do not cover
+
+Three JVM cases — reports once when disconnected, never when the controller was always null, and not
+again after a rebuild. Deleting the hook call fails the first.
+
+Criterion 1's second half — taps arriving *while* a rebuild is in flight — is **not** covered.
+Asserting the precondition showed this harness rebuilds synchronously: the second tap already
+succeeds, so no tap can land mid-rebuild. The guard is `onControllerLost`'s `compareAndSet`, covered
+from the rebuild side by `repeatedFailuresWhileReconnecting_doNotQueueAttempts` — which has the same
+shape and may be equally optimistic about what it exercises.
+
+### Also here
+
+`applyRestored` moved to file level. The class had reached detekt's function ceiling and my first
+answer was a `@Suppress`, which contradicts D23 in `docs/aaos-DESIGN.md` — a decision that names this
+class and says a threshold is not answered with a suppression.
