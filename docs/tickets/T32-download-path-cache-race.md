@@ -191,5 +191,5 @@ Acceptance criterion 3 — cold boot, offline, play from the car template — pa
 fix (`docs/tickets/T31-…` device pass), because the window is too narrow to hit by hand. Re-running
 it would prove nothing this change did not already prove in tests.
 
-`./gradlew test detekt :app:lintDebug :automotive:lintOemDebug` — BUILD SUCCESSFUL, **844 tests,
+`./gradlew test detekt :app:lintDebug :automotive:lintOemDebug` — BUILD SUCCESSFUL, **850 tests,
 0 failures**, detekt and lint clean.

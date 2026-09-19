@@ -7,9 +7,6 @@ out to be a bug a driver or user would hit, or a safety gap.
 ## Specced or filed tickets, parked
 
 - **T27** — report a controller found disconnected as a non-fatal (`docs/tickets/T27-tripwire-non-fatal.md`).
-- **T32** — a downloaded song reads as undownloaded for the first moments after process start
-  (`docs/tickets/T32-download-path-cache-race.md`). Both surfaces. Not reproducible by hand — the
-  car attempt on 2026-09-19 failed to provoke it, so the evidence has to come from a test.
 - **T20** — audio quality preference (`docs/tickets/T20-audio-quality-preference.md`).
 - **T19** — car phone and email sign-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T19-car-auth-phone-and-email.md`).
 - **T18** — car PIN opt-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T18-car-pin-opt-in.md`).
@@ -37,9 +34,10 @@ wrap and a driving-state pass (T13, T14).
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
 - The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:308`), not as a modal over the queue.
 - Six resolution sites still read the download index without awaiting it —
-  `PlayerViewModel.kt:190,195,213` and `AutomotivePlayerViewModel.kt:273,280,297`. They are
-  non-suspend and a tap is slow enough that the window has closed, so T32 left them; the visible
-  symptom if one ever lost the race is "no connection" on a downloaded song (2026-09-19).
+  `PlayerViewModel.kt:190,195,213` and `AutomotivePlayerViewModel.kt:273,280,297`. T32 gave the two
+  suspend paths an await and left these: they are non-suspend, and a tap is far slower than the
+  load. If one ever lost the race the user would see "no connection" on a downloaded song
+  (`docs/tickets/T32-download-path-cache-race.md`, 2026-09-19).
 - A download refused because the phone is offline tells the user nothing: the overflow sheet closes
   like a download has started, no Snackbar follows, and Downloads still reads "No downloads yet"
   rather than showing a failed row (`docs/T29_VERIFICATION.md`, 2026-09-19).
