@@ -84,10 +84,49 @@ Checked by the owner through the Crashlytics reporting API on 2026-09-15, during
 19:26:05 IST on 2026-09-14, and `topVersions` over 2026-09-14 and 2026-09-15 counts two events in
 all, this one and T26's release crash. The debug crash never reached the dashboard.
 
-## The phone — not run, owed
+## The phone — run 2026-09-19
 
-`Medium_Phone_API_35` refused the release build: `adb install -r` →
-`INSTALL_FAILED_INSUFFICIENT_STORAGE` (`/data` 95% full, 316 MB free). This is the same
-low-storage block that stopped the T29 phone pass (`docs/T29_VERIFICATION.md`). Owed: the release and
-debug pair above, on the phone, alongside the T28, T29 and T14 mobile passes. T26 ran its phone
-checks on `Pixel_9_Pro_Fold_API_35`, which has room.
+`Medium_Phone_API_35` had refused the release build on 2026-09-14: `adb install -r` →
+`INSTALL_FAILED_INSUFFICIENT_STORAGE` (`/data` 95% full, 316 MB free), the same low-storage block
+that stopped the T29 phone pass. The pass was re-run on `Pixel_9_Pro_Fold_API_35`
+(`emulator-5558`, API 35, `/data` 37% used), signed in, against `:app` at `a0214b1`.
+
+The release APK has no `signingConfig`, so `app-release-unsigned.apk` was signed locally with
+`apksigner` and `~/.android/debug.keystore` — the same method the car used. Builds were swapped with
+`adb install -r`, which keeps the signed-in data directory; the stored-report ambiguity that would
+otherwise create was removed by hand, see below.
+
+| Step | Result |
+|---|---|
+| One stale report from an earlier debug crash sat in `priority-reports` (`6AA9859A…`) | Deleted before the release install, with the owner's standing approval, so any upload could only be this run's |
+| Release: install, launch (pid 7637), `am crash 7637`, relaunch (pid 7790) | **Sent.** `POST https://crashlyticsreports-pa.googleapis.com/v1/firelog/legacy/batchlog` → `Status Code: 200` at 12:21:58 IST, 5 s after relaunch |
+| Debug: install, launch (pid 8008), `am crash 8008`, relaunch (pid 8130) | **Not sent.** No enqueue and no request to `crashlyticsreports-pa` after the crash or the relaunch |
+| Debug crash stored instead | `priority-reports/6AAE70C900F600011F482AA5BF87E6E8`, written but never uploaded; deleted afterwards so the next release run in this data directory starts clean |
+| Dashboard | `topVersions` over 2026-09-19 counts **one** event, version `1.0 (1)` — the release crash. The debug crash is not there |
+
+The release upload, from the relaunch after the crash (`adb logcat -s FirebaseCrashlytics
+TRuntime.CctTransportBackend`):
+
+```
+09-19 12:21:53.678  7790  7790 I FirebaseCrashlytics: Initializing Firebase Crashlytics 19.4.4 for com.example.nyasaplayer
+09-19 12:21:58.121  7790  7805 I TRuntime.CctTransportBackend: Making request to: https://crashlyticsreports-pa.googleapis.com/v1/firelog/legacy/batchlog
+09-19 12:21:58.291  7790  7805 I TRuntime.CctTransportBackend: Status Code: 200
+```
+
+The debug relaunch, same filter, over a window twice as long — the SDK starts and stops there:
+
+```
+09-19 12:24:21.586  8130  8130 I FirebaseCrashlytics: Initializing Firebase Crashlytics 19.4.4 for com.example.nyasaplayer
+09-19 12:24:21.709  8130  8149 I FirebaseCrashlytics: Saved version control info
+```
+
+`topIssues` returns nothing for this app over the last seven days, including the 2026-09-14 and
+2026-09-15 car events that are known to be on the dashboard: the reporting API's `topIssues` hides
+closed issues (`reference_crashlytics_reporting_api`). `topVersions` counts events regardless, which
+is why it is the check used here.
+
+The enqueue line the car pass quotes (`Crashlytics report successfully enqueued to DataTransport:
+<id>`, D-level) did not appear in either phone log. The upload did, at Info level with a 200, and
+the dashboard has the event — the evidence stands on those two rather than on the enqueue line.
+
+`am crash <pid>` again: the package form is a no-op on API 35 (`docs/T26_VERIFICATION.md`).

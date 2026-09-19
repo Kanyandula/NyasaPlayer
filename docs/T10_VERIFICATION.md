@@ -67,5 +67,24 @@ fail) in logcat from the first launch, and only then judges restore. Worth check
 service reaches foreground at all on API 35 with this AVD's notification permissions — a
 `startForegroundService` refusal would explain every line above.
 
-Mobile therefore still carries what it carried before T10: unverified restore, and T3's D55 index
+Mobile therefore still carried what it carried before T10: unverified restore, and T3's D55 index
 fix shipped without a device pass.
+
+## Mobile — run 2026-09-19, restore established
+
+`Pixel_9_Pro_Fold_API_35` (`emulator-5558`, API 35), signed in, debug build of `:app` at `a0214b1`.
+The protocol the note above asked for: watch the service from the first launch, then judge restore.
+
+| | Before the kill | After relaunch |
+|---|---|---|
+| Process | 2165 | 6125 — a genuine restart, not a resumed task |
+| Session | `PLAYING`, position 265779, "Vanity Remix", queue 55 | `PAUSED`, position **261733**, same track, queue 55 |
+| Service | — | `ServiceRecord …/.core.playback.PlaybackService app=ProcessRecord{6125}`, foreground, notification id 1001 |
+| UI | mini player playing | mini player carrying "Vanity Remix", paused, progress bar part-filled |
+
+Killed with `am force-stop` (pid gone, confirmed), relaunched with `am start`. Restore lands 4 s
+short of where the kill caught it, which is the last persisted position, not a rounding error.
+
+So the 2026-08-25 reading that fits all three observations — "the service never came up on this
+AVD" — is not what happens on this phone: the service starts from the first launch and the session
+is there. The earlier run was on a different AVD and is left as recorded rather than reinterpreted.

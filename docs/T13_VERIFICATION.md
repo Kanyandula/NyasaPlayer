@@ -60,3 +60,47 @@ Nine of ten operations behave exactly as they did before the move.
 - `CarQueueScreen`'s header counts *upcoming* songs, not the queue: it read "5 songs" while the
   session reported 8, because the current track sat at index 2. Not a defect, but it makes the
   header useless as a check on queue size — read the session instead.
+
+## Mobile — run 2026-09-19
+
+`Pixel_9_Pro_Fold_API_35` (`emulator-5558`, API 35), signed in, debug build of `:app` at `a0214b1`,
+one process throughout (2165, then 6125 after the T10 kill). Read from `dumpsys media_session`; the
+UI states were read from screenshots.
+
+| Operation | Result |
+|---|---|
+| `play` | `state=PLAYING`, position 88111, "Vanity Remix" |
+| `pause` | `state=PAUSED` at 90551 |
+| `play` | `state=PLAYING` at 93596 |
+| `skipNext` | `position=3708`, "Here We Stand" |
+| `skipPrevious` | back to "Vanity Remix" |
+| `seekTo` (75% of 4:29) | `position=201508` |
+| `toggleShuffle` | icon purple, playback uninterrupted |
+| `toggleRepeatMode` | icon purple, playback uninterrupted |
+| `toggleLike` | the session's custom action flipped `Like → Unlike`, heart filled |
+| `dismiss` | `state=NONE(0)`, `position=0`; the foreground service left the foreground, the media notification went, and the mini player disappeared from the UI |
+
+That closes the transport set on mobile, `dismiss()` included.
+
+### The offline-buffering pause
+
+Airplane mode on mid-stream, then `svc wifi disable` / `svc data disable` to be certain (the ping
+confirmed `Network is unreachable` throughout). Playback ran on to the end of what was already
+buffered, 132350 ms, and then:
+
+- the session went to `state=ERROR(7), error=Source error` — **not** a buffering spinner that never
+  resolves, which is the failure this check exists to rule out;
+- pressing play offline put the error in front of the driver in words:
+  **"Offline — Can't stream while offline. Download songs for offline playback."** with a Retry
+  button, in the expanded player, over `OfflineBanner`'s "No internet connection";
+- with the network back, play resumed from 2:17 and buffered ahead normally.
+
+### Observation, not reproduced
+
+Across that offline window the heart on "Vanity Remix" showed filled, and after reconnect it showed
+unfilled, with the session's custom action back at `Like` — a like made while the Firestore backend
+was unreachable looks like it did not survive the reconnect. The like had been tapped minutes
+earlier, during a window where Firestore was logging `Could not reach Cloud Firestore backend`, and
+no deliberate attempt was made to reproduce it. `toggleLike` is specified to roll back optimistically
+and show a Snackbar on failure, which would explain it exactly; it is parked in `docs/BACKLOG.md`
+rather than claimed as a defect.
