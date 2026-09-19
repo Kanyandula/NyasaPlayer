@@ -10,6 +10,15 @@ out to be a bug a driver or user would hit, or a safety gap.
 - **T19** — car phone and email sign-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T19-car-auth-phone-and-email.md`).
 - **T18** — car PIN opt-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T18-car-pin-opt-in.md`).
 - **T8** — search draft-query hoist, deferred on measurement (`docs/tickets/T8-automotive-search-draft-query-hoist.md`).
+- **T33** — a like made while Firestore was unreachable may not survive the reconnect; seen once,
+  not reproduced (`docs/tickets/T33-like-across-reconnect.md`).
+- **T34** — split `AutomotiveContentViewModel`; 24 functions against detekt's 16, held open by the
+  file-level suppression D23 says this project does not use
+  (`docs/tickets/T34-split-automotive-content-viewmodel.md`).
+- **T35** — the four owed device checks, collected into one sitting
+  (`docs/tickets/T35-owed-device-checks.md`).
+- **T36** — `MediaBrowseTree`'s 17 tests, never challenged by a mutation that compiled
+  (`docs/tickets/T36-sweep-mediabrowsetree-tests.md`).
 
 ## Owed phone checks — cleared 2026-09-19
 
@@ -20,7 +29,8 @@ after `force-stop`, with the service watched from the first launch).
 
 Still owed on mobile, and not covered by that sitting: T3's D55 index fix and T7's skeletons, both
 named in T10's and T14's own "still owed" notes. Still owed on the car: T13's `skipNext` repeat-all
-wrap and a driving-state pass (T13, T14).
+wrap and a driving-state pass (T13, T14). All four are now collected in
+`docs/tickets/T35-owed-device-checks.md`.
 
 ## Known, not fixed
 
@@ -39,12 +49,13 @@ wrap and a driving-state pass (T13, T14).
   (`docs/tickets/T32-download-path-cache-race.md`, 2026-09-19).
 - 32 of `:core:playback`'s 106 tests were never challenged by the 2026-09-19 mutation sweep —
   mostly `MediaBrowseTree`'s `getItem` and `search`, whose mutations would not compile
-  (`docs/TEST_MUTATION_SWEEP.md` lists them). No weakness shown, none ruled out either.
+  (`docs/TEST_MUTATION_SWEEP.md` lists them). No weakness shown, none ruled out either. The
+  17-test `MediaBrowseTree` block is now `docs/tickets/T36-sweep-mediabrowsetree-tests.md`.
 - `onControllerLost`'s single-attempt guard (`compareAndSet`) is untested on both sides, and
   untestable in the current harness: `ControllerConnection.reconnect()` resolves inside the first
   command, so no second command can arrive mid-rebuild. Two tests claimed to cover it and did not
   (T14's, renamed 2026-09-19; T27 hit the same wall). Testing it needs a seam that can hold a
   rebuild open.
 - A like may not survive a reconnect after Firestore was unreachable — seen once, not reproduced
-  (`docs/T13_VERIFICATION.md`, 2026-09-19).
-- `AutomotiveContentViewModel` is past detekt's function threshold and now owns downloads too; its file-level `TooManyFunctions` note says the next slice to touch it should split it, and A9 added to it instead (PRD §6.3 names the content VM as screen 15's data source).
+  (`docs/T13_VERIFICATION.md`, 2026-09-19). Ticketed as T33.
+- `AutomotiveContentViewModel` is past detekt's function threshold and now owns downloads too; its file-level `TooManyFunctions` note says the next slice to touch it should split it, and A9 added to it instead (PRD §6.3 names the content VM as screen 15's data source). Ticketed as T34.
