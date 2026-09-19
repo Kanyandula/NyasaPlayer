@@ -13,10 +13,12 @@ import com.example.nyasaplayer.core.data.api.UserRepository
 import com.example.nyasaplayer.core.data.download.SongDownloadManager
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.ControllerConnection
+import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
+import com.example.nyasaplayer.core.playback.isStreamStalledOffline
 import com.example.nyasaplayer.core.playback.toSong
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -160,12 +162,18 @@ class PlayerViewModel @Inject constructor(
                     repeatMode = snapshot.repeatMode,
                 )
             }
-            handleOfflineBuffering(snapshot.isBuffering)
+            handleOfflineBuffering(snapshot)
         }.launchIn(viewModelScope)
     }
 
-    private fun handleOfflineBuffering(isBuffering: Boolean) {
-        if (isBuffering && !isOnline) {
+    /**
+     * The car's stall guard, now mobile's too (T28): a stream that cannot load offline is paused
+     * and named. The shared rule adds what mobile's own condition lacked — it exempts a local file,
+     * which used to be paused with "Connection lost" whenever it buffered offline, and it waits for
+     * `playWhenReady`, so buffering nobody asked for raises nothing.
+     */
+    private fun handleOfflineBuffering(snapshot: PlaybackSnapshot) {
+        if (snapshot.isStreamStalledOffline(isOnline)) {
             stateCollector.transport.pause()
             _uiState.update {
                 it.copy(
@@ -183,13 +191,12 @@ class PlayerViewModel @Inject constructor(
     // ── Playback Actions ──
 
     fun playSong(songs: List<Song>, song: Song) {
-        val isDownloaded = downloadManager.getLocalFileUri(song.mediaId) != null
-        if (!isOnline && !isDownloaded) {
+        val resolvedSong = downloadManager.resolveLocalUri(song)
+        if (OfflinePlaybackGate.refuses(resolvedSong, isOnline)) {
             showOfflineError(song)
             return
         }
         val resolvedSongs = songs.map(downloadManager::resolveLocalUri)
-        val resolvedSong = downloadManager.resolveLocalUri(song)
         val startIndex = resolvedSongs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
         // Nothing is painted as playing unless the command reached a connected player (T11).
         if (!stateCollector.transport.setQueue(resolvedSongs, startIndex)) return
@@ -208,10 +215,7 @@ class PlayerViewModel @Inject constructor(
     fun shufflePlay(songs: List<Song>) {
         if (songs.isEmpty()) return
         val resolvedSongs = songs.map(downloadManager::resolveLocalUri)
-        val hasPlayable = isOnline || resolvedSongs.zip(songs).any { (resolved, original) ->
-            resolved.audioUrl != original.audioUrl
-        }
-        if (!hasPlayable) {
+        if (OfflinePlaybackGate.refuses(resolvedSongs, isOnline)) {
             showOfflineError(songs.first())
             return
         }
@@ -259,10 +263,11 @@ class PlayerViewModel @Inject constructor(
             transport.pause()
             return
         }
-        val currentMediaId = _uiState.value.currentSong?.mediaId
-        val isDownloaded = currentMediaId != null &&
-            downloadManager.getLocalFileUri(currentMediaId) != null
-        if (!isOnline && !isDownloaded) {
+        // The queue holds resolved songs — playSong, shufflePlay and restore all resolve before
+        // it reaches the player — so the shared rule can read the song rather than ask the
+        // download repository. The !isOnline gate stays: a null song must not refuse an online tap.
+        val current = _uiState.value.currentSong
+        if (!isOnline && (current == null || OfflinePlaybackGate.refuses(current, isOnline))) {
             _uiState.update {
                 it.copy(
                     error = PlayerError(
