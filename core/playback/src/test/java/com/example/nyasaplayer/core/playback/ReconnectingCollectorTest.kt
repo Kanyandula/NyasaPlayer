@@ -114,18 +114,31 @@ class ReconnectingCollectorTest {
         assertTrue("the collector holds a live controller again", collector.controller!!.isConnected)
     }
 
+    /**
+     * Three commands in a row against a lost controller leave a live one and no failure reported.
+     *
+     * This was written for T14 as "repeated failures while reconnecting do not queue attempts",
+     * and it never tested that: only the **first** command fails. Asserted below, because it is
+     * the surprising part — `connection.reconnect()` resolves within the first call here, so the
+     * second command already has a live controller and never enters `onControllerLost`. Three taps
+     * produce one rebuild because two of them never asked for one, not because the single-attempt
+     * guard turned them away.
+     *
+     * That guard — `onControllerLost`'s `compareAndSet` — has no test, and cannot have one in this
+     * harness: nothing can hold a rebuild open long enough for a second command to land during it.
+     * T27 hit the same wall from the reporting side.
+     */
     @Test
-    fun repeatedFailuresWhileReconnecting_doNotQueueAttempts() {
+    fun commandsAfterALostController_endWithALiveOneAndNoFailureReported() {
         loseTheController()
 
-        // Three taps before the connection can complete.
-        collector.transport.play()
-        collector.transport.skipNext()
-        collector.transport.pause()
+        assertFalse("only the first command finds it dead", collector.transport.play())
+        assertTrue("the rebuild has already landed by the second", collector.transport.skipNext())
+        assertTrue(collector.transport.pause())
         idle()
 
         assertTrue(collector.controller!!.isConnected)
-        assertEquals("one attempt, not three", 0, collector.unavailableReports)
+        assertEquals("a rebuild that works is silent", 0, collector.unavailableReports)
     }
 
     // ── Reads against the same lost controller (T15) ──
