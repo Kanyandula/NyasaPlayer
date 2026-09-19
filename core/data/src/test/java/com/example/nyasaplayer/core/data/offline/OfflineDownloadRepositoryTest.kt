@@ -3,10 +3,13 @@ package com.example.nyasaplayer.core.data.offline
 import com.example.nyasaplayer.core.data.fake.FakeDownloadDao
 import com.example.nyasaplayer.core.data.local.entity.DownloadEntity
 import com.example.nyasaplayer.core.data.local.entity.DownloadStatus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -77,18 +80,25 @@ class OfflineDownloadRepositoryTest {
         assertNull(repo.getLocalFilePath(OtherMediaId))
     }
 
-    /** T32's fix: the callers that can wait, wait — and then the path is there. */
+    /**
+     * T32's fix: a caller that awaits does not come back until the index is loaded.
+     *
+     * The await is launched and checked *while the query is still open* — asserting only that the
+     * path is there afterwards would pass whether or not it waited.
+     */
     @Test
     fun awaitDownloadIndex_returnsOnlyOnceTheIndexIsLoaded() = runBlocking {
         val dao = FakeDownloadDao(listOf(completed(MediaId, Path)))
 
         val repo = OfflineDownloadRepository(dao)
         withTimeout(TimeoutMs) { dao.completedLoadStarted.await() }
-        assertNull("precondition: still racing", repo.getLocalFilePath(MediaId))
+        val awaiting = launch(Dispatchers.Default) { repo.awaitDownloadIndex() }
+        delay(SettleMs)
+
+        assertFalse("the await returned while the query was still open", awaiting.isCompleted)
+
         dao.releaseCompletedLoad()
-
-        withTimeout(TimeoutMs) { repo.awaitDownloadIndex() }
-
+        withTimeout(TimeoutMs) { awaiting.join() }
         assertEquals(Path, repo.getLocalFilePath(MediaId))
     }
 
@@ -102,12 +112,12 @@ class OfflineDownloadRepositoryTest {
     fun awaitDownloadIndex_afterAFailedLoad_triesAgain() = runBlocking {
         val dao = FakeDownloadDao(
             rows = listOf(completed(MediaId, Path)),
-            gated = false,
             failuresBeforeSuccess = 1,
         )
 
         val repo = OfflineDownloadRepository(dao)
         withTimeout(TimeoutMs) { dao.completedLoadStarted.await() }
+        dao.releaseCompletedLoad()
 
         withTimeout(TimeoutMs) { repo.awaitDownloadIndex() }
 
@@ -139,5 +149,6 @@ class OfflineDownloadRepositoryTest {
         const val Path = "/data/user/10/com.example.nyasaplayer/files/downloads/56.audio"
         const val TimeoutMs = 5_000L
         const val PollMs = 5L
+        const val SettleMs = 100L
     }
 }

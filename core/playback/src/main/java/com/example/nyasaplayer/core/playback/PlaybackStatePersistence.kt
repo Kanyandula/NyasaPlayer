@@ -91,8 +91,8 @@ class PlaybackStatePersistence @Inject constructor(
             val saved = userRepository.getPlaybackState(uid) ?: return null
             if (saved.currentSongId.isBlank()) return null
 
-            // Before resolving: the index loads asynchronously at process start, and a restore is
-            // early enough to beat it (T32).
+            // The index loads asynchronously at process start and a restore is early enough to
+            // beat it (T32).
             downloadRepository.awaitDownloadIndex()
             val songMap = songRepository.getSongsByIds(saved.queueSongIds).associateBy { it.mediaId }
             // Resolved here rather than in each caller: a restore hands the queue straight to the

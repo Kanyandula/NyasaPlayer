@@ -3,11 +3,13 @@ package com.example.nyasaplayer.screens.common
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.SongDownloadState
 import com.example.nyasaplayer.core.common.ui.components.SongOverflowSheet
 import com.example.nyasaplayer.core.data.download.SongDownloadManager
 import com.example.nyasaplayer.core.data.local.entity.DownloadStatus
+import java.io.File
 
 @Composable
 fun SongOverflowWithDownload(
@@ -48,26 +50,42 @@ fun SongOverflowWithDownload(
 }
 
 /**
- * The sheet's download state, from the database rather than the in-memory path index.
+ * The sheet's download state, observed from the row rather than read from the in-memory path
+ * index, which is empty for a moment after process start (T32).
  *
- * It used to read `getLocalFileUri` inside a `remember`, which was wrong twice over: the index
- * loads asynchronously at process start, so an early read said "not downloaded" about a song that
- * is (T32), and `remember` then kept that answer for the life of the composition. Observing the
- * row fixes both — and it also updates while a download runs, which the old read never did.
+ * The `exists` check is the one `localUriFor` does, keyed on the path so it runs when the row
+ * changes rather than on every recomposition. One frame of NotDownloaded precedes the first row
+ * emission — the trade for never being stale.
  */
 @Composable
-fun rememberDownloadState(
+private fun rememberDownloadState(
     mediaId: String,
     downloadManager: SongDownloadManager?,
 ): SongDownloadState {
     if (downloadManager == null) return SongDownloadState.NotDownloaded
-    val download by downloadManager.observeDownload(mediaId).collectAsState(initial = null)
+    val rows = remember(mediaId, downloadManager) { downloadManager.observeDownload(mediaId) }
+    val download by rows.collectAsState(initial = null)
     val active by downloadManager.activeDownloads.collectAsState()
-    return when {
-        download?.status == DownloadStatus.Completed -> SongDownloadState.Downloaded
-        mediaId in active -> SongDownloadState.Downloading
-        download?.status == DownloadStatus.Downloading ||
-            download?.status == DownloadStatus.Pending -> SongDownloadState.Downloading
-        else -> SongDownloadState.NotDownloaded
+    val onDisk = remember(download?.filePath) {
+        download?.filePath?.takeIf { it.isNotBlank() }?.let { File(it).exists() } == true
     }
+    return downloadStateOf(download?.status, onDisk, isActive = mediaId in active)
+}
+
+/**
+ * The sheet's three states from what is known about a song.
+ *
+ * [onDisk] is separate from a `Completed` [status] on purpose: the row outlives the file when
+ * storage is cleared, and the player falls back to the stream then, so the sheet must offer
+ * Download rather than Remove or the two disagree.
+ */
+internal fun downloadStateOf(
+    status: DownloadStatus?,
+    onDisk: Boolean,
+    isActive: Boolean,
+): SongDownloadState = when {
+    status == DownloadStatus.Completed && onDisk -> SongDownloadState.Downloaded
+    isActive || status == DownloadStatus.Downloading || status == DownloadStatus.Pending ->
+        SongDownloadState.Downloading
+    else -> SongDownloadState.NotDownloaded
 }

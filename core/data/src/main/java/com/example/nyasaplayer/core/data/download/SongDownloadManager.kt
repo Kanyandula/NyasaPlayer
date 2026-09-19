@@ -109,14 +109,7 @@ class SongDownloadManager @Inject constructor(
         downloadSong(mediaId)
     }
 
-    fun getLocalFileUri(mediaId: String): String? = downloadRepository.localUriFor(mediaId)
-
-    /**
-     * The download row for [mediaId] as it changes.
-     *
-     * Read straight from the database, so unlike [getLocalFileUri] it does not depend on the
-     * in-memory path index having loaded (T32) and it corrects itself when the row changes.
-     */
+    /** The download row for [mediaId] as it changes, for screens that render its state. */
     fun observeDownload(mediaId: String): Flow<DownloadEntity?> =
         downloadRepository.observeDownload(mediaId)
 

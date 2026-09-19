@@ -36,6 +36,10 @@ wrap and a driving-state pass (T13, T14).
 - `CLAUDE.md` doesn't mention Crashlytics or `CrashReporter`.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
 - The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:308`), not as a modal over the queue.
+- Six resolution sites still read the download index without awaiting it —
+  `PlayerViewModel.kt:190,195,213` and `AutomotivePlayerViewModel.kt:273,280,297`. They are
+  non-suspend and a tap is slow enough that the window has closed, so T32 left them; the visible
+  symptom if one ever lost the race is "no connection" on a downloaded song (2026-09-19).
 - A download refused because the phone is offline tells the user nothing: the overflow sheet closes
   like a download has started, no Snackbar follows, and Downloads still reads "No downloads yet"
   rather than showing a failed row (`docs/T29_VERIFICATION.md`, 2026-09-19).
