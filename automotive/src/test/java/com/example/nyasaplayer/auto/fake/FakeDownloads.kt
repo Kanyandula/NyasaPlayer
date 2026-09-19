@@ -45,6 +45,8 @@ class FakeDownloadRepository : DownloadRepository {
 
     override fun getLocalFilePath(mediaId: String): String? = paths[mediaId]
 
+    override suspend fun awaitDownloadIndex() = Unit
+
     override suspend fun addDownload(mediaId: String) {
         rows.value = rows.value + DownloadEntity(mediaId = mediaId)
     }

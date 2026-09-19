@@ -170,11 +170,20 @@ the test now says what it actually guards.
 | `awaitDownloadIndex_afterAFailedLoad_triesAgain` | Acceptance criterion 2 |
 | `PlayableItemsTest.downloadedSong_whenTheIndexHasNotLoadedYet_isStillRequestedFromTheFile` | The await at T31's call site |
 | `PlaybackStatePersistenceTest.restore_downloadedSong_whenTheIndexHasNotLoadedYet_stillComesBackLocal` | The await on the restore path |
+| `DownloadStateTest` (6 cases) | The sheet's mapping, including a `Completed` row whose file is gone |
 
 The last two were each checked by deleting their await and watching them fail; the repository test
 by patching the getter to fall back to the DAO. `TestDownloadRepository` grew
 `pathsAfterIndexLoads`, which is what makes "index not loaded" distinguishable from "nothing
 downloaded" — the distinction the first draft of this ticket's test missed.
+
+### Left racing, on purpose
+
+The four `playSong` / `shufflePlay` entry points resolve without awaiting, because they are
+non-suspend — the car's even returns `Boolean` — and a human tap is far slower than the load. Six
+call sites in all; recorded in `docs/BACKLOG.md` rather than silently skipped. Awaiting once in
+each ViewModel's `init` would narrow the window further without closing it, which is why it was
+not done.
 
 ### Not done here
 
@@ -182,5 +191,5 @@ Acceptance criterion 3 — cold boot, offline, play from the car template — pa
 fix (`docs/tickets/T31-…` device pass), because the window is too narrow to hit by hand. Re-running
 it would prove nothing this change did not already prove in tests.
 
-`./gradlew test detekt :app:lintDebug :automotive:lintOemDebug` — BUILD SUCCESSFUL, **844 tests,
+`./gradlew test detekt :app:lintDebug :automotive:lintOemDebug` — BUILD SUCCESSFUL, **850 tests,
 0 failures**, detekt and lint clean.

@@ -21,13 +21,11 @@ import java.util.concurrent.atomic.AtomicInteger
  * begins empty answers null whether or not the load has landed, so a test built on one proves
  * nothing about the race.
  *
- * With [gated] false the query answers straight away, for tests that care about the result rather
- * than the timing. [failuresBeforeSuccess] makes the first calls throw, which is how a load that
- * failed and has to be retried is tested.
+ * [failuresBeforeSuccess] makes the first calls throw, which is how a load that failed and has to
+ * be retried is tested — the throw happens before the gate, so a failing call never waits.
  */
 class FakeDownloadDao(
     rows: List<DownloadEntity> = emptyList(),
-    private val gated: Boolean = true,
     failuresBeforeSuccess: Int = 0,
 ) : DownloadDao {
 
@@ -47,8 +45,10 @@ class FakeDownloadDao(
 
     override suspend fun getAllCompletedOnce(): List<DownloadEntity> {
         completedLoadStarted.complete(Unit)
-        check(remainingFailures.getAndDecrement() <= 0) { "database unavailable" }
-        return if (gated) completedLoadGate.await() else completedRows()
+        check(remainingFailures.getAndUpdate { current -> maxOf(0, current - 1) } == 0) {
+            "database unavailable"
+        }
+        return completedLoadGate.await()
     }
 
     private fun completedRows() = downloads.value.filter { it.status == DownloadStatus.Completed }
