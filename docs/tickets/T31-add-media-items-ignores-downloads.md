@@ -2,7 +2,7 @@
 
 - **Slice:** playback, downloads — both surfaces
 - **Depends on:** A9 (`DownloadRepository.resolveLocalUri`, restore already uses it)
-- **Status:** Fixed and unit-covered; the device pass is owed — see Outcome
+- **Status:** Done — fixed, unit-covered and device-verified on the car; see Outcome
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest test detekt`, plus a device
   pass on each surface
 - **Design Reference:** `core/data/.../download/LocalUri.kt` (the resolution contract);
@@ -93,7 +93,23 @@ does not know is absent.
 0 failures**, detekt and lint clean. (Wider than the header's command, which stays as the minimum
 for a change to this file.)
 
-### Owed
+### Device pass — run 2026-09-19 on the car
+
+`AAOS_AOSP_33_userdebug`, driver user 10, `oem` debug build of `4aad54b`, load settled to 3.0 with
+404 MB available before the run. A test album (`albums/test_album_t31_t32`, three real songs: 170,
+56, 54) was added to Firestore for the pass and deleted afterwards, as A9's was.
+
+| Step | Result |
+|---|---|
+| Album screen → **Download** | All three fetched: `files/downloads/` holds `170.audio` (4,852,096 B), `54.audio` (5,245,857 B), `56.audio` (3,097,271 B); the control became **Downloaded**, disabled |
+| Airplane mode, `ping` → `Network is unreachable` | Offline banner up on the car |
+| **Play a downloaded song from the OEM media template** | **Plays.** `state=3`, position advancing 12017 → onward, `buffered position=64052`, the right track in the session metadata. With no network reachable the only possible source is the file, which is the resolution this ticket added |
+
+That is the acceptance criterion: a downloaded song requested by media id through
+`playFromMediaId` now points at the local file. Before T31 the same tap would have handed the
+player an `https:` URI.
+
+### What the old owed section asked for, and what is left
 
 The device pass. The unit test proves the resolution; it does not prove the plumbing through a real
 external controller. The car is the surface that matters — the OEM template plays everything through
@@ -101,9 +117,6 @@ external controller. The car is the surface that matters — the OEM template pl
 the car, which is why it was deferred rather than run with this change (owner's call, 2026-09-19).
 Until then this is a fix with unit evidence, not a verified one.
 
-**Run it cold.** `DownloadRepository.getLocalFilePath` reads an in-memory cache that
-`OfflineDownloadRepository` fills asynchronously in its `init` (`OfflineDownloadRepository.kt:27-36`).
-`onAddMediaItems` is the coldest entry point there is — a controller can connect and play within a
-second of process start — so a pass that plays a downloaded song *immediately* after a cold boot,
-offline, is the one that would catch the resolution silently not applying. That race is not T31's
-to fix; it is a backlog line of its own.
+**The cold case was run too** — see `docs/tickets/T32-download-path-cache-race.md`. It did not
+reproduce: after a full reboot, offline, the first thing done on the device was to play a downloaded
+song from the template, and it played from the file.

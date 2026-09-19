@@ -2,7 +2,7 @@
 
 - **Slice:** downloads, offline playback — both surfaces
 - **Depends on:** nothing; pre-dates A9, T28 and T31
-- **Status:** Filed, not specced
+- **Status:** Filed, not specced. Attempted on the car 2026-09-19 and **not reproduced** — see Device attempt
 - **Verification Command:** `./gradlew :core:data:testDebugUnitTest :core:playback:testDebugUnitTest
   test detekt`, plus a cold-start device pass
 - **Design Reference:** `core/data/.../offline/OfflineDownloadRepository.kt`;
@@ -50,9 +50,33 @@ Two further sharp edges in the same `init`:
 - `scope.launch` has no `try`/`catch` and the scope has no `CoroutineExceptionHandler`, so a DAO
   failure propagates to the default handler rather than being logged and recovered.
 
-**Not yet observed on a device.** This is read from the code. T31's owed car pass is the run most
-likely to surface it — cold boot, offline, play a downloaded song immediately — and until then the
-window's real width is unknown.
+**Not observed on a device.** This is read from the code, and an attempt to provoke it failed —
+see below. The reasoning stands; the window is narrower than anything a person can drive by hand.
+
+## Device attempt — 2026-09-19, `AAOS_AOSP_33_userdebug`
+
+Run at the end of T31's car pass, with three songs downloaded and the network off
+(`ping` → `Network is unreachable`). Criterion three below is the one being probed: play a
+downloaded song from the OEM template before the path cache can load.
+
+| Attempt | Result |
+|---|---|
+| Kill the app, then tap play in the template, ×3 | Process never died: `am kill` is refused while the app holds a foreground service, and the pid was unchanged each time — the memory note about comparing pids, not presence, earning its keep again |
+| Pause first, then kill, ×3 | Still refused. A connected media browser binds the service, which keeps the process out of `am kill`'s reach |
+| `am force-stop`, then play from the template | The template could not start the service at all: `force-stop` puts the package in the stopped state, so an external component cannot bind it. This is a testing artefact, not a product behaviour |
+| Leave the template (HOME), kill, reopen the template, play | The process was killed (pid 4891 → 5142), but the media browser rebinds within a second and the fastest path back to a tap was ~9 s — orders of magnitude wider than a one-shot Room query |
+| **Full reboot, offline, play from the template as the first action on the device** | **Played from the file.** `state=3`, position advancing, `pid` unchanged from the one the system started at boot |
+
+So the race did not bite on any sequence that can be driven by hand, including the coldest realistic
+one. Two things that follow:
+
+- **The severity drops.** The window is real in the code but narrow enough that a person cannot hit
+  it; the car media app also connects to media sources at boot, which warms the cache before a
+  driver can touch anything.
+- **The evidence will have to be a test, not a device.** Whoever picks this up should provoke it at
+  the repository level — construct `OfflineDownloadRepository` against a DAO whose first query is
+  suspended, and assert what `getLocalFilePath` answers before it lands — rather than trying again
+  on a head unit.
 
 ## Scope
 
