@@ -51,3 +51,22 @@ of the plan asked for.
   T7's skeletons.
 - **A driving-state pass** on the car, to confirm no new surface appears mid-drive. T14 adds no UI,
   so this is a formality rather than a risk.
+
+## Mobile — run 2026-09-19, the failure mode's own surface
+
+`Pixel_9_Pro_Fold_API_35` (`emulator-5558`, API 35), signed in, debug build of `:app` at `a0214b1`.
+Same process throughout (6125), so every result is about the controller rather than a restart.
+
+Both ways of finishing the Activity were tried:
+
+| Step | Result |
+|---|---|
+| Playing, swipe the task off the recents list | Process survives, `PlaybackService` still foreground, playback runs on (position 150009) |
+| Relaunch | Controller rebuilt: mini player live on the same track, position advanced to 173237, now-playing marks back on the Home tiles |
+| Playing, back out of the root activity (launcher resumed, `NexusLauncherActivity` on top) | Playback continues, position 15128 |
+| Return, press pause | `PLAYING → PAUSED` at 38444 |
+| Press play | `PAUSED → PLAYING` at 41494 |
+
+The last two rows are the check this record has been owing: on pre-fix `main` a released shared
+future hands the next consumer a disconnected controller, so play after an Activity finish does
+nothing.

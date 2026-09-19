@@ -13,13 +13,16 @@ out to be a bug a driver or user would hit, or a safety gap.
 - **T18** — car PIN opt-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T18-car-pin-opt-in.md`).
 - **T8** — search draft-query hoist, deferred on measurement (`docs/tickets/T8-automotive-search-draft-query-hoist.md`).
 
-## Owed phone checks
+## Owed phone checks — cleared 2026-09-19
 
-`Pixel_9_Pro_Fold_API_35` can take installs (`docs/T26_VERIFICATION.md`).
+All five ran on `Pixel_9_Pro_Fold_API_35` in one sitting: T25 (release crash sent, debug crash not,
+one event on the dashboard), T29 (offline banner, refusal wording, recovery), T13 (transport set,
+`dismiss()`, the offline-buffering pause), T14 (both ways of finishing the Activity), T10 (restore
+after `force-stop`, with the service watched from the first launch).
 
-- **T25** — phone release crash reaches the dashboard; phone debug crash does not (`docs/T25_VERIFICATION.md` → "The phone").
-- **T29** — phone offline/online pass (`docs/T29_VERIFICATION.md` → "The phone").
-- **T14, T13, T10** — the mobile passes their Outcomes leave open.
+Still owed on mobile, and not covered by that sitting: T3's D55 index fix and T7's skeletons, both
+named in T10's and T14's own "still owed" notes. Still owed on the car: T13's `skipNext` repeat-all
+wrap and a driving-state pass (T13, T14).
 
 ## Known, not fixed
 
@@ -30,6 +33,10 @@ out to be a bug a driver or user would hit, or a safety gap.
 - A 404 is called "No Connection" on the car (`docs/AAOS_A8_VERIFICATION.md`, "Findings recorded, not fixed here").
 - `CLAUDE.md` doesn't mention Crashlytics or `CrashReporter`.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
-- The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:335`), not as a modal over the queue.
-- Nav-rail labels are 13sp (`CarNavRail.kt:41`), under NFR-3's 14sp floor.
+- The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:308`), not as a modal over the queue.
+- A download refused because the phone is offline tells the user nothing: the overflow sheet closes
+  like a download has started, no Snackbar follows, and Downloads still reads "No downloads yet"
+  rather than showing a failed row (`docs/T29_VERIFICATION.md`, 2026-09-19).
+- A like may not survive a reconnect after Firestore was unreachable — seen once, not reproduced
+  (`docs/T13_VERIFICATION.md`, 2026-09-19).
 - `AutomotiveContentViewModel` is past detekt's function threshold and now owns downloads too; its file-level `TooManyFunctions` note says the next slice to touch it should split it, and A9 added to it instead (PRD §6.3 names the content VM as screen 15's data source).

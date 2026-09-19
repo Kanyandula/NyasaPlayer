@@ -56,3 +56,28 @@ always follows `onAvailable` immediately, but each takes the lock separately, so
 between them is ignored and `isOnline` reads `false` until capabilities publish. That is the spec's
 own rule (a callback outranks the seed) and it corrects itself; worth remembering if a startup banner
 flicker is ever seen.
+
+## The phone — run 2026-09-19
+
+`Pixel_9_Pro_Fold_API_35` (`emulator-5558`, API 35, `/data` 37% used) took the build that
+`Medium_Phone_API_35` could not. Run by hand rather than through
+`scripts/aaos-network-toggle-check.sh`: the same phone sitting was also closing T10, T13, T14 and
+T25, and the checks below are the ones that script's `NT_LAUNCH` form was meant to reach.
+
+| Check | Result |
+|---|---|
+| Offline (`cmd connectivity airplane-mode enable`, then `svc wifi disable` / `svc data disable`; `ping` → `Network is unreachable`) | `OfflineBanner` — "No internet connection" — on Home, Library and Downloads, within one screenshot of the toggle |
+| A streamed song, offline | Refused in mobile's own wording: **"Offline — Can't stream while offline. Download songs for offline playback."** with Retry, in the expanded player |
+| Playback already running when the network went, and recovery afterwards | Measured in the same sitting and written up once, in `docs/T13_VERIFICATION.md` → "The offline-buffering pause" |
+| Profile, offline | Its own `ErrorBanner`: "Connection lost — Showing cached content", with Retry, over cached content |
+| A download started offline | Nothing downloaded — `files/downloads` does not exist — but see below |
+
+### Finding: a download refused offline says nothing
+
+`SongDownloadManager` checks `networkMonitor.isOnline` and calls `downloadRepository.markFailed`
+(`SongDownloadManager.kt:51`). On the phone that refusal is invisible: the overflow sheet closes as
+if the download had started, no Snackbar appears in the next 8 s, and the Downloads screen still
+reads "0 songs / No downloads yet" — not a failed row. The user is told nothing at all, on a screen
+that is otherwise showing them the offline banner.
+
+Parked in `docs/BACKLOG.md`; the car's equivalent refusal is A9's and was not re-checked here.

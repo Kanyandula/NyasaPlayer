@@ -44,7 +44,10 @@ descriptor declares `<uses name="media" />`, and `playstore` ships no app activi
 - **T30** — the Remove-all confirmation's buttons are clipped on a 768dp-tall head unit, found by
   hand on 2026-09-17 because the measurement suite renders at 800dp
   (`docs/tickets/T30-remove-all-dialog-clipped.md`). Driver-facing, so it is a ticket rather than a
-  backlog line.
+  backlog line. Fixed and device-verified 2026-09-18; merged as #71.
+- **The owed phone checks are cleared** (2026-09-19): T25, T29, T13, T14 and T10 all ran on
+  `Pixel_9_Pro_Fold_API_35`. Mobile still owes T3's D55 index fix and T7's skeletons, which that
+  sitting did not reach. Two new mobile findings went to `docs/BACKLOG.md`, neither driver-facing.
 - **T18 and T19**, deferred past ship by the §12 exception, and parked in `docs/BACKLOG.md`.
 - **The `HR-*` host-render smoke tests** (§8.4) are not part of this release: they run before a Play
   submission decision, which §3.2 makes a later business call.
