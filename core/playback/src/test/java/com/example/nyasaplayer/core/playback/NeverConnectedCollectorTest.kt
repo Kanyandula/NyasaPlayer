@@ -3,7 +3,6 @@ package com.example.nyasaplayer.core.playback
 import android.os.Looper
 import androidx.media3.session.MediaSession
 import androidx.test.core.app.ApplicationProvider
-import kotlinx.coroutines.test.TestScope
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -24,17 +23,18 @@ import org.robolectric.Shadows.shadowOf
 class NeverConnectedCollectorTest {
 
     private lateinit var session: MediaSession
-    private lateinit var collector: CountingCollector
+    private lateinit var collector: TestCollector
 
     @Before
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         session = MediaSession.Builder(context, ReconnectPlayer()).setId("t27-never").build()
-        collector = CountingCollector(ControllerConnection(context, session.token))
+        collector = TestCollector(ControllerConnection(context, session.token))
     }
 
     @After
     fun tearDown() {
+        collector.releaseController()
         session.release()
     }
 
@@ -44,17 +44,5 @@ class NeverConnectedCollectorTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         assertEquals("a null controller is expected, not evidence", 0, collector.disconnectedReports)
-    }
-
-    private class CountingCollector(connection: ControllerConnection) :
-        BasePlayerStateCollector(connection, TestScope()) {
-
-        var disconnectedReports = 0
-
-        override val positionPollIntervalMs: Long = 1_000L
-
-        override fun onControllerFoundDisconnected() {
-            disconnectedReports++
-        }
     }
 }

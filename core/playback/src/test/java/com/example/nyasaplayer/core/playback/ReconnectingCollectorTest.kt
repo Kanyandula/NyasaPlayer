@@ -73,17 +73,24 @@ class ReconnectingCollectorTest {
         assertEquals("the disconnected controller should be reported", 1, collector.disconnectedReports)
     }
 
-    /** A reconnect already in flight swallows later taps, and must not report them either. */
+    /**
+     * One loss, one report — the taps that follow a rebuild find a live controller and say nothing.
+     *
+     * Not the in-flight case: this harness rebuilds synchronously (the second tap here already
+     * succeeds), so a reconnect cannot be held open long enough for a tap to land during it. The
+     * guard that would swallow such a tap is `onControllerLost`'s `compareAndSet`, which the
+     * "one attempt, not three" test above covers from the rebuild side.
+     */
     @Test
-    fun repeatedCommandsDuringOneRebuild_reportOnce() {
+    fun tapsAfterTheRebuild_doNotReportAgain() {
         loseTheController()
 
-        collector.transport.play()
-        collector.transport.play()
+        assertFalse("precondition: the first tap finds it dead", collector.transport.play())
+        assertTrue("the rebuild lands synchronously here", collector.transport.play())
         collector.transport.play()
         idle()
 
-        assertEquals("one attempt, one report", 1, collector.disconnectedReports)
+        assertEquals("one loss, one report", 1, collector.disconnectedReports)
     }
 
     @Test
@@ -163,7 +170,8 @@ class ReconnectingCollectorTest {
     }
 }
 
-private class TestCollector(connection: ControllerConnection) :
+/** Shared with [NeverConnectedCollectorTest], which counts the same hooks. */
+internal class TestCollector(connection: ControllerConnection) :
     BasePlayerStateCollector(connection, TestScope()) {
 
     var unavailableReports = 0
@@ -181,7 +189,7 @@ private class TestCollector(connection: ControllerConnection) :
 }
 
 /** Shared with [NeverConnectedCollectorTest]: any session needs a player behind it. */
-class ReconnectPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
+internal class ReconnectPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
     override fun getState(): State =
         State.Builder()
             .setAvailableCommands(Player.Commands.Builder().addAllCommands().build())

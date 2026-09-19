@@ -58,7 +58,7 @@ known way to get there while the process lives:
   so there is no player UI to dim; a connection that fails already raises `onControllerConnectionFailed`;
   and a failed rebuild can only follow a disconnect no one has reproduced.
 
-**The tripwire.** `BasePlayerStateCollector.onControllerLost()` now logs once per loss, saying
+**The tripwire.** `BasePlayerStateCollector.onControllerLost()` now logs once per rebuild attempt, saying
 whether the controller it found was `null` or `disconnected`, and logs the cause if the rebuild
 fails. `null` is expected — a tap before the first connection resolved. **A `disconnected` line on a
 device reopens this ticket**, with the evidence T11 could never collect.

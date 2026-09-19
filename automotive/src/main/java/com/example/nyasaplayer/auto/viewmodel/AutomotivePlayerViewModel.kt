@@ -122,9 +122,6 @@ class AutomotivePlayerViewModel @Inject constructor(
          * `CarErrorOverlay` renders it above everything and blocks the controls underneath, so
          * repeated taps cannot stack it.
          */
-        /** T27's tripwire: the surface forwards it, the collector stays free of Firebase. */
-        override fun onControllerFoundDisconnected() = crashReporter.reportControllerFoundDisconnected()
-
         override fun onPlayerUnavailable() {
             _uiState.update {
                 it.copy(
@@ -136,6 +133,9 @@ class AutomotivePlayerViewModel @Inject constructor(
                 )
             }
         }
+
+        /** T27's tripwire: the surface forwards it, the collector stays free of Firebase. */
+        override fun onControllerFoundDisconnected() = crashReporter.reportControllerFoundDisconnected()
     }
 
     init {

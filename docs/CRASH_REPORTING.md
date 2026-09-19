@@ -71,8 +71,10 @@ The code sets no other key.
 |---|---|---|
 | `IllegalStateException("T16 tripwire: transport command found a disconnected controller")` | A transport command found a controller that was connected and is not any more — once per rebuild attempt, not once per tap. A `null` controller is ordinary and records nothing | The fixed message above, the stack at the point of the command, and the `surface` key. No ids, no song or queue data, no timestamp in the message (T24 D8) |
 
-The message is a fixed string on purpose: Firebase groups issues by message, so a unique value in
-one splits a single issue into many. `CrashReporter.reportControllerFoundDisconnected()` is the
+The message is a fixed string on purpose. Crashlytics groups by the stack, not the message — the
+2026-09-19 staged check produced an issue titled after its calling frame, with the message as the
+subtitle — so a unique value would not split the issue, but it would churn the title and make the
+issue unreadable. Firebase advises against unique values in exception messages for that reason. `CrashReporter.reportControllerFoundDisconnected()` is the
 only caller, reached through `BasePlayerStateCollector.onControllerFoundDisconnected()`, which each
 surface's collector overrides (T27).
 
@@ -87,7 +89,8 @@ eight most recent between sends.
 - No song, queue or search text, in custom keys, logs, or exception messages.
 - `FirebaseCrashlytics.log` is not called anywhere in the codebase; existing `Log.w`/`Log.e` calls
   stay in logcat only.
-- No custom non-fatals: nothing calls `recordException`.
+- No custom non-fatals beyond the one listed above: `recordException` is called from exactly one
+  place, `CrashReporter.reportControllerFoundDisconnected()`.
 - No breadcrumbs: Firebase Analytics is not a dependency of either app, and the SDK logs
   "Skipping logging Crashlytics event to Firebase, no Firebase Analytics".
 - The Crashlytics installation UUID identifies the install, not the driver — on a shared head unit
@@ -143,4 +146,5 @@ declaration.
 
 ## Extending this file
 
-T27 (the `disconnected` non-fatal) extends this inventory as it adds what it sends.
+Anything that adds to what Crashlytics sends — a key, a non-fatal, a new SDK — adds its row here in
+the same change. T27 added the non-fatal above.
