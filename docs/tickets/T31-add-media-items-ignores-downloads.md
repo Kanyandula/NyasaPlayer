@@ -2,7 +2,7 @@
 
 - **Slice:** playback, downloads — both surfaces
 - **Depends on:** A9 (`DownloadRepository.resolveLocalUri`, restore already uses it)
-- **Status:** Filed, not specced
+- **Status:** Fixed and unit-covered; the device pass is owed — see Outcome
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest test detekt`, plus a device
   pass on each surface
 - **Design Reference:** `core/data/.../download/LocalUri.kt` (the resolution contract);
@@ -65,3 +65,31 @@ wording is now wrong in the other direction — the song *is* downloaded.
   `:core:data`, already injected into `PlaybackStatePersistence`, so the seam exists.
 - The car half is the more visible one: the OEM template is a first-class surface there, and A9
   shipped downloads on the assumption that a downloaded song plays offline from anywhere.
+
+## Outcome
+
+`SongRepository.playableItems(ids, downloads)` in `SongMediaItemMapper.kt` is now the one way media
+ids become playable items: fetch, `resolveLocalUri`, map. `PlaybackService` injects
+`DownloadRepository` — the binding was already reachable, `PlaybackStatePersistence` takes it — and
+`onAddMediaItems` calls it, so every external controller gets the same resolution the restore path
+has had since A9.
+
+Why a function rather than the one line inline: nothing instantiates `PlaybackService` in a test,
+and standing it up needs Robolectric plus Hilt. Lifting the three steps out makes the rule reachable
+from `PlayableItemsTest`, which uses the `TestSongRepository` and `TestDownloadRepository` fakes this
+module's tests already have (the download fake stopped being file-private; it was not copied).
+
+Four cases: a downloaded song comes back pointing at its file, an undownloaded neighbour keeps its
+stream URL, a download whose file has been deleted falls back to the stream, and an id the catalogue
+does not know is absent.
+
+`./gradlew test detekt :app:lintDebug :automotive:lintOemDebug` — BUILD SUCCESSFUL, **830 tests,
+0 failures**, detekt and lint clean.
+
+### Owed
+
+The device pass. The unit test proves the resolution; it does not prove the plumbing through a real
+external controller. The car is the surface that matters — the OEM template plays everything through
+`playFromMediaId` — and a pass there needs a test album back in Firestore and a song downloaded on
+the car, which is why it was deferred rather than run with this change (owner's call, 2026-09-19).
+Until then this is a fix with unit evidence, not a verified one.

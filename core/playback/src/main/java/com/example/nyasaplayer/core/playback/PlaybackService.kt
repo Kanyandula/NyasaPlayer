@@ -18,6 +18,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.example.nyasaplayer.core.data.api.AuthRepository
+import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
 import com.google.common.collect.ImmutableList
@@ -62,6 +63,8 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var authRepository: AuthRepository
 
     @Inject lateinit var songRepository: SongRepository
+
+    @Inject lateinit var downloadRepository: DownloadRepository
 
     private lateinit var exoPlayer: ExoPlayer
     private var mediaSession: MediaLibrarySession? = null
@@ -169,7 +172,7 @@ class PlaybackService : MediaLibraryService() {
             serviceScope.launch {
                 try {
                     val ids = mediaItems.map { it.mediaId }.filter { it.isNotBlank() }
-                    val resolved = songRepository.getSongsByIds(ids).map { it.toMediaItem() }
+                    val resolved = songRepository.playableItems(ids, downloadRepository)
                     future.set(resolved.toMutableList())
                 } catch (e: CancellationException) {
                     throw e

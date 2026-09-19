@@ -8,6 +8,9 @@ import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.data.api.DownloadRepository
+import com.example.nyasaplayer.core.data.api.SongRepository
+import com.example.nyasaplayer.core.data.download.resolveLocalUri
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -155,3 +158,19 @@ fun Bundle.toSongList(): List<Song> {
         )
     }
 }
+
+/**
+ * The playable items for [ids], pointed at their downloaded files where there are any.
+ *
+ * `onAddMediaItems` used to map catalogue songs straight to items, so a song the user had
+ * downloaded was still requested over the network and would not play offline — the one entry point
+ * that missed the resolution `PlaybackStatePersistence.restore()` does (T31). It serves every
+ * external controller: Assistant, Bluetooth, system media resumption, and the car template's
+ * `playFromMediaId`.
+ *
+ * Ordering is the repository's: ids it does not know are simply absent.
+ */
+suspend fun SongRepository.playableItems(
+    ids: List<String>,
+    downloads: DownloadRepository,
+): List<MediaItem> = getSongsByIds(ids).map(downloads::resolveLocalUri).map { it.toMediaItem() }
