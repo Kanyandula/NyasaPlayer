@@ -37,6 +37,9 @@ wrap and a driving-state pass (T13, T14).
   suspend paths an await and left these: they are non-suspend, and a tap is far slower than the
   load. If one ever lost the race the user would see "no connection" on a downloaded song
   (`docs/tickets/T32-download-path-cache-race.md`, 2026-09-19).
+- 32 of `:core:playback`'s 106 tests were never challenged by the 2026-09-19 mutation sweep —
+  mostly `MediaBrowseTree`'s `getItem` and `search`, whose mutations would not compile
+  (`docs/TEST_MUTATION_SWEEP.md` lists them). No weakness shown, none ruled out either.
 - `onControllerLost`'s single-attempt guard (`compareAndSet`) is untested on both sides, and
   untestable in the current harness: `ControllerConnection.reconnect()` resolves inside the first
   command, so no second command can arrive mid-rebuild. Two tests claimed to cover it and did not
