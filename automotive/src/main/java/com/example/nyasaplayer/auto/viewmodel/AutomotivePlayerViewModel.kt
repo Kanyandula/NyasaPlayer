@@ -12,6 +12,7 @@ import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
+import com.example.nyasaplayer.core.data.crash.CrashReporter
 import com.example.nyasaplayer.core.data.download.resolveLocalUri
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.ControllerConnection
@@ -50,6 +51,7 @@ class AutomotivePlayerViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val networkMonitor: NetworkMonitor,
     private val downloadRepository: DownloadRepository,
+    private val crashReporter: CrashReporter,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AutomotiveUiState())
@@ -131,6 +133,9 @@ class AutomotivePlayerViewModel @Inject constructor(
                 )
             }
         }
+
+        /** T27's tripwire: the surface forwards it, the collector stays free of Firebase. */
+        override fun onControllerFoundDisconnected() = crashReporter.reportControllerFoundDisconnected()
     }
 
     init {

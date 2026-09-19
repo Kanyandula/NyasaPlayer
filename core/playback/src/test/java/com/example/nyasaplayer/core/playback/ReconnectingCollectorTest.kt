@@ -59,6 +59,40 @@ class ReconnectingCollectorTest {
         idle()
     }
 
+    /**
+     * T27: the tripwire T16 closed without. A disconnected controller is the state nothing known
+     * produces in a live process, so the one report is the evidence.
+     */
+    @Test
+    fun aCommandAgainstADisconnectedController_reportsItOnce() {
+        loseTheController()
+
+        assertFalse(collector.transport.play())
+        idle()
+
+        assertEquals("the disconnected controller should be reported", 1, collector.disconnectedReports)
+    }
+
+    /**
+     * One loss, one report — the taps that follow a rebuild find a live controller and say nothing.
+     *
+     * Not the in-flight case: this harness rebuilds synchronously (the second tap here already
+     * succeeds), so a reconnect cannot be held open long enough for a tap to land during it. The
+     * guard that would swallow such a tap is `onControllerLost`'s `compareAndSet`, which the
+     * "one attempt, not three" test above covers from the rebuild side.
+     */
+    @Test
+    fun tapsAfterTheRebuild_doNotReportAgain() {
+        loseTheController()
+
+        assertFalse("precondition: the first tap finds it dead", collector.transport.play())
+        assertTrue("the rebuild lands synchronously here", collector.transport.play())
+        collector.transport.play()
+        idle()
+
+        assertEquals("one loss, one report", 1, collector.disconnectedReports)
+    }
+
     @Test
     fun aCommandAgainstALostController_rebuildsTheConnection() {
         loseTheController()
@@ -136,19 +170,26 @@ class ReconnectingCollectorTest {
     }
 }
 
-private class TestCollector(connection: ControllerConnection) :
+/** Shared with [NeverConnectedCollectorTest], which counts the same hooks. */
+internal class TestCollector(connection: ControllerConnection) :
     BasePlayerStateCollector(connection, TestScope()) {
 
     var unavailableReports = 0
+    var disconnectedReports = 0
 
     override val positionPollIntervalMs: Long = 1_000L
 
     override fun onPlayerUnavailable() {
         unavailableReports++
     }
+
+    override fun onControllerFoundDisconnected() {
+        disconnectedReports++
+    }
 }
 
-private class ReconnectPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
+/** Shared with [NeverConnectedCollectorTest]: any session needs a player behind it. */
+internal class ReconnectPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
     override fun getState(): State =
         State.Builder()
             .setAvailableCommands(Player.Commands.Builder().addAllCommands().build())

@@ -58,6 +58,19 @@ abstract class BasePlayerStateCollector(
      */
     protected open fun onPlayerUnavailable() {}
 
+    /**
+     * A command found a controller that was there but **disconnected** — the state T16 closed on
+     * the grounds that nothing known produces it in a live process.
+     *
+     * T16's Outcome says a `disconnected` line on a device reopens it, and that line only exists
+     * in the logcat of a plugged-in device. This is the tripwire that carries it off the device
+     * (T27): the surfaces override it and record a non-fatal. A `null` controller is ordinary and
+     * does not fire this.
+     *
+     * Observational only — the rebuild below proceeds either way.
+     */
+    protected open fun onControllerFoundDisconnected() {}
+
     fun connectController() {
         val mediaControllerFuture = connection.acquire()
         mediaControllerFuture.addListener(
@@ -89,9 +102,20 @@ abstract class BasePlayerStateCollector(
     private fun onControllerLost() {
         if (!reconnecting.compareAndSet(false, true)) return
         // T16 tripwire: `disconnected` here reopens T16 (see its Outcome); `null` is expected.
-        val state = if (controller == null) "null" else "disconnected"
+        val foundDisconnected = controller != null
+        val state = if (foundDisconnected) "disconnected" else "null"
         Log.w(TAG, "Command found no usable controller ($state); rebuilding")
         val fresh = connection.reconnect()
+        // After the rebuild is under way, and guarded: the tripwire is observational, and an
+        // override that throws here must not leave `reconnecting` set — nothing would clear it,
+        // and the surface would stop recovering for the life of the process.
+        if (foundDisconnected) {
+            try {
+                onControllerFoundDisconnected()
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                Log.w(TAG, "Tripwire reporting failed", e)
+            }
+        }
         fresh.addListener(
             {
                 try {
@@ -282,37 +306,6 @@ abstract class BasePlayerStateCollector(
         return restored
     }
 
-    /**
-     * Publishes a session the service has just restored, paused and seeked but not playing.
-     *
-     * Every value comes from [restored] and none from the controller. A `SessionResult` says the
-     * *session* applied the queue; it does not say the controller has caught up, so asking the
-     * controller here — [hasNextTrack], say — would let a one-message-loop lag answer for an empty
-     * player and show the driver nothing. The controller's own callbacks refine this moments later.
-     *
-     * Both surfaces call this, which is the point: a restored session looks the same on each.
-     */
-    fun applyRestored(restored: RestoredPlayback) {
-        _playbackState.update {
-            it.copy(
-                currentSong = restored.song,
-                isPlaying = false,
-                playWhenReady = false,
-                currentPositionMs = restored.positionMs,
-                // The position poller only runs while playing, so nothing else fills the
-                // scrubber's total on a restored-and-paused session.
-                durationMs = restored.song.durationMs,
-                hasPrevious = restored.index > 0,
-                hasNext = restored.index < restored.queue.lastIndex ||
-                    restored.repeatMode == RepeatMode.All,
-                repeatMode = restored.repeatMode,
-                queue = restored.queue,
-                queueSize = restored.queue.size,
-                currentQueueIndex = restored.index,
-            )
-        }
-    }
-
     fun updateSnapshot(transform: (PlaybackSnapshot) -> PlaybackSnapshot) {
         _playbackState.update(transform)
     }
@@ -355,4 +348,38 @@ fun Int.toAppRepeatMode(): RepeatMode = when (this) {
     Player.REPEAT_MODE_ALL -> RepeatMode.All
     Player.REPEAT_MODE_ONE -> RepeatMode.One
     else -> RepeatMode.Off
+}
+
+/**
+ * Publishes a session the service has just restored, paused and seeked but not playing.
+ *
+ * Every value comes from [restored] and none from the controller. A `SessionResult` says the
+ * *session* applied the queue; it does not say the controller has caught up, so asking the
+ * controller here — [hasNextTrack], say — would let a one-message-loop lag answer for an empty
+ * player and show the driver nothing. The controller's own callbacks refine this moments later.
+ *
+ * Both surfaces call this, which is the point: a restored session looks the same on each.
+ *
+ * File-level, like `awaitResultCode` above: it needs nothing private, and the class sits at
+ * detekt's function ceiling (D23 — a threshold is not answered with a suppression).
+ */
+fun BasePlayerStateCollector.applyRestored(restored: RestoredPlayback) {
+    updateSnapshot {
+        it.copy(
+            currentSong = restored.song,
+            isPlaying = false,
+            playWhenReady = false,
+            currentPositionMs = restored.positionMs,
+            // The position poller only runs while playing, so nothing else fills the
+            // scrubber's total on a restored-and-paused session.
+            durationMs = restored.song.durationMs,
+            hasPrevious = restored.index > 0,
+            hasNext = restored.index < restored.queue.lastIndex ||
+                restored.repeatMode == RepeatMode.All,
+            repeatMode = restored.repeatMode,
+            queue = restored.queue,
+            queueSize = restored.queue.size,
+            currentQueueIndex = restored.index,
+        )
+    }
 }

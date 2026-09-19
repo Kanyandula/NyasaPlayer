@@ -10,6 +10,7 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
 import com.example.nyasaplayer.core.data.api.UserRepository
+import com.example.nyasaplayer.core.data.crash.CrashReporter
 import com.example.nyasaplayer.core.data.download.SongDownloadManager
 import com.example.nyasaplayer.core.playback.BasePlayerStateCollector
 import com.example.nyasaplayer.core.playback.ControllerConnection
@@ -46,6 +47,7 @@ class PlayerViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val persistence: PlaybackStatePersistence,
     private val networkMonitor: NetworkMonitor,
+    private val crashReporter: CrashReporter,
     val downloadManager: SongDownloadManager,
 ) : ViewModel() {
 
@@ -119,6 +121,9 @@ class PlayerViewModel @Inject constructor(
         }
 
         override fun onPlayerUnavailable() = reportPlayerUnavailable()
+
+        /** T27's tripwire: the surface forwards it, the collector stays free of Firebase. */
+        override fun onControllerFoundDisconnected() = crashReporter.reportControllerFoundDisconnected()
     }
 
     /**
