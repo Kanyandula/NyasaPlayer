@@ -65,6 +65,22 @@ class PlayableItemsTest {
         assertTrue(items.single().uriString().startsWith("https://"))
     }
 
+    /**
+     * T32: the index is not loaded when an external controller asks, so `playableItems` has to
+     * await it. Delete that await and this fails — the song comes back with its stream URL.
+     */
+    @Test
+    fun downloadedSong_whenTheIndexHasNotLoadedYet_isStillRequestedFromTheFile() = runTest {
+        val file = downloadsDir.newFile("b.audio")
+        val repo = TestDownloadRepository()
+        repo.pathsAfterIndexLoads["b"] = file.absolutePath
+
+        val items = songRepo.playableItems(listOf("b"), repo)
+
+        assertTrue("playableItems must await the index before resolving", repo.indexAwaited)
+        assertEquals(file.toURI().toString(), items.single().uriString())
+    }
+
     @Test
     fun anIdTheCatalogueDoesNotHave_isDropped() = runTest {
         val items = songRepo.playableItems(listOf("a", "nope"), downloadRepo)

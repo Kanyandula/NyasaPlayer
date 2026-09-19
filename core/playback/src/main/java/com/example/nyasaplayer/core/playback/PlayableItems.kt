@@ -17,4 +17,9 @@ import com.example.nyasaplayer.core.data.download.resolveLocalUri
 suspend fun SongRepository.playableItems(
     ids: List<String>,
     downloads: DownloadRepository,
-): List<MediaItem> = getSongsByIds(ids).map(downloads::resolveLocalUri).map { it.toMediaItem() }
+): List<MediaItem> {
+    // An external controller can ask within a second of process start, before the download index
+    // has loaded, and an unresolved downloaded song will not play offline (T32).
+    downloads.awaitDownloadIndex()
+    return getSongsByIds(ids).map(downloads::resolveLocalUri).map { it.toMediaItem() }
+}

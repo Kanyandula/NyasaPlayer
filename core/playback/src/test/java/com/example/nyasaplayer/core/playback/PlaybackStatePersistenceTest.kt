@@ -193,6 +193,23 @@ class PlaybackStatePersistenceTest {
         assertEquals("https://cdn.example/a.mp3", restored.queue[0].resolvedAudioUrl)
     }
 
+    /**
+     * T32: a restore runs early enough to beat the download index, so it has to await it. Delete
+     * that await and this fails — the song comes back with its stream URL.
+     */
+    @Test
+    fun restore_downloadedSong_whenTheIndexHasNotLoadedYet_stillComesBackLocal() = runTest {
+        val file = downloadsDir.newFile("b.audio")
+        downloadRepo.pathsAfterIndexLoads["b"] = file.absolutePath
+        userRepo.playbackState = savedState("b", listOf("a", "b"), 1)
+        songRepo.songs.value = listOf(song("a"), song("b"))
+
+        val restored = requireNotNull(persistence.restore())
+
+        assertTrue("restore must await the index before resolving", downloadRepo.indexAwaited)
+        assertEquals(file.toURI().toString(), restored.song.resolvedAudioUrl)
+    }
+
     @Test
     fun restore_downloadRecordedButFileDeleted_keepsTheStreamUrl() = runTest {
         downloadRepo.paths["a"] = downloadsDir.root.resolve("gone.audio").absolutePath
@@ -206,11 +223,29 @@ class PlaybackStatePersistenceTest {
     }
 }
 
-/** Shared by every test in this source set. Only [getLocalFilePath] is ever consulted. */
+/**
+ * Shared by every test in this source set. Only [getLocalFilePath] and [awaitDownloadIndex] are
+ * consulted.
+ *
+ * [pathsAfterIndexLoads] models T32's real repository: paths put there are invisible until
+ * something awaits the index. A caller that resolves without awaiting sees nothing, which is the
+ * bug T32 fixed and the reason tests can tell the two apart.
+ */
 class TestDownloadRepository : DownloadRepository {
     val paths = mutableMapOf<String, String>()
 
+    /** Paths that appear only once [awaitDownloadIndex] has been called. */
+    val pathsAfterIndexLoads = mutableMapOf<String, String>()
+
+    var indexAwaited = false
+        private set
+
     override fun getLocalFilePath(mediaId: String): String? = paths[mediaId]
+
+    override suspend fun awaitDownloadIndex() {
+        indexAwaited = true
+        paths.putAll(pathsAfterIndexLoads)
+    }
 
     override fun getCompletedDownloads(): Flow<List<DownloadEntity>> = flowOf(emptyList())
     override fun getAllDownloads(): Flow<List<DownloadEntity>> = flowOf(emptyList())

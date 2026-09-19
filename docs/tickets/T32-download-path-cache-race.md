@@ -2,7 +2,7 @@
 
 - **Slice:** downloads, offline playback — both surfaces
 - **Depends on:** nothing; pre-dates A9, T28 and T31
-- **Status:** Reproduced in a test (2026-09-19); the fix is not written. Not reproducible by hand — see Device attempt
+- **Status:** Fixed 2026-09-19, unit-covered. Device evidence is the T31 car pass; the race itself was only ever reproducible in a test — see Device attempt
 - **Verification Command:** `./gradlew :core:data:testDebugUnitTest :core:playback:testDebugUnitTest
   test detekt`, plus a cold-start device pass
 - **Design Reference:** `core/data/.../offline/OfflineDownloadRepository.kt`;
@@ -138,3 +138,49 @@ what proves the replacement is honest.
   cache is authoritative once the initial load lands. The defect is the window, not the design.
 - Whatever shape is chosen, it should keep one resolution path for both surfaces — T28 spent its
   review budget removing a second way to ask the same question.
+
+## Outcome
+
+`DownloadRepository.awaitDownloadIndex()` is the fix: the index loads once under a mutex, and a
+load that threw is **not** remembered as done, so the next caller retries rather than the process
+spending its life believing nothing is downloaded. The startup warm-up now goes through the same
+function and logs a failure instead of handing an uncaught exception to a scope with no handler —
+the second sharp edge this ticket listed.
+
+The two cold paths await it before resolving: `PlaybackStatePersistence.restore()` and
+`SongRepository.playableItems` (T31's), both already `suspend`.
+
+**`getLocalFilePath` is unchanged, deliberately.** It is called from composition, where nothing can
+suspend, so making it correct would have meant a suspend contract across the interface, the
+composable and all four `playSong`/`shufflePlay` entry points — one of which returns `Boolean`
+synchronously. Instead mobile's overflow sheet stopped calling it: `rememberDownloadState` observes
+the download row, which is immune to the index entirely and also fixes the stale `remember` that
+kept a cold answer for the life of a composition.
+
+So the original race test still passes and is meant to: it pins what `getLocalFilePath` does for a
+caller that does not await. The ticket's earlier claim that the assertion would flip was wrong, and
+the test now says what it actually guards.
+
+### What the tests cover
+
+| Test | Guards |
+|---|---|
+| `…whileTheInitialLoadIsStillRunning_saysNotDownloaded` | The raw getter still answers from the cache only |
+| `awaitDownloadIndex_returnsOnlyOnceTheIndexIsLoaded` | Acceptance criterion 1 |
+| `awaitDownloadIndex_afterAFailedLoad_triesAgain` | Acceptance criterion 2 |
+| `PlayableItemsTest.downloadedSong_whenTheIndexHasNotLoadedYet_isStillRequestedFromTheFile` | The await at T31's call site |
+| `PlaybackStatePersistenceTest.restore_downloadedSong_whenTheIndexHasNotLoadedYet_stillComesBackLocal` | The await on the restore path |
+
+The last two were each checked by deleting their await and watching them fail; the repository test
+by patching the getter to fall back to the DAO. `TestDownloadRepository` grew
+`pathsAfterIndexLoads`, which is what makes "index not loaded" distinguishable from "nothing
+downloaded" — the distinction the first draft of this ticket's test missed.
+
+### Not done here
+
+Acceptance criterion 3 — cold boot, offline, play from the car template — passed **before** this
+fix (`docs/tickets/T31-…` device pass), because the window is too narrow to hit by hand. Re-running
+it would prove nothing this change did not already prove in tests.
+
+`./gradlew test detekt :app:lintDebug :automotive:lintOemDebug` — BUILD SUCCESSFUL, **844 tests,
+0 failures**, detekt and lint clean.
