@@ -6,6 +6,7 @@ import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
 import com.example.nyasaplayer.core.data.local.entity.DownloadEntity
+import com.example.nyasaplayer.core.data.local.entity.DownloadStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,11 +65,12 @@ class SongDownloadManager @Inject constructor(
         if (_activeDownloads.value.contains(mediaId)) return
         scope.launch {
             try {
-                if (downloadRepository.localUriFor(mediaId) != null) return@launch
-                // The attempt is recorded before it can be refused. markFailed is an UPDATE, so
-                // until there is a row it writes nothing and a refusal leaves no trace at all —
-                // which is why an offline tap used to vanish on both surfaces.
-                recordAttempt(mediaId)
+                val existing = downloadRepository.getDownload(mediaId)
+                if (existing.isOnDisk()) return@launch
+                // Recorded before it can be refused: markFailed is an UPDATE, so until a row
+                // exists it writes nothing and the refusal leaves no trace at all. addDownload
+                // upserts a bare Pending row, so an existing one is left as it is.
+                if (existing == null) downloadRepository.addDownload(mediaId)
                 if (!networkMonitor.isOnline.value) {
                     refuse(mediaId, DownloadRefusal.Offline)
                     return@launch
@@ -96,16 +98,15 @@ class SongDownloadManager @Inject constructor(
     }
 
     /**
-     * A row for [mediaId], unless one is already there.
+     * Already downloaded and still there.
      *
-     * [DownloadRepository.addDownload] upserts a bare `Pending` entity, so calling it for a song
-     * that already has a row would throw away its path and size.
+     * Read from the row rather than `localUriFor`, which goes through the in-memory path index —
+     * empty for a moment after process start (T32), and a miss here would let the code below mark
+     * a good download Failed.
      */
-    private suspend fun recordAttempt(mediaId: String) {
-        if (downloadRepository.getDownload(mediaId) == null) {
-            downloadRepository.addDownload(mediaId)
-        }
-    }
+    private fun DownloadEntity?.isOnDisk(): Boolean =
+        this != null && status == DownloadStatus.Completed && filePath.isNotBlank() &&
+            File(filePath).exists()
 
     private suspend fun refuse(mediaId: String, reason: DownloadRefusal) {
         downloadRepository.markFailed(mediaId)
