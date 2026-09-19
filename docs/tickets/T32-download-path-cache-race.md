@@ -2,7 +2,7 @@
 
 - **Slice:** downloads, offline playback — both surfaces
 - **Depends on:** nothing; pre-dates A9, T28 and T31
-- **Status:** Filed, not specced. Attempted on the car 2026-09-19 and **not reproduced** — see Device attempt
+- **Status:** Reproduced in a test (2026-09-19); the fix is not written. Not reproducible by hand — see Device attempt
 - **Verification Command:** `./gradlew :core:data:testDebugUnitTest :core:playback:testDebugUnitTest
   test detekt`, plus a cold-start device pass
 - **Design Reference:** `core/data/.../offline/OfflineDownloadRepository.kt`;
@@ -50,8 +50,15 @@ Two further sharp edges in the same `init`:
 - `scope.launch` has no `try`/`catch` and the scope has no `CoroutineExceptionHandler`, so a DAO
   failure propagates to the default handler rather than being logged and recovered.
 
-**Not observed on a device.** This is read from the code, and an attempt to provoke it failed —
-see below. The reasoning stands; the window is narrower than anything a person can drive by hand.
+**Reproduced, in a test rather than on a device.**
+`OfflineDownloadRepositoryTest.getLocalFilePath_whileTheInitialLoadIsStillRunning_saysNotDownloaded`
+holds the startup query open with a gated `FakeDownloadDao` and asks the repository for a path
+while the load is in flight: it answers null for a song that is downloaded. That test pins the
+defect as it stands today — when this ticket is fixed, the assertion flips from `assertNull` to the
+path, which is how the fix will prove itself.
+
+An attempt to provoke it on the car failed first; the window is narrower than anything a person can
+drive by hand.
 
 ## Device attempt — 2026-09-19, `AAOS_AOSP_33_userdebug`
 
@@ -73,10 +80,9 @@ one. Two things that follow:
 - **The severity drops.** The window is real in the code but narrow enough that a person cannot hit
   it; the car media app also connects to media sources at boot, which warms the cache before a
   driver can touch anything.
-- **The evidence will have to be a test, not a device.** Whoever picks this up should provoke it at
-  the repository level — construct `OfflineDownloadRepository` against a DAO whose first query is
-  suspended, and assert what `getLocalFilePath` answers before it lands — rather than trying again
-  on a head unit.
+- **The evidence had to be a test, not a device** — and now is one, in
+  `core/data/src/test/.../offline/OfflineDownloadRepositoryTest.kt`. Trying again on a head unit
+  would add nothing.
 
 ## Scope
 
@@ -94,6 +100,20 @@ one. Two things that follow:
   trip per call is not obviously better; measure before proposing it.
 - Any change to when downloads are recorded, or to `resolveLocalUri`'s contract of rewriting both
   URL fields.
+
+## Evidence that exists now
+
+`OfflineDownloadRepositoryTest`, three cases, `runBlocking` because the repository loads on
+`Dispatchers.IO` and a virtual-time scheduler does not drive it:
+
+| Case | Asserts |
+|---|---|
+| `…whileTheInitialLoadIsStillRunning_saysNotDownloaded` | **The defect.** Load started (the fake reports the query was asked) and still open; a downloaded song reads as null |
+| `…onceTheLoadLands_findsTheFile` | After the query answers, the path is there |
+| `…songWithNoDownload_staysNull` | The cache is not blanket-filling |
+
+`FakeDownloadDao` (`core/data/src/test/.../fake/`) is the gate: `completedLoadStarted` says the
+startup query has been asked, `releaseCompletedLoad(rows)` lets it answer.
 
 ## Acceptance Criteria
 
