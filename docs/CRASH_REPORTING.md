@@ -65,6 +65,20 @@ Of those, only the one custom key below applies here; for the rest see "What is 
 `car`. A crash before `start()` (during Hilt injection or content-provider start) carries no key.
 The code sets no other key.
 
+### Non-fatals the code records
+
+| Event | When it fires | What it carries |
+|---|---|---|
+| `IllegalStateException("T16 tripwire: transport command found a disconnected controller")` | A transport command found a controller that was connected and is not any more — once per rebuild attempt, not once per tap. A `null` controller is ordinary and records nothing | The fixed message above, the stack at the point of the command, and the `surface` key. No ids, no song or queue data, no timestamp in the message (T24 D8) |
+
+The message is a fixed string on purpose: Firebase groups issues by message, so a unique value in
+one splits a single issue into many. `CrashReporter.reportControllerFoundDisconnected()` is the
+only caller, reached through `BasePlayerStateCollector.onControllerFoundDisconnected()`, which each
+surface's collector overrides (T27).
+
+Non-fatals are delivered on the next launch or with the next fatal, and Crashlytics keeps only the
+eight most recent between sends.
+
 ## What is never sent
 
 - No `setUserId` — nothing identifies the signed-in user.

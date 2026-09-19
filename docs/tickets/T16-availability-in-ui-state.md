@@ -61,8 +61,12 @@ known way to get there while the process lives:
 **The tripwire.** `BasePlayerStateCollector.onControllerLost()` now logs once per loss, saying
 whether the controller it found was `null` or `disconnected`, and logs the cause if the rebuild
 fails. `null` is expected — a tap before the first connection resolved. **A `disconnected` line on a
-device reopens this ticket**, with the evidence T11 could never collect. It goes to logcat only:
-there is no crash reporting in this project yet, which is T24.
+device reopens this ticket**, with the evidence T11 could never collect.
+
+It no longer goes to logcat only. T27 added `onControllerFoundDisconnected()`, which both surfaces
+override to record a Crashlytics non-fatal carrying the fixed message "T16 tripwire: transport
+command found a disconnected controller" and the `surface` key — so the line reaches us from a
+device nobody has plugged in. A report arriving is what reopens this ticket.
 
 **For whoever reopens it:** the push in Notes would be a `MediaController.Listener` on the `Builder` in
 `ControllerConnection`. T15 rejected that listener for clearing a field; publishing state is a fair use.

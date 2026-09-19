@@ -59,6 +59,33 @@ class ReconnectingCollectorTest {
         idle()
     }
 
+    /**
+     * T27: the tripwire T16 closed without. A disconnected controller is the state nothing known
+     * produces in a live process, so the one report is the evidence.
+     */
+    @Test
+    fun aCommandAgainstADisconnectedController_reportsItOnce() {
+        loseTheController()
+
+        assertFalse(collector.transport.play())
+        idle()
+
+        assertEquals("the disconnected controller should be reported", 1, collector.disconnectedReports)
+    }
+
+    /** A reconnect already in flight swallows later taps, and must not report them either. */
+    @Test
+    fun repeatedCommandsDuringOneRebuild_reportOnce() {
+        loseTheController()
+
+        collector.transport.play()
+        collector.transport.play()
+        collector.transport.play()
+        idle()
+
+        assertEquals("one attempt, one report", 1, collector.disconnectedReports)
+    }
+
     @Test
     fun aCommandAgainstALostController_rebuildsTheConnection() {
         loseTheController()
@@ -140,15 +167,21 @@ private class TestCollector(connection: ControllerConnection) :
     BasePlayerStateCollector(connection, TestScope()) {
 
     var unavailableReports = 0
+    var disconnectedReports = 0
 
     override val positionPollIntervalMs: Long = 1_000L
 
     override fun onPlayerUnavailable() {
         unavailableReports++
     }
+
+    override fun onControllerFoundDisconnected() {
+        disconnectedReports++
+    }
 }
 
-private class ReconnectPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
+/** Shared with [NeverConnectedCollectorTest]: any session needs a player behind it. */
+class ReconnectPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
     override fun getState(): State =
         State.Builder()
             .setAvailableCommands(Player.Commands.Builder().addAllCommands().build())

@@ -26,6 +26,11 @@ import kotlin.coroutines.resume
 
 private const val TAG = "PlayerStateCollector"
 
+// Six of the sixteen are `protected open` hooks with empty bodies — the seam each surface
+// overrides, not behaviour this class carries. T27 added the sixth and tipped the count; splitting
+// the class to move no-ops would make the seam harder to find, so the threshold is suppressed here
+// rather than raised for every class.
+@Suppress("TooManyFunctions")
 abstract class BasePlayerStateCollector(
     private val connection: ControllerConnection,
     private val collectorScope: CoroutineScope,
@@ -58,6 +63,19 @@ abstract class BasePlayerStateCollector(
      */
     protected open fun onPlayerUnavailable() {}
 
+    /**
+     * A command found a controller that was there but **disconnected** — the state T16 closed on
+     * the grounds that nothing known produces it in a live process.
+     *
+     * T16's Outcome says a `disconnected` line on a device reopens it, and that line only exists
+     * in the logcat of a plugged-in device. This is the tripwire that carries it off the device
+     * (T27): the surfaces override it and record a non-fatal. A `null` controller is ordinary and
+     * does not fire this.
+     *
+     * Observational only — the rebuild below proceeds either way.
+     */
+    protected open fun onControllerFoundDisconnected() {}
+
     fun connectController() {
         val mediaControllerFuture = connection.acquire()
         mediaControllerFuture.addListener(
@@ -89,8 +107,10 @@ abstract class BasePlayerStateCollector(
     private fun onControllerLost() {
         if (!reconnecting.compareAndSet(false, true)) return
         // T16 tripwire: `disconnected` here reopens T16 (see its Outcome); `null` is expected.
-        val state = if (controller == null) "null" else "disconnected"
+        val foundDisconnected = controller != null
+        val state = if (foundDisconnected) "disconnected" else "null"
         Log.w(TAG, "Command found no usable controller ($state); rebuilding")
+        if (foundDisconnected) onControllerFoundDisconnected()
         val fresh = connection.reconnect()
         fresh.addListener(
             {
