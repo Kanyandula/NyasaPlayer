@@ -80,4 +80,8 @@ if the download had started, no Snackbar appears in the next 8 s, and the Downlo
 reads "0 songs / No downloads yet" — not a failed row. The user is told nothing at all, on a screen
 that is otherwise showing them the offline banner.
 
-Parked in `docs/BACKLOG.md`; the car's equivalent refusal is A9's and was not re-checked here.
+**Fixed 2026-09-19.** The cause was not only silence: `downloadSong` called `markFailed` before
+any row existed, and `markFailed` is an `UPDATE`, so the refusal was never recorded at all — which
+is why the car's Downloads screen, which does render failed rows, had nothing to show either. The
+attempt is now recorded before it can be refused, and mobile says "Can't download while offline"
+through the snackbar `NyasaPlayerApp` already hosts.
