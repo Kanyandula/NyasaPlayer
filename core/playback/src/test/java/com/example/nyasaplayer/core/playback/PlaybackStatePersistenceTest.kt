@@ -206,8 +206,8 @@ class PlaybackStatePersistenceTest {
     }
 }
 
-/** Only [getLocalFilePath] is consulted on the restore path; the rest is never reached. */
-private class TestDownloadRepository : DownloadRepository {
+/** Shared by every test in this source set. Only [getLocalFilePath] is ever consulted. */
+class TestDownloadRepository : DownloadRepository {
     val paths = mutableMapOf<String, String>()
 
     override fun getLocalFilePath(mediaId: String): String? = paths[mediaId]

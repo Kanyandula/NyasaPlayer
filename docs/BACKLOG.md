@@ -7,12 +7,16 @@ out to be a bug a driver or user would hit, or a safety gap.
 ## Specced or filed tickets, parked
 
 - **T27** — report a controller found disconnected as a non-fatal (`docs/tickets/T27-tripwire-non-fatal.md`).
-- **T31** — a downloaded song played from outside the app ignores its download
-  (`docs/tickets/T31-add-media-items-ignores-downloads.md`). Both surfaces.
 - **T20** — audio quality preference (`docs/tickets/T20-audio-quality-preference.md`).
 - **T19** — car phone and email sign-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T19-car-auth-phone-and-email.md`).
 - **T18** — car PIN opt-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T18-car-pin-opt-in.md`).
 - **T8** — search draft-query hoist, deferred on measurement (`docs/tickets/T8-automotive-search-draft-query-hoist.md`).
+
+## Owed device checks
+
+- **T31** — fixed and unit-covered on 2026-09-19; the car pass is owed, and needs a test album back
+  in Firestore plus a song downloaded on the car
+  (`docs/tickets/T31-add-media-items-ignores-downloads.md`).
 
 ## Owed phone checks — cleared 2026-09-19
 
@@ -35,6 +39,11 @@ wrap and a driving-state pass (T13, T14).
 - `CLAUDE.md` doesn't mention Crashlytics or `CrashReporter`.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
 - The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:308`), not as a modal over the queue.
+- `OfflineDownloadRepository` fills its `filePathCache` asynchronously in `init`
+  (`OfflineDownloadRepository.kt:27-36`) and `getLocalFilePath` reads it without waiting, so every
+  caller — `resolveLocalUri`, the overflow sheet's download state, T31's `onAddMediaItems` — can see
+  a downloaded song as undownloaded for the first moments after process start. Pre-dates T31; found
+  reviewing it (2026-09-19).
 - A download refused because the phone is offline tells the user nothing: the overflow sheet closes
   like a download has started, no Snackbar follows, and Downloads still reads "No downloads yet"
   rather than showing a failed row (`docs/T29_VERIFICATION.md`, 2026-09-19).
