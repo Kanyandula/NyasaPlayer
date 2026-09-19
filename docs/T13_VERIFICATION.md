@@ -63,9 +63,9 @@ Nine of ten operations behave exactly as they did before the move.
 
 ## Mobile — run 2026-09-19
 
-`Pixel_9_Pro_Fold_API_35` (`emulator-5558`, API 35), signed in, debug build of `:app` at `a0214b1`,
-one process throughout (2165, then 6125 after the T10 kill). Read from `dumpsys media_session`; the
-UI states were read from screenshots.
+`Pixel_9_Pro_Fold_API_35` (`emulator-5558`, API 35), signed in, debug build of `:app` at `a0214b1`.
+Two processes across the sitting — 2165 for the transport table, 6125 after the T10 force-stop for
+everything below it. States read from `dumpsys media_session`, the UI from screenshots.
 
 | Operation | Result |
 |---|---|
@@ -84,13 +84,14 @@ That closes the transport set on mobile, `dismiss()` included.
 
 ### The offline-buffering pause
 
-Airplane mode on mid-stream, then `svc wifi disable` / `svc data disable` to be certain (the ping
-confirmed `Network is unreachable` throughout). Playback ran on to the end of what was already
+Airplane mode on mid-stream, then `svc wifi disable` / `svc data disable` to be certain — a ping
+after each returned `Network is unreachable`, and `dumpsys connectivity` read
+`Active default network: none`. Playback ran on to the end of what was already
 buffered, 132350 ms, and then:
 
 - the session went to `state=ERROR(7), error=Source error` — **not** a buffering spinner that never
   resolves, which is the failure this check exists to rule out;
-- pressing play offline put the error in front of the driver in words:
+- pressing play offline put the error in front of the user in words:
   **"Offline — Can't stream while offline. Download songs for offline playback."** with a Retry
   button, in the expanded player, over `OfflineBanner`'s "No internet connection";
 - with the network back, play resumed from 2:17 and buffered ahead normally.
