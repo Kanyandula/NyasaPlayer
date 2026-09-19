@@ -27,10 +27,13 @@ import org.junit.Test
 class OfflineDownloadRepositoryTest {
 
     /**
-     * **This pins the defect, not the desired behaviour.** The song is downloaded and recorded;
-     * the repository says otherwise because its startup query has not come back. When T32 is
-     * fixed — by waiting for the load, or by falling back to the DAO — this assertion becomes
-     * `assertEquals(Path, …)`.
+     * The window T32 is about: the song is downloaded and recorded, and the repository says
+     * otherwise because its startup query has not come back.
+     *
+     * This still holds after T32's fix, and is meant to: `getLocalFilePath` stays a plain cache
+     * read, because it is called from composition where nothing can suspend. What the fix adds is
+     * [OfflineDownloadRepository.awaitDownloadIndex] for the callers that *can* wait — see the
+     * next test. A caller that skips it still sees this.
      */
     @Test
     fun getLocalFilePath_whileTheInitialLoadIsStillRunning_saysNotDownloaded() = runBlocking {
@@ -72,6 +75,43 @@ class OfflineDownloadRepositoryTest {
         repo.awaitLocalFilePath(MediaId)
 
         assertNull(repo.getLocalFilePath(OtherMediaId))
+    }
+
+    /** T32's fix: the callers that can wait, wait — and then the path is there. */
+    @Test
+    fun awaitDownloadIndex_returnsOnlyOnceTheIndexIsLoaded() = runBlocking {
+        val dao = FakeDownloadDao(listOf(completed(MediaId, Path)))
+
+        val repo = OfflineDownloadRepository(dao)
+        withTimeout(TimeoutMs) { dao.completedLoadStarted.await() }
+        assertNull("precondition: still racing", repo.getLocalFilePath(MediaId))
+        dao.releaseCompletedLoad()
+
+        withTimeout(TimeoutMs) { repo.awaitDownloadIndex() }
+
+        assertEquals(Path, repo.getLocalFilePath(MediaId))
+    }
+
+    /**
+     * A load that threw is not remembered as "loaded": the next caller tries again.
+     *
+     * Before T32 the startup read happened once, unguarded, so a database error at the wrong
+     * moment left every song looking undownloaded until the process restarted.
+     */
+    @Test
+    fun awaitDownloadIndex_afterAFailedLoad_triesAgain() = runBlocking {
+        val dao = FakeDownloadDao(
+            rows = listOf(completed(MediaId, Path)),
+            gated = false,
+            failuresBeforeSuccess = 1,
+        )
+
+        val repo = OfflineDownloadRepository(dao)
+        withTimeout(TimeoutMs) { dao.completedLoadStarted.await() }
+
+        withTimeout(TimeoutMs) { repo.awaitDownloadIndex() }
+
+        assertEquals(Path, repo.getLocalFilePath(MediaId))
     }
 
     /** Polls the cache: the load completes on `Dispatchers.IO`, off this thread. */

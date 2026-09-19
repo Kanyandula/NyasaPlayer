@@ -5,10 +5,12 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.DownloadRepository
 import com.example.nyasaplayer.core.data.api.SongRepository
+import com.example.nyasaplayer.core.data.local.entity.DownloadEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -108,6 +110,15 @@ class SongDownloadManager @Inject constructor(
     }
 
     fun getLocalFileUri(mediaId: String): String? = downloadRepository.localUriFor(mediaId)
+
+    /**
+     * The download row for [mediaId] as it changes.
+     *
+     * Read straight from the database, so unlike [getLocalFileUri] it does not depend on the
+     * in-memory path index having loaded (T32) and it corrects itself when the row changes.
+     */
+    fun observeDownload(mediaId: String): Flow<DownloadEntity?> =
+        downloadRepository.observeDownload(mediaId)
 
     /** [DownloadRepository.resolveLocalUri], for callers that already hold the manager. */
     fun resolveLocalUri(song: Song): Song = downloadRepository.resolveLocalUri(song)

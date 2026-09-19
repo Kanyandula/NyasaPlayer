@@ -212,6 +212,8 @@ class TestDownloadRepository : DownloadRepository {
 
     override fun getLocalFilePath(mediaId: String): String? = paths[mediaId]
 
+    override suspend fun awaitDownloadIndex() = Unit
+
     override fun getCompletedDownloads(): Flow<List<DownloadEntity>> = flowOf(emptyList())
     override fun getAllDownloads(): Flow<List<DownloadEntity>> = flowOf(emptyList())
     override fun observeDownload(mediaId: String): Flow<DownloadEntity?> = flowOf(null)

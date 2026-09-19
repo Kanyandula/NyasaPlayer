@@ -25,4 +25,16 @@ interface DownloadRepository {
     suspend fun removeAllDownloads()
     suspend fun resetStaleDownloads()
     fun getLocalFilePath(mediaId: String): String?
+
+    /**
+     * Returns once the downloaded-path index is loaded, so [getLocalFilePath] can answer.
+     *
+     * The index is read from the database once and kept in memory. Callers that can wait — the
+     * restore path and the media session's `onAddMediaItems`, both `suspend` — must call this
+     * before resolving, or they risk asking during the window after process start when the index
+     * is still loading and every song looks undownloaded (T32).
+     *
+     * Cheap and idempotent once loaded. A load that failed is retried on the next call.
+     */
+    suspend fun awaitDownloadIndex()
 }
