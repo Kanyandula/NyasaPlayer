@@ -69,6 +69,4 @@ Both ways of finishing the Activity were tried:
 
 The last two rows are the check this record has been owing: on pre-fix `main` a released shared
 future hands the next consumer a disconnected controller, so play after an Activity finish does
-nothing. Here both transport presses land on the first try.
-
-The driving-state pass on the car is still a formality this ticket has not run.
+nothing.

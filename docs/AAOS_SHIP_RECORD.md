@@ -46,9 +46,8 @@ descriptor declares `<uses name="media" />`, and `playstore` ships no app activi
   (`docs/tickets/T30-remove-all-dialog-clipped.md`). Driver-facing, so it is a ticket rather than a
   backlog line. Fixed and device-verified 2026-09-18; merged as #71.
 - **The owed phone checks are cleared** (2026-09-19): T25, T29, T13, T14 and T10 all ran on
-  `Pixel_9_Pro_Fold_API_35`. They were mobile-side debts, not release gates for the car, but they
-  were the last unverified claims either surface carried. Two new mobile findings went to
-  `docs/BACKLOG.md`, neither driver-facing.
+  `Pixel_9_Pro_Fold_API_35`. Mobile still owes T3's D55 index fix and T7's skeletons, which that
+  sitting did not reach. Two new mobile findings went to `docs/BACKLOG.md`, neither driver-facing.
 - **T18 and T19**, deferred past ship by the §12 exception, and parked in `docs/BACKLOG.md`.
 - **The `HR-*` host-render smoke tests** (§8.4) are not part of this release: they run before a Play
   submission decision, which §3.2 makes a later business call.

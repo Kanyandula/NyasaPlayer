@@ -89,8 +89,8 @@ after each returned `Network is unreachable`, and `dumpsys connectivity` read
 `Active default network: none`. Playback ran on to the end of what was already
 buffered, 132350 ms, and then:
 
-- the session went to `state=ERROR(7), error=Source error` — **not** a buffering spinner that never
-  resolves, which is the failure this check exists to rule out;
+- the session went to `state=ERROR(7), error=Source error`, not a buffering spinner that never
+  resolves;
 - pressing play offline put the error in front of the user in words:
   **"Offline — Can't stream while offline. Download songs for offline playback."** with a Retry
   button, in the expanded player, over `OfflineBanner`'s "No internet connection";

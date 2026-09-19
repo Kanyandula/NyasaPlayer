@@ -87,8 +87,8 @@ all, this one and T26's release crash. The debug crash never reached the dashboa
 ## The phone — run 2026-09-19
 
 `Medium_Phone_API_35` had refused the release build on 2026-09-14: `adb install -r` →
-`INSTALL_FAILED_INSUFFICIENT_STORAGE` (`/data` 95% full, 316 MB free), the same low-storage block
-that stopped the T29 phone pass. The pass was re-run on `Pixel_9_Pro_Fold_API_35`
+`INSTALL_FAILED_INSUFFICIENT_STORAGE` (`/data` 95% full, 316 MB free — T29's own attempt read
+312 MB and a different message for the same block). The pass was re-run on `Pixel_9_Pro_Fold_API_35`
 (`emulator-5558`, API 35, `/data` 37% used), signed in, against `:app` at `a0214b1`.
 
 The release APK has no `signingConfig`, so `app-release-unsigned.apk` was signed locally with
@@ -122,8 +122,7 @@ The debug relaunch, same filter and a 30 s window after it — the SDK starts, a
 
 `topIssues` returns nothing for this app over the last seven days, including the 2026-09-14 and
 2026-09-15 car events this record already shows are on the dashboard: `topIssues` omits closed
-issues, and those were closed. `topVersions` counts events either way, which is why it is the check
-used here.
+issues. `topVersions` counts events either way, which is why it is the check used here.
 
 The enqueue line the car pass quotes (`Crashlytics report successfully enqueued to DataTransport:
 <id>`, D-level) did not appear in either phone log. The upload did, at Info level with a 200, and

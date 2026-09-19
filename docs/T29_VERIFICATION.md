@@ -67,9 +67,8 @@ T25, and the checks below are the ones that script's `NT_LAUNCH` form was meant 
 | Check | Result |
 |---|---|
 | Offline (`cmd connectivity airplane-mode enable`, then `svc wifi disable` / `svc data disable`; `ping` → `Network is unreachable`) | `OfflineBanner` — "No internet connection" — on Home, Library and Downloads, within one screenshot of the toggle |
-| A streamed song, offline | Refused in mobile's own wording: **"Offline — Can't stream while offline. Download songs for offline playback."** with Retry, in the expanded player. No endless spinner; the session sat at `ERROR(7), error=Source error` |
-| Playback already running when the network went | Ran to the end of the buffer (132350 ms) and then errored, rather than stalling |
-| Online again | Banner cleared, the error banner went, play resumed from 2:17 and buffered ahead |
+| A streamed song, offline | Refused in mobile's own wording: **"Offline — Can't stream while offline. Download songs for offline playback."** with Retry, in the expanded player |
+| Playback already running when the network went, and recovery afterwards | Measured in the same sitting and written up once, in `docs/T13_VERIFICATION.md` → "The offline-buffering pause" |
 | Profile, offline | Its own `ErrorBanner`: "Connection lost — Showing cached content", with Retry, over cached content |
 | A download started offline | Nothing downloaded — `files/downloads` does not exist — but see below |
 
@@ -81,5 +80,4 @@ if the download had started, no Snackbar appears in the next 8 s, and the Downlo
 reads "0 songs / No downloads yet" — not a failed row. The user is told nothing at all, on a screen
 that is otherwise showing them the offline banner.
 
-Correct outcome, silent delivery. Parked in `docs/BACKLOG.md`; the car's equivalent refusal is A9's
-and was not re-checked here.
+Parked in `docs/BACKLOG.md`; the car's equivalent refusal is A9's and was not re-checked here.
