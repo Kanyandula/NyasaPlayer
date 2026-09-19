@@ -8,17 +8,12 @@ out to be a bug a driver or user would hit, or a safety gap.
 
 - **T27** — report a controller found disconnected as a non-fatal (`docs/tickets/T27-tripwire-non-fatal.md`).
 - **T32** — a downloaded song reads as undownloaded for the first moments after process start
-  (`docs/tickets/T32-download-path-cache-race.md`). Both surfaces; the race T31's fix runs into.
+  (`docs/tickets/T32-download-path-cache-race.md`). Both surfaces. Not reproducible by hand — the
+  car attempt on 2026-09-19 failed to provoke it, so the evidence has to come from a test.
 - **T20** — audio quality preference (`docs/tickets/T20-audio-quality-preference.md`).
 - **T19** — car phone and email sign-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T19-car-auth-phone-and-email.md`).
 - **T18** — car PIN opt-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T18-car-pin-opt-in.md`).
 - **T8** — search draft-query hoist, deferred on measurement (`docs/tickets/T8-automotive-search-draft-query-hoist.md`).
-
-## Owed device checks
-
-- **T31** — fixed and unit-covered on 2026-09-19; the car pass is owed, and needs a test album back
-  in Firestore plus a song downloaded on the car
-  (`docs/tickets/T31-add-media-items-ignores-downloads.md`).
 
 ## Owed phone checks — cleared 2026-09-19
 
