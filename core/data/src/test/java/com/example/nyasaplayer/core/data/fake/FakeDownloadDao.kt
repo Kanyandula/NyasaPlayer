@@ -15,20 +15,23 @@ import kotlinx.coroutines.flow.map
  * launches from `init`, so a test that wants to look at the repository *while that query is still
  * running* needs the query to stop and wait. [completedLoadStarted] says it has been asked;
  * [releaseCompletedLoad] lets it answer.
+ *
+ * [rows] are in the database from the start — that is what makes the wait meaningful. A fake that
+ * begins empty answers null whether or not the load has landed, so a test built on one proves
+ * nothing about the race.
  */
-class FakeDownloadDao : DownloadDao {
+class FakeDownloadDao(rows: List<DownloadEntity> = emptyList()) : DownloadDao {
 
-    private val downloads = MutableStateFlow<List<DownloadEntity>>(emptyList())
+    private val downloads = MutableStateFlow(rows)
 
     /** Completes when [getAllCompletedOnce] has been called. */
     val completedLoadStarted = CompletableDeferred<Unit>()
 
     private val completedLoadGate = CompletableDeferred<List<DownloadEntity>>()
 
-    /** Answers the waiting [getAllCompletedOnce] with [rows]. */
-    fun releaseCompletedLoad(rows: List<DownloadEntity>) {
-        downloads.value = rows
-        completedLoadGate.complete(rows)
+    /** Lets the waiting [getAllCompletedOnce] answer with the completed rows it holds. */
+    fun releaseCompletedLoad() {
+        completedLoadGate.complete(downloads.value.filter { it.status == DownloadStatus.Completed })
     }
 
     override suspend fun getAllCompletedOnce(): List<DownloadEntity> {

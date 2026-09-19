@@ -108,12 +108,20 @@ one. Two things that follow:
 
 | Case | Asserts |
 |---|---|
-| `…whileTheInitialLoadIsStillRunning_saysNotDownloaded` | **The defect.** Load started (the fake reports the query was asked) and still open; a downloaded song reads as null |
-| `…onceTheLoadLands_findsTheFile` | After the query answers, the path is there |
-| `…songWithNoDownload_staysNull` | The cache is not blanket-filling |
+| `…whileTheInitialLoadIsStillRunning_saysNotDownloaded` | **The defect.** The download row is in the database from the start and the startup query has been asked but not answered; the repository says the song is not downloaded |
+| `…onceTheLoadLands_findsTheFile` | Once the query answers, the path is there |
+| `…completedRowWithNoPath_staysNull` | The load's one branch: a completed row with a blank path is not cached |
 
-`FakeDownloadDao` (`core/data/src/test/.../fake/`) is the gate: `completedLoadStarted` says the
-startup query has been asked, `releaseCompletedLoad(rows)` lets it answer.
+`FakeDownloadDao` (`core/data/src/test/.../fake/`) is the gate: it is constructed **with the rows
+already in the database**, `completedLoadStarted` says the startup query has been asked, and
+`releaseCompletedLoad()` lets it answer.
+
+**The first case was checked by mutation**, because a test that pins a defect is worthless if it
+passes for another reason. With `getLocalFilePath` patched to fall back to
+`downloadDao.getByMediaId` on a cache miss, it fails (`AssertionError`, the path is found) while
+the other two still pass. An earlier draft of this test seeded nothing, so its null meant "no
+download exists" rather than "the load has not landed"; review caught it, and the mutation check is
+what proves the replacement is honest.
 
 ## Acceptance Criteria
 
