@@ -18,6 +18,7 @@ import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
+import com.example.nyasaplayer.core.playback.isPlayableNow
 import com.example.nyasaplayer.core.playback.isStreamStalledOffline
 import com.example.nyasaplayer.core.playback.toSong
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -166,12 +167,7 @@ class PlayerViewModel @Inject constructor(
         }.launchIn(viewModelScope)
     }
 
-    /**
-     * The car's stall guard, now mobile's too (T28): a stream that cannot load offline is paused
-     * and named. The shared rule adds what mobile's own condition lacked — it exempts a local file,
-     * which used to be paused with "Connection lost" whenever it buffered offline, and it waits for
-     * `playWhenReady`, so buffering nobody asked for raises nothing.
-     */
+    /** The car's stall guard, now mobile's too (T28). */
     private fun handleOfflineBuffering(snapshot: PlaybackSnapshot) {
         if (snapshot.isStreamStalledOffline(isOnline)) {
             stateCollector.transport.pause()
@@ -192,7 +188,7 @@ class PlayerViewModel @Inject constructor(
 
     fun playSong(songs: List<Song>, song: Song) {
         val resolvedSong = downloadManager.resolveLocalUri(song)
-        if (OfflinePlaybackGate.refuses(resolvedSong, isOnline)) {
+        if (!resolvedSong.isPlayableNow(isOnline)) {
             showOfflineError(song)
             return
         }
@@ -215,7 +211,9 @@ class PlayerViewModel @Inject constructor(
     fun shufflePlay(songs: List<Song>) {
         if (songs.isEmpty()) return
         val resolvedSongs = songs.map(downloadManager::resolveLocalUri)
-        if (OfflinePlaybackGate.refuses(resolvedSongs, isOnline)) {
+        // One playable song is enough to start, as on the car: a mixed list shuffles, and a track
+        // that cannot load raises the offline error rather than leaving silence.
+        if (resolvedSongs.none { it.isPlayableNow(isOnline) }) {
             showOfflineError(songs.first())
             return
         }
@@ -264,10 +262,9 @@ class PlayerViewModel @Inject constructor(
             return
         }
         // The queue holds resolved songs — playSong, shufflePlay and restore all resolve before
-        // it reaches the player — so the shared rule can read the song rather than ask the
-        // download repository. The !isOnline gate stays: a null song must not refuse an online tap.
-        val current = _uiState.value.currentSong
-        if (!isOnline && (current == null || OfflinePlaybackGate.refuses(current, isOnline))) {
+        // anything reaches the player — so the rule can read the song rather than ask the download
+        // repository. Same shape as isStreamStalledOffline, null included.
+        if (!isOnline && _uiState.value.currentSong?.isPlayableNow(isOnline = false) != true) {
             _uiState.update {
                 it.copy(
                     error = PlayerError(

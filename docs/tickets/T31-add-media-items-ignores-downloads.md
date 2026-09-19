@@ -34,7 +34,10 @@ the one entry point that was missed.
 ("play X"), Bluetooth/AVRCP, Wear, system media resumption, and `playFromMediaId` from a browse
 item — which on the car is how the OEM media template plays anything at all.
 
-Found while speccing T28 (`:app`-only, so it could not fix this).
+Found while speccing T28 (`:app`-only, so it could not fix this). Since T28, the symptom on mobile
+is sharper: `togglePlayPause` reads the song's URL, so play on such a track is refused up front with
+"Can't stream while offline" rather than attempting a load that fails. Earlier and clearer, but the
+wording is now wrong in the other direction — the song *is* downloaded.
 
 ## Scope
 

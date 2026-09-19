@@ -79,7 +79,10 @@ local files, and criterion 5 below covers it.
 
 `shufflePlay`'s old `zip` comparison also misread two classes of song — one whose catalogue
 `audioUrl` is already the local URI, and one whose `audioUrl` is blank with a `file:` `songUrl`.
-Both are unit-covered now.
+`OfflinePlaybackTest` in `:core:playback` already covers both, which is why T28 adds no tests: the
+first draft wrapped the rule in an `:app` gate for testability, and review showed the wrapper was a
+second name for the car's own expression and its tests duplicated existing ones. Mobile now inlines
+the rule exactly as the car writes it.
 
 ### Device pass, all offline unless stated
 
@@ -103,6 +106,6 @@ Assistant, Bluetooth or system media resumption ignores its download — filed a
 
 ### Gates
 
-`./gradlew test detekt :app:lintDebug` — BUILD SUCCESSFUL, **831 tests, 0 failures**, detekt clean,
-lint clean. Nine of those tests are new (`OfflinePlaybackGateTest`); they prove the rule, not the
-wiring, which is what the device pass above is for.
+`./gradlew test detekt :app:lintDebug` — BUILD SUCCESSFUL, **822 tests, 0 failures**, detekt clean,
+lint clean. No new tests: the rule's own cases live in `:core:playback`, and the wiring is what the
+device pass above is for.

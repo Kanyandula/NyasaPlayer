@@ -54,7 +54,7 @@ All four decisions move onto the shared rule. Three are the ticket's; the fourth
 |---|---|---|
 | `playSong` | `downloadManager.getLocalFileUri(song.mediaId) != null`, then `!isOnline && !isDownloaded` | `!downloadManager.resolveLocalUri(song).isPlayableNow(isOnline)` |
 | `shufflePlay` | `isOnline \|\| resolvedSongs.zip(songs).any { (r, o) -> r.audioUrl != o.audioUrl }` | `resolvedSongs.none { it.isPlayableNow(isOnline) }` |
-| `togglePlayPause` | `getLocalFileUri(currentMediaId) != null`, then `!isOnline && !isDownloaded` | `!isOnline && (current == null \|\| !current.isPlayableNow(isOnline))` |
+| `togglePlayPause` | `getLocalFileUri(currentMediaId) != null`, then `!isOnline && !isDownloaded` | `!isOnline && currentSong?.isPlayableNow(isOnline = false) != true` |
 | `handleOfflineBuffering(isBuffering)` | `isBuffering && !isOnline` | `snapshot.isStreamStalledOffline(isOnline)` — takes the snapshot, not a Boolean |
 
 `shufflePlay`'s `zip` comparison is worth naming: it asks "did resolution change any URL", a proxy
@@ -112,91 +112,34 @@ lives in `:core:playback`, outside this ticket's `:app` scope. It goes to `docs/
   (`handleOfflineBuffering`). T28 changes decisions, not words.
 - `togglePlayPause` keeps reading the live player for `isPlaying` before anything else (T13/T14);
   only its offline branch changes.
-- A null `currentSong` refuses **only while offline**, exactly as today. The tempting one-liner
-  `currentSong?.isPlayableNow(isOnline) != true` is wrong: for a null song it evaluates to `true`
-  whatever the network is doing, so an online tap with no current song would be refused with an
-  offline error. The `!isOnline` gate stays explicit for that reason.
+- A null `currentSong` refuses **only while offline**, exactly as today. `?.isPlayableNow(…) != true`
+  is `true` for a null song whatever the network is doing, so dropping the `!isOnline` gate would
+  refuse an online tap with no current song. Guarded by it, the expression is the same shape
+  `isStreamStalledOffline` uses for the same reason.
 
-## The pure decision, and what the tests can reach
+## Tests: none new, and why
 
-`PlayerViewModel` takes six collaborators. Two are interfaces with fakes already in the repo —
-`UserRepository` and `AuthRepository` (faked in `MediaBrowseTreeTest.kt`). The other four are final
-classes that cannot be faked by subclassing: `ControllerConnection`, `PlaybackStatePersistence`,
-`NetworkMonitor` and `SongDownloadManager`. Two of those four are the blockers —
-`ControllerConnection` needs a real `SessionToken` and `NetworkMonitor` needs Robolectric's
-connectivity shadows. `:app` has no Robolectric in its test dependencies, and the
-MediaSession-over-fake-player pattern that solves this is a private class inside `:core:playback`'s
-`ConnectedTransportTest.kt`, which `:app` cannot see. A ViewModel-level harness is a ticket of its
-own (recorded in `docs/BACKLOG.md`).
+The first draft of this spec put the decision in an `OfflinePlaybackGate` object in `:app` so it
+could be unit-tested, on the reasoning that `PlayerViewModel` cannot be constructed in a plain JVM
+test. Review killed it, correctly, on two counts:
 
-So the decision comes out of the ViewModel and is tested where it can be reached:
+- **It is a second name for the car's expression.** `AutomotivePlayerViewModel` already writes
+  `!resolvedSong.isPlayableNow(isOnline)` and `resolvedSongs.none { it.isPlayableNow(isOnline) }`
+  inline. A mobile wrapper at inverted polarity gives one rule two vocabularies — the drift T28
+  exists to end.
+- **Its tests proved nothing new.** `:core:playback`'s `OfflinePlaybackTest` already covers online
+  and offline streamed songs, an offline local file, and the `songUrl` fallback. The rest of the
+  proposed cases tested Kotlin's `none`.
 
-```kotlin
-// app/src/main/java/com/example/nyasaplayer/player/OfflinePlaybackGate.kt
-package com.example.nyasaplayer.player
+So mobile inlines the rule exactly as the car does, and adds no tests. The four call sites are
+covered by `OfflinePlaybackTest` for the rule and by the phone pass for the wiring — which is all
+the earlier design would have got anyway, since a gate's tests cannot show that `PlayerViewModel`
+calls it.
 
-/**
- * What mobile is allowed to start right now, decided by `:core:playback`'s shared rule (T28).
- *
- * Extracted from `PlayerViewModel` only so it can be tested: the ViewModel's six collaborators are
- * final `@Singleton` classes, so nothing below it is reachable from a plain JVM test.
- */
-internal object OfflinePlaybackGate {
-
-    /** A single resolved song the caller asked to play. */
-    fun refuses(resolved: Song, isOnline: Boolean): Boolean = !resolved.isPlayableNow(isOnline)
-
-    /** A resolved queue: one playable song is enough to start. */
-    fun refuses(resolved: List<Song>, isOnline: Boolean): Boolean =
-        resolved.none { it.isPlayableNow(isOnline) }
-}
-```
-
-`PlayerViewModel` calls `OfflinePlaybackGate.refuses(...)` at the three start sites:
-
-```kotlin
-// playSong
-if (OfflinePlaybackGate.refuses(resolvedSong, isOnline)) { showOfflineError(song); return }
-
-// shufflePlay
-if (OfflinePlaybackGate.refuses(resolvedSongs, isOnline)) { showOfflineError(songs.first()); return }
-
-// togglePlayPause — the !isOnline gate stays: a null song must not refuse an online tap
-val current = _uiState.value.currentSong
-if (!isOnline && (current == null || OfflinePlaybackGate.refuses(current, isOnline))) {
-    /* today's error */
-    return
-}
-```
-
-`playSong` resolves the tapped song before the check rather than after, so the single resolve at
-the top serves both the gate and the queue it builds. The buffering guard calls
-`snapshot.isStreamStalledOffline(isOnline)` directly, because that shared function is already the
-whole decision and wrapping it would add nothing.
-
-**What the unit tests prove:** the rule refuses and allows the right things.
-**What they do not prove:** that `PlayerViewModel` calls the gate, or that the UI shows the error.
-The phone pass covers that, and this spec says so rather than implying the tests are sufficient.
-
-### Tests — `app/src/test/java/com/example/nyasaplayer/player/OfflinePlaybackGateTest.kt`
-
-Plain JUnit, no Robolectric, no new dependencies. One case per *decision* behind the acceptance
-criteria — the criteria themselves are device checks, because they are about what the ViewModel and
-the UI then do:
-
-| Case | Expectation |
-|---|---|
-| offline, streamed song (`https:`) | refused |
-| offline, downloaded song (`file:`) | allowed |
-| online, streamed song | allowed |
-| offline, list mixing one `file:` and three `https:` | allowed |
-| offline, list of only `https:` | refused |
-| offline, empty list | refused |
-| offline, song with a blank `audioUrl` and a `file:` `songUrl` | allowed — `resolvedAudioUrl` falls back, which the old `zip` proxy never saw |
-| offline, song whose catalogue `audioUrl` is already the local URI | allowed — resolution changes nothing, so the old proxy read it as not downloaded |
-
-The stall rule keeps its existing coverage in `:core:playback`'s `OfflinePlaybackTest`; T28 adds no
-cases there, because it introduces no new behaviour in that function.
+A `PlayerViewModel` harness stays out of scope and in `docs/BACKLOG.md`. Note for whoever picks it
+up: `:app` has no Robolectric, but `:core:playback` does and drives a real `MediaController` over
+`SimpleBasePlayer` in `PlayWhenReadySnapshotTest` — "the ViewModel is not JVM-testable" is an
+assumption to check, not a fact.
 
 ## Acceptance criteria
 
