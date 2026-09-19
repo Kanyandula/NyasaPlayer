@@ -83,7 +83,8 @@ The protocol the note above asked for: watch the service from the first launch, 
 | UI | mini player playing | mini player carrying "Vanity Remix", paused, progress bar part-filled |
 
 Killed with `am force-stop` (pid gone, confirmed), relaunched with `am start`. Restore lands 4 s
-short of where the kill caught it, which is the last persisted position, not a rounding error.
+behind where the kill caught it — whatever the last save wrote, not the position at the moment of
+death.
 
 So the 2026-08-25 reading that fits all three observations — "the service never came up on this
 AVD" — is not what happens on this phone: the service starts from the first launch and the session
