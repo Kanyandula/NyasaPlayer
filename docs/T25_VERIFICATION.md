@@ -113,7 +113,7 @@ TRuntime.CctTransportBackend`):
 09-19 12:21:58.291  7790  7805 I TRuntime.CctTransportBackend: Status Code: 200
 ```
 
-The debug relaunch, same filter, over a window twice as long — the SDK starts and stops there:
+The debug relaunch, same filter and a 30 s window after it — the SDK starts, and that is all:
 
 ```
 09-19 12:24:21.586  8130  8130 I FirebaseCrashlytics: Initializing Firebase Crashlytics 19.4.4 for com.example.nyasaplayer
@@ -121,9 +121,9 @@ The debug relaunch, same filter, over a window twice as long — the SDK starts 
 ```
 
 `topIssues` returns nothing for this app over the last seven days, including the 2026-09-14 and
-2026-09-15 car events that are known to be on the dashboard: the reporting API's `topIssues` hides
-closed issues (`reference_crashlytics_reporting_api`). `topVersions` counts events regardless, which
-is why it is the check used here.
+2026-09-15 car events this record already shows are on the dashboard: `topIssues` omits closed
+issues, and those were closed. `topVersions` counts events either way, which is why it is the check
+used here.
 
 The enqueue line the car pass quotes (`Crashlytics report successfully enqueued to DataTransport:
 <id>`, D-level) did not appear in either phone log. The upload did, at Info level with a 200, and
