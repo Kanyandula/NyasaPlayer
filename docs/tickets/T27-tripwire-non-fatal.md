@@ -111,9 +111,12 @@ again after a rebuild. Deleting the hook call fails the first.
 
 Criterion 1's second half — taps arriving *while* a rebuild is in flight — is **not** covered.
 Asserting the precondition showed this harness rebuilds synchronously: the second tap already
-succeeds, so no tap can land mid-rebuild. The guard is `onControllerLost`'s `compareAndSet`, covered
-from the rebuild side by `repeatedFailuresWhileReconnecting_doNotQueueAttempts` — which has the same
-shape and may be equally optimistic about what it exercises.
+succeeds, so no tap can land mid-rebuild.
+
+The suspicion recorded here about `repeatedFailuresWhileReconnecting_doNotQueueAttempts` covering
+it from the rebuild side was checked on 2026-09-19 and confirmed: that test's commands also return
+`[false, true, true]`, so it never exercised the guard either. It has been renamed for what it
+does. `onControllerLost`'s `compareAndSet` has no coverage on either side.
 
 ### Also here
 

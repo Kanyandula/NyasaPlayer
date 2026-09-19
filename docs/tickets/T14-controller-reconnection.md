@@ -84,6 +84,13 @@ Nineteen new tests, all on the JVM, all of them impossible before T17 landed the
 the unbalanced-release case), `ReconnectingCollectorTest` (rebuild once, report only on failure,
 three taps produce one attempt).
 
+**Correction, 2026-09-19.** That last claim was never true of the test. Instrumenting it showed the
+three commands return `[false, true, true]`: the rebuild resolves inside the first one, so the
+second and third never reach `onControllerLost` and the single-attempt guard is never asked. Three
+taps produce one rebuild here because two of them did not need one. The test now asserts that and
+is named for it; the `AtomicBoolean` guard itself has no coverage, and cannot have any in this
+harness — nothing can hold a rebuild open long enough for a second command to land during it.
+
 Gates: 315 tests, detekt clean with the baseline untouched and no `@Suppress` added, lint clean, both
 automotive flavors and `:app:assembleDebug`.
 
