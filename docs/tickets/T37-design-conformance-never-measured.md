@@ -3,7 +3,8 @@
 - **Slice:** AAOS UI/UX conformance
 - **Depends on:** nothing. Wants a head unit for the part an emulator cannot close (open question Q3).
 - **Status:** Filed 2026-09-19 after an audit of the shipped car UI against the live design
-  documents. Findings below were spot-checked against the source, not taken on trust.
+  documents. **8 of the 11 findings below are verified against the source; 3 are not. Each row says
+  which.** An earlier version of this ticket claimed all of them were checked — see Notes.
 - **Verification Command:** `./gradlew :automotive:testDebugUnitTest` (the three measurement tests),
   plus whatever this ticket adds
 - **Design Reference:** `docs/aaos-DESIGN.md` (frontmatter type and spacing scales, §Components,
@@ -36,32 +37,53 @@ records the reversal: the custom launcher is the product. The governing document
 screen contract and `aaos-DESIGN.md`. Against those, 18 of 21 contracted screens ship, 2 are owner
 deferrals (T18's PIN opt-in, T20's audio quality) and 2 are deliberate non-screens (D71).
 
-### Findings, verified against the source
+### Findings
 
-| # | Finding | Evidence |
-|---|---|---|
-| 1 | **The sign-in screen shows the wrong brand.** `aaos-DESIGN.md:152` — *"The product name is **Nyasa Music**. It is the only brand name that may appear in any screen."* | `CarAuthScreen.kt:90` renders `"NyasaPlayer"`. `CarSystemBar.kt:110` and `CarSettingsScreen.kt:66` both get it right, so it is one stale string on the first screen a driver sees |
-| 2 | **`CarChip` is built, unused, and two documents say it does not exist.** | Defined at `CarControls.kt:41`; the only call sites are `CarUiCases.kt:489-490`, a test. `AAOS_SCREEN_CONTRACT.md:82` says *"not built"*; `CarSearchScreen.kt:349` explains why the ghost `CarPillButton` is used instead (D39) |
-| 3 | **Three contract components were never built**, and transport is duplicated because of one of them. | No `CarIconButton`, `CarPlaybackControls` or `CarParkedBadge` anywhere in `automotive/src`. `CircleIconButton` (`CarFullPlayerScreen.kt:417`) is a private local copy; `MainControls`/`PlayPauseButton` and `MiniPlayerControls` (`CarMiniPlayer.kt:155`) are two copies of the same transport — against the contract's *"Prefer one shared component with variants over local copies"* |
-| 4 | **The type scale is not tokenised.** `aaos-DESIGN.md` frontmatter names 7 styles; `AutomotiveDimens.kt` holds only dp. Sizes are private per-file vals: 14/16/18/20/22/24/26/30/34/36/40 sp. | Screen titles are 30sp, 34sp (`CarDetailScreen.kt:41` and 3 others) and 36sp. 40sp exists, but only on `CarEmptyState.kt:21` and `CarRestrictionDialog.kt:32` — not on any screen title, which is what the scale's `screen-title` names |
-| 5 | **Corner radii disagree with the spec and with each other.** | Primary CTA is fully rounded (`CarControls.kt:29`, pill), design says 14px. Text input is 20dp (`CarSearchScreen.kt:68`), design says 16px. Three independent private 16dp list-row constants (`CarQueueScreen.kt:64`, `CarDownloadRow.kt:49`, `CarSheetChrome.kt:32`). `CarRestrictionDialog.kt:52` bypasses `CarModalCard`, so modals have two different corners |
-| 6 | **The system bar adds an unspecified gold badge.** `aaos-DESIGN.md:276` specs the wordmark 24px from the left edge. | `CarSystemBar.kt:90-116` puts a gold circular music-note badge before it — and §Colors restricts gold to the active nav item, focused border, primary CTAs, the play button and the progress fill |
-| 7 | **Two PRD/contract claims describe behaviour that does not ship.** | PRD §7.3 says ambient gradients follow the album artwork while parked; `CarAmbientBackground.kt:39` says the hue is fixed and artwork-following was deferred in A2 (D4). The contract lists "screen cross-fade" as parked motion; no `Crossfade`/`AnimatedContent` exists under `automotive/src/main` |
-| 8 | **Home's sections are not the specced ones.** PRD §6.3 and contract screen 3 say Continue Listening cards, Your Mixes, Recommended. | `CarHomeScreen.kt:145` is "Continue Listening" as **track rows**, `:156` is "Popular Now". "Your Mixes" and "Recommended" do not exist; an unspecified `ResumeHero` (`:210`) was added |
-| 9 | **D12 was superseded and never annotated.** `aaos-DESIGN.md:331` still forbids a Download button on the album screen and download-progress state. | A9 shipped both (`CarDownloadItem.kt:93`, `CarDetailScreen`). D14 got a `**Closed by D68:**` line at `:344`; D12 got nothing |
-| 10 | **`getMaxRestrictedStringLength()` (120 chars) is still unenforced.** `aaos-DESIGN.md` §Driving restrictions says it *"would need real enforcement before shipping"*. | `UxFlags.kt` carries only `maxContentDepth` and `maxCumulativeContentItems`. `AAOS_SHIP_RECORD.md` does not mention it |
-| 11 | **Three phases have no verification document.** | There is no `AAOS_A1_`, `AAOS_A2_` or `AAOS_A7_VERIFICATION.md`. A2 delivered the **entire chrome contract** — the thing PRD §7.2 exists for *"because the original generated designs drifted"* — and has no standing record; A7's is *"parked and driving pass in the PR"* |
+`✔` = checked against the source by this ticket's author. `?` = reported by the audit and **not**
+independently checked — treat as a place to look, not as a fact.
+
+| # | ✔/? | Finding | Evidence |
+|---|---|---|---|
+| 1 | ✔ | **The app disagrees with itself about its own name.** `aaos-DESIGN.md:152` — *"The product name is **Nyasa Music**. It is the only brand name that may appear in any screen."* **This is not a one-line fix and not a PRD requirement** — see below the table | `CarAuthScreen.kt:90` renders `"NyasaPlayer"`; `CarSystemBar.kt:110` renders `"Nyasa Music"`; and `automotive/.../res/values/strings.xml:3` sets the launcher label `auto_app_name` to `"NyasaPlayer"`. So the auth screen agrees with the app's own label and disagrees with the system bar |
+| 2 | ✔ | **`CarChip` is built, unused, and two documents say it does not exist.** | Defined at `CarControls.kt:41`; the only call sites are `CarUiCases.kt:489-490`, a test. `AAOS_SCREEN_CONTRACT.md:82` says *"not built"*; `CarSearchScreen.kt:349` explains why the ghost `CarPillButton` is used instead (D39) |
+| 3 | ✔ | **Three contract components were never built**, and transport is duplicated because of one of them. | No `CarIconButton`, `CarPlaybackControls` or `CarParkedBadge` anywhere in `automotive/src`. `CircleIconButton` (`CarFullPlayerScreen.kt:417`) is a private local copy; `MainControls`/`PlayPauseButton` and `MiniPlayerControls` (`CarMiniPlayer.kt:155`) are two copies of the same transport — against the contract's *"Prefer one shared component with variants over local copies"* |
+| 4 | ✔ | **The type scale is not tokenised.** `aaos-DESIGN.md` frontmatter names 7 styles; `AutomotiveDimens.kt` holds only dp. Sizes are private per-file vals: 14/16/18/20/22/24/26/30/34/36/40 sp. | Screen titles are 30sp, 34sp (`CarDetailScreen.kt:41` and 3 others) and 36sp. 40sp exists, but only on `CarEmptyState.kt:21` and `CarRestrictionDialog.kt:32` — not on any screen title, which is what the scale's `screen-title` names |
+| 5 | ? | **Corner radii disagree with the spec and with each other.** | Primary CTA is fully rounded (`CarControls.kt:29`, pill), design says 14px. Text input is 20dp (`CarSearchScreen.kt:68`), design says 16px. Three independent private 16dp list-row constants (`CarQueueScreen.kt:64`, `CarDownloadRow.kt:49`, `CarSheetChrome.kt:32`). `CarRestrictionDialog.kt:52` bypasses `CarModalCard`, so modals have two different corners |
+| 6 | ? | **The system bar adds an unspecified gold badge.** `aaos-DESIGN.md:276` specs the wordmark 24px from the left edge. | `CarSystemBar.kt:90-116` puts a gold circular music-note badge before it — and §Colors restricts gold to the active nav item, focused border, primary CTAs, the play button and the progress fill |
+| 7 | ✔ | **Two PRD/contract claims describe behaviour that does not ship.** | PRD §7.3 says ambient gradients follow the album artwork while parked; `CarAmbientBackground.kt:39` says the hue is fixed and artwork-following was deferred in A2 (D4). The contract lists "screen cross-fade" as parked motion; no `Crossfade`/`AnimatedContent` exists under `automotive/src/main` |
+| 8 | — | ~~**Home's sections are not the specced ones.**~~ **Withdrawn — this is a recorded decision, not drift.** | `CarHomeScreen.kt:53-57` states it: *"'Your Mixes' and 'Recommended' are deliberately absent rather than renamed — the data layer has neither a mixes nor a recommendation concept, and a section title promising personalisation the backend does not do is worse than one fewer section (A2 spec, D1). The slots remain."* The only thing left here is that PRD §6.3 was never amended to match D1 — a documentation gap, the same shape as finding 9 |
+| 9 | ? | **D12 was superseded and never annotated.** `aaos-DESIGN.md:331` still forbids a Download button on the album screen and download-progress state. | A9 shipped both (`CarDownloadItem.kt:93`, `CarDetailScreen`). D14 got a `**Closed by D68:**` line at `:344`; D12 got nothing |
+| 10 | ✔ | **`getMaxRestrictedStringLength()` (120 chars) is still unenforced.** `aaos-DESIGN.md` §Driving restrictions says it *"would need real enforcement before shipping"*. | `UxFlags.kt` carries only `maxContentDepth` and `maxCumulativeContentItems`. `AAOS_SHIP_RECORD.md` does not mention it |
+| 11 | ✔ | **Three phases have no verification document.** | There is no `AAOS_A1_`, `AAOS_A2_` or `AAOS_A7_VERIFICATION.md`. A2 delivered the **entire chrome contract** — the thing PRD §7.2 exists for *"because the original generated designs drifted"* — and has no standing record; A7's is *"parked and driving pass in the PR"* |
+
+### On finding 1: the brand name is a decision, not a bug
+
+An earlier draft of this ticket called the auth screen's `"NyasaPlayer"` a one-line fix and the
+obvious first thing to do. Both claims were wrong, and neither came from the plan:
+
+- **It is not a PRD requirement.** The rule lives only at `aaos-DESIGN.md:152`. It is not in §6
+  (requirements), not in §12 (exit criteria), and no phase was scoped to it. The PRD's own brand
+  work is Project B — a separate, explicitly non-blocking effort for the *mobile* app (§3.2, §9).
+- **It is not one line.** `auto_app_name` is `"NyasaPlayer"`, so the launcher, the app switcher and
+  the auth screen all agree; only the system bar says "Nyasa Music". Changing the auth screen alone
+  makes the app *more* inconsistent, not less. Changing all of them renames the shipped product.
+- **Nobody asked for it.** It was raised by the audit and promoted to "do this first" by its author,
+  not by the owner. Recorded here so the next reader does not inherit a priority nobody set.
+
+What is actually true is narrower: **the app renders two different product names**, and whichever
+one is right, one of them and `aaos-DESIGN.md` disagree. That is the owner's call.
 
 ## Scope
 
 Two halves, and the second is cheap only after the first.
 
+- **Check the three `?` rows before acting on them.** Findings 5, 6 and 9 are unverified audit
+  output. The first work item is confirming or dropping them.
 - **Decide, per finding, which side is wrong.** Several of these are the document being stale, not
-  the code (D12, `CarChip`'s contract row, arguably the ambient gradient). A document amended with
-  a dated reason is a fix; a document quietly left wrong is the thing that made this audit
-  necessary.
-- **For the ones where the code is wrong**, fix them. Finding 1 is a one-line change on the highest
-  visibility screen and should not wait for the rest.
+  the code (D12, `CarChip`'s contract row, arguably the ambient gradient, and PRD §6.3 against D1).
+  A document amended with a dated reason is a fix; a document quietly left wrong is the thing that
+  made this audit necessary.
+- **For the ones where the code is wrong**, fix them — after the owner has said which those are.
 - **Leave a measurement behind where one can exist.** The type and spacing scales are the natural
   candidates: `CarUiCases.kt` already renders every screen, and `CarTextSizeMeasurementTest` already
   walks every text node — asserting *membership in the scale* is a smaller change than it looks, and
@@ -72,23 +94,34 @@ Two halves, and the second is cheap only after the first.
 - Reopening the 2026-04-23 template-only decision. It was reversed on 2026-08-02 and PRD §3.3 is
   the record; this ticket is not a second look at that.
 - T18 and T20's deferred screens, which are the PRD's own §12 exceptions.
-- Any new screen, section or feature. "Your Mixes" and "Recommended" (finding 8) are a **decision**
-  to record either way — build them or amend §6.3 — not an invitation to design them here.
+- Any new screen, section or feature. "Your Mixes" and "Recommended" were already decided against by
+  D1 (finding 8, withdrawn); all that is left is amending PRD §6.3 to say so.
 - Open question Q3 (15px secondary text at arm's length). That needs real head-unit hardware and
   cannot be closed by anything in this ticket.
 
 ## Acceptance Criteria
 
-- Every finding above has a resolution recorded with a date: code changed, document amended, or
+- Each of findings 5, 6 and 9 is either confirmed against the source or dropped.
+- Every surviving finding has a resolution recorded with a date: code changed, document amended, or
   accepted with a reason.
 - Given the type scale has been reconciled, when the measurement suite runs, then a size outside the
   agreed scale fails the build — or the ticket says explicitly why that check was not added.
-- `CarAuthScreen` renders "Nyasa Music".
+- The app renders **one** product name, and `aaos-DESIGN.md:152` says the same one.
 - No component is defined in `automotive/src/main` with zero production call sites.
 
 ## Notes
 
-The audit that produced this list is not itself evidence — it is a list of places to look, and every
-row above was spot-checked against the source before being written down. One claim in the draft was
-wrong on that check (*"nothing is 40sp"*) and is corrected in finding 4. Anything acted on here
+**This ticket is not evidence of anything.** It is a list of places to look. There is still no
+answer to "does the shipped car UI match the design" beyond the three measured floors — that is the
+whole point of the ticket, and filing it did not change it.
+
+Two corrections are already baked in, both from re-checking the audit's output against the source:
+
+| Draft claim | What the source says |
+|---|---|
+| *"nothing is 40sp"* | `CarEmptyState.kt:21` and `CarRestrictionDialog.kt:32` both use it. Corrected in finding 4 |
+| Home's missing sections are drift | `CarHomeScreen.kt:53-57` records D1. Finding 8 withdrawn |
+
+The draft also said all eleven rows had been checked. Four had. That claim is now the `✔`/`?`
+column, which is what it should have been from the start. Anything acted on here
 should be re-confirmed the same way.

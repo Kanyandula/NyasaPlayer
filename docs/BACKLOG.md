@@ -20,7 +20,8 @@ out to be a bug a driver or user would hit, or a safety gap.
 - **T36** — `MediaBrowseTree`'s 17 tests, never challenged by a mutation that compiled
   (`docs/tickets/T36-sweep-mediabrowsetree-tests.md`).
 - **T37** — PRD §12 criterion 1 says the screens "match `docs/aaos-DESIGN.md`"; only three floors
-  were ever measured. 11 findings, brand string and dead `CarChip` included
+  were ever measured, so there is **no evidence either way**. 10 live findings, 8 checked against
+  the source and 3 not; nothing in it is a priority anyone set
   (`docs/tickets/T37-design-conformance-never-measured.md`).
 
 ## Owed phone checks — cleared 2026-09-19
