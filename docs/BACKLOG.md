@@ -19,6 +19,9 @@ out to be a bug a driver or user would hit, or a safety gap.
   (`docs/tickets/T35-owed-device-checks.md`).
 - **T36** — `MediaBrowseTree`'s 17 tests, never challenged by a mutation that compiled
   (`docs/tickets/T36-sweep-mediabrowsetree-tests.md`).
+- **T37** — PRD §12 criterion 1 says the screens "match `docs/aaos-DESIGN.md`"; only three floors
+  were ever measured. 11 findings, brand string and dead `CarChip` included
+  (`docs/tickets/T37-design-conformance-never-measured.md`).
 
 ## Owed phone checks — cleared 2026-09-19
 
