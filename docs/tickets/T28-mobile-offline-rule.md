@@ -97,6 +97,13 @@ the rule exactly as the car writes it.
 Criterion 5 shows no spurious error; it does not prove the player entered `STATE_BUFFERING` during
 that seek, so it is evidence the guard stays quiet rather than proof the exempting branch ran.
 
+The table above was run against the first implementation. Review then replaced the `:app` gate with
+the rule inlined — same truth tables, no behaviour change — so the build was reinstalled and
+criteria 1, 2, 4 and 5 re-run against it: the streamed song still refuses without disturbing what is
+playing, the downloaded song still plays offline, the offline relaunch still restores without an
+error, and repositioning inside the local file still raises nothing. Criterion 3 was not re-run; it
+exercises the same `none { isPlayableNow }` expression the unit tests cover.
+
 ### Found on the way, not fixed here
 
 `PlaybackService.onAddMediaItems` queues downloaded songs unresolved, so a song requested by
