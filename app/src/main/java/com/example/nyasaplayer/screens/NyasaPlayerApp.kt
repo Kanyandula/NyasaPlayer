@@ -19,11 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.rememberNavController
+import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
 import com.example.nyasaplayer.core.data.download.DownloadRefusal
@@ -111,6 +113,17 @@ fun NyasaPlayerApp(
  * renders behind it — including the "could not connect to playback service" message, which is
  * needed exactly when the user is tapping controls that do nothing (T11).
  */
+@Composable
+private fun AppSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {
+    SnackbarHost(hostState = hostState, modifier = modifier) { data ->
+        Snackbar(
+            snackbarData = data,
+            containerColor = NyasaSurface3,
+            contentColor = Color.White,
+        )
+    }
+}
+
 /**
  * A download refused before it began, said out loud.
  *
@@ -120,25 +133,17 @@ fun NyasaPlayerApp(
  */
 @Composable
 private fun DownloadRefusals(downloads: SongDownloadManager, hostState: SnackbarHostState) {
+    val context = LocalContext.current
     LaunchedEffect(downloads) {
         downloads.refusals.collect { reason ->
             hostState.showSnackbar(
-                when (reason) {
-                    DownloadRefusal.Offline -> "Can't download while offline"
-                    DownloadRefusal.Unavailable -> "This song can't be downloaded"
-                },
+                context.getString(
+                    when (reason) {
+                        DownloadRefusal.Offline -> R.string.offline_cannot_download
+                        DownloadRefusal.Unavailable -> R.string.song_cannot_be_downloaded
+                    },
+                ),
             )
         }
-    }
-}
-
-@Composable
-private fun AppSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {
-    SnackbarHost(hostState = hostState, modifier = modifier) { data ->
-        Snackbar(
-            snackbarData = data,
-            containerColor = NyasaSurface3,
-            contentColor = Color.White,
-        )
     }
 }

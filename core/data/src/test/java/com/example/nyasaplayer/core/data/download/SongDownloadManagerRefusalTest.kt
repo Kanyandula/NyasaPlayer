@@ -8,9 +8,9 @@ import com.example.nyasaplayer.core.data.fake.FakeSongRepository
 import com.example.nyasaplayer.core.data.local.entity.DownloadEntity
 import com.example.nyasaplayer.core.data.local.entity.DownloadStatus
 import com.example.nyasaplayer.core.data.offline.OfflineDownloadRepository
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -52,31 +52,26 @@ class SongDownloadManagerRefusalTest {
         manager.downloadSong(MediaId)
 
         val row = withTimeout(TimeoutMs) {
-            var found = dao.getByMediaId(MediaId)
-            while (found?.status != DownloadStatus.Failed) {
-                delay(PollMs)
-                found = dao.getByMediaId(MediaId)
-            }
-            found
+            dao.observeByMediaId(MediaId).first { it?.status == DownloadStatus.Failed }
         }
-        assertEquals(DownloadStatus.Failed, row.status)
+        assertEquals(DownloadStatus.Failed, requireNotNull(row).status)
     }
 
     @Test
     fun offline_saysWhyItRefused() = runBlocking {
         val dao = FakeDownloadDao()
         val (manager, _) = managerWith(dao)
-        val refusal = async { withTimeout(TimeoutMs) { manager.refusals.first() } }
-        delay(SettleMs)
+        val refusal = withTimeout(TimeoutMs) {
+            manager.refusals.onSubscription { manager.downloadSong(MediaId) }.first()
+        }
 
-        manager.downloadSong(MediaId)
-
-        assertEquals(DownloadRefusal.Offline, refusal.await())
+        assertEquals(DownloadRefusal.Offline, refusal)
     }
 
     /**
-     * A song already on disk is left alone: `addDownload` upserts a bare `Pending` row, so
-     * recording an attempt for one would throw away the path and size it already has.
+     * A song already on disk is left alone. Without the guard the row survives — `addDownload` is
+     * skipped for an existing one — but `markFailed` still flips `Completed` to `Failed`, and a
+     * good download then reads as not downloaded everywhere.
      */
     @Test
     fun offline_songAlreadyOnDisk_isNotTouched() = runBlocking {
@@ -103,17 +98,51 @@ class SongDownloadManagerRefusalTest {
         delay(SettleMs)
 
         assertEquals(
-            "the completed row was downgraded by an attempt that should not have been recorded",
+            "a download that is present on disk was downgraded to Failed",
             DownloadStatus.Completed,
             dao.getByMediaId(MediaId)?.status,
         )
-        assertEquals(file.absolutePath, dao.getByMediaId(MediaId)?.filePath)
+    }
+
+    /**
+     * The same song, with the path index **not** loaded — the window T32 is about.
+     *
+     * An earlier version of the guard asked `localUriFor`, which reads that index, so inside this
+     * window it missed and the row was downgraded. The guard reads the row, so the gate below is
+     * deliberately left closed.
+     */
+    @Test
+    fun offline_songOnDiskButIndexNotLoaded_isStillNotTouched() = runBlocking {
+        val file = File(context.filesDir, "downloads/$MediaId.audio").apply {
+            parentFile?.mkdirs()
+            writeText("audio")
+        }
+        val dao = FakeDownloadDao(
+            listOf(
+                DownloadEntity(
+                    mediaId = MediaId,
+                    status = DownloadStatus.Completed,
+                    filePath = file.absolutePath,
+                    fileSizeBytes = file.length(),
+                    downloadedAt = 1L,
+                ),
+            ),
+        )
+        val (manager, _) = managerWith(dao)
+
+        manager.downloadSong(MediaId)
+        delay(SettleMs)
+
+        assertEquals(
+            "the guard read the path index, which has not loaded, and downgraded a good download",
+            DownloadStatus.Completed,
+            dao.getByMediaId(MediaId)?.status,
+        )
     }
 
     private companion object {
         const val MediaId = "a"
         const val TimeoutMs = 5_000L
-        const val PollMs = 5L
         const val SettleMs = 150L
     }
 }
