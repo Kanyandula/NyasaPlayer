@@ -107,7 +107,10 @@ class ReconnectingCollectorTest {
     @Test
     fun aSuccessfulReconnect_reportsNothingToTheSurface() {
         loseTheController()
-        collector.transport.skipNext()
+
+        // Asserted, not assumed: both assertions below also hold for a controller that was never
+        // lost, so without this the test would keep passing if `loseTheController` stopped losing.
+        assertFalse("precondition: the command finds a dead controller", collector.transport.skipNext())
         idle()
 
         assertEquals(0, collector.unavailableReports)
