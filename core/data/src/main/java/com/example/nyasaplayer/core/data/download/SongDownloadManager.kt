@@ -11,8 +11,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,6 +45,17 @@ class SongDownloadManager @Inject constructor(
     private val _activeDownloads = MutableStateFlow<Set<String>>(emptySet())
     val activeDownloads: StateFlow<Set<String>> = _activeDownloads.asStateFlow()
 
+    private val _refusals = MutableSharedFlow<DownloadRefusal>(extraBufferCapacity = 1)
+
+    /**
+     * Downloads that were asked for and refused before they began.
+     *
+     * The car shows a failed row on its Downloads screen, which is its own answer; mobile's
+     * Downloads screen lists completed songs only and the person who tapped is somewhere else
+     * entirely, so `NyasaPlayerApp` turns these into a snackbar.
+     */
+    val refusals: SharedFlow<DownloadRefusal> = _refusals.asSharedFlow()
+
     init {
         scope.launch { downloadRepository.resetStaleDownloads() }
     }
@@ -50,21 +64,25 @@ class SongDownloadManager @Inject constructor(
         if (_activeDownloads.value.contains(mediaId)) return
         scope.launch {
             try {
+                if (downloadRepository.localUriFor(mediaId) != null) return@launch
+                // The attempt is recorded before it can be refused. markFailed is an UPDATE, so
+                // until there is a row it writes nothing and a refusal leaves no trace at all —
+                // which is why an offline tap used to vanish on both surfaces.
+                recordAttempt(mediaId)
                 if (!networkMonitor.isOnline.value) {
-                    downloadRepository.markFailed(mediaId)
+                    refuse(mediaId, DownloadRefusal.Offline)
                     return@launch
                 }
                 val songs = songRepository.getSongsByIds(listOf(mediaId))
                 val song = songs.firstOrNull() ?: run {
-                    downloadRepository.markFailed(mediaId)
+                    refuse(mediaId, DownloadRefusal.Unavailable)
                     return@launch
                 }
                 val audioUrl = song.resolvedAudioUrl
                 if (audioUrl.isBlank()) {
-                    downloadRepository.markFailed(mediaId)
+                    refuse(mediaId, DownloadRefusal.Unavailable)
                     return@launch
                 }
-                downloadRepository.addDownload(mediaId)
                 _activeDownloads.update { it + mediaId }
                 performDownload(mediaId, audioUrl)
             } catch (e: CancellationException) {
@@ -75,6 +93,23 @@ class SongDownloadManager @Inject constructor(
                 _activeDownloads.update { it - mediaId }
             }
         }
+    }
+
+    /**
+     * A row for [mediaId], unless one is already there.
+     *
+     * [DownloadRepository.addDownload] upserts a bare `Pending` entity, so calling it for a song
+     * that already has a row would throw away its path and size.
+     */
+    private suspend fun recordAttempt(mediaId: String) {
+        if (downloadRepository.getDownload(mediaId) == null) {
+            downloadRepository.addDownload(mediaId)
+        }
+    }
+
+    private suspend fun refuse(mediaId: String, reason: DownloadRefusal) {
+        downloadRepository.markFailed(mediaId)
+        _refusals.emit(reason)
     }
 
     /** Not on [SongDownloads]: no screen offers it. Cancelling mid-flight is still phone-only. */

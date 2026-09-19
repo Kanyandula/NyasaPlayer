@@ -26,6 +26,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.rememberNavController
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
+import com.example.nyasaplayer.core.data.download.DownloadRefusal
+import com.example.nyasaplayer.core.data.download.SongDownloadManager
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.navigation.NyasaBottomNavBar
 import com.example.nyasaplayer.navigation.NyasaPlayerNavHost
@@ -42,6 +44,8 @@ fun NyasaPlayerApp(
     val navController = rememberNavController()
     val playerState by playerViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    DownloadRefusals(playerViewModel.downloadManager, snackbarHostState)
 
     LaunchedEffect(playerState.error, playerState.playerMode) {
         val error = playerState.error ?: return@LaunchedEffect
@@ -107,6 +111,27 @@ fun NyasaPlayerApp(
  * renders behind it — including the "could not connect to playback service" message, which is
  * needed exactly when the user is tapping controls that do nothing (T11).
  */
+/**
+ * A download refused before it began, said out loud.
+ *
+ * The car shows a failed row on its own Downloads screen; mobile's lists completed songs only, and
+ * the person who tapped is on another screen anyway. Collected here, once, rather than in each of
+ * the three screens that host the overflow sheet.
+ */
+@Composable
+private fun DownloadRefusals(downloads: SongDownloadManager, hostState: SnackbarHostState) {
+    LaunchedEffect(downloads) {
+        downloads.refusals.collect { reason ->
+            hostState.showSnackbar(
+                when (reason) {
+                    DownloadRefusal.Offline -> "Can't download while offline"
+                    DownloadRefusal.Unavailable -> "This song can't be downloaded"
+                },
+            )
+        }
+    }
+}
+
 @Composable
 private fun AppSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {
     SnackbarHost(hostState = hostState, modifier = modifier) { data ->
