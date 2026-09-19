@@ -39,6 +39,11 @@ wrap and a driving-state pass (T13, T14).
 - `CLAUDE.md` doesn't mention Crashlytics or `CrashReporter`.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
 - The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:308`), not as a modal over the queue.
+- `OfflineDownloadRepository` fills its `filePathCache` asynchronously in `init`
+  (`OfflineDownloadRepository.kt:27-36`) and `getLocalFilePath` reads it without waiting, so every
+  caller — `resolveLocalUri`, the overflow sheet's download state, T31's `onAddMediaItems` — can see
+  a downloaded song as undownloaded for the first moments after process start. Pre-dates T31; found
+  reviewing it (2026-09-19).
 - A download refused because the phone is offline tells the user nothing: the overflow sheet closes
   like a download has started, no Snackbar follows, and Downloads still reads "No downloads yet"
   rather than showing a failed row (`docs/T29_VERIFICATION.md`, 2026-09-19).
