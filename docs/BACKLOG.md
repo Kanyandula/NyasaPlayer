@@ -38,9 +38,6 @@ wrap and a driving-state pass (T13, T14).
   suspend paths an await and left these: they are non-suspend, and a tap is far slower than the
   load. If one ever lost the race the user would see "no connection" on a downloaded song
   (`docs/tickets/T32-download-path-cache-race.md`, 2026-09-19).
-- A download refused because the phone is offline tells the user nothing: the overflow sheet closes
-  like a download has started, no Snackbar follows, and Downloads still reads "No downloads yet"
-  rather than showing a failed row (`docs/T29_VERIFICATION.md`, 2026-09-19).
 - A like may not survive a reconnect after Firestore was unreachable — seen once, not reproduced
   (`docs/T13_VERIFICATION.md`, 2026-09-19).
 - `AutomotiveContentViewModel` is past detekt's function threshold and now owns downloads too; its file-level `TooManyFunctions` note says the next slice to touch it should split it, and A9 added to it instead (PRD §6.3 names the content VM as screen 15's data source).

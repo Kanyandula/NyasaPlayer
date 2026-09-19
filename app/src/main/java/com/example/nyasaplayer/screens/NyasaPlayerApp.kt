@@ -19,13 +19,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.rememberNavController
+import com.example.nyasaplayer.R
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaSurface3
+import com.example.nyasaplayer.core.data.download.DownloadRefusal
+import com.example.nyasaplayer.core.data.download.SongDownloadManager
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.navigation.NyasaBottomNavBar
 import com.example.nyasaplayer.navigation.NyasaPlayerNavHost
@@ -42,6 +46,8 @@ fun NyasaPlayerApp(
     val navController = rememberNavController()
     val playerState by playerViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    DownloadRefusals(playerViewModel.downloadManager, snackbarHostState)
 
     LaunchedEffect(playerState.error, playerState.playerMode) {
         val error = playerState.error ?: return@LaunchedEffect
@@ -115,5 +121,29 @@ private fun AppSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = M
             containerColor = NyasaSurface3,
             contentColor = Color.White,
         )
+    }
+}
+
+/**
+ * A download refused before it began, said out loud.
+ *
+ * The car shows a failed row on its own Downloads screen; mobile's lists completed songs only, and
+ * the person who tapped is on another screen anyway. Collected here, once, rather than in each of
+ * the three screens that host the overflow sheet.
+ */
+@Composable
+private fun DownloadRefusals(downloads: SongDownloadManager, hostState: SnackbarHostState) {
+    val context = LocalContext.current
+    LaunchedEffect(downloads) {
+        downloads.refusals.collect { reason ->
+            hostState.showSnackbar(
+                context.getString(
+                    when (reason) {
+                        DownloadRefusal.Offline -> R.string.offline_cannot_download
+                        DownloadRefusal.Unavailable -> R.string.song_cannot_be_downloaded
+                    },
+                ),
+            )
+        }
     }
 }
