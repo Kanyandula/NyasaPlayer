@@ -92,7 +92,6 @@ fun CarFullPlayerScreen(
             .fillMaxSize()
             .background(NyasaBackground),
     ) {
-        // Background gradient overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -111,7 +110,6 @@ fun CarFullPlayerScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(48.dp),
         ) {
-            // Left — Album Art
             AsyncImage(
                 model = song?.resolvedCoverUrl,
                 contentDescription = song?.title,
@@ -121,7 +119,6 @@ fun CarFullPlayerScreen(
                     .clip(RoundedCornerShape(24.dp)),
             )
 
-            // Right — Controls
             PlayerControlsPanel(
                 playback = playback,
                 onCollapseClick = onCollapseClick,

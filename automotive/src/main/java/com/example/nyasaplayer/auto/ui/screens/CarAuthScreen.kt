@@ -68,7 +68,6 @@ fun CarAuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            // App icon
             Box(
                 modifier = Modifier
                     .size(IconBackgroundSize)
