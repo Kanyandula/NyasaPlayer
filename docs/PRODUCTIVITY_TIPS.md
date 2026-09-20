@@ -13,12 +13,16 @@ open build/reports/detekt/detekt.html
 ## Running Lint Locally
 
 ```bash
-# Debug variant lint check
-./gradlew :app:lintDebug
+# All modules that have a lint task
+./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug \
+          :core:playback:lintDebug :automotive:lintOemDebug
 
 # View the HTML report
 open app/build/reports/lint-results-debug.html
 ```
+
+> Detekt and Lint are **manual** gates here — `core.hooksPath` is set globally, so the
+> repo's pre-commit hook never runs. See `docs/CODING_GUIDELINES.md` → Commit Workflow.
 
 ## IDE Plugin Setup
 

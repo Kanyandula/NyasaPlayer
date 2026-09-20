@@ -43,7 +43,6 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   (`docs/AAOS_A9_VERIFICATION.md`, 2026-09-17).
 
 - A 404 is called "No Connection" on the car (`docs/AAOS_A8_VERIFICATION.md`, "Findings recorded, not fixed here").
-- `CLAUDE.md` doesn't mention Crashlytics or `CrashReporter`.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
 - The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:308`), not as a modal over the queue.
 - Six resolution sites still read the download index without awaiting it —

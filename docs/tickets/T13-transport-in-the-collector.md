@@ -2,7 +2,8 @@
 
 - **Slice:** architecture - the same move T10 made for restore, applied to transport
 - **Depends on:** T10 (merged, PR #45). Unblocks T11.
-- **Status:** Implemented; car device-verified nine of ten, mobile not run — see Outcome
+- **Status:** Implemented; car device-verified nine of ten, mobile run 2026-09-19
+  (`docs/T13_VERIFICATION.md`). `skipNext`'s repeat-all wrap and a driving-state pass are owed, in T35
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`
 - **Design Reference:** `docs/aaos-DESIGN.md` D61, and D62 for the outcome
 - **Plan:** `docs/superpowers/plans/2026-08-26-aaos-t12-t13-playback-cleanups.md`
@@ -129,6 +130,4 @@ Nine of ten car operations are recorded field by field in `docs/T13_VERIFICATION
 exercises it — and the driving-state refusal was not run, though it tests a `CarQueueScreen`
 contract this ticket does not touch.
 
-**Mobile was not run at all.** Its transport set, plus `dismiss()` and the offline-buffering pause,
-still needs a session with a signed-in phone — the same session that owes T3's D55 fix and T10's
-restore pass.
+Mobile ran on 2026-09-19: the transport set, `dismiss()` and the offline-buffering pause are all recorded in `docs/T13_VERIFICATION.md` → "Mobile — run 2026-09-19". `skipNext`'s repeat-all wrap and the driving-state refusal are still owed, now in T35.

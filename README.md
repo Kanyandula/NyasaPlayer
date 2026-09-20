@@ -11,13 +11,14 @@ https://preview--nyasa-harmony-suite.lovable.app/screens
 | Jetpack Compose + Material3 | UI framework |
 | Kotlin | Language |
 | Hilt | Dependency injection |
-| Firebase Firestore | Song/genre/artist data |
+| Firebase Firestore | Song/genre/artist/album data, playlists, user state |
 | Firebase Realtime Database | Home feed sections |
 | Firebase Auth | Email/password + Google Sign-In |
 | Room | Local database (offline-first catalog) |
 | ExoPlayer (Media3 1.5.1) | Audio playback |
 | Coil | Image loading (with offline disk cache) |
 | Compose Navigation | Screen navigation |
+| Firebase Crashlytics | Crash and non-fatal reporting (see `docs/CRASH_REPORTING.md`) |
 
 ## Architecture
 
@@ -37,58 +38,76 @@ Multi-module Gradle project:
 
 ```
 :core:common  (com.example.nyasaplayer.core.common)
-├── models/                         # Domain models (Song, Artist, Genre, HomeFeed, UserData)
+├── models/                         # Song, Artist, Album, Genre, HomeFeed, UserData
 ├── ui/
 │   ├── theme/                      # Color, Theme, Type
 │   ├── icons/NyasaIcons.kt        # Custom ImageVector icons
-│   └── components/                 # ErrorBanner, NyasaErrorScreen, OfflineBanner, SongOverflowSheet
-└── util/                           # FormatDuration, Greeting, NetworkMonitor
+│   └── components/                 # ErrorBanner, NyasaErrorScreen, OfflineBanner,
+│                                   #   SongOverflowSheet, PlaylistPickerSheet, ...
+└── util/                           # FormatDuration, Greeting, NetworkMonitor, DefaultNetworkState
 
 :core:data  (com.example.nyasaplayer.core.data)
 ├── api/                            # Repository interfaces (SongRepository, AuthRepository, etc.)
 ├── dto/                            # Firestore DTOs
-├── local/                          # Room database, DAOs, entities
+├── local/                          # Room database, DAOs, entities, migrations
 ├── offline/                        # Offline-first repository implementations
-├── sync/FirebaseSyncManager.kt     # Syncs Firestore -> Room on startup
+├── download/SongDownloadManager.kt # Download-for-offline, local URI resolution
+├── crash/CrashReporter.kt          # Crashlytics wrapper (surface key, non-fatals)
+├── sync/                           # FirebaseSyncManager, CatalogSync — Firestore -> Room
 ├── Firebase*Repository.kt          # Firebase implementations
-└── di/                             # DatabaseModule, RepositoryModule
+└── di/                             # DatabaseModule, RepositoryModule, SyncModule
 
 :core:playback  (com.example.nyasaplayer.core.playback)
+├── PlaybackService.kt              # MediaLibraryService — single playback owner, mobile + AAOS
+├── MediaBrowseTree.kt              # Browse tree for the OEM media template and Assistant search
+├── SongMediaItemMapper.kt          # Song <-> MediaItem conversion
+├── PlaybackCommands.kt             # Custom SessionCommand constants
 ├── PlaybackQueueManager.kt         # Queue state, shuffle, repeat modes
-├── PlaybackStatePersistence.kt     # Disk-based save/restore of queue and position
+├── PlaybackStatePersistence.kt     # Firestore-backed save/restore of queue, position, repeat
 ├── BasePlayerStateCollector.kt     # Shared MediaController event/polling base class
-├── PlayerError.kt                  # Error model for playback/network errors
-└── di/PlaybackModule.kt            # Provides shared playback dependencies
+├── ControllerConnection.kt         # MediaController lifecycle and reconnection
+├── PlayerUiState.kt / PlaybackSnapshot.kt / PlayerTransport.kt
+├── OfflinePlayback.kt              # Shared isPlayableNow / isStreamStalledOffline rules
+└── di/PlaybackModule.kt            # Provides SessionToken and shared playback dependencies
 
 :app  (com.example.nyasaplayer)
 ├── MainActivity.kt
-├── di/                             # AppModule (Firebase providers), PlayerModule
+├── di/AppModule.kt                 # Firestore, FirebaseAuth, ApplicationContext
 ├── navigation/                     # RootNavigation, NyasaPlayerNavigation, NyasaBottomNavBar
+├── player/PlayerViewModel.kt       # Extends BasePlayerStateCollector (250ms polling)
 ├── screens/
 │   ├── NyasaPlayerApp.kt          # Main app shell with bottom nav
 │   ├── auth/                       # LoginScreen, SignUpScreen, AuthViewModel, SignUpViewModel
-│   ├── home/                       # HomeScreen, HomeViewModel
-│   ├── search/                     # SearchScreen, SearchViewModel
-│   ├── library/                    # LibraryScreen, LibraryViewModel
-│   ├── profile/                    # ProfileScreen, ProfileViewModel
-│   └── player/                     # MiniPlayer, ExpandedPlayer, PlayerViewModel
-├── player/                         # PlayerManager, PlaybackService, MediaLibraryService
+│   ├── home/ search/ library/ profile/
+│   ├── downloads/                  # DownloadsScreen, DownloadsViewModel
+│   ├── playlist/                   # PlaylistDetailScreen, PlaylistViewModel
+│   └── player/                     # MiniPlayer, ExpandedPlayer, GlobalPlayerLayer
 ├── util/ErrorMessages.kt           # Firebase error classification
 └── ui/preview/PreviewData.kt       # Preview/mock data
 
 :automotive  (com.example.nyasaplayer.auto)
-# AAOS parked-only custom flows. All playback / browse / search UI is rendered
-# by the OEM media template against :core:playback's MediaLibraryService.
-├── AutomotiveActivity.kt           # Parked-only entry point (Auth + Settings)
+# The custom Compose launcher IS the AAOS product (oem flavor). The OEM media
+# template remains live in parallel, rendered from :core:playback's PlaybackService.
+├── AutomotiveActivity.kt           # oem launcher entry point, distractionOptimized=true
 ├── ui/
-│   ├── AutomotiveApp.kt            # Nav root: auth gate → Settings cluster
-│   ├── screens/                    # CarAuthScreen, CarSettingsScreen, CarAccountScreen,
-│   │                               #   CarAudioQualityScreen, CarAboutScreen
-│   ├── dialog/                     # SignOutConfirmationDialog
+│   ├── AutomotiveApp.kt            # Nav root: auth gate → rail tabs → overlays and sheets
+│   ├── screens/                    # 17 screens — Home, Browse, Library, Favourites,
+│   │                               #   Search(+Results), FullPlayer, Queue, Downloads,
+│   │                               #   Album/Playlist/Artist detail, Settings, ProfileSwitcher,
+│   │                               #   ArtistLikedSongs, EmptyFavourites, Auth
+│   ├── components/                 # CarMiniPlayer, CarNavRail, CarSystemBar, CarModal,
+│   │                               #   CarTrackRow, CarSignOutConfirmation, ... (21 files)
+│   ├── navigation/                 # CarScreen (4 rail tabs), CarDestination, CarUiLocation, gate()
 │   └── theme/                      # AutomotiveColors, AutomotiveDimens
-├── viewmodel/                      # AutomotiveAuthViewModel, CarSettingsViewModel
-└── di/AutoAppModule.kt             # Automotive-specific DI
+├── viewmodel/                      # AutomotiveAuthViewModel, AutomotiveContentViewModel,
+│                                   #   AutomotivePlayerViewModel, AutomotiveSearchViewModel,
+│                                   #   CarUxRestrictionsHandler
+└── di/AutoAppModule.kt             # Firebase + ApplicationContext for the automotive process
 ```
+
+Build variants: `:automotive` ships `oem` (custom launcher, the product) and `playstore`
+(no launcher activity, host-rendered only — a preserved Play path, not currently submitted).
+See `docs/AAOS_PRD.md` §3.3.
 
 ## Implemented Features
 
@@ -129,11 +148,11 @@ Multi-module Gradle project:
 ### Music Player
 - **MiniPlayer**: Collapsed bar at bottom showing current song, play/pause/skip controls, artwork; swipe-to-dismiss; progress bar (turns red on error)
 - **ExpandedPlayer**: Full-screen with large artwork (animated scale on play/pause), song info, like button, play/pause/skip/shuffle/repeat controls, styled progress slider with time labels; drag-down-to-collapse gesture; error banner for playback errors
-- **Playback engine**: ExoPlayer (Media3) via `PlayerManager` wrapper for audio streaming
+- **Playback engine**: ExoPlayer (Media3), built and owned by `PlaybackService` (`:core:playback`); UI talks to it through a `MediaController`, never directly
 - **Queue management**: `PlaybackQueueManager` handles queue state, skip next/previous, shuffle (keeps current song at index 0), repeat modes (Off/All/One)
 - **Like/unlike**: Optimistic UI toggle with Firestore persistence; real-time like-state observation via snapshot listener
 - **Background playback**: `PlaybackService` foreground service keeps audio playing when app is backgrounded
-- **State persistence**: `PlaybackStatePersistence` saves/restores queue, position, and repeat mode to disk across app restarts
+- **State persistence**: `PlaybackStatePersistence` saves/restores queue, position and repeat mode through `UserRepository` (Firestore), so playback resumes across app restarts and across devices
 - **Recently played**: Logged per song play, displayed in Home screen
 - **Error handling**: `PlayerError` model routes playback errors to ErrorBanner in ExpandedPlayer and non-playback errors (sync, restore) to Snackbar; `CoroutineExceptionHandler` safety net in all ViewModels
 - **Offline UX**: Persistent offline banner across all screens; fail-fast playback (shows error instead of infinite buffering); `NetworkMonitor` singleton detects connectivity changes in real-time
@@ -153,18 +172,26 @@ Multi-module Gradle project:
 - **Stale download recovery**: Pending/Downloading states reset to Failed on app restart
 
 ### Android Automotive OS (AAOS)
-- **Template path (Option B)**: Declared `<uses name="media" />` — the OEM media template
-  renders Home, Browse, Library, Now Playing, Queue, and Search directly from our
-  `MediaLibraryService` + `MediaBrowseTree`. No custom playback or browse UI is shipped.
-- **MediaLibraryService** (`:core:playback`): Root → [Recently Played, Genres, Artists,
-  All Songs, Liked Songs] browse tree with style hints; search via `onSearch` /
-  `onGetSearchResult`; queue drives `Player.setMediaItems` so the template's Queue
-  screen works for free.
-- **Custom parked-only flows** (`:automotive`): Auth (Google Sign-In via Credential
-  Manager), Settings (Account + Audio Quality + About), and a sign-out confirmation
-  dialog. Settings surfaces via `android.intent.action.APPLICATION_PREFERENCES`.
-- **Distraction compliance**: 76dp min touch targets + 24sp min type on all custom
-  screens; Settings is `distractionOptimized="false"` (parked only).
+
+Two surfaces ship, both live. The custom launcher is the product; the media template is
+kept first-class for Assistant and voice search. The 2026-04-23 "template only" decision
+was reversed on 2026-08-02 — see `docs/AAOS_PRD.md` §3.3.
+
+- **Custom launcher** (`:automotive`, `oem` flavor): 18 of 20 designed screens, in a
+  champagne-gold identity — Home, Browse, Library, Favourites, Search, Full Player, Queue,
+  Downloads, Album/Playlist/Artist detail, Settings, Profile Switcher, Auth. Screen 2
+  (PIN opt-in, T18) and phone/email sign-in (T19) are deferred past ship.
+- **OEM media template**: Declared `<uses name="media" />`; root → [Recently Played, Genres,
+  Artists, All Songs, Liked Songs] browse tree from `MediaBrowseTree`, search via
+  `onSearch` / `onGetSearchResult`, queue driving `Player.setMediaItems`. Discovery needs
+  both service actions plus `androidx.car.app.launchable` metadata **on the service**.
+- **Driving restrictions**: `CarUxRestrictionsHandler` reads `CarUxRestrictionsManager` —
+  `NO_KEYBOARD`, `NO_SETUP`, content depth and item caps. Settings, profile switching, typed
+  search, deep drill-down, queue mutation and download deletion are refused while driving;
+  transport, seek, queue skip-to and tab switching stay available. Starting to drive inside
+  a restricted screen **evicts** you to a permitted one with an explanation (FR-2.5).
+- **Measured compliance**: 695 interactive nodes ≥ 76dp, 1103 text nodes ≥ 7:1 contrast,
+  both by automated Compose measurement tests. Evidence: `docs/AAOS_SHIP_RECORD.md`.
 
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)
@@ -190,7 +217,7 @@ Multi-module Gradle project:
 | Artist detail screen | Not started | No route or screen |
 | Album detail screen | Not started | No route or screen |
 | "See All" section expansion | Stub | Home headers have chevrons but no navigation callback |
-| Queue management UI | Not started | Queue managed internally but no user-facing screen to view/reorder |
+| Queue management UI (mobile) | Not started | Queue managed internally; no phone screen to view/reorder. The car has `CarQueueScreen` |
 | Playlist creation / management | Implemented | `PlaylistDetailScreen`, `PlaylistViewModel`, `FirebasePlaylistRepository`; create, add/remove songs, album art grid covers |
 | User profile editing | Not started | No edit screen or update flow |
 | Onboarding / genre selection | Not started | No onboarding flow after sign-up |
@@ -216,7 +243,6 @@ Multi-module Gradle project:
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Notifications (push) | Not started | Bell icon stub in `HomeScreen.kt` |
-| Hardcoded strings | Minor | `SearchScreen.kt` has "No songs in this genre" and "No results found" not in `strings.xml` |
 
 ### Architectural Debt
 
@@ -237,7 +263,7 @@ Multi-module Gradle project:
 5. In Firebase Console:
    - Enable **Authentication** → Email/Password provider
    - Enable **Authentication** → Google provider
-   - Set up **Firestore** collections: `songs`, `genres`, `artists`
+   - Set up **Firestore** collections: `songs`, `genres`, `artists`, `albums`
    - Set up **Realtime Database** for home feed sections
 6. Build and run: `./gradlew assembleDebug`
 

@@ -9,9 +9,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./gradlew assembleRelease        # Build release APK
 ./gradlew clean                  # Clean build artifacts
 
-# Static analysis (both enforced by pre-commit hook)
+# Static analysis — run these yourself; see the hook caveat below
 ./gradlew detekt                 # Run Detekt — maxIssues: 0, any issue fails
-./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug  # Run Android Lint
+./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug \
+          :core:playback:lintDebug :automotive:lintOemDebug            # Android Lint, all modules
 
 # Reports
 open build/reports/detekt/detekt.html
@@ -20,11 +21,16 @@ open app/build/reports/lint-results-debug.html
 # Baselines
 ./gradlew detektBaseline         # Regenerate detekt-baseline.xml
 
-# Git hooks (runs Detekt + Lint before each commit)
+# Git hooks — NOT ACTIVE in this checkout
 ./scripts/install-hooks.sh       # or: ./gradlew installGitHooks
 ```
 
-Unit tests live in `core/data/src/test/`. Run with `./gradlew test`.
+**The pre-commit hook does not run here.** `core.hooksPath` is set globally to
+`~/.claude/git-hooks`, so git ignores `.git/hooks/` — which is exactly where
+`install-hooks.sh` writes. Treat Detekt and Lint as manual gates and run them in every
+verification command; do not report "the hook passed".
+
+Unit tests span five modules — `:automotive` (43 files) is the largest, then `:core:data` (21), `:core:playback` (12), `:app` (2), `:core:common` (2). Run all with `./gradlew test`.
 
 ## Architecture
 
@@ -41,8 +47,8 @@ Unit tests live in `core/data/src/test/`. Run with `./gradlew test`.
 - **`:core:common`** (`com.example.nyasaplayer.core.common`) — domain models, theme, UI components, utilities
 - **`:core:data`** (`com.example.nyasaplayer.core.data`) — repository interfaces & implementations, Room DB, Firebase sync, DTOs, DI modules
 - **`:core:playback`** (`com.example.nyasaplayer.core.playback`) — `PlaybackService` (MediaLibraryService), `PlaybackQueueManager`, `PlaybackStatePersistence`, `BasePlayerStateCollector`, `MediaBrowseTree`, shared playback state models
-- **`:app`** — screens, ViewModels, navigation, `AppModule`/`PlayerModule`
-- **`:automotive`** (`com.example.nyasaplayer.auto`) — AAOS. Ships **both** a launcher app with 7 custom Compose screens (`ui/screens/`) and, via `:core:playback`'s `PlaybackService`, the media source the OEM template browses. See "AAOS rendering" below.
+- **`:app`** — screens, ViewModels, navigation, `AppModule`
+- **`:automotive`** (`com.example.nyasaplayer.auto`) — AAOS. Ships **both** a launcher app with 17 custom Compose screens (`ui/screens/`) and, via `:core:playback`'s `PlaybackService`, the media source the OEM template browses. See "AAOS rendering" below.
 
 ```
 Firestore / Realtime DB / Firebase Auth
@@ -89,17 +95,26 @@ AAOS rendering — two surfaces, both live:
   media app checks; without it the service is skipped as a "non media template app".
   The `com.android.automotive` application descriptor does not affect this
   (verified on emulator: the GAS car media app never reads it).
-- **Custom launcher app** — `AutomotiveActivity` → `AutomotiveApp` hosts 7 screens in
-  `auto/ui/screens/`:
+- **Custom launcher app** — `AutomotiveActivity` → `AutomotiveApp` hosts 17 screen
+  composables in `auto/ui/screens/` (the PRD counts a 20-screen design; see
+  `docs/AAOS_SHIP_RECORD.md` for what shipped against it):
   - `CarAuthScreen` — gate shown until signed in
-  - `CarHomeScreen` / `CarBrowseScreen` / `CarLibraryScreen` — the three `CarScreen` enum tabs
-  - `CarArtistLikedSongsScreen` — drill-down from Library
-  - `CarFullPlayerScreen`, `CarQueueScreen` — conditional overlays, not nav destinations
-- Car-side ViewModels: `AutomotiveAuthViewModel`, `AutomotiveContentViewModel`, and
-  `AutomotivePlayerViewModel` (wraps `BasePlayerStateCollector`). `CarUxRestrictionsHandler`
-  (`@Singleton`) drives parked-vs-driving gating.
-- `docs/AAOS_UI_REDESIGN_PLAN.md` records a 2026-04-23 "template only, no custom screens"
-  decision that the code no longer follows.
+  - `CarHomeScreen` / `CarBrowseScreen` / `CarLibraryScreen` / `CarFavouriteMusicScreen` —
+    the four `CarScreen` enum rail tabs
+  - `CarAlbumScreen` / `CarPlaylistScreen` / `CarArtistScreen` (all in `CarDetailScreen.kt`),
+    `CarArtistLikedSongsScreen`, `CarDownloadsScreen` — drill-downs via `CarDestination`
+  - `CarSearchScreen` / `CarSearchResultsScreen` — search, gated by `NO_KEYBOARD`
+  - `CarSettingsScreen` / `CarProfileSwitcherScreen` — parked-only sheets (`CarSheet`)
+  - `CarFullPlayerScreen`, `CarQueueScreen`, `CarEmptyFavouritesScreen` — conditional
+    overlays and states, not nav destinations
+- Car-side ViewModels: `AutomotiveAuthViewModel`, `AutomotiveContentViewModel`,
+  `AutomotiveSearchViewModel`, and `AutomotivePlayerViewModel` (wraps
+  `BasePlayerStateCollector`). `CarUxRestrictionsHandler` (`@Singleton`) drives
+  parked-vs-driving gating.
+- `docs/AAOS_UI_REDESIGN_PLAN.md` holds the superseded 2026-04-23 "template only" decision.
+  It carries a SUPERSEDED banner and is kept for its §1.1 two-surface inventory and §2 Play
+  policy reasoning. Current sources of truth: `docs/AAOS_PRD.md` §3.3,
+  `docs/AAOS_SCREEN_CONTRACT.md`, `docs/AAOS_COMPLIANCE.md`.
 
 ### Data layer
 
@@ -121,11 +136,11 @@ Room entities live in `core/data/.../local/entity/`, DAOs in `core/data/.../loca
 ### DI modules
 
 - `AppModule` (`:app` `di/`) — provides FirebaseFirestore, FirebaseAuth, and ApplicationContext
+  (ExoPlayer is built inside `PlaybackService`, not injected)
 - `DatabaseModule` (`:core:data` `di/`) — provides Room `NyasaDatabase` and DAOs
 - `RepositoryModule` (`:core:data` `di/`) — binds `Offline*Repository` implementations to repository interfaces
-- `PlayerModule` (`:app` `di/`) — provides ExoPlayer instance
-- `PlaybackModule` (`:core:playback` `di/`) — provides `MediaController` future, `PlaybackStatePersistence`
-- `AutoAppModule` (`:automotive` `di/`) — provides Firebase, ApplicationContext, and `SessionToken` for AAOS
+- `PlaybackModule` (`:core:playback` `di/`) — provides the `SessionToken` that `ControllerConnection` uses
+- `AutoAppModule` (`:automotive` `di/`) — provides Firebase and ApplicationContext for the automotive process
 
 ## Code Style & Static Analysis
 
@@ -149,14 +164,23 @@ Requires `app/google-services.json`. Firebase console must have:
 - Firestore collections: `songs`, `genres`, `artists`, `albums`
 - Realtime Database for home feed sections
 
+## Crash Reporting
+
+`CrashReporter` (`:core:data` `crash/`) wraps Firebase Crashlytics. It sets one custom key,
+`surface` (`mobile` / `automotive`), and reports non-fatals; it never calls `setUserId` or
+`log`. Collection is off in every debug variant, via
+`core/data/src/debug/AndroidManifest.xml`. What the SDK sends, and what it never sends, is
+inventoried in `docs/CRASH_REPORTING.md`. Crashlytics is pinned to 19.4.4 pending a KTX
+migration.
+
 ## Known Gaps
 
-- Unit tests live in `:core:data` (`core/data/src/test/`) covering entities, converters, offline repos, and sync backoff
+- Tests: `:core:data` covers entities, converters, offline repos and sync backoff; `:automotive` holds the largest suite, including the `CarTouchTargetMeasurementTest` / `CarTextContrastMeasurementTest` / `CarTextSizeMeasurementTest` compliance measurements
 - README "Not Yet Implemented" section tracks planned features (queue management, artist/album detail screens, etc.)
 
 ### Error handling that IS in place
 
-- **`CoroutineExceptionHandler`** — all 7 ViewModels have a `private val exceptionHandler` CEH as a safety net for uncaught exceptions in `viewModelScope.launch`; maps errors to the ViewModel's error state (existing try/catch and `.catch {}` remain as primary handling)
+- **`CoroutineExceptionHandler`** — 12 of the 14 `@HiltViewModel` classes have a `private val exceptionHandler` CEH as a safety net for uncaught exceptions in `viewModelScope.launch`; maps errors to the ViewModel's error state (existing try/catch and `.catch {}` remain as primary handling). `AutomotivePlayerViewModel` and `AutomotiveSearchViewModel` do not have one
 - **`NetworkMonitor`** (`:core:common` `util/`) — singleton on `registerDefaultNetworkCallback` exposing `isOnline: StateFlow<Boolean>`: the default network has `INTERNET` and is not a `CAPTIVE_PORTAL`, decided from the callbacks' own arguments by `DefaultNetworkState` (D72); used by `PlayerViewModel`, `ProfileViewModel`, `SongDownloadManager` and the car's `AutomotivePlayerViewModel`
 - **Offline banner** — persistent `OfflineBanner` composable shown at top of all screens when offline; driven by `PlayerUiState.isOffline` which observes `NetworkMonitor`
 - **Fail-fast offline playback** — `PlayerViewModel` checks `isOnline` before streaming; shows error instead of infinite buffering spinner. The car does the same through the shared `Song.isPlayableNow` / `isStreamStalledOffline` rules in `AutomotivePlayerViewModel`.

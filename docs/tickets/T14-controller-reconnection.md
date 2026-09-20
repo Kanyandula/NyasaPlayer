@@ -2,7 +2,8 @@
 
 - **Slice:** playback lifecycle
 - **Depends on:** T11 (merged, PR #47) reports the condition. T17 would make it testable.
-- **Status:** Implemented; the failure mode is proved in tests, not on a device — see Outcome
+- **Status:** Implemented; the failure mode was proved on mobile 2026-09-19
+  (`docs/T14_VERIFICATION.md`). A car driving-state pass is owed, in T35
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`
 - **Design Reference:** `docs/aaos-DESIGN.md` D63, and D65 for the outcome
 - **Plan:** `docs/superpowers/plans/2026-08-26-aaos-t14-reconnection.md`
@@ -102,5 +103,4 @@ build, so `onCleared()` never runs and the trigger is unreachable there — esta
 The car pass is therefore a regression check: restore, play, pause, next and play-after-return all
 behave, in one process.
 
-Mobile is where finishing the root activity is routine, and that pass is still owed. So is a
-driving-state check on the car, though T14 adds no UI.
+Mobile ran on 2026-09-19 — both ways of finishing the Activity, on the surface where the trigger is reachable (`docs/T14_VERIFICATION.md` → "Mobile — run 2026-09-19, the failure mode's own surface"). The car driving-state check is still owed, now in T35.

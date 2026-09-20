@@ -33,7 +33,12 @@ The configuration enforces `maxIssues: 0`, meaning any issue will fail the build
 Android Lint is configured per-module.
 
 - **Config file**: `app/lint.xml`
-- **Run manually**: `./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug`
+- **Run manually**:
+
+  ```bash
+  ./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug \
+            :core:playback:lintDebug :automotive:lintOemDebug
+  ```
 - **Report location**: `app/build/reports/lint-results-debug.html`
 
 Custom severity overrides in `lint.xml`:
@@ -62,7 +67,12 @@ fun getSongsByIds_emptyList_returnsEmpty() = runTest { }
 
 ## Commit Workflow
 
-A pre-commit hook runs Detekt and Lint before every commit.
+A pre-commit hook is *available*, but **do not assume it is running.**
+
+> **It is inactive wherever `core.hooksPath` is set.** On this machine it points at
+> `~/.claude/git-hooks`, so git never reads `.git/hooks/` — which is exactly where
+> `install-hooks.sh` writes. Check with `git config --get core.hooksPath`; if it prints
+> anything, the hook below is not enforcing anything and Detekt/Lint are manual gates.
 
 ### Installing the hook
 
@@ -79,7 +89,10 @@ Or via Gradle:
 ### What the hook does
 
 1. Runs `./gradlew detekt` — fails the commit if any issues are found
-2. Runs `./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug` — fails the commit if any lint errors are found
+2. Runs lint — fails the commit if any lint errors are found
+
+The hook's lint invocation predates `:core:playback` and `:automotive`; run those two
+yourself regardless of hook state.
 
 ### Bypassing the hook
 
