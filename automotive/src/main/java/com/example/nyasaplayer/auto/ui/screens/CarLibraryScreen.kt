@@ -45,6 +45,9 @@ import com.example.nyasaplayer.core.common.models.Album
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
+import com.example.nyasaplayer.core.common.ui.icons.DownloadIcon
+import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
+import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 
 private val RowSpacing = 24.dp
 private val CardSpacing = 24.dp
@@ -190,6 +193,8 @@ private fun LibraryRows(
                             title = playlist.name,
                             onClick = { onPlaylistClick(playlist) },
                             subtitle = "${playlist.songIds.size} songs",
+                            // D18 stands: still the gold placeholder, only the glyph on it changes.
+                            placeholderIcon = QueueMusicIcon,
                         )
                     }
                 }
@@ -235,6 +240,7 @@ private fun LibraryRows(
                             title = "Liked songs",
                             onClick = onFavouritesClick,
                             subtitle = "$likedSongCount songs",
+                            placeholderIcon = HeartIcon,
                         )
                     }
                 }
@@ -249,6 +255,7 @@ private fun LibraryRows(
                         title = "Downloads",
                         onClick = onDownloadsClick,
                         subtitle = "Offline music",
+                        placeholderIcon = DownloadIcon,
                     )
                 }
             }

@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -72,6 +73,7 @@ fun CarContentCard(
     shape: CarCardShape = CarCardShape.Square,
     isPlaying: Boolean = false,
     enabled: Boolean = true,
+    placeholderIcon: ImageVector = MusicNoteIcon,
 ) {
     val cardShape = when (shape) {
         CarCardShape.Square -> RoundedCornerShape(CarCardCornerRadius)
@@ -102,8 +104,8 @@ fun CarContentCard(
                 .aspectRatio(1f)
                 .clip(cardShape)
                 .background(CarRaised),
-            loading = { CardPlaceholder() },
-            error = { CardPlaceholder() },
+            loading = { CardPlaceholder(icon = placeholderIcon) },
+            error = { CardPlaceholder(icon = placeholderIcon) },
         )
         Text(
             text = title,
@@ -136,7 +138,7 @@ fun CarContentCard(
 }
 
 @Composable
-private fun CardPlaceholder(modifier: Modifier = Modifier) {
+private fun CardPlaceholder(icon: ImageVector, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -144,7 +146,7 @@ private fun CardPlaceholder(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = MusicNoteIcon,
+            imageVector = icon,
             contentDescription = null,
             tint = NyasaOnGold,
             modifier = Modifier.size(PlaceholderIconSize),
