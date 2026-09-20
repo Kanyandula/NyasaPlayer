@@ -149,6 +149,7 @@ internal const val MeasurementQualifiers = "w1280dp-h800dp-xhdpi"
  */
 internal fun AndroidComposeTestRule<*, ComponentActivity>.forEachCarUiCase(
     cases: List<CarUiCase> = carUiCases,
+    scroll: Boolean = true,
     measure: (CarUiCase) -> Unit,
 ) {
     cases.forEach { case ->
@@ -163,7 +164,7 @@ internal fun AndroidComposeTestRule<*, ComponentActivity>.forEachCarUiCase(
         waitForIdle()
         requireScopeMatches(case)
         measure(case)
-        if (case.scrollsList) measureEachScrollStep(case, measure)
+        if (scroll && case.scrollsList) measureEachScrollStep(case, measure)
     }
     mainClock.autoAdvance = true
 }

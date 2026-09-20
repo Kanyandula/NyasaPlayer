@@ -182,29 +182,19 @@ class CarTouchTargetMeasurementTest {
      * Library's page header, section header and card together asked for more than the slot had.
      * Different causes, same silent result, neither caught by measurement until this test.
      *
-     * Two things narrow what is judged, and both matter.
+     * Judged at rest only (`scroll = false`), and only on a card that **opens in the top half**
+     * of the window. On Browse and Library the first card is what the screen is for, so losing
+     * its label is a defect. On search results the songs are `CarTrackRow`s and the first
+     * `CarContentCard` sits in a carousel several sections down — cut there means "scroll for
+     * more", not "broken".
      *
-     * Only **at-rest** frames: a `.scrolling()` case is measured once where it opens and again at
-     * every scroll step, and past that first frame a partly-visible card is the list working.
-     *
-     * Only a card that **opens in the top half** of the window. On Browse and Library the first
-     * card is what the screen is for, so losing its label is a defect. On search results the
-     * songs are `CarTrackRow`s and the first `CarContentCard` sits in a carousel several sections
-     * down — cut there means "scroll for more", not "broken", and asserting on it would be
-     * demanding that an arbitrarily long page fit one screen.
-     * Rendered at **1024x768** rather than the suite's 1280x800, because the defect needs the
+     * Rendered at 1024x768 rather than the suite's 1280x800, because the defect needs the
      * shorter head unit.
      *
-     * **What this cannot see, stated plainly.** `InContentSlot` subtracts only the app's own
-     * chrome — nav rail, system bar, mini-player, margins — leaving 480dp at this size. A real
-     * head unit also loses the OS status bar and the climate bar, and measured ~347dp. So the
-     * harness models ~133dp more room than the hardware has, and the regression this test was
-     * written for (a 180dp `CarContentCardSize`, which cut Library's labels on device) still
-     * **passes** here. Verified by mutation, not assumed.
-     *
-     * What it does hold is the invariant itself, against a card gross enough to overrun even the
-     * generous slot. Closing the gap means teaching `ContentSlot` the OS chrome, which would
-     * re-baseline all 120 cases — worth doing, too big to smuggle in here.
+     * **What this cannot see.** `InContentSlot` models the app's own chrome only, so the slot is
+     * taller than a real head unit's and the 180dp [CarContentCardSize] that prompted this test
+     * still passes here — mutation-checked, not assumed. Measured in `docs/BACKLOG.md`; what the
+     * test does hold is the invariant, against a card gross enough to overrun even that slot.
      */
     @Test
     @Config(qualifiers = "w1024dp-h768dp-xhdpi")
@@ -212,16 +202,16 @@ class CarTouchTargetMeasurementTest {
         val density = composeRule.density.density
         val cut = mutableListOf<String>()
         var judged = 0
+        // Fixed by the qualifiers above, and forEachCarUiCase only swaps the content view.
+        val midWindow by lazy { composeRule.onRoot().fetchSemanticsNode().size.height / 2f }
 
-        composeRule.forEachCarUiCase { case ->
-            // Scroll steps start at item 1, so any such name is already away from rest.
-            if ("scrolled to item " in case.name) return@forEachCarUiCase
+        composeRule.forEachCarUiCase(scroll = false) { case ->
             val cards = composeRule
                 .onAllNodes(hasTestTag(ContentCardTag), useUnmergedTree = true)
                 .fetchSemanticsNodes()
+                // A card collapsed to nothing would otherwise become "first" and mask a cut sibling.
                 .filter { it.size.height > 0 }
             val first = cards.minByOrNull { it.boundsInWindow.top } ?: return@forEachCarUiCase
-            val midWindow = composeRule.onRoot().fetchSemanticsNode().size.height / 2f
             if (first.boundsInWindow.top > midWindow) return@forEachCarUiCase
             judged++
             if (first.boundsInWindow.height < first.size.height - 1f) {
