@@ -8,7 +8,10 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onRoot
+import com.example.nyasaplayer.auto.ui.components.ContentCardTag
 import com.example.nyasaplayer.auto.ui.components.SkeletonRowTag
+import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -162,6 +165,77 @@ class CarTouchTargetMeasurementTest {
             "${clipped.size} loading placeholders are drawn only in part, so the skeleton does not " +
                 "fit its slot (case | laid out | visible):\n" + clipped.joinToString("\n"),
             clipped.isEmpty(),
+        )
+    }
+
+    /**
+     * The first content card on a screen is drawn whole, artwork **and** labels.
+     *
+     * `isClipped` cannot see this: every card sits in a `LazyColumn` or `LazyRow`, and that check
+     * deliberately exempts anything a driver could scroll into view. But the row at the top of a
+     * screen is not something to scroll into view — it is what the screen looks like at rest, and
+     * `CarContentCard` puts its title and subtitle *below* the artwork, so a card that overruns
+     * the slot keeps looking like a tile while losing the words that say what it is.
+     *
+     * Both halves of that shipped: Browse gave its cards `weight(1f)`, which overrode
+     * [CarContentCardSize] and let `aspectRatio(1f)` turn the extra width into extra height; and
+     * Library's page header, section header and card together asked for more than the slot had.
+     * Different causes, same silent result, neither caught by measurement until this test.
+     *
+     * Two things narrow what is judged, and both matter.
+     *
+     * Only **at-rest** frames: a `.scrolling()` case is measured once where it opens and again at
+     * every scroll step, and past that first frame a partly-visible card is the list working.
+     *
+     * Only a card that **opens in the top half** of the window. On Browse and Library the first
+     * card is what the screen is for, so losing its label is a defect. On search results the
+     * songs are `CarTrackRow`s and the first `CarContentCard` sits in a carousel several sections
+     * down — cut there means "scroll for more", not "broken", and asserting on it would be
+     * demanding that an arbitrarily long page fit one screen.
+     * Rendered at **1024x768** rather than the suite's 1280x800, because the defect needs the
+     * shorter head unit.
+     *
+     * **What this cannot see, stated plainly.** `InContentSlot` subtracts only the app's own
+     * chrome — nav rail, system bar, mini-player, margins — leaving 480dp at this size. A real
+     * head unit also loses the OS status bar and the climate bar, and measured ~347dp. So the
+     * harness models ~133dp more room than the hardware has, and the regression this test was
+     * written for (a 180dp `CarContentCardSize`, which cut Library's labels on device) still
+     * **passes** here. Verified by mutation, not assumed.
+     *
+     * What it does hold is the invariant itself, against a card gross enough to overrun even the
+     * generous slot. Closing the gap means teaching `ContentSlot` the OS chrome, which would
+     * re-baseline all 120 cases — worth doing, too big to smuggle in here.
+     */
+    @Test
+    @Config(qualifiers = "w1024dp-h768dp-xhdpi")
+    fun `the first content card on each screen is drawn whole, labels included`() {
+        val density = composeRule.density.density
+        val cut = mutableListOf<String>()
+        var judged = 0
+
+        composeRule.forEachCarUiCase { case ->
+            // Scroll steps start at item 1, so any such name is already away from rest.
+            if ("scrolled to item " in case.name) return@forEachCarUiCase
+            val cards = composeRule
+                .onAllNodes(hasTestTag(ContentCardTag), useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .filter { it.size.height > 0 }
+            val first = cards.minByOrNull { it.boundsInWindow.top } ?: return@forEachCarUiCase
+            val midWindow = composeRule.onRoot().fetchSemanticsNode().size.height / 2f
+            if (first.boundsInWindow.top > midWindow) return@forEachCarUiCase
+            judged++
+            if (first.boundsInWindow.height < first.size.height - 1f) {
+                cut += "${case.name} | laid out ${dp(first.size.height, density)} dp tall, " +
+                    "only ${dp(first.boundsInWindow.height, density)} dp visible"
+            }
+        }
+
+        println("Content cards: first card judged on $judged at-rest frames, ${cut.size} cut")
+        assertTrue("no frame rendered a content card — the seam is gone", judged > 0)
+        assertTrue(
+            "${cut.size} screens cut their first card, so its labels are not readable at rest " +
+                "(case | laid out | visible):\n" + cut.joinToString("\n"),
+            cut.isEmpty(),
         )
     }
 

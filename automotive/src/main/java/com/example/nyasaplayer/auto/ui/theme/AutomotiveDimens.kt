@@ -13,7 +13,7 @@ val CarListArtSize = 80.dp
 
 // Default CarContentCard width and art size (album/playlist/genre/artist tiles), and the
 // footprint their loading skeletons (BrowseSkeleton, LibrarySkeleton) reserve to match
-val CarContentCardSize = 180.dp
+val CarContentCardSize = 130.dp
 
 // Standard card corner radius
 val CarCardCornerRadius = 20.dp

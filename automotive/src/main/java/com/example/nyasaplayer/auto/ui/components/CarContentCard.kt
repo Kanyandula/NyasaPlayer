@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +41,13 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 
 /** Square for albums, playlists and genres; circle for artists. */
 enum class CarCardShape { Square, Circle }
+
+/**
+ * Test seam: the whole card, artwork and labels together. `CarTouchTargetMeasurementTest` asserts
+ * the topmost one is drawn whole at rest — the labels sit below the artwork, so a card that
+ * overruns its slot loses them silently while still looking like a tile.
+ */
+internal const val ContentCardTag = "carContentCard"
 
 private val LabelSpacing = 10.dp
 private val PlaceholderIconSize = 48.dp
@@ -75,6 +83,7 @@ fun CarContentCard(
     // neither, which is what every existing Library call site relies on.
     Column(
         modifier = modifier
+            .testTag(ContentCardTag)
             .width(CarContentCardSize)
             .alpha(if (enabled) 1f else DisabledAlpha)
             .clickable(enabled = enabled, onClick = onClick),

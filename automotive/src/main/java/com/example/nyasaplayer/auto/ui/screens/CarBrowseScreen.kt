@@ -44,7 +44,7 @@ import com.example.nyasaplayer.core.common.models.Genre
 
 private val GridSpacing = 24.dp
 private val ListPadding = 24.dp
-private const val BrowseGridColumns = 3
+private const val BrowseGridColumns = 4
 private val ScrollbarGap = 8.dp
 private val ScrollbarWidth = 8.dp
 private val ScrollbarTrackCornerRadius = 4.dp
