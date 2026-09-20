@@ -32,10 +32,12 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
+import com.example.nyasaplayer.auto.ui.components.SkeletonRowTag
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.core.common.models.Genre
@@ -148,21 +150,19 @@ private fun BrowseGrid(
 /**
  * Static placeholders, no shimmer — the ambient layer is the app's only decorative motion.
  *
- * One row only, not two. Real Browse cards are now width-flexed and square (BrowseGrid), so a
- * placeholder row's *height* is whatever its *width* works out to. On the 1024dp AVD this was
- * verified against, the content slot is 1024 - CarNavRailWidth (80) - 2 * CarScreenMargin (96)
- * = 848dp wide; matching BrowseGrid's own `end = ScrollbarWidth + ScrollbarGap` (16dp)
- * reservation below brings that to 832dp, so each of the 3 columns is (832 - 2 * GridSpacing) /
- * 3 = (832 - 48) / 3 ≈ 261dp — and a row is therefore ~261dp tall, not 180dp.
+ * **One row, not two.** BrowseGrid's cards are width-flexed and square, so a row is as tall as a
+ * column is wide — about 261dp on a 1024dp-wide screen, not the 180dp a fixed card would give.
+ * Two rows need ~546dp and the vertical slot is at most ~544dp, so the second row overflows and
+ * this `Column` clips it silently.
  *
- * The vertical budget one row has to fit in is CarSystemBarHeight (80) subtracted from the
- * screen height, then CarMiniPlayerHeight (112) *if something is playing* and OfflineBanner's
- * height *if offline* — both conditional, both only ever shrinking the slot — then 2 *
- * CarScreenMargin (96) for this row's own container. Worst case on a 720dp-tall screen with the
- * mini player showing: 720 - 80 - 112 - 96 = 432dp. One 261dp row clears that with room left
- * for the mini player and system bar. Two rows (2 * 261 + GridSpacing = 546dp) does not fit even
- * the *best* case (no mini player: 720 - 80 - 96 = 544dp) — that overflow, silently clipped by
- * this `Column`, is what this fixes.
+ * Both figures fall out of `CarNavRailWidth`, `CarScreenMargin`, `GridSpacing`,
+ * `CarSystemBarHeight` and `CarMiniPlayerHeight`; change any of them and re-check rather than
+ * trusting the numbers here.
+ *
+ * They were derived by hand for a 1024x720 head unit. The measurement suite renders
+ * `browseCase("loading")` at `MeasurementQualifiers` (1280x800), so no test asserts this row
+ * fits — `isClipped` in `CarTouchTargetMeasurementTest` only visits interactive nodes, and a
+ * placeholder is not one.
  */
 @Composable
 private fun BrowseSkeleton(modifier: Modifier = Modifier) {
@@ -172,7 +172,9 @@ private fun BrowseSkeleton(modifier: Modifier = Modifier) {
             .padding(top = ListPadding, bottom = ListPadding, end = ScrollbarWidth + ScrollbarGap),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .testTag(SkeletonRowTag)
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(GridSpacing),
         ) {
             repeat(BrowseGridColumns) {
@@ -238,7 +240,6 @@ private fun VerticalScrollbar(
                 val trackHeight = size.height
                 val scrollbarWidthPx = size.width
 
-                // Track
                 drawRoundRect(
                     color = trackColor,
                     topLeft = Offset.Zero,
@@ -246,7 +247,6 @@ private fun VerticalScrollbar(
                     cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
                 )
 
-                // Thumb
                 val thumbHeight = (trackHeight * animatedThumbRatio).coerceAtLeast(scrollbarWidthPx * 2)
                 val maxThumbOffset = trackHeight - thumbHeight
                 val thumbOffset = maxThumbOffset * animatedScrollFraction

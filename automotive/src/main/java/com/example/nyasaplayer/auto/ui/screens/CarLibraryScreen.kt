@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import com.example.nyasaplayer.auto.ui.components.CarCardShape
 import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
+import com.example.nyasaplayer.auto.ui.components.SkeletonRowTag
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
@@ -48,8 +50,7 @@ private val RowSpacing = 32.dp
 private val CardSpacing = 24.dp
 private val ListPadding = 24.dp
 
-// 2 rows, matching BrowseSkeleton: 3 rows (604dp) clips the third inside Library's
-// content slot (roughly 432dp), and this is a static placeholder, not scrollable content.
+// Two rows: a third clips inside Library's content slot. See LibrarySkeleton.
 private const val SkeletonRowCount = 2
 private const val SkeletonCardCount = 4
 
@@ -273,12 +274,18 @@ private fun LibraryRow(
 /**
  * Row-shaped placeholders, so the headings stay put and the screen does not jump.
  *
- * Budget: the ~432dp content slot minus this composable's own `padding(vertical = ListPadding)`
- * (24dp top + 24dp bottom) leaves 384dp, exactly 2 * CarContentCardSize (180dp) + CardSpacing
- * (24dp). Using RowSpacing (32dp) here — the gap `LibraryRows` puts *between* rows — double-counts
- * padding the real layout doesn't have at this level, so the second row's box gets coerced down to
- * ~172dp. CardSpacing matches the 24dp gap BrowseSkeleton uses between its own two rows, for the
- * same reason.
+ * Two rows fit the slot exactly: `2 * CarContentCardSize + CardSpacing` is 384dp, which is what
+ * the ~432dp content slot leaves after this composable's own [ListPadding] top and bottom. A
+ * third row needs 588dp and clips.
+ *
+ * [CardSpacing] between them, **not** [RowSpacing]: `LibraryRows` puts `RowSpacing` between
+ * *real* rows, but this composable already has its own vertical padding, so reusing it
+ * double-counts and Compose coerces the second row short.
+ * `BrowseSkeleton` spaces its rows the same way for the same reason.
+ *
+ * Hand-derived, and unasserted: `libraryCase("loading")` renders at `MeasurementQualifiers`
+ * (1280x800), not the 1024x720 this was worked out for, and the suite's clipping check skips
+ * non-interactive nodes.
  */
 @Composable
 private fun LibrarySkeleton(modifier: Modifier = Modifier) {
@@ -289,7 +296,10 @@ private fun LibrarySkeleton(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(CardSpacing),
     ) {
         repeat(SkeletonRowCount) {
-            Row(horizontalArrangement = Arrangement.spacedBy(CardSpacing)) {
+            Row(
+                modifier = Modifier.testTag(SkeletonRowTag),
+                horizontalArrangement = Arrangement.spacedBy(CardSpacing),
+            ) {
                 repeat(SkeletonCardCount) {
                     Box(
                         modifier = Modifier
