@@ -2,7 +2,8 @@
 
 - **Slice:** correctness, shared by both surfaces
 - **Depends on:** —
-- **Status:** Implemented; car device-verified, phone pass owed — see Outcome and `docs/T29_VERIFICATION.md`
+- **Status:** Implemented; device-verified on both surfaces — phone pass ran 2026-09-19
+  (`docs/T29_VERIFICATION.md`)
 - **Verification Command:** `./gradlew :core:common:testDebugUnitTest`, plus a device pass
 - **Design Reference:** `docs/AAOS_A8_VERIFICATION.md` (findings); D71; D72
 - **Risk Tags:** shared module, both surfaces, mobile behaviour change
@@ -64,8 +65,7 @@ offline is now worse than a false online, which only falls back to the slow fail
 
 Baseline, measured on `main` on 2026-09-14 with the protocol in the spec's Testing section: 1 miss in
 20 valid transitions (an offline transition where the system settled offline and the app stayed
-online). With the fix, the same script on the same emulator: 0 misses in 20. The phone pass is owed;
-see `docs/T29_VERIFICATION.md`.
+online). With the fix, the same script on the same emulator: 0 misses in 20. The phone pass ran on 2026-09-19 — offline banner, refusal wording and recovery all confirmed; see `docs/T29_VERIFICATION.md` → "The phone — run 2026-09-19".
 
 Mobile's behaviour changes too: more networks now read online, since an unvalidated network no
 longer shows the banner or blocks offline checks.

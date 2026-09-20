@@ -49,7 +49,7 @@ cross-device resume.
 | Module | Package | Responsibility |
 |---|---|---|
 | `:core:common` | `core.common` | Domain models, theme, shared UI primitives, NetworkMonitor |
-| `:core:data` | `core.data` | Repositories, Room, Firebase sync, preferences DataStore |
+| `:core:data` | `core.data` | Repositories, Room, Firebase sync, downloads (`SongDownloadManager`), `CrashReporter` |
 | `:core:playback` | `core.playback` | `PlaybackService` (`MediaLibraryService`), `MediaBrowseTree`, `PlaybackQueueManager`, `PlaybackStatePersistence`, `SongMediaItemMapper`, `PlaybackCommands` |
 | `:app` | `com.example.nyasaplayer` | Mobile-only screens, ViewModels, navigation, `MediaController` client |
 | `:automotive` | `com.example.nyasaplayer.auto` | AAOS app shell. `oem` adds the custom launcher; `playstore` removes it and relies on `PlaybackService`. Parked-only setup/settings/sign-in flows stay custom where allowed |
@@ -65,9 +65,12 @@ android {
 
 dependencies {
     implementation(project(":core:playback"))  // PlaybackService merges from here
-    implementation(project(":core:data"))       // AuthRepository + AudioQualityPreference
+    implementation(project(":core:data"))       // AuthRepository, downloads, CrashReporter
     implementation(project(":core:common"))     // Theme + NyasaIcons
-    // No androidx.car.app — we're a MediaLibraryService app, not a Car App Library app.
+    implementation(libs.androidx.car.app)
+    implementation(libs.androidx.car.app.automotive)
+    // android.car.jar is compileOnly — its stubs throw, so restriction logic stays
+    // pure functions over primitives (PRD §6.5).
 }
 ```
 
@@ -291,12 +294,9 @@ The current AAOS upgrade is governed by:
 - `docs/superpowers/specs/2026-08-02-aaos-foundation-restrictions-design.md` — A1 spec.
 - `docs/superpowers/plans/2026-08-02-aaos-foundation-restrictions.md` — A1 plan.
 
-Near-term sequence:
-
-1. A1 creates tokens, shared primitives, restriction mapping, `CarUiLocation`, `gate()`, and
-   `oem` / `playstore` manifest flavors.
-2. A2 builds shared chrome and Home against those primitives.
-3. A3-A8 implement the remaining 19 screens against `docs/AAOS_SCREEN_CONTRACT.md`.
+Phases A1-A9 and the Exit measurement are complete and merged. Where `main` stands against
+each PRD §12 criterion, with the evidence and what is still owed, is
+`docs/AAOS_SHIP_RECORD.md` — that record, not this section, is the current status.
 
 ### Verification
 

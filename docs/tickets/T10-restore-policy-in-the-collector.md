@@ -2,7 +2,8 @@
 
 - **Slice:** architecture - removes a duplication that T3 was forced to work around
 - **Depends on:** T3 (merged, PR #41)
-- **Status:** Implemented; car device-verified, mobile not established — see Outcome
+- **Status:** Implemented; device-verified on both surfaces — car, then mobile on 2026-09-19
+  (`docs/T10_VERIFICATION.md`). Residual checks are collected in T35
 - **Verification Command:** `./gradlew :core:playback:testDebugUnitTest :automotive:testOemDebugUnitTest :app:assembleDebug`, plus one device pass per surface — the race and command-failure criteria below cannot be reached from Gradle
 - **Design Reference:** `docs/aaos-DESIGN.md` D53–D59, and D61 for the outcome
 - **Plan:** `docs/superpowers/plans/2026-08-25-aaos-t10-collector-restore.md`
@@ -190,4 +191,4 @@ and gone away, which is exactly the dead-controller state that ticket describes,
 probably closer to passing than the record says. It still needs a clean run that watches
 `PlaybackService` start from the first launch.
 
-Mobile therefore still carries T3's D55 index fix without a device pass.
+The mobile pass ran on 2026-09-19 — restore after `force-stop`, with the service watched from the first launch, which is the clean run this section asked for. `docs/T10_VERIFICATION.md` → "Mobile — run 2026-09-19, restore established". T3's D55 index fix is still owed, now in T35.

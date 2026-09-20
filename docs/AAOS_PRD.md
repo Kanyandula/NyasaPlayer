@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | Nyasa Music — AAOS in-car experience |
 | **Document owner** | Ephraim Kanyandula |
-| **Status** | Draft for review |
+| **Status** | Shipped — A1-A9 and Exit merged. Current standing: `docs/AAOS_SHIP_RECORD.md` |
 | **Version** | 1.0 |
 | **Date** | 2026-08-02 |
 | **Repository** | `~/AndroidStudioProjects/NyasaPlayer`, module `:automotive` |
@@ -450,7 +450,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 | Risk | Impact | Likelihood | Mitigation |
 |---|---|---|---|
 | Launcher activity is not declared distraction optimised, so the platform blocks it while driving | The custom launcher — the product — is unusable in motion, and the entire restriction layer is moot | **Was certain until found** | Gate OG-1; added to A1's flavor task |
-| No adb recipe exists to put the emulator into a driving state | Restriction layer ships unverified end to end | Medium | Spike is Task 1 of A1 so it fails early; a documented "no recipe" is an acceptable deliverable that triggers re-planning |
+| ~~No adb recipe exists to put the emulator into a driving state~~ **Retired 2026-08-08** | Restriction layer ships unverified end to end | Medium | A1 Task 1 found one; `docs/AAOS_DRIVING_STATE_TESTING.md` |
 | Play policy changes, making the deferred compliant path urgent | Rework | Low | `playstore` flavor is built and kept green from A1 onward |
 | Design figures are px, hardware is dp at unknown density | Controls smaller in practice than measured | Medium | Conversion rule recorded; requires validation on real hardware |
 | Smallest rendered text is 15px | May be too small at arm's length | Medium | Flagged in the design doc as a floor to revisit, pending device testing |
@@ -463,7 +463,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 
 | # | Question | Owner | Blocks |
 |---|---|---|---|
-| Q1 | Can the emulator be put into a driving state, and how? | A1 Task 1 | End-to-end verification of all restriction work |
+| ~~Q1~~ | ~~Can the emulator be put into a driving state, and how?~~ **Resolved 2026-08-08: yes, and it is scriptable — but only on a `userdebug` image.** Recipe and the AVD comparison are in `docs/AAOS_DRIVING_STATE_TESTING.md`. | — | Closed |
 | ~~Q2~~ | ~~How does text entry work on a head unit — on-screen keyboard when parked, voice-only when driving? The 20 screens do not solve this; the prototype only draws a disabled field.~~ **Resolved 2026-08-20:** A6 uses the platform/system IME when `UX_RESTRICTIONS_NO_KEYBOARD` is absent and replaces editing with a system/Assistant voice-search prompt when it is present. The app draws no custom keyboard and records no audio. A6 shipped song-only submitted results; T4 added album, artist and playlist result cards to the launcher, while the media-session path stays song-only (D43-D47). | — | Closed |
 | Q3 | Is 15px acceptable for secondary text at arm's length, or should the floor rise? | Device testing | Type scale across all phases |
 | ~~Q4~~ | ~~Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted?~~ **Resolved 2026-08-02: bannered, not deleted.** §1.1 and §2 are load-bearing history — the two-surface inventory and the Play policy reasoning a future submission must still satisfy. | — | Closed |
