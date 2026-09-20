@@ -11,7 +11,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import com.example.nyasaplayer.auto.ui.components.ContentCardTag
 import com.example.nyasaplayer.auto.ui.components.SkeletonRowTag
-import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -178,7 +177,7 @@ class CarTouchTargetMeasurementTest {
      * the slot keeps looking like a tile while losing the words that say what it is.
      *
      * Both halves of that shipped: Browse gave its cards `weight(1f)`, which overrode
-     * [CarContentCardSize] and let `aspectRatio(1f)` turn the extra width into extra height; and
+     * `CarContentCardSize` and let `aspectRatio(1f)` turn the extra width into extra height; and
      * Library's page header, section header and card together asked for more than the slot had.
      * Different causes, same silent result, neither caught by measurement until this test.
      *
@@ -192,7 +191,7 @@ class CarTouchTargetMeasurementTest {
      * shorter head unit.
      *
      * **What this cannot see.** `InContentSlot` models the app's own chrome only, so the slot is
-     * taller than a real head unit's and the 180dp [CarContentCardSize] that prompted this test
+     * taller than a real head unit's and the 180dp `CarContentCardSize` that prompted this test
      * still passes here — mutation-checked, not assumed. Measured in `docs/BACKLOG.md`; what the
      * test does hold is the invariant, against a card gross enough to overrun even that slot.
      */

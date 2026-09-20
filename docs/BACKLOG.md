@@ -80,3 +80,7 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   green suite because of it, and `the first content card ... drawn whole` still passes on the
   broken build (mutation-checked). Teaching `ContentSlot` the OS chrome would re-baseline all 120
   cases, so it is its own piece of work.
+- Detekt never scans test sources. `build.gradle.kts` scopes `source.setFrom(...)` to
+  `*/src/main/java` only, so the 80-odd files under `src/test` are unlinted — an unused import in
+  `CarTouchTargetMeasurementTest` passed a green `detekt` run and was found by review instead.
+  Pre-existing, and adding the test roots will surface a backlog of its own.
