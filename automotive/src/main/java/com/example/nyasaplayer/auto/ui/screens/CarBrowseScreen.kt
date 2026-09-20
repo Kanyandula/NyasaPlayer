@@ -32,10 +32,12 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
+import com.example.nyasaplayer.auto.ui.components.SkeletonRowTag
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.core.common.models.Genre
@@ -170,7 +172,9 @@ private fun BrowseSkeleton(modifier: Modifier = Modifier) {
             .padding(top = ListPadding, bottom = ListPadding, end = ScrollbarWidth + ScrollbarGap),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .testTag(SkeletonRowTag)
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(GridSpacing),
         ) {
             repeat(BrowseGridColumns) {

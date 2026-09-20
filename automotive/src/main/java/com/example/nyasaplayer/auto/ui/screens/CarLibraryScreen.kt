@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import com.example.nyasaplayer.auto.ui.components.CarCardShape
 import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
 import com.example.nyasaplayer.auto.ui.components.CarSectionHeader
+import com.example.nyasaplayer.auto.ui.components.SkeletonRowTag
 import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
 import com.example.nyasaplayer.auto.ui.theme.CarContentCardSize
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
@@ -294,7 +296,10 @@ private fun LibrarySkeleton(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(CardSpacing),
     ) {
         repeat(SkeletonRowCount) {
-            Row(horizontalArrangement = Arrangement.spacedBy(CardSpacing)) {
+            Row(
+                modifier = Modifier.testTag(SkeletonRowTag),
+                horizontalArrangement = Arrangement.spacedBy(CardSpacing),
+            ) {
                 repeat(SkeletonCardCount) {
                     Box(
                         modifier = Modifier

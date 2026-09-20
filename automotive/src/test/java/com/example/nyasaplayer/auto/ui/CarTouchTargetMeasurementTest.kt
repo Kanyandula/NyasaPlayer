@@ -6,7 +6,9 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import com.example.nyasaplayer.auto.ui.components.SkeletonRowTag
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -105,6 +107,62 @@ class CarTouchTargetMeasurementTest {
                 0f,
             )
         }
+    }
+
+    /**
+     * No loading placeholder is cut off by the slot it is drawn in.
+     *
+     * Skeleton row counts are hand-derived constants — `SkeletonRowCount` in `CarRowSkeleton` and
+     * `CarLibraryScreen`, and the single row in `BrowseSkeleton` — chosen so the placeholder fits
+     * the content slot. Nothing enforced them: each skeleton is a plain `Column` that silently
+     * clips whatever overflows, and the check above never visited them because a placeholder is
+     * not interactive. This is the assertion those KDocs were standing in for.
+     *
+     * Runs over every case, not just the ones named "loading", so a skeleton reachable from a
+     * state nobody thought to name is covered too.
+     *
+     * Equal heights, not [isClipped], is the assertion that does the work. A `Column` out of room
+     * **shrinks** its trailing child rather than overflowing it, so laid-out size and visible
+     * bounds still agree and nothing reads as clipped. Only a row that is shorter than its
+     * siblings reveals it. `isClipped` is kept for the degenerate case where the row collapses to
+     * nothing and the bounds go to zero.
+     */
+    @Test
+    fun `no loading skeleton is clipped by its slot`() {
+        val density = composeRule.density.density
+        val clipped = mutableListOf<String>()
+        var rows = 0
+
+        composeRule.forEachCarUiCase { case ->
+            val nodes = composeRule
+                .onAllNodes(hasTestTag(SkeletonRowTag), useUnmergedTree = true)
+                .fetchSemanticsNodes()
+            rows += nodes.size
+            nodes.filter { it.isClipped() }.forEach { node ->
+                clipped += "${case.name} | laid out " +
+                    "${dp(node.size.width, density)} x ${dp(node.size.height, density)} dp, " +
+                    "visible ${dp(node.boundsInWindow.width, density)} x " +
+                    "${dp(node.boundsInWindow.height, density)} dp"
+            }
+            val tallest = nodes.maxOfOrNull { it.size.height } ?: 0
+            nodes.filter { it.size.height < tallest - 1 }.forEach { node ->
+                clipped += "${case.name} | row squeezed to ${dp(node.size.height, density)} dp " +
+                    "where its siblings are ${dp(tallest, density)} dp — the slot is too short " +
+                    "for this many rows"
+            }
+        }
+
+        println("Skeletons: $rows placeholder rows across ${carUiCases.size} cases, ${clipped.size} clipped")
+        // Without this the suite would pass by finding nothing at all if the tag ever stopped matching.
+        assertTrue(
+            "no node carried $SkeletonRowTag — the seam is gone, so this test proves nothing",
+            rows > 0,
+        )
+        assertTrue(
+            "${clipped.size} loading placeholders are drawn only in part, so the skeleton does not " +
+                "fit its slot (case | laid out | visible):\n" + clipped.joinToString("\n"),
+            clipped.isEmpty(),
+        )
     }
 
     private companion object {
