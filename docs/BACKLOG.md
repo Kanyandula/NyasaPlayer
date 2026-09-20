@@ -84,3 +84,8 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   `*/src/main/java` only, so the 80-odd files under `src/test` are unlinted — an unused import in
   `CarTouchTargetMeasurementTest` passed a green `detekt` run and was found by review instead.
   Pre-existing, and adding the test roots will surface a backlog of its own.
+- The three Robolectric measurement classes can fail as a group under parallel Gradle workers,
+  with `NoSuchMethodError` and "Could not write XML test results"; `--max-workers=1` passes
+  cleanly. Reported by a review of PR #95 and reproduced there on a fresh daemon. Not reproduced
+  in this session across roughly a dozen runs, so it is recorded rather than diagnosed — but a
+  gate that fails on worker count and not on code is one nobody will trust for long.
