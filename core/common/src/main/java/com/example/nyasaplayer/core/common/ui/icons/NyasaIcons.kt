@@ -411,6 +411,10 @@ val SearchIcon: ImageVector by lazy {
     }.build()
 }
 
+/**
+ * The Material "explore" compass. A 2x2 grid was tried first and read as a rendering glitch at
+ * rail size — four small squares with nothing tying them together.
+ */
 val BrowseIcon: ImageVector by lazy {
     ImageVector.Builder(
         name = "Browse",
@@ -420,25 +424,29 @@ val BrowseIcon: ImageVector by lazy {
         viewportHeight = 24f,
     ).apply {
         path(fill = SolidColor(Color.White)) {
-            moveTo(4f, 4f)
-            horizontalLineTo(10f)
-            verticalLineTo(10f)
-            horizontalLineTo(4f)
+            moveTo(12f, 2f)
+            curveTo(6.48f, 2f, 2f, 6.48f, 2f, 12f)
+            reflectiveCurveToRelative(4.48f, 10f, 10f, 10f)
+            reflectiveCurveToRelative(10f, -4.48f, 10f, -10f)
+            reflectiveCurveTo(17.52f, 2f, 12f, 2f)
             close()
-            moveTo(14f, 4f)
-            horizontalLineTo(20f)
-            verticalLineTo(10f)
-            horizontalLineTo(14f)
+            moveToRelative(0f, 18f)
+            curveToRelative(-4.41f, 0f, -8f, -3.59f, -8f, -8f)
+            reflectiveCurveToRelative(3.59f, -8f, 8f, -8f)
+            reflectiveCurveToRelative(8f, 3.59f, 8f, 8f)
+            reflectiveCurveToRelative(-3.59f, 8f, -8f, 8f)
             close()
-            moveTo(4f, 14f)
-            horizontalLineTo(10f)
-            verticalLineTo(20f)
-            horizontalLineTo(14f)
+            moveToRelative(-5.5f, -2.5f)
+            lineToRelative(7.51f, -3.49f)
+            lineTo(17.5f, 6.5f)
+            lineTo(9.99f, 9.99f)
+            lineTo(6.5f, 17.5f)
             close()
-            moveTo(14f, 14f)
-            horizontalLineTo(20f)
-            verticalLineTo(20f)
-            horizontalLineTo(14f)
+            moveToRelative(5.5f, -6.6f)
+            curveToRelative(0.61f, 0f, 1.1f, 0.49f, 1.1f, 1.1f)
+            reflectiveCurveToRelative(-0.49f, 1.1f, -1.1f, 1.1f)
+            reflectiveCurveToRelative(-1.1f, -0.49f, -1.1f, -1.1f)
+            reflectiveCurveToRelative(0.49f, -1.1f, 1.1f, -1.1f)
             close()
         }
     }.build()
