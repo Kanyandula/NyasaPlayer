@@ -44,7 +44,7 @@ import com.example.nyasaplayer.core.common.models.Genre
 
 private val GridSpacing = 24.dp
 private val ListPadding = 24.dp
-private const val BrowseGridColumns = 3
+private const val BrowseGridColumns = 4
 private val ScrollbarGap = 8.dp
 private val ScrollbarWidth = 8.dp
 private val ScrollbarTrackCornerRadius = 4.dp
@@ -151,18 +151,16 @@ private fun BrowseGrid(
  * Static placeholders, no shimmer — the ambient layer is the app's only decorative motion.
  *
  * **One row, not two.** BrowseGrid's cards are width-flexed and square, so a row is as tall as a
- * column is wide — about 261dp on a 1024dp-wide screen, not the 180dp a fixed card would give.
- * Two rows need ~546dp and the vertical slot is at most ~544dp, so the second row overflows and
- * this `Column` clips it silently.
+ * column is wide — about 190dp across the four columns of a 1024dp-wide screen. Two rows need
+ * ~404dp, which fits the measurement harness's slot and *not* a real head unit's, so a second row
+ * would pass CI and clip on the hardware. That asymmetry is why this stays at one.
  *
- * Both figures fall out of `CarNavRailWidth`, `CarScreenMargin`, `GridSpacing`,
- * `CarSystemBarHeight` and `CarMiniPlayerHeight`; change any of them and re-check rather than
- * trusting the numbers here.
+ * The figure falls out of `CarNavRailWidth`, `CarScreenMargin`, `GridSpacing`, `ScrollbarWidth`
+ * and `BrowseGridColumns` — re-derive it rather than trusting it, because changing the column
+ * count is exactly what made the numbers that used to sit here wrong.
  *
- * They were derived by hand for a 1024x720 head unit. The measurement suite renders
- * `browseCase("loading")` at `MeasurementQualifiers` (1280x800), so no test asserts this row
- * fits — `isClipped` in `CarTouchTargetMeasurementTest` only visits interactive nodes, and a
- * placeholder is not one.
+ * `CarTouchTargetMeasurementTest` tags these rows and asserts none is squeezed, but only against
+ * the harness's slot; `docs/BACKLOG.md` records how much roomier that is than a car.
  */
 @Composable
 private fun BrowseSkeleton(modifier: Modifier = Modifier) {

@@ -46,7 +46,7 @@ import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.NowPlayingOverlay
 
-private val RowSpacing = 32.dp
+private val RowSpacing = 24.dp
 private val CardSpacing = 24.dp
 private val ListPadding = 24.dp
 
@@ -263,7 +263,7 @@ private fun LibraryRow(
     content: LazyListScope.() -> Unit,
 ) {
     Column(modifier = modifier) {
-        CarSectionHeader(title = title, modifier = Modifier.padding(bottom = 16.dp))
+        CarSectionHeader(title = title, modifier = Modifier.padding(bottom = 12.dp))
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(CardSpacing),
             content = content,
@@ -274,9 +274,8 @@ private fun LibraryRow(
 /**
  * Row-shaped placeholders, so the headings stay put and the screen does not jump.
  *
- * Two rows fit the slot exactly: `2 * CarContentCardSize + CardSpacing` is 384dp, which is what
- * the ~432dp content slot leaves after this composable's own [ListPadding] top and bottom. A
- * third row needs 588dp and clips.
+ * Two rows: `2 * CarContentCardSize + CardSpacing` is 284dp against the content slot left after
+ * this composable's own [ListPadding] top and bottom. A third needs 438dp and clips.
  *
  * [CardSpacing] between them, **not** [RowSpacing]: `LibraryRows` puts `RowSpacing` between
  * *real* rows, but this composable already has its own vertical padding, so reusing it
@@ -315,14 +314,15 @@ private fun LibrarySkeleton(modifier: Modifier = Modifier) {
 
 @Composable
 private fun LibraryHeader(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text("Your Library", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-        Text(
-            text = "All your music in one place",
-            color = CarTextSecondary,
-            fontSize = 18.sp,
-        )
-    }
+    // Title only. The strapline cost 26dp of a slot that could not afford it: with it, the first
+    // row's card labels fell outside the content region and the row read as broken at rest.
+    Text(
+        text = "Your Library",
+        color = Color.White,
+        fontSize = 30.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
