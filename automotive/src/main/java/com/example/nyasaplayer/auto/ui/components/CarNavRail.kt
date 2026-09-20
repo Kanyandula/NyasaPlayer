@@ -31,10 +31,10 @@ import com.example.nyasaplayer.auto.ui.navigation.CarScreen
 import com.example.nyasaplayer.auto.ui.theme.CarChrome
 import com.example.nyasaplayer.auto.ui.theme.CarNavRailWidth
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
+import com.example.nyasaplayer.core.common.ui.icons.BrowseIcon
 import com.example.nyasaplayer.core.common.ui.icons.HeartIcon
 import com.example.nyasaplayer.core.common.ui.icons.HomeIcon
 import com.example.nyasaplayer.core.common.ui.icons.LibraryIcon
-import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 
 private val RailItemHeight = 88.dp
@@ -149,7 +149,7 @@ private fun CarNavRailItem(
 
 private fun iconFor(screen: CarScreen): ImageVector = when (screen) {
     CarScreen.Home -> HomeIcon
-    CarScreen.Browse -> SearchIcon
+    CarScreen.Browse -> BrowseIcon
     CarScreen.Library -> LibraryIcon
     CarScreen.Favourites -> HeartIcon
 }

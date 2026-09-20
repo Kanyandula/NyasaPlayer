@@ -411,6 +411,39 @@ val SearchIcon: ImageVector by lazy {
     }.build()
 }
 
+val BrowseIcon: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "Browse",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).apply {
+        path(fill = SolidColor(Color.White)) {
+            moveTo(4f, 4f)
+            horizontalLineTo(10f)
+            verticalLineTo(10f)
+            horizontalLineTo(4f)
+            close()
+            moveTo(14f, 4f)
+            horizontalLineTo(20f)
+            verticalLineTo(10f)
+            horizontalLineTo(14f)
+            close()
+            moveTo(4f, 14f)
+            horizontalLineTo(10f)
+            verticalLineTo(20f)
+            horizontalLineTo(14f)
+            close()
+            moveTo(14f, 14f)
+            horizontalLineTo(20f)
+            verticalLineTo(20f)
+            horizontalLineTo(14f)
+            close()
+        }
+    }.build()
+}
+
 val LibraryIcon: ImageVector by lazy {
     ImageVector.Builder(
         name = "Library",
