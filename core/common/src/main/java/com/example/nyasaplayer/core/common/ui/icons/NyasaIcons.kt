@@ -2,6 +2,8 @@ package com.example.nyasaplayer.core.common.ui.icons
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
@@ -452,6 +454,25 @@ val BrowseIcon: ImageVector by lazy {
     }.build()
 }
 
+/**
+ * Three books on a shelf, outlined rather than filled — the only stroked icon in this file.
+ *
+ * The right book leans into the stack at -8 degrees, so the silhouette reads as a shelf rather
+ * than as three bars.
+ *
+ * The 1.8dp stroke is centred on the edge, so two outlines touch once their centrelines come
+ * within 1.8dp of each other and merge into one block with slots cut in it. Nearest approach
+ * here is 2.5dp between the left and middle books and 2.6dp between the middle and the leaning
+ * one — 0.7dp and 0.8dp of clear air.
+ *
+ * The upright pair is the tighter of the two. The leaning corner is the one that *moves*: an
+ * earlier cut spaced the upright bodies 2.5dp and left that corner overlapping the middle book
+ * by 0.39dp, because the lean swings it inward after the spacing is chosen. Re-measure it after
+ * any change to the angle, the pivot or the right book's position.
+ *
+ * Measure along the real outline, not the rectangle: the corner radius pulls the boundary 0.44dp
+ * back from where a sharp corner would sit, so measuring corner-to-corner understates the gap.
+ */
 val LibraryIcon: ImageVector by lazy {
     ImageVector.Builder(
         name = "Library",
@@ -460,22 +481,44 @@ val LibraryIcon: ImageVector by lazy {
         viewportWidth = 24f,
         viewportHeight = 24f,
     ).apply {
-        path(fill = SolidColor(Color.White)) {
-            // Three vertical bars matching the design's equalizer icon
-            moveTo(4f, 6f)
-            horizontalLineTo(6f)
-            verticalLineTo(18f)
-            horizontalLineTo(4f)
+        path(
+            stroke = SolidColor(Color.White),
+            strokeLineWidth = 1.8f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+        ) {
+            // Left book, upright.
+            moveTo(4.5f, 4.5f)
+            lineTo(5.5f, 4.5f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 7f, 6f)
+            lineTo(7f, 19f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 5.5f, 20.5f)
+            lineTo(4.5f, 20.5f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 3f, 19f)
+            lineTo(3f, 6f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 4.5f, 4.5f)
             close()
-            moveTo(11f, 4f)
-            horizontalLineTo(13f)
-            verticalLineTo(20f)
-            horizontalLineTo(11f)
+            // Middle book, upright and 1.5dp taller.
+            moveTo(11f, 3f)
+            lineTo(12f, 3f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 13.5f, 4.5f)
+            lineTo(13.5f, 19f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 12f, 20.5f)
+            lineTo(11f, 20.5f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 9.5f, 19f)
+            lineTo(9.5f, 4.5f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 11f, 3f)
             close()
-            moveTo(18f, 8f)
-            horizontalLineTo(20f)
-            verticalLineTo(16f)
-            horizontalLineTo(18f)
+            // Right book, leaning into the stack at -8 degrees.
+            moveTo(17.39f, 4.65f)
+            lineTo(18.38f, 4.51f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 20.08f, 5.78f)
+            lineTo(21.89f, 18.66f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 20.61f, 20.35f)
+            lineTo(19.62f, 20.49f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 17.92f, 19.22f)
+            lineTo(16.11f, 6.34f)
+            arcTo(1.5f, 1.5f, 0f, false, true, 17.39f, 4.65f)
             close()
         }
     }.build()
