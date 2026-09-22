@@ -26,8 +26,12 @@ val CarMiniPlayerHeight = 112.dp
 // settings, avatar) and a 48dp bar cannot contain a 76dp target.
 val CarSystemBarHeight = 80.dp
 
-// Left navigation rail
-val CarNavRailWidth = 80.dp
+// Left navigation rail. 176 and not 80: the tab label sits beside its icon rather than under
+// it. "Favourites" at 18sp ends 147dp from the rail's leading edge (measured on a 160dpi head
+// unit; the 64dp prefix is the 20dp start inset, the 28dp icon and their 16dp gap), leaving
+// 29dp of rail and 21dp inside the selection pill. It costs the content area 96dp, which drops
+// the Browse grid's columns from ~190dp to ~166dp.
+val CarNavRailWidth = 176.dp
 
 // Filter chip height
 val CarChipHeight = 76.dp

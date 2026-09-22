@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,7 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
@@ -40,10 +41,18 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 private val RailItemHeight = 88.dp
 private val RailIconSize = 28.dp
 
-// 14sp is NFR-3's text floor. The design drew 13px here, which its own type rule forbids; the rule wins.
-private val RailLabelSize = 14.sp
+// Beside the icon there is room for the 18sp interactive-label floor, so the label takes it
+// rather than the 14sp text floor it sat on while it was stacked underneath.
+private val RailLabelSize = 18.sp
+private val RailItemPaddingStart = 20.dp
+private val RailIconLabelGap = 16.dp
 private val RailPillInset = 8.dp
 private val RailPillRadius = 20.dp
+
+// Shorter than the row it marks: 88dp is what CarTouchTargetSize costs the tap area, and at the
+// full height on a 176dp rail the highlight read as a panel rather than a selection.
+private val RailPillHeight = 64.dp
+private val RailPillVerticalInset = (RailItemHeight - RailPillHeight) / 2
 
 // The gold label sits on this wash: 7.33:1 over CarChrome at 0.08, measured from rendered pixels.
 // 0.10 gave 7.07:1 — a one-level rendering drift from failing — and the old 0.12 gave 6.75:1.
@@ -90,9 +99,9 @@ fun CarNavRail(
         Box(
             modifier = Modifier
                 .offset(y = pillOffset)
-                .padding(horizontal = RailPillInset)
+                .padding(horizontal = RailPillInset, vertical = RailPillVerticalInset)
                 .fillMaxWidth()
-                .height(RailItemHeight)
+                .height(RailPillHeight)
                 .background(NyasaGold.copy(alpha = ActivePillAlpha), RoundedCornerShape(RailPillRadius)),
         )
         Column(modifier = Modifier.fillMaxHeight()) {
@@ -117,20 +126,20 @@ private fun CarNavRailItem(
     modifier: Modifier = Modifier,
 ) {
     val tint = if (selected) NyasaGold else CarTextSecondary
-    Column(
+    Row(
         modifier = modifier
             .fillMaxWidth()
             .height(RailItemHeight)
             // A tab, and which one is current: announcing the role without the selected state
-            // tells a screen reader less than it needs. The type floor for a button's label does
-            // not apply to a tab label under an icon (docs/aaos-DESIGN.md, Typography).
-            .selectable(selected = selected, onClick = onClick, role = Role.Tab),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            // tells a screen reader less than it needs.
+            .selectable(selected = selected, onClick = onClick, role = Role.Tab)
+            .padding(start = RailItemPaddingStart),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(RailIconLabelGap),
     ) {
         Icon(
             imageVector = icon,
-            // The Text below already labels this row; describing the icon too makes
+            // The Text beside this already labels the row; describing the icon too makes
             // TalkBack announce "Home, Home".
             contentDescription = null,
             tint = tint,
@@ -141,8 +150,10 @@ private fun CarNavRailItem(
             color = tint,
             fontSize = RailLabelSize,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 4.dp),
+            // The rail is sized for "Favourites" at the default font scale; a larger scale
+            // ellipsises rather than reflowing, because a two-line tab is not a tab any more.
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

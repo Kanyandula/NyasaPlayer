@@ -2,7 +2,6 @@ package com.example.nyasaplayer.auto.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -30,8 +29,11 @@ import java.util.Locale
  * pill, which is the whole of what a driver reads to know what it does. It is not for every string
  * inside something clickable: a track row is one big control, and its artist line and duration are
  * metadata the design sets at 15 and 16sp deliberately. So the floor applies when the nearest
- * clickable ancestor holds exactly one text, and never to a rail tab — `Role.Tab`, the exception
- * the design doc records, because an 80dp rail cannot hold "Favourites" at 18sp.
+ * clickable ancestor holds exactly one text.
+ *
+ * Rail tabs used to be exempt, because an 80dp rail could not hold "Favourites" at 18sp. The rail
+ * is 176dp now and its labels sit beside their icons at 18sp, so the exemption is gone and NFR-3
+ * is enforced as written — shrinking a rail label back below the floor fails here.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -112,7 +114,6 @@ class CarTextSizeMeasurementTest {
                     SemanticsActions.OnLongClick in node.config ||
                     SemanticsProperties.ToggleableState in node.config
             } ?: return false
-            if (control.config.getOrNull(SemanticsProperties.Role) == Role.Tab) return false
             return control.textDescendants() == 1
         }
 

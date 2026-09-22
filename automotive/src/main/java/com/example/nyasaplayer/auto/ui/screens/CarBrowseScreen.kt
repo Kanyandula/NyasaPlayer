@@ -151,8 +151,8 @@ private fun BrowseGrid(
  * Static placeholders, no shimmer — the ambient layer is the app's only decorative motion.
  *
  * **One row, not two.** BrowseGrid's cards are width-flexed and square, so a row is as tall as a
- * column is wide — about 190dp across the four columns of a 1024dp-wide screen. Two rows need
- * ~404dp, which fits the measurement harness's slot and *not* a real head unit's, so a second row
+ * column is wide — about 166dp across the four columns of a 1024dp-wide screen. Two rows need
+ * ~356dp, which fits the measurement harness's slot and *not* a real head unit's, so a second row
  * would pass CI and clip on the hardware. That asymmetry is why this stays at one.
  *
  * The figure falls out of `CarNavRailWidth`, `CarScreenMargin`, `GridSpacing`, `ScrollbarWidth`
