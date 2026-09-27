@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
@@ -424,7 +425,7 @@ internal val carUiCases: List<CarUiCase> =
         playerCases() + queueCases() + downloadsCases() + sheetCases() + searchCases()
 
 /** Covers bright enough to break the ceiling unconditioned: white, and the most luminous hues. */
-internal val White = 0xFFFFFFFF.toInt()
+internal val White = Color.White.toArgb()
 private val BrightArtwork = listOf(White to "white", 0xFFFFE000.toInt() to "yellow", 0xFF00FFFF.toInt() to "cyan")
 
 /**
@@ -433,16 +434,16 @@ private val BrightArtwork = listOf(White to "white", 0xFFFFE000.toInt() to "yell
  */
 internal val ambientCases: List<CarUiCase> = (
     listOf(ArtworkThemeDefaults.theme to "shipping tints") +
-        BrightArtwork.map { (seed, label) -> conditionedTheme(seed) to "$label artwork" }
+        BrightArtwork.map { (seed, label) -> artworkThemeFromSeeds(seed, seed) to "$label artwork" }
     ).map { (theme, label) ->
     CarUiCase("ambient behind the content slot, $label", artwork = theme) {
         InContentSlot { Box(modifier = Modifier.fillMaxSize().testTag(ContentSlotTag)) }
     }
-}.withLowestDrift() + squareAmbientCase(conditionedTheme(White), "white artwork")
+}.withLowestDrift() + squareAmbientCase(artworkThemeFromSeeds(White, White), "white artwork")
 
 /**
- * The ambient layer alone in a square window, where its two circles overlap most. Each tint is held
- * to the ceiling on its own; this is where the two together would show if they were not.
+ * The ambient layer alone in a square window, where its two circles overlap most: where a pair of
+ * tints each held to the ceiling alone would add up past it.
  */
 internal fun squareAmbientCase(theme: ArtworkTheme, label: String) =
     CarUiCase("ambient in a square window, $label", onGlow = false) {
@@ -462,8 +463,6 @@ internal fun squareAmbientCase(theme: ArtworkTheme, label: String) =
 
 private val SquareWindow = 700.dp
 
-/** A theme from one [seed], through the same conditioning a real cover gets — at its brightest. */
-internal fun conditionedTheme(seed: Int) = artworkThemeFromSeeds(seed, seed)
 
 internal const val ContentSlotTag = "contentSlot"
 
@@ -852,7 +851,7 @@ private fun playerCases(): List<CarUiCase> = listOf(
         liked = false,
     ),
     // T38: the glow at its brightest, behind every piece of text the player draws.
-    PlayerCase("playing, white artwork glow", PlayingSnapshot, liked = true, artwork = conditionedTheme(White)),
+    PlayerCase("playing, white artwork glow", PlayingSnapshot, liked = true, artwork = artworkThemeFromSeeds(White, White)),
 ).map { case ->
     CarUiCase("CarFullPlayerScreen/${case.state}", artwork = case.artwork) {
         InAppWindow {

@@ -16,8 +16,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import com.example.nyasaplayer.auto.ui.motion.animateDecorativeColor
-import com.example.nyasaplayer.auto.ui.theme.CarAmbientBlue
-import com.example.nyasaplayer.auto.ui.theme.CarAmbientPurple
 
 // Internal so the exit measurement can run the drift to its far end (CarUiCases).
 internal const val DriftDurationMs = 24_000
@@ -39,16 +37,15 @@ private const val DriftTravelFactor = 0.25f
  * trying to prevent.
  *
  * The hue follows the current artwork (T38): [primaryTint] and [secondaryTint] come from the
- * player's `ArtworkTheme`, already darkened so neither centre is lighter than `CarRaised`, and
- * default to the fixed tints that shipped before. A new hue eases in on the same [animate] gate as
- * the drift.
+ * player's `ArtworkTheme`, darkened as a pair so even overlapping they are no lighter than
+ * `CarRaised`. A new hue eases in on the same [animate] gate as the drift.
  */
 @Composable
 fun CarAmbientBackground(
     animate: Boolean,
+    primaryTint: Color,
+    secondaryTint: Color,
     modifier: Modifier = Modifier,
-    primaryTint: Color = CarAmbientBlue,
-    secondaryTint: Color = CarAmbientPurple,
 ) {
     val primary by animateDecorativeColor(primaryTint, animate)
     val secondary by animateDecorativeColor(secondaryTint, animate)

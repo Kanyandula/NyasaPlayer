@@ -223,19 +223,15 @@ frame where its drift carries it furthest into the content region. Four rows are
 measured by it: the two on base `#0A0A0C` (the app paints `#0D0D0D`), the disabled row (exempt) and
 the non-text fill edge. The glow was the surface the flat-surface figures missed: at full strength
 it took secondary text to 5.5:1. Its tints' alphas (`CarAmbientBlue`, `CarAmbientPurple`) now cap
-each centre at no lighter than raised `#1E1E2A`, and the same test checks that cap.
-
-**The glow follows the artwork, and the artwork supplies only hue (T38, 2026-09-27).** A white cover
-at the tints' alphas would take secondary text to 5.8:1, so every artwork colour is blended toward
-the root background until it composites no lighter than raised `#1E1E2A` (`ArtworkTheme.kt`). The
-two ambient tints are conditioned **as a stacked pair**, not one by one: each at the ceiling on its
-own went over it where the circles overlap at the drift's lowest frame (L 0.0144 against 0.0137),
-and stacked is the worst any window shape can do. The full player's glow is a single layer and
-keeps its own ceiling. `CarTextContrastMeasurementTest` measures white, yellow and cyan covers
-behind content at both drift frames and in a square window, and a raw white theme as a negative
-control that must break the ceiling. The nav-rail
+each centre at no lighter than raised `#1E1E2A`, and the same test checks that cap. The nav-rail
 pill was 12% gold (6.75:1 for its label); it is 8%, not the 10% that first cleared 7:1, to keep a
 margin off the limit.
+
+**The glow follows the artwork, which supplies only hue (T38, 2026-09-27).** A white cover at the
+tints' alphas would take secondary text to 5.8:1, so `ArtworkTheme.kt` darkens every artwork colour
+until it composites no lighter than raised `#1E1E2A` — the two ambient tints as a stacked pair,
+since each at the ceiling alone went over it where the circles overlap. Hue changes ease in sRGB:
+an Oklab path between two safe colours can peak over the ceiling midway.
 
 **A translucent fill has no ratio of its own.** A wash takes its contrast from whatever it is laid
 on, so a washed control that measures fine in one place can fail in another without its own colours
