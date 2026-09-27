@@ -52,7 +52,6 @@ class CarSourceLabelTest {
         render(QueueOrigin.None)
 
         composeRule.onNodeWithText("PLAYING FROM", substring = true).assertDoesNotExist()
-        // The old fallback printed "Now Playing" in the label's place.
         composeRule.onNodeWithText("Now Playing").assertDoesNotExist()
     }
 

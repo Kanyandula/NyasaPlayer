@@ -689,29 +689,19 @@ private fun BrowseShell(
                     .padding(CarScreenMargin),
             ) {
                 when (currentScreen) {
-                    CarScreen.Home -> {
-                        val recentlyPlayed = rememberVisible(contentState.recentlyPlayed, restrictions)
-                        CarHomeScreen(
-                            recentlyPlayed = recentlyPlayed,
-                            popularSongs = rememberVisible(contentState.popularSongs, restrictions),
-                            isLoading = contentState.isLoading,
-                            errorMessage = contentState.errorMessage,
-                            // Each row passes its own section's list (see CarHomeScreen), so the
-                            // instance says which section was tapped. Popular Now names no collection.
-                            onSongClick = { songs, song ->
-                                val origin = if (songs === recentlyPlayed) {
-                                    QueueOrigin.RecentlyPlayed
-                                } else {
-                                    QueueOrigin.None
-                                }
-                                onSongClick(songs, song, origin)
-                            },
-                            onRetry = onRetry,
-                            onBrowseClick = { onSelectTab(CarScreen.Browse) },
-                            currentlyPlayingMediaId = currentlyPlayingMediaId,
-                            isPlaying = isPlaying,
-                        )
-                    }
+                    CarScreen.Home -> CarHomeScreen(
+                        recentlyPlayed = rememberVisible(contentState.recentlyPlayed, restrictions),
+                        popularSongs = rememberVisible(contentState.popularSongs, restrictions),
+                        isLoading = contentState.isLoading,
+                        errorMessage = contentState.errorMessage,
+                        onRecentClick = { songs, song -> onSongClick(songs, song, QueueOrigin.RecentlyPlayed) },
+                        // Popular Now is a chart, not a collection the driver owns: no label.
+                        onPopularClick = { songs, song -> onSongClick(songs, song, QueueOrigin.None) },
+                        onRetry = onRetry,
+                        onBrowseClick = { onSelectTab(CarScreen.Browse) },
+                        currentlyPlayingMediaId = currentlyPlayingMediaId,
+                        isPlaying = isPlaying,
+                    )
 
                     CarScreen.Browse -> CarBrowseScreen(
                         genres = rememberVisible(contentState.genres, restrictions),
@@ -744,7 +734,10 @@ private fun BrowseShell(
                                     ?.coverUrl
                                     .orEmpty()
                             }
-                            val artistOrigin = QueueOrigin.Artist(destination.artistId, destination.artistName)
+                            // Remembered: a fresh origin each position tick would defeat skipping below.
+                            val artistOrigin = remember(destination) {
+                                QueueOrigin.Artist(destination.artistId, destination.artistName)
+                            }
                             CarArtistLikedSongsScreen(
                                 artistName = destination.artistName,
                                 artistCoverUrl = artistCoverUrl,
@@ -937,7 +930,7 @@ private fun DetailRoute(
             ?.let { loaded -> loaded.copy(tracks = restrictions.cap(loaded.tracks)) }
             ?: CarDetailState(destination = destination, isLoading = true)
     }
-    val origin = destination.queueOrigin(capped.title)
+    val origin = remember(destination, capped.title) { destination.queueOrigin(capped.title) }
     val onPlay: (List<Song>) -> Unit = { tracks -> onPlayTracks(tracks, origin) }
     val onShuffle: (List<Song>) -> Unit = { tracks -> onShuffleTracks(tracks, origin) }
     val onTrackClick: (List<Song>, Song) -> Unit = { tracks, song -> onSongClick(tracks, song, origin) }

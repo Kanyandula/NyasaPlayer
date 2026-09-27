@@ -205,8 +205,7 @@ private fun PlayerTopBar(
             size = CarTouchTargetSize,
             onClick = onCollapseClick,
         )
-        // No origin, no label: a single track has no collection behind it, and naming one would be
-        // the same lie the hardcoded "PLAYING FROM PLAYLIST" told.
+        // No origin, no label: a single track has no collection behind it to name.
         if (source != null) {
             Column(
                 modifier = Modifier.weight(1f),

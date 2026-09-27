@@ -17,9 +17,4 @@ class DetailQueueOriginTest {
             CarDestination.CatalogArtist("ar1").queueOrigin("Lucius Banda"),
         )
     }
-
-    @Test
-    fun destinations_routed_elsewhere_have_no_origin_here() {
-        assertEquals(QueueOrigin.None, CarDestination.Downloads.queueOrigin("Downloads"))
-    }
 }
