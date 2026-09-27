@@ -38,11 +38,9 @@ internal const val SkeletonRowTag = "carSkeletonRow"
  * [spacing] varies by screen; the row height does not, and is not a parameter — see D60 in
  * `docs/aaos-DESIGN.md`. Pass outer padding through [modifier].
  *
- * Counted from the height, not fixed: a `Column` that runs out of room coerces its trailing
- * children to zero rather than complaining, and a head unit's slot is shorter than any count chosen
- * on a taller canvas held — four rows fitted the 800dp test canvas and were squeezed to nothing in
- * the 628dp window a real head unit gives the app. `CarTouchTargetMeasurementTest` is what stops a
- * clipped placeholder shipping. Where the height is unbounded there is nothing to fit, so it draws
+ * Rows are counted from the height, because a `Column` that runs out of room coerces its
+ * trailing children to zero rather than complaining. `CarTouchTargetMeasurementTest` is what stops a
+ * clipped placeholder shipping. With no bounded height there is nothing to fit, so it draws
  * [DefaultSkeletonRowCount].
  */
 @Composable

@@ -187,9 +187,8 @@ class CarTouchTargetMeasurementTest {
      * `CarContentCard` sits in a carousel several sections down — cut there means "scroll for
      * more", not "broken".
      *
-     * Rendered on the suite's canvas, which is the app window a real head unit gives (1440x628dp),
-     * so the slot is the ~340dp a driver actually gets. It used to run at 1024x768 with a slot of
-     * 480dp, where the 180dp `CarContentCardSize` that prompted this test still passed.
+     * Rendered on the suite's canvas, the app window a real head unit gives, so the slot is the one
+     * a driver gets: a 180dp `CarContentCardSize` fails here, as it did on the device.
      */
     @Test
     fun `the first content card on each screen is drawn whole, labels included`() {

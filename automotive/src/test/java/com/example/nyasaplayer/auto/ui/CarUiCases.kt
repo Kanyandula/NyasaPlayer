@@ -148,9 +148,7 @@ private fun CarUiCase.scrolling() = copy(scrollsList = true)
  * measurement to recover.
  *
  * 1440x628dp is the app window on the reference AVD (1080x600px at 120dpi) once the OS status and
- * climate bars are taken, per `dumpsys window`. It was 1280x800 — the whole panel — which gave every
- * screen ~170dp more height than a car does, and let a clipped Up Next strip and two clipped cards
- * pass green (T05).
+ * climate bars are taken, per `dumpsys window` — the room a car really gives, not the whole panel.
  */
 internal const val MeasurementQualifiers = "w1440dp-h628dp-xhdpi"
 

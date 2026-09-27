@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -50,8 +49,7 @@ private const val MinBrowseColumns = 4
 
 /**
  * The largest a genre card grows before the grid adds a column. Cards are square and flex to their
- * column, so on a wide head unit four columns made each card ~270dp and pushed its label below the
- * fold of a 628dp window. At 200dp the first row, labels included, fits the slot a car gives.
+ * column, so without a cap a wide head unit pushes the first row's labels below the fold.
  */
 private val MaxGenreCardSize = 200.dp
 private val ScrollbarGap = 8.dp
@@ -172,22 +170,20 @@ private fun BrowseSkeleton(modifier: Modifier = Modifier) = BoxWithConstraints(
         .padding(top = ListPadding, bottom = ListPadding, end = ScrollbarWidth + ScrollbarGap),
 ) {
     val columns = browseColumns(maxWidth)
-    Column {
-        Row(
-            modifier = Modifier
-                .testTag(SkeletonRowTag)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(GridSpacing),
-        ) {
-            repeat(columns) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(CarCardCornerRadius))
-                        .background(CarRaised),
-                )
-            }
+    Row(
+        modifier = Modifier
+            .testTag(SkeletonRowTag)
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(GridSpacing),
+    ) {
+        repeat(columns) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(CarCardCornerRadius))
+                    .background(CarRaised),
+            )
         }
     }
 }

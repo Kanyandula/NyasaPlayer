@@ -290,7 +290,7 @@ private fun LibraryRow(
  * `BrowseSkeleton` spaces its rows the same way for the same reason.
  *
  * Asserted: the rows carry `SkeletonRowTag`, and `CarTouchTargetMeasurementTest` measures them on
- * a head unit's real app window (1440x628dp), where the slot leaves 292dp after this padding.
+ * a head unit's real app window.
  */
 @Composable
 private fun LibrarySkeleton(modifier: Modifier = Modifier) {
