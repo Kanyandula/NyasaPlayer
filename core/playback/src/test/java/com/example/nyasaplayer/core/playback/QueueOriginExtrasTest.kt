@@ -97,6 +97,7 @@ class QueueOriginExtrasTest {
     fun a_later_queue_with_no_origin_clears_it() {
         val collector = connectedCollector(ControllerConnection(context, session.token))
         publish(album)
+        assertEquals("precondition", album, collector.playbackState.value.queueOrigin)
 
         publish(QueueOrigin.None)
 
