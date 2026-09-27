@@ -36,9 +36,6 @@ import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.formatDuration
 
 private val HeroArtSize = 200.dp
-
-/** The hero takes 224dp of the slot, so only two row placeholders fit below it. */
-private const val DetailSkeletonRows = 2
 private val HeroSpacing = 24.dp
 private val ListPadding = 24.dp
 private val TitleSize = 34.sp
@@ -295,6 +292,7 @@ private fun DetailSkeleton(modifier: Modifier = Modifier) {
                 .clip(RoundedCornerShape(CarCardCornerRadius))
                 .background(CarRaised),
         )
-        CarRowSkeleton(spacing = HeroSpacing, rows = DetailSkeletonRows)
+        // The rest of the slot below the hero: as many rows as fit it, which on a short head unit is none.
+        CarRowSkeleton(spacing = HeroSpacing, modifier = Modifier.weight(1f))
     }
 }

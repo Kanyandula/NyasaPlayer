@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ComposeView
@@ -147,8 +146,13 @@ private fun CarUiCase.scrolling() = copy(scrollsList = true)
  * The shared head-unit canvas from robolectric.properties, at 2x rather than 1x: layout in dp is
  * unchanged, and a glyph gets enough pixels that its core renders at full colour for the contrast
  * measurement to recover.
+ *
+ * 1440x628dp is the app window on the reference AVD (1080x600px at 120dpi) once the OS status and
+ * climate bars are taken, per `dumpsys window`. It was 1280x800 — the whole panel — which gave every
+ * screen ~170dp more height than a car does, and let a clipped Up Next strip and two clipped cards
+ * pass green (T05, docs/BACKLOG.md).
  */
-internal const val MeasurementQualifiers = "w1280dp-h800dp-xhdpi"
+internal const val MeasurementQualifiers = "w1440dp-h628dp-xhdpi"
 
 
 /**
@@ -314,19 +318,6 @@ private fun InCrampedContentSlot(content: @Composable BoxScope.() -> Unit) {
  * live in — not a number chosen to make a point.
  */
 private val CrampedSlotHeight = 372.dp
-
-/** A full-window overlay at the height the app really gets, clipped so overflow reads as cut off. */
-@Composable
-private fun InAppWindow(content: @Composable BoxScope.() -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().height(AppWindowHeight).clipToBounds(), content = content)
-}
-
-/**
- * The app window on the reference AVD (1080x600px at 120dpi) once the OS status and climate bars
- * are taken, per `dumpsys window` (h628dp). The 800dp canvas let a clipped Up Next strip pass
- * (T05); see the harness-height entry in docs/BACKLOG.md.
- */
-private val AppWindowHeight = 628.dp
 
 // ── Fixture data ──
 
@@ -854,20 +845,18 @@ private fun playerCases(): List<CarUiCase> = listOf(
     PlayerCase("playing, white artwork glow", PlayingSnapshot, liked = true, artwork = artworkThemeFromSeeds(White, White)),
 ).map { case ->
     CarUiCase("CarFullPlayerScreen/${case.state}", artwork = case.artwork) {
-        InAppWindow {
-            CarFullPlayerScreen(
-                playback = case.playback,
-                onCollapseClick = {},
-                onPlayPauseClick = {},
-                onSkipNextClick = {},
-                onSkipPreviousClick = {},
-                onShuffleClick = {},
-                onRepeatClick = {},
-                onSeek = {},
-                isLiked = case.liked,
-                glow = Color(case.artwork.fullPlayerGlow),
-            )
-        }
+        CarFullPlayerScreen(
+            playback = case.playback,
+            onCollapseClick = {},
+            onPlayPauseClick = {},
+            onSkipNextClick = {},
+            onSkipPreviousClick = {},
+            onShuffleClick = {},
+            onRepeatClick = {},
+            onSeek = {},
+            isLiked = case.liked,
+            glow = Color(case.artwork.fullPlayerGlow),
+        )
     }
 }
 
@@ -925,6 +914,8 @@ private fun downloadsCases(): List<CarUiCase> {
         downloadsCase("parked, every status", DownloadItems, isDriving = false),
         downloadsCase("parked, every status", DownloadItems, isDriving = false).scrolling(),
         downloadsCase("driving, locked, capped to 3", DownloadItems, isDriving = true, maxItems = 3),
+        // In a real head unit's slot the third row sits below the fold; the list still scrolls in motion.
+        downloadsCase("driving, locked, capped to 3", DownloadItems, isDriving = true, maxItems = 3).scrolling(),
         downloadsCase("parked, nothing downloaded", emptyList(), isDriving = false),
         downloadsCase("parked, one finished download", DownloadItems.take(1), isDriving = false),
         CarUiCase(

@@ -3,6 +3,7 @@ package com.example.nyasaplayer.auto.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,7 +28,8 @@ private const val DefaultSkeletonRowCount = 4
 internal const val SkeletonRowTag = "carSkeletonRow"
 
 /**
- * The loading placeholder for a list of rows: [rows] full-width blocks at [CarListRowHeight].
+ * The loading placeholder for a list of rows: as many full-width blocks at [CarListRowHeight] as
+ * fit the height it is given, whole.
  *
  * Static placeholders, no shimmer. The ambient layer is the app's only decorative motion, and it
  * is gated on vehicle state; a shimmer that ignored that gating would reintroduce exactly the
@@ -36,21 +38,24 @@ internal const val SkeletonRowTag = "carSkeletonRow"
  * [spacing] varies by screen; the row height does not, and is not a parameter — see D60 in
  * `docs/aaos-DESIGN.md`. Pass outer padding through [modifier].
  *
- * [rows] exists because a caller that puts something else in the same column — `DetailSkeleton`
- * draws a 200dp hero above this — has less height to give than a plain list does, and a `Column`
- * that runs out of room coerces its trailing children to zero rather than complaining. Four fits
- * a full slot. `CarTouchTargetMeasurementTest` is what stops a wrong count shipping invisibly.
+ * Counted from the height, not fixed: a `Column` that runs out of room coerces its trailing
+ * children to zero rather than complaining, and a head unit's slot is shorter than any count chosen
+ * on a taller canvas held — four rows fitted the 800dp test canvas and were squeezed to nothing in
+ * the 628dp window a real head unit gives the app. `CarTouchTargetMeasurementTest` is what stops a
+ * clipped placeholder shipping. Where the height is unbounded there is nothing to fit, so it draws
+ * [DefaultSkeletonRowCount].
  */
 @Composable
 fun CarRowSkeleton(
     spacing: Dp,
     modifier: Modifier = Modifier,
-    rows: Int = DefaultSkeletonRowCount,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(spacing),
-    ) {
+) = BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+    val rows = if (constraints.hasBoundedHeight) {
+        ((maxHeight + spacing) / (CarListRowHeight + spacing)).toInt()
+    } else {
+        DefaultSkeletonRowCount
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
         repeat(rows) {
             Box(
                 modifier = Modifier

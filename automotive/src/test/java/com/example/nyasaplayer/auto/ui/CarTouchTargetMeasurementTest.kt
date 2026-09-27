@@ -187,21 +187,16 @@ class CarTouchTargetMeasurementTest {
      * `CarContentCard` sits in a carousel several sections down — cut there means "scroll for
      * more", not "broken".
      *
-     * Rendered at 1024x768 rather than the suite's 1280x800, because the defect needs the
-     * shorter head unit.
-     *
-     * **What this cannot see.** `InContentSlot` models the app's own chrome only, so the slot is
-     * taller than a real head unit's and the 180dp `CarContentCardSize` that prompted this test
-     * still passes here — mutation-checked, not assumed. Measured in `docs/BACKLOG.md`; what the
-     * test does hold is the invariant, against a card gross enough to overrun even that slot.
+     * Rendered on the suite's canvas, which is the app window a real head unit gives (1440x628dp),
+     * so the slot is the ~340dp a driver actually gets. It used to run at 1024x768 with a slot of
+     * 480dp, where the 180dp `CarContentCardSize` that prompted this test still passed.
      */
     @Test
-    @Config(qualifiers = "w1024dp-h768dp-xhdpi")
     fun `the first content card on each screen is drawn whole, labels included`() {
         val density = composeRule.density.density
         val cut = mutableListOf<String>()
         var judged = 0
-        // Fixed by the qualifiers above, and forEachCarUiCase only swaps the content view.
+        // Fixed by the suite's qualifiers, and forEachCarUiCase only swaps the content view.
         val midWindow by lazy { composeRule.onRoot().fetchSemanticsNode().size.height / 2f }
 
         composeRule.forEachCarUiCase(scroll = false) { case ->
