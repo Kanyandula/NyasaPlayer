@@ -29,6 +29,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +44,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.artwork.ArtworkThemeDefaults
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
+import com.example.nyasaplayer.auto.ui.motion.animateDecorativeColor
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
@@ -57,13 +60,13 @@ import com.example.nyasaplayer.core.common.ui.icons.SkipNextIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipPreviousIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
-import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
 private val FullPlayerAlbumArtSize = 400.dp
+private val DefaultGlow = Color(ArtworkThemeDefaults.theme.fullPlayerGlow)
 private val PlayButtonSize = 112.dp
 private val SkipButtonSize = 80.dp
 private val BufferingRingStroke = 5.dp
@@ -92,8 +95,12 @@ fun CarFullPlayerScreen(
     isLiked: Boolean = false,
     onLikeClick: () -> Unit = {},
     onQueueClick: () -> Unit = {},
+    glow: Color = DefaultGlow,
+    animateGlow: Boolean = false,
 ) {
     val song = playback.currentSong
+    // The artwork's hue, pre-darkened to the CarRaised ceiling by the player's ArtworkTheme (T38).
+    val glowColor by animateDecorativeColor(glow, animateGlow)
 
     Box(
         // Opaque for the same reason as the queue: a full-screen overlay, outside the chrome
@@ -107,7 +114,7 @@ fun CarFullPlayerScreen(
                 .fillMaxSize()
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(NyasaGoldDim.copy(alpha = 0.15f), Color.Transparent),
+                        colors = listOf(glowColor, Color.Transparent),
                         radius = 800f,
                     ),
                 ),

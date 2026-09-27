@@ -8,12 +8,14 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import com.example.nyasaplayer.auto.ui.motion.animateDecorativeColor
 import com.example.nyasaplayer.auto.ui.theme.CarAmbientBlue
 import com.example.nyasaplayer.auto.ui.theme.CarAmbientPurple
 
@@ -36,14 +38,21 @@ private const val DriftTravelFactor = 0.25f
  * the draw, would make the transition itself a distraction — which is the thing the rule is
  * trying to prevent.
  *
- * The hue is fixed. Following the current artwork was deferred in A2 (D4); when it lands it
- * changes the two colours below and nothing else.
+ * The hue follows the current artwork (T38): [primaryTint] and [secondaryTint] come from the
+ * player's `ArtworkTheme`, already darkened so neither centre is lighter than `CarRaised`, and
+ * default to the fixed tints that shipped before. A new hue eases in on the same [animate] gate as
+ * the drift.
  */
 @Composable
 fun CarAmbientBackground(
     animate: Boolean,
     modifier: Modifier = Modifier,
+    primaryTint: Color = CarAmbientBlue,
+    secondaryTint: Color = CarAmbientPurple,
 ) {
+    val primary by animateDecorativeColor(primaryTint, animate)
+    val secondary by animateDecorativeColor(secondaryTint, animate)
+
     // An Animatable driven by a LaunchedEffect, not an InfiniteTransition. Two reasons:
     // cancelling the effect actually stops the animation clock, where an InfiniteTransition
     // keeps requesting frames even if its value is ignored; and the Animatable holds its
@@ -67,12 +76,12 @@ fun CarAmbientBackground(
         val radius = size.minDimension * GradientRadiusFactor
 
         drawCircleTint(
-            color = CarAmbientBlue,
+            color = primary,
             center = Offset(x = size.width * 0.15f, y = travel * phase),
             radius = radius,
         )
         drawCircleTint(
-            color = CarAmbientPurple,
+            color = secondary,
             center = Offset(x = size.width * 0.85f, y = size.height - travel * phase),
             radius = radius,
         )

@@ -107,9 +107,20 @@ class ArtworkThemeTest {
     fun one_usable_swatch_supplies_both_tints() {
         val theme = artworkThemeFrom(ArtworkSwatches(vibrant = cyan))
 
-        // The same seed, each conditioned at its own alpha — not an invented second hue.
-        assertEquals(conditionArtworkColor(cyan, AmbientPrimaryAlpha), theme.ambientPrimary)
-        assertEquals(conditionArtworkColor(cyan, AmbientSecondaryAlpha), theme.ambientSecondary)
+        // The same seed — not an invented second hue — conditioned as a pair.
+        assertEquals(artworkThemeFromSeeds(cyan, cyan), theme)
+    }
+
+    @Test
+    fun the_ambient_tints_stacked_on_each_other_stay_under_the_ceiling() {
+        // The worst the two circles can do is overlap completely; the pair is held to that (T08).
+        for (seed in listOf(white, yellow, cyan, neonGreen)) {
+            val theme = artworkThemeFromSeeds(seed, seed)
+            val stacked = Color(theme.ambientSecondary)
+                .compositeOver(Color(theme.ambientPrimary).compositeOver(NyasaBackground))
+                .luminance()
+            assertTrue("${hex(seed)} stacked at L %.5f, over %.5f".format(stacked, ceiling), stacked <= ceiling)
+        }
     }
 
     private fun hex(color: Int) = "#%08X".format(color)
