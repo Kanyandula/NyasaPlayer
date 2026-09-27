@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import com.example.nyasaplayer.auto.BuildConfig
@@ -266,7 +267,12 @@ private fun AuthenticatedApp(
     // No background here: the root paints it, and an opaque surface at this level would
     // hide the ambient layer. This Box exists only to stack the overlays.
     Box(modifier = modifier.fillMaxSize()) {
-        CarAmbientBackground(animate = motionEnabled)
+        val artwork = playerState.artworkTheme
+        CarAmbientBackground(
+            animate = motionEnabled,
+            primaryTint = Color(artwork.ambientPrimary),
+            secondaryTint = Color(artwork.ambientSecondary),
+        )
 
         if (CarOverlay.FullPlayer in overlays) {
             CarFullPlayerScreen(
@@ -281,6 +287,8 @@ private fun AuthenticatedApp(
                 isLiked = playerState.isCurrentSongLiked,
                 onLikeClick = playerViewModel::toggleLike,
                 onQueueClick = openQueue,
+                glow = Color(artwork.fullPlayerGlow),
+                animateGlow = motionEnabled,
             )
         } else {
             BrowseShell(

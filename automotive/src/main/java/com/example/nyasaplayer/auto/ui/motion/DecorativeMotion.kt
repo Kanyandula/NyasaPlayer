@@ -5,15 +5,24 @@ import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import androidx.compose.animation.core.AnimationVector4D
+import androidx.compose.animation.core.TwoWayConverter
+import androidx.compose.animation.core.animateValueAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private const val DefaultAnimatorScale = 1f
+
+/** Slow enough to read as the room's light changing, not as something to look at. */
+internal const val DecorativeColorTransitionMs = 1_500
 
 /**
  * Whether the decorative layer — the ambient gradient, the rail's sliding pill — may animate.
@@ -60,6 +69,37 @@ fun rememberAnimatorDurationScale(): State<Float> {
     }
     return scale
 }
+
+/**
+ * A decorative colour that eases to [target] when [animate] (from [decorativeMotionEnabled]) and
+ * otherwise jumps straight to it: a parked update with animations off still lands, it just does not
+ * move (NFR-6). While driving the artwork theme itself holds (D-T38.6), so this rarely has a change
+ * to show then.
+ *
+ * Eased in sRGB, not the Oklab `animateColorAsState` uses. Both ends are held to the CarRaised
+ * ceiling, and the canvas composites in sRGB, so a straight sRGB path can never be lighter than its
+ * brighter end; an Oklab path between two safe colours (red to blue) peaks well over it midway.
+ */
+@Composable
+fun animateDecorativeColor(target: Color, animate: Boolean): State<Color> = animateValueAsState(
+    targetValue = target,
+    typeConverter = SrgbColorConverter,
+    animationSpec = if (animate) tween(DecorativeColorTransitionMs) else snap(),
+    label = "decorative colour",
+)
+
+/** Colour as its sRGB channels, so interpolation runs in the space the canvas blends in. */
+internal val SrgbColorConverter = TwoWayConverter<Color, AnimationVector4D>(
+    convertToVector = { AnimationVector4D(it.red, it.green, it.blue, it.alpha) },
+    convertFromVector = { v ->
+        Color(
+            red = v.v1.coerceIn(0f, 1f),
+            green = v.v2.coerceIn(0f, 1f),
+            blue = v.v3.coerceIn(0f, 1f),
+            alpha = v.v4.coerceIn(0f, 1f),
+        )
+    },
+)
 
 private fun readAnimatorScale(resolver: ContentResolver): Float =
     Settings.Global.getFloat(

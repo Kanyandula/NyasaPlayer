@@ -15,12 +15,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
@@ -36,6 +39,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.unit.dp
+import com.example.nyasaplayer.auto.artwork.ArtworkTheme
+import com.example.nyasaplayer.auto.artwork.ArtworkThemeDefaults
+import com.example.nyasaplayer.auto.artwork.artworkThemeFromSeeds
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResult
 import com.example.nyasaplayer.auto.search.AutomotiveSearchResults
 import com.example.nyasaplayer.auto.ui.components.CarAmbientBackground
@@ -85,10 +91,10 @@ import com.example.nyasaplayer.core.common.models.Artist
 import com.example.nyasaplayer.core.common.models.Genre
 import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
-import com.example.nyasaplayer.core.data.local.entity.DownloadStatus
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
+import com.example.nyasaplayer.core.data.local.entity.DownloadStatus
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.QueueOrigin
@@ -125,6 +131,7 @@ internal class CarUiCase(
     val scrollsList: Boolean = false,
     val onGlow: Boolean = true,
     val family: String = name,
+    val artwork: ArtworkTheme = ArtworkThemeDefaults.theme,
     val content: @Composable () -> Unit,
 )
 
@@ -132,7 +139,7 @@ private fun CarUiCase.copy(
     name: String = this.name,
     lowestDrift: Boolean = this.lowestDrift,
     scrollsList: Boolean = this.scrollsList,
-) = CarUiCase(name, scope, interact, lowestDrift, scrollsList, onGlow, family, content)
+) = CarUiCase(name, scope, interact, lowestDrift, scrollsList, onGlow, family, artwork, content)
 
 private fun CarUiCase.scrolling() = copy(scrollsList = true)
 
@@ -225,7 +232,13 @@ private fun CarUiFrame(case: CarUiCase) {
                 .fillMaxSize()
                 .background(NyasaBackground),
         ) {
-            if (case.onGlow) CarAmbientBackground(animate = case.lowestDrift)
+            if (case.onGlow) {
+                CarAmbientBackground(
+                    animate = case.lowestDrift,
+                    primaryTint = Color(case.artwork.ambientPrimary),
+                    secondaryTint = Color(case.artwork.ambientSecondary),
+                )
+            }
             case.content()
         }
     }
@@ -411,12 +424,45 @@ internal val carUiCases: List<CarUiCase> =
     chromeCases() + modalCases() + (componentCases() + authCases() + tabCases() + detailCases()).withLowestDrift() +
         playerCases() + queueCases() + downloadsCases() + sheetCases() + searchCases()
 
-/** Only the content slot on the ambient layer, at the first and the lowest drift frame. */
-internal val ambientCases: List<CarUiCase> = listOf(
-    CarUiCase("ambient behind the content slot") {
+/** Covers bright enough to break the ceiling unconditioned: white, and the most luminous hues. */
+internal val White = Color.White.toArgb()
+private val BrightArtwork = listOf(White to "white", 0xFFFFE000.toInt() to "yellow", 0xFF00FFFF.toInt() to "cyan")
+
+/**
+ * Only the content slot on the ambient layer, at the first and the lowest drift frame: under the
+ * shipping tints and under artwork themes as bright as a cover can make them (T38).
+ */
+internal val ambientCases: List<CarUiCase> = (
+    listOf(ArtworkThemeDefaults.theme to "shipping tints") +
+        BrightArtwork.map { (seed, label) -> artworkThemeFromSeeds(seed, seed) to "$label artwork" }
+    ).map { (theme, label) ->
+    CarUiCase("ambient behind the content slot, $label", artwork = theme) {
         InContentSlot { Box(modifier = Modifier.fillMaxSize().testTag(ContentSlotTag)) }
-    },
-).withLowestDrift()
+    }
+}.withLowestDrift() + squareAmbientCase(artworkThemeFromSeeds(White, White), "white artwork")
+
+/**
+ * The ambient layer alone in a square window, where its two circles overlap most: where a pair of
+ * tints each held to the ceiling alone would add up past it.
+ */
+internal fun squareAmbientCase(theme: ArtworkTheme, label: String) =
+    CarUiCase("ambient in a square window, $label", onGlow = false) {
+        Box(
+            modifier = Modifier
+                .size(SquareWindow)
+                .background(NyasaBackground)
+                .testTag(ContentSlotTag),
+        ) {
+            CarAmbientBackground(
+                animate = false,
+                primaryTint = Color(theme.ambientPrimary),
+                secondaryTint = Color(theme.ambientSecondary),
+            )
+        }
+    }
+
+private val SquareWindow = 700.dp
+
 
 internal const val ContentSlotTag = "contentSlot"
 
@@ -794,17 +840,23 @@ private fun Detail(
 }
 
 private fun playerCases(): List<CarUiCase> = listOf(
-    Triple("playing, liked, shuffle on, repeat all", PlayingSnapshot, true),
-    Triple("paused, unliked, shuffle off, repeat off", PausedSnapshot, false),
-    Triple("buffering, repeat one", BufferingSnapshot, true),
+    PlayerCase("playing, liked, shuffle on, repeat all", PlayingSnapshot, liked = true),
+    PlayerCase("paused, unliked, shuffle off, repeat off", PausedSnapshot, liked = false),
+    PlayerCase("buffering, repeat one", BufferingSnapshot, liked = true),
     // Up Next (T04): PlayingSnapshot above has a next item; these are the two shapes without one.
-    Triple("last track, repeat off (no up next)", PausedSnapshot.copy(currentQueueIndex = Songs.lastIndex), false),
-    Triple("empty queue (no up next)", PausedSnapshot.copy(queue = emptyList(), queueSize = 0, currentQueueIndex = -1), false),
-).map { (state, playback, liked) ->
-    CarUiCase("CarFullPlayerScreen/$state") {
+    PlayerCase("last track, repeat off (no up next)", PausedSnapshot.copy(currentQueueIndex = Songs.lastIndex), false),
+    PlayerCase(
+        "empty queue (no up next)",
+        PausedSnapshot.copy(queue = emptyList(), queueSize = 0, currentQueueIndex = -1),
+        liked = false,
+    ),
+    // T38: the glow at its brightest, behind every piece of text the player draws.
+    PlayerCase("playing, white artwork glow", PlayingSnapshot, liked = true, artwork = artworkThemeFromSeeds(White, White)),
+).map { case ->
+    CarUiCase("CarFullPlayerScreen/${case.state}", artwork = case.artwork) {
         InAppWindow {
             CarFullPlayerScreen(
-                playback = playback,
+                playback = case.playback,
                 onCollapseClick = {},
                 onPlayPauseClick = {},
                 onSkipNextClick = {},
@@ -812,11 +864,19 @@ private fun playerCases(): List<CarUiCase> = listOf(
                 onShuffleClick = {},
                 onRepeatClick = {},
                 onSeek = {},
-                isLiked = liked,
+                isLiked = case.liked,
+                glow = Color(case.artwork.fullPlayerGlow),
             )
         }
     }
 }
+
+private class PlayerCase(
+    val state: String,
+    val playback: PlaybackSnapshot,
+    val liked: Boolean,
+    val artwork: ArtworkTheme = ArtworkThemeDefaults.theme,
+)
 
 private fun queueCases(): List<CarUiCase> {
     val removeConfirmDialog = hasClickAction() and hasAnyDescendant(hasText("Remove from queue?"))

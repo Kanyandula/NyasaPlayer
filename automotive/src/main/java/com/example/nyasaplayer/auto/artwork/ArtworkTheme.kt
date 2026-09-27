@@ -61,9 +61,21 @@ fun artworkThemeFrom(swatches: ArtworkSwatches): ArtworkTheme {
         ?: return ArtworkThemeDefaults.theme
     // Falls back to the primary hue, not an invented one: depth comes from placement and alpha.
     val secondary = with(swatches) { firstUsable(muted, darkMuted, darkVibrant, vibrant, dominant) } ?: primary
+    return artworkThemeFromSeeds(primary, secondary)
+}
+
+/**
+ * The two ambient tints are conditioned together, as if the secondary sat right on the primary's
+ * centre: where the circles overlap their light adds, and one tint each at the ceiling measured over
+ * it at the drift's lowest frame (T08). Stacking is the worst any window shape can do, so the pair
+ * holds on all of them. The full player's glow is a single layer and keeps its own ceiling.
+ */
+internal fun artworkThemeFromSeeds(@ColorInt primary: Int, @ColorInt secondary: Int): ArtworkTheme {
+    val (ambientPrimary, ambientSecondary) =
+        conditionArtworkLayers(listOf(primary to AmbientPrimaryAlpha, secondary to AmbientSecondaryAlpha))
     return ArtworkTheme(
-        ambientPrimary = conditionArtworkColor(primary, AmbientPrimaryAlpha),
-        ambientSecondary = conditionArtworkColor(secondary, AmbientSecondaryAlpha),
+        ambientPrimary = ambientPrimary,
+        ambientSecondary = ambientSecondary,
         fullPlayerGlow = conditionArtworkColor(primary, FullPlayerGlowAlpha),
     )
 }
@@ -72,10 +84,6 @@ fun artworkThemeFrom(swatches: ArtworkSwatches): ArtworkTheme {
  * [seed] at [alpha], blended toward [background] only as far as it takes to composite no lighter
  * than [ceiling] — so bright and neon covers keep their hue but lose their light. Palette's raw
  * colour never reaches the screen; this is the only way through.
- *
- * Per tint, over the background it lands on. That is exact for the full player's single glow; where
- * the ambient layer's two circles overlap they can add up past one centre on a near-square window,
- * which the pixel test on the rendered layer (T08) is what catches.
  */
 @ColorInt
 fun conditionArtworkColor(
@@ -83,14 +91,27 @@ fun conditionArtworkColor(
     alpha: Int,
     @ColorInt background: Int = NyasaBackground.toArgb(),
     @ColorInt ceiling: Int = CarRaised.toArgb(),
-): Int {
+): Int = conditionArtworkLayers(listOf(seed to alpha), background, ceiling).single()
+
+/**
+ * Each (seed, alpha) layer, drawn in order over [background], blended toward it by one shared amount
+ * — the least that keeps the whole stack no lighter than [ceiling]. Sharing it keeps the layers'
+ * balance: no one hue is sacrificed to let another stay bright.
+ */
+internal fun conditionArtworkLayers(
+    layers: List<Pair<Int, Int>>,
+    @ColorInt background: Int = NyasaBackground.toArgb(),
+    @ColorInt ceiling: Int = CarRaised.toArgb(),
+): List<Int> {
     val base = Color(background)
     val limit = Color(ceiling).luminance()
-    val opaque = Color(seed).copy(alpha = 1f)
-    fun tinted(towardBackground: Float) = mixSrgb(opaque, base, towardBackground).copy(alpha = alpha / MaxChannel)
-    fun fits(towardBackground: Float) = tinted(towardBackground).compositeOver(base).luminance() <= limit
+    fun tinted(towardBackground: Float) = layers.map { (seed, alpha) ->
+        mixSrgb(Color(seed).copy(alpha = 1f), base, towardBackground).copy(alpha = alpha / MaxChannel)
+    }
+    fun fits(towardBackground: Float) =
+        tinted(towardBackground).fold(base) { under, layer -> layer.compositeOver(under) }.luminance() <= limit
 
-    if (fits(0f)) return tinted(0f).toArgb()
+    if (fits(0f)) return tinted(0f).map { it.toArgb() }
     // ponytail: bisection to within 1/1024 of the least blend that fits; a closed form needs the
     // sRGB curve inverted per channel, for no visible difference.
     var low = 0f
@@ -99,7 +120,7 @@ fun conditionArtworkColor(
         val mid = (low + high) / 2
         if (fits(mid)) high = mid else low = mid
     }
-    return tinted(high).toArgb()
+    return tinted(high).map { it.toArgb() }
 }
 
 /**

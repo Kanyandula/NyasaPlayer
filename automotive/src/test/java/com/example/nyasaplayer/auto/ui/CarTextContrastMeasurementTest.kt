@@ -11,6 +11,10 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import com.example.nyasaplayer.auto.artwork.AmbientPrimaryAlpha
+import com.example.nyasaplayer.auto.artwork.AmbientSecondaryAlpha
+import com.example.nyasaplayer.auto.artwork.ArtworkTheme
+import com.example.nyasaplayer.auto.artwork.FullPlayerGlowAlpha
 import com.example.nyasaplayer.auto.ui.theme.CarChrome
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarObsidian
@@ -115,8 +119,34 @@ class CarTextContrastMeasurementTest {
     @Test
     fun `ambient glow behind content is never lighter than CarRaised`() {
         val ceiling = luminance(CarRaised.toArgb())
-        val over = mutableListOf<String>()
-        composeRule.forEachCarUiCase(ambientCases) { case ->
+        val over = brightestBehindContent(ambientCases).filter { (_, colour) -> luminance(colour) > ceiling }
+        assertTrue("Ambient lighter than CarRaised behind content: $over", over.isEmpty())
+    }
+
+    /**
+     * The check above can fail: a white cover's colour at the tints' alphas, *without* the artwork
+     * theme's conditioning, is lighter than [CarRaised] behind content (T38 measured it at 5.81:1).
+     * If this stops failing the ceiling, the ceiling test is no longer measuring what it says.
+     */
+    @Test
+    fun `an unconditioned white artwork theme would break the ceiling`() {
+        fun rawWhite(alpha: Int) = Color.White.copy(alpha = alpha / 255f).toArgb()
+        val raw = ArtworkTheme(
+            ambientPrimary = rawWhite(AmbientPrimaryAlpha),
+            ambientSecondary = rawWhite(AmbientSecondaryAlpha),
+            fullPlayerGlow = rawWhite(FullPlayerGlowAlpha),
+        )
+        val ceiling = luminance(CarRaised.toArgb())
+        val brightest = brightestBehindContent(listOf(squareAmbientCase(raw, "unconditioned white")))
+
+        assertTrue("expected the raw glow over the ceiling: $brightest", brightest.all { luminance(it.second) > ceiling })
+    }
+
+    /** Each case's brightest pixel inside the [ContentSlotTag] node, by case name. */
+    private fun brightestBehindContent(cases: List<CarUiCase>): List<Pair<String, Int>> {
+        val ceiling = luminance(CarRaised.toArgb())
+        val found = mutableListOf<Pair<String, Int>>()
+        composeRule.forEachCarUiCase(cases) { case ->
             val window = composeRule.captureWindow()
             val slot = composeRule.onNodeWithTag(ContentSlotTag).fetchSemanticsNode().boundsInWindow
             val w = slot.width.roundToInt()
@@ -124,11 +154,10 @@ class CarTextContrastMeasurementTest {
             val pixels = IntArray(w * h)
             window.getPixels(pixels, 0, w, slot.left.roundToInt(), slot.top.roundToInt(), w, h)
             val brightest = pixels.distinct().maxBy(::luminance)
-            val l = luminance(brightest)
-            println("Ambient: ${case.name}: brightest ${hex(brightest)}, L %.4f vs %.4f".format(l, ceiling))
-            if (l > ceiling) over += "${case.name}: ${hex(brightest)}"
+            println("Ambient: ${case.name}: brightest ${hex(brightest)}, L %.4f vs %.4f".format(luminance(brightest), ceiling))
+            found += case.name to brightest
         }
-        assertTrue("Ambient lighter than CarRaised behind content: $over", over.isEmpty())
+        return found
     }
 
     /** The ratio function checked against values the design doc and WCAG publish. */
