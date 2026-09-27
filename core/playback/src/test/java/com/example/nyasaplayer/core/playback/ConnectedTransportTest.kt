@@ -115,14 +115,15 @@ class ConnectedTransportTest {
     }
 
     @Test
-    fun setQueue_sendsTheCommandCarryingItsSongs() {
+    fun setQueue_sendsTheCommandCarryingItsSongsAndOrigin() {
         val songs = listOf(Song(mediaId = "a", title = "A"), Song(mediaId = "b", title = "B"))
 
-        assertTrue(transport.setQueue(songs, startIndex = 1))
+        assertTrue(transport.setQueue(songs, startIndex = 1, QueueOrigin.Favourites))
         idle()
 
         assertEquals(listOf(PlaybackCommands.CMD_SET_QUEUE), callback.customCommands)
         assertEquals(1, callback.lastArgs?.getInt(PlaybackCommands.KEY_START_INDEX))
+        assertEquals(QueueOrigin.Favourites, callback.lastArgs?.getQueueOrigin())
     }
 
     @Test
