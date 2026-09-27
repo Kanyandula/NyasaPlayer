@@ -7,6 +7,10 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
+import com.example.nyasaplayer.auto.artwork.ArtworkTheme
+import com.example.nyasaplayer.auto.artwork.ArtworkThemeDefaults
+import com.example.nyasaplayer.auto.artwork.ArtworkThemeExtractor
+import com.example.nyasaplayer.auto.artwork.appliedArtworkTheme
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.util.NetworkMonitor
 import com.example.nyasaplayer.core.data.api.AuthRepository
@@ -30,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -53,6 +58,7 @@ class AutomotivePlayerViewModel @Inject constructor(
     private val networkMonitor: NetworkMonitor,
     private val downloadRepository: DownloadRepository,
     private val crashReporter: CrashReporter,
+    private val artworkThemeExtractor: ArtworkThemeExtractor,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AutomotiveUiState())
@@ -145,6 +151,7 @@ class AutomotivePlayerViewModel @Inject constructor(
         observePlaybackSnapshot()
         observeUxRestrictions()
         observeNetworkState()
+        observeArtworkTheme()
     }
 
     private fun observePlaybackSnapshot() {
@@ -159,6 +166,18 @@ class AutomotivePlayerViewModel @Inject constructor(
         uxHandler.restrictions.onEach { restrictions ->
             _uiState.update { it.copy(restrictions = restrictions) }
         }.catch { /* Restrictions flow is internal — errors are non-fatal */ }
+            .launchIn(viewModelScope)
+    }
+
+    /** The current cover's theme, applied only while parked (T07 / D-T38.6). */
+    private fun observeArtworkTheme() {
+        appliedArtworkTheme(
+            coverUrls = stateCollector.playbackState.map { it.currentSong?.resolvedCoverUrl },
+            isDriving = uxHandler.restrictions.map { it.isDistractionOptimized },
+            extractor = artworkThemeExtractor,
+        ).onEach { theme ->
+            _uiState.update { it.copy(artworkTheme = theme) }
+        }.catch { /* Artwork theme flow is internal — errors are non-fatal */ }
             .launchIn(viewModelScope)
     }
 
@@ -436,4 +455,5 @@ data class AutomotiveUiState(
     val error: PlayerError? = null,
     val isCurrentSongLiked: Boolean = false,
     val isOffline: Boolean = false,
+    val artworkTheme: ArtworkTheme = ArtworkThemeDefaults.theme,
 )
