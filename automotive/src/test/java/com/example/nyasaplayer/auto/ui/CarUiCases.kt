@@ -90,6 +90,7 @@ import com.example.nyasaplayer.core.common.ui.theme.AppTheme
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlayerError
+import com.example.nyasaplayer.core.playback.QueueOrigin
 import com.example.nyasaplayer.core.playback.RepeatMode
 import org.robolectric.Shadows.shadowOf
 
@@ -349,12 +350,16 @@ private val PlayingSnapshot = PlaybackSnapshot(
     queue = Songs,
     currentQueueIndex = 1,
     playWhenReady = true,
+    // A long name, so the measurement tests see the source label at its widest.
+    queueOrigin = QueueOrigin.Playlist(id = "p1", name = "Late Night Drive Through the Rift Valley Highlands"),
 )
 private val PausedSnapshot = PlayingSnapshot.copy(
     isPlaying = false,
     playWhenReady = false,
     repeatMode = RepeatMode.Off,
     isShuffled = false,
+    // And one with no origin, where the label is absent.
+    queueOrigin = QueueOrigin.None,
 )
 private val BufferingSnapshot = PlayingSnapshot.copy(isPlaying = false, isBuffering = true, repeatMode = RepeatMode.One)
 
@@ -586,7 +591,8 @@ private fun homeCase(
             popularSongs = popular,
             isLoading = isLoading,
             errorMessage = error,
-            onSongClick = { _, _ -> },
+            onRecentClick = { _, _ -> },
+            onPopularClick = { _, _ -> },
             onRetry = {},
             onBrowseClick = {},
             currentlyPlayingMediaId = NowPlaying.mediaId,

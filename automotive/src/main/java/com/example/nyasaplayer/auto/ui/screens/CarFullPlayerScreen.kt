@@ -162,7 +162,7 @@ private fun PlayerControlsPanel(
         verticalArrangement = Arrangement.Center,
     ) {
         PlayerTopBar(
-            albumName = song?.albumName?.ifBlank { "Now Playing" } ?: "Now Playing",
+            source = playback.queueOrigin.sourceLabel(),
             onCollapseClick = onCollapseClick,
             onQueueClick = onQueueClick,
         )
@@ -189,7 +189,7 @@ private fun PlayerControlsPanel(
 
 @Composable
 private fun PlayerTopBar(
-    albumName: String,
+    source: SourceLabel?,
     onCollapseClick: () -> Unit,
     onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -205,9 +205,21 @@ private fun PlayerTopBar(
             size = CarTouchTargetSize,
             onClick = onCollapseClick,
         )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("PLAYING FROM PLAYLIST", color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(albumName, color = Color.White, fontSize = 18.sp)
+        // No origin, no label: a single track has no collection behind it to name.
+        if (source != null) {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(source.heading, color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    text = source.name,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         CircleIconButton(
             icon = QueueMusicIcon,

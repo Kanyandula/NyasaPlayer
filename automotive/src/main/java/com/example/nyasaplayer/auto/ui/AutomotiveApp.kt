@@ -77,6 +77,7 @@ import com.example.nyasaplayer.core.common.models.Playlist
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.components.OfflineBanner
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
+import com.example.nyasaplayer.core.playback.QueueOrigin
 import kotlinx.coroutines.launch
 
 @UnstableApi
@@ -303,8 +304,8 @@ private fun AuthenticatedApp(
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
                 onSkipPrevious = playerViewModel::skipPrevious,
-                onSongClick = { songs, song ->
-                    openFullPlayerIfStarted(playerViewModel.playSong(songs, song), openFullPlayer)
+                onSongClick = { songs, song, origin ->
+                    openFullPlayerIfStarted(playerViewModel.playSong(songs, song, origin), openFullPlayer)
                 },
                 onRetry = contentViewModel::retryLoad,
                 onRetryDetail = { drillDown?.let(contentViewModel::openDetail) },
@@ -323,22 +324,22 @@ private fun AuthenticatedApp(
                 },
                 drillDown = drillDown,
                 onBackFromDetail = { drillDown = null },
-                onArtistSongClick = { songs, song ->
-                    openFullPlayerIfStarted(playerViewModel.playSong(songs, song), openFullPlayer)
+                onShuffleTracks = { songs, origin ->
+                    openFullPlayerIfStarted(playerViewModel.shufflePlay(songs, origin), openFullPlayer)
                 },
-                onShuffleTracks = { songs ->
-                    openFullPlayerIfStarted(playerViewModel.shufflePlay(songs), openFullPlayer)
-                },
-                onPlayTracks = { tracks ->
+                onPlayTracks = { tracks, origin ->
                     tracks.firstOrNull()?.let { first ->
-                        openFullPlayerIfStarted(playerViewModel.playSong(tracks, first), openFullPlayer)
+                        openFullPlayerIfStarted(playerViewModel.playSong(tracks, first, origin), openFullPlayer)
                     }
                 },
                 onGenreClick = { genre ->
                     scope.launch {
                         val songs = contentViewModel.getSongsByGenre(genre.id)
                         if (songs.isNotEmpty()) {
-                            openFullPlayerIfStarted(playerViewModel.shufflePlay(songs), openFullPlayer)
+                            openFullPlayerIfStarted(
+                                playerViewModel.shufflePlay(songs, QueueOrigin.Genre(genre.name)),
+                                openFullPlayer,
+                            )
                         } else {
                             playerViewModel.reportEmptyGenrePlayback()
                         }
@@ -388,7 +389,8 @@ private fun AuthenticatedApp(
                         // containing rows the cap hid.
                         songQueue = visibleResults.songQueue,
                         onPlay = { songs, song ->
-                            openFullPlayerIfStarted(playerViewModel.playSong(songs, song), openFullPlayer)
+                            val origin = QueueOrigin.Search(searchState.submittedQuery)
+                            openFullPlayerIfStarted(playerViewModel.playSong(songs, song, origin), openFullPlayer)
                         },
                         onOpenDetail = openFromSearch,
                     )
@@ -526,6 +528,14 @@ internal fun routeSearchResult(
     }
 }
 
+/** The origin a detail screen's queue is played from; [title] is the loaded collection's name. */
+internal fun CarDestination.queueOrigin(title: String): QueueOrigin = when (this) {
+    is CarDestination.Album -> QueueOrigin.Album(albumId, title)
+    is CarDestination.Playlist -> QueueOrigin.Playlist(playlistId, title)
+    is CarDestination.CatalogArtist -> QueueOrigin.Artist(artistId, title)
+    is CarDestination.Artist, CarDestination.Downloads -> QueueOrigin.None
+}
+
 /**
  * The overlay stack after opening [opening].
  *
@@ -632,7 +642,7 @@ private fun BrowseShell(
     onTogglePlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
-    onSongClick: (List<Song>, Song) -> Unit,
+    onSongClick: (List<Song>, Song, QueueOrigin) -> Unit,
     onRetry: () -> Unit,
     onRetryDetail: () -> Unit,
     onAlbumClick: (Album) -> Unit,
@@ -645,9 +655,8 @@ private fun BrowseShell(
     onArtistClick: (FavoriteArtist) -> Unit,
     drillDown: CarDestination?,
     onBackFromDetail: () -> Unit,
-    onArtistSongClick: (List<Song>, Song) -> Unit,
-    onShuffleTracks: (List<Song>) -> Unit,
-    onPlayTracks: (List<Song>) -> Unit,
+    onShuffleTracks: (List<Song>, QueueOrigin) -> Unit,
+    onPlayTracks: (List<Song>, QueueOrigin) -> Unit,
     onLikeClick: () -> Unit,
     onGenreClick: (Genre) -> Unit,
     onLikeToggle: (Song, Boolean) -> Unit,
@@ -685,7 +694,9 @@ private fun BrowseShell(
                         popularSongs = rememberVisible(contentState.popularSongs, restrictions),
                         isLoading = contentState.isLoading,
                         errorMessage = contentState.errorMessage,
-                        onSongClick = onSongClick,
+                        onRecentClick = { songs, song -> onSongClick(songs, song, QueueOrigin.RecentlyPlayed) },
+                        // Popular Now is a chart, not a collection the driver owns: no label.
+                        onPopularClick = { songs, song -> onSongClick(songs, song, QueueOrigin.None) },
                         onRetry = onRetry,
                         onBrowseClick = { onSelectTab(CarScreen.Browse) },
                         currentlyPlayingMediaId = currentlyPlayingMediaId,
@@ -723,15 +734,19 @@ private fun BrowseShell(
                                     ?.coverUrl
                                     .orEmpty()
                             }
+                            // Remembered: a fresh origin each position tick would defeat skipping below.
+                            val artistOrigin = remember(destination) {
+                                QueueOrigin.Artist(destination.artistId, destination.artistName)
+                            }
                             CarArtistLikedSongsScreen(
                                 artistName = destination.artistName,
                                 artistCoverUrl = artistCoverUrl,
                                 likedSongs = artistSongs,
                                 pendingUnlikes = contentState.pendingUnlikes,
                                 onBackClick = onBackFromDetail,
-                                onSongClick = { song -> onArtistSongClick(artistSongs, song) },
-                                onPlayAll = { onPlayTracks(artistSongs) },
-                                onShufflePlay = { onShuffleTracks(artistSongs) },
+                                onSongClick = { song -> onSongClick(artistSongs, song, artistOrigin) },
+                                onPlayAll = { onPlayTracks(artistSongs, artistOrigin) },
+                                onShufflePlay = { onShuffleTracks(artistSongs, artistOrigin) },
                                 // Live list: the row leaves on the next emission (D25).
                                 onLikeToggle = likeToggle(onLikeToggle, freeze = false),
                                 currentlyPlayingMediaId = currentlyPlayingMediaId,
@@ -746,7 +761,7 @@ private fun BrowseShell(
                             isDriving = restrictions.isDistractionOptimized,
                             maxItems = restrictions.maxCumulativeContentItems,
                             onBackClick = onBackFromDetail,
-                            onSongClick = onSongClick,
+                            onSongClick = { songs, song -> onSongClick(songs, song, QueueOrigin.Downloads) },
                             onRemove = onRemoveDownload,
                             onRemoveAll = onRemoveAllDownloads,
                             onRetry = onRetryDownload,
@@ -782,7 +797,8 @@ private fun BrowseShell(
                                 restrictions,
                             ),
                             likedSongCount = contentState.likedSongs.size,
-                            onSongClick = onSongClick,
+                            // Library's only song rows are its recently played shelf.
+                            onSongClick = { songs, song -> onSongClick(songs, song, QueueOrigin.RecentlyPlayed) },
                             onPlaylistClick = onPlaylistClick,
                             onAlbumClick = onAlbumClick,
                             onArtistClick = onArtistClick,
@@ -800,9 +816,9 @@ private fun BrowseShell(
                     CarScreen.Favourites -> CarFavouritesRoute(
                         contentState = contentState,
                         restrictions = restrictions,
-                        onSongClick = onSongClick,
-                        onPlayTracks = onPlayTracks,
-                        onShuffleTracks = onShuffleTracks,
+                        onSongClick = { songs, song -> onSongClick(songs, song, QueueOrigin.Favourites) },
+                        onPlayTracks = { songs -> onPlayTracks(songs, QueueOrigin.Favourites) },
+                        onShuffleTracks = { songs -> onShuffleTracks(songs, QueueOrigin.Favourites) },
                         onLikeToggle = onLikeToggle,
                         onBrowseClick = { onSelectTab(CarScreen.Browse) },
                         onRetry = onRetry,
@@ -899,9 +915,9 @@ private fun DetailRoute(
     detail: CarDetailState?,
     restrictions: UxRestrictionState,
     onBackClick: () -> Unit,
-    onPlayTracks: (List<Song>) -> Unit,
-    onShuffleTracks: (List<Song>) -> Unit,
-    onSongClick: (List<Song>, Song) -> Unit,
+    onPlayTracks: (List<Song>, QueueOrigin) -> Unit,
+    onShuffleTracks: (List<Song>, QueueOrigin) -> Unit,
+    onSongClick: (List<Song>, Song, QueueOrigin) -> Unit,
     currentlyPlayingMediaId: String?,
     isPlaying: Boolean,
     onRetry: () -> Unit,
@@ -914,14 +930,18 @@ private fun DetailRoute(
             ?.let { loaded -> loaded.copy(tracks = restrictions.cap(loaded.tracks)) }
             ?: CarDetailState(destination = destination, isLoading = true)
     }
+    val origin = remember(destination, capped.title) { destination.queueOrigin(capped.title) }
+    val onPlay: (List<Song>) -> Unit = { tracks -> onPlayTracks(tracks, origin) }
+    val onShuffle: (List<Song>) -> Unit = { tracks -> onShuffleTracks(tracks, origin) }
+    val onTrackClick: (List<Song>, Song) -> Unit = { tracks, song -> onSongClick(tracks, song, origin) }
 
     when (destination) {
         is CarDestination.Album -> CarAlbumScreen(
             detail = capped,
             onBackClick = onBackClick,
-            onPlay = onPlayTracks,
-            onShuffle = onShuffleTracks,
-            onSongClick = onSongClick,
+            onPlay = onPlay,
+            onShuffle = onShuffle,
+            onSongClick = onTrackClick,
             modifier = modifier,
             currentlyPlayingMediaId = currentlyPlayingMediaId,
             isPlaying = isPlaying,
@@ -941,9 +961,9 @@ private fun DetailRoute(
         is CarDestination.Playlist -> CarPlaylistScreen(
             detail = capped,
             onBackClick = onBackClick,
-            onPlay = onPlayTracks,
-            onShuffle = onShuffleTracks,
-            onSongClick = onSongClick,
+            onPlay = onPlay,
+            onShuffle = onShuffle,
+            onSongClick = onTrackClick,
             modifier = modifier,
             currentlyPlayingMediaId = currentlyPlayingMediaId,
             isPlaying = isPlaying,
@@ -953,9 +973,9 @@ private fun DetailRoute(
         is CarDestination.CatalogArtist -> CarArtistScreen(
             detail = capped,
             onBackClick = onBackClick,
-            onPlay = onPlayTracks,
-            onShuffle = onShuffleTracks,
-            onSongClick = onSongClick,
+            onPlay = onPlay,
+            onShuffle = onShuffle,
+            onSongClick = onTrackClick,
             modifier = modifier,
             currentlyPlayingMediaId = currentlyPlayingMediaId,
             isPlaying = isPlaying,

@@ -19,6 +19,7 @@ import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
 import com.example.nyasaplayer.core.playback.PlayerMode
 import com.example.nyasaplayer.core.playback.PlayerUiState
+import com.example.nyasaplayer.core.playback.QueueOrigin
 import com.example.nyasaplayer.core.playback.isPlayableNow
 import com.example.nyasaplayer.core.playback.isStreamStalledOffline
 import com.example.nyasaplayer.core.playback.toSong
@@ -200,7 +201,7 @@ class PlayerViewModel @Inject constructor(
         val resolvedSongs = songs.map(downloadManager::resolveLocalUri)
         val startIndex = resolvedSongs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
         // Nothing is painted as playing unless the command reached a connected player (T11).
-        if (!stateCollector.transport.setQueue(resolvedSongs, startIndex)) return
+        if (!stateCollector.transport.setQueue(resolvedSongs, startIndex, QueueOrigin.None)) return
         _uiState.update {
             it.copy(
                 playerMode = PlayerMode.Expanded,
@@ -222,7 +223,7 @@ class PlayerViewModel @Inject constructor(
             showOfflineError(songs.first())
             return
         }
-        if (!stateCollector.transport.shufflePlay(resolvedSongs)) return
+        if (!stateCollector.transport.shufflePlay(resolvedSongs, QueueOrigin.None)) return
         _uiState.update {
             it.copy(
                 playerMode = PlayerMode.Expanded,

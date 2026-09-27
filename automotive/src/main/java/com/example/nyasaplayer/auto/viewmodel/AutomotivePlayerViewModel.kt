@@ -19,6 +19,7 @@ import com.example.nyasaplayer.core.playback.ControllerConnection
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.PlaybackStatePersistence
 import com.example.nyasaplayer.core.playback.PlayerError
+import com.example.nyasaplayer.core.playback.QueueOrigin
 import com.example.nyasaplayer.core.playback.isPlayableNow
 import com.example.nyasaplayer.core.playback.isStreamStalledOffline
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -272,7 +273,7 @@ class AutomotivePlayerViewModel @Inject constructor(
     // ── Play Actions ──
 
     /** True only when the queue reached a connected player — the caller opens the full player on it. */
-    fun playSong(songs: List<Song>, song: Song): Boolean {
+    fun playSong(songs: List<Song>, song: Song, origin: QueueOrigin): Boolean {
         // Resolved before the playability check, not after: the check reads the resolved URL, so
         // asking it first would refuse a downloaded song offline (A9).
         val resolvedSong = downloadRepository.resolveLocalUri(song)
@@ -285,19 +286,20 @@ class AutomotivePlayerViewModel @Inject constructor(
         val resolvedSongs = songs.map(downloadRepository::resolveLocalUri)
         val startIndex = resolvedSongs.indexOfFirst { it.mediaId == song.mediaId }.coerceAtLeast(0)
         // Nothing is painted as playing unless the command reached a connected player (T11).
-        if (!stateCollector.transport.setQueue(resolvedSongs, startIndex)) return false
+        if (!stateCollector.transport.setQueue(resolvedSongs, startIndex, origin)) return false
         stateCollector.updateSnapshot {
             it.copy(
                 currentSong = resolvedSong,
                 isPlaying = true,
                 isShuffled = false,
+                queueOrigin = origin,
             )
         }
         return true
     }
 
     /** True only when the shuffle reached a connected player. */
-    fun shufflePlay(songs: List<Song>): Boolean {
+    fun shufflePlay(songs: List<Song>, origin: QueueOrigin): Boolean {
         if (songs.isEmpty()) return false
         val resolvedSongs = songs.map(downloadRepository::resolveLocalUri)
         // ponytail: any-playable lets a mixed list start on a streamed song offline, which A9 makes
@@ -308,12 +310,13 @@ class AutomotivePlayerViewModel @Inject constructor(
             showNoConnection(isRetryable = false)
             return false
         }
-        if (!stateCollector.transport.shufflePlay(resolvedSongs)) return false
+        if (!stateCollector.transport.shufflePlay(resolvedSongs, origin)) return false
         stateCollector.updateSnapshot {
             it.copy(
                 currentSong = resolvedSongs.first(),
                 isPlaying = true,
                 isShuffled = true,
+                queueOrigin = origin,
             )
         }
         return true

@@ -91,13 +91,13 @@ class PlayerTransportTest {
     fun setQueue_noController_reportsAndDoesNotDispatch() {
         // The one that produced the false "playing" state: the ViewModel may only paint a track as
         // playing when this returns true.
-        assertFalse(transport.setQueue(listOf(song("a")), startIndex = 0))
+        assertFalse(transport.setQueue(listOf(song("a")), startIndex = 0, QueueOrigin.None))
         assertEquals(1, reports)
     }
 
     @Test
     fun shufflePlay_noController_reportsAndDoesNotDispatch() {
-        assertFalse(transport.shufflePlay(listOf(song("a"), song("b"))))
+        assertFalse(transport.shufflePlay(listOf(song("a"), song("b")), QueueOrigin.None))
         assertEquals(1, reports)
     }
 
@@ -146,8 +146,8 @@ class PlayerTransportTest {
             "toggleRepeatMode" to transport.toggleRepeatMode(),
             "toggleShuffle" to transport.toggleShuffle(),
             "stopAndClear" to transport.stopAndClear(),
-            "setQueue" to transport.setQueue(listOf(song("a")), 0),
-            "shufflePlay" to transport.shufflePlay(listOf(song("a"))),
+            "setQueue" to transport.setQueue(listOf(song("a")), 0, QueueOrigin.None),
+            "shufflePlay" to transport.shufflePlay(listOf(song("a")), QueueOrigin.None),
             "skipToQueueItem" to transport.queue.skipToQueueItem(0),
             "removeFromQueue" to transport.queue.removeFromQueue(0),
             "clearQueue" to transport.queue.clearQueue(),

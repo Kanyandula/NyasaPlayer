@@ -60,7 +60,8 @@ private val HeroLabelSize = 14.sp
  * actions were rail destinations, and two navigation systems on one screen is the
  * muscle-memory problem the chrome contract exists to prevent.
  *
- * [onSongClick] takes the section's own list. `playSong` resolves its start index with
+ * Each section has its own click callback, so the caller knows which section a song came from.
+ * Each takes that section's own list: `playSong` resolves its start index with
  * `indexOfFirst { … }.coerceAtLeast(0)`, so handing it a list the song is absent from would
  * silently play that list's first track instead.
  */
@@ -70,7 +71,8 @@ fun CarHomeScreen(
     popularSongs: List<Song>,
     isLoading: Boolean,
     errorMessage: String?,
-    onSongClick: (List<Song>, Song) -> Unit,
+    onRecentClick: (List<Song>, Song) -> Unit,
+    onPopularClick: (List<Song>, Song) -> Unit,
     onRetry: () -> Unit,
     onBrowseClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -109,7 +111,8 @@ fun CarHomeScreen(
         else -> HomeContent(
             recentlyPlayed = recentlyPlayed,
             popularSongs = popularSongs,
-            onSongClick = onSongClick,
+            onRecentClick = onRecentClick,
+            onPopularClick = onPopularClick,
             currentlyPlayingMediaId = currentlyPlayingMediaId,
             isPlaying = isPlaying,
             modifier = modifier,
@@ -121,7 +124,8 @@ fun CarHomeScreen(
 private fun HomeContent(
     recentlyPlayed: List<Song>,
     popularSongs: List<Song>,
-    onSongClick: (List<Song>, Song) -> Unit,
+    onRecentClick: (List<Song>, Song) -> Unit,
+    onPopularClick: (List<Song>, Song) -> Unit,
     currentlyPlayingMediaId: String?,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
@@ -135,7 +139,7 @@ private fun HomeContent(
 
         recentlyPlayed.firstOrNull()?.let { resume ->
             item {
-                ResumeHero(song = resume, onClick = { onSongClick(recentlyPlayed, resume) })
+                ResumeHero(song = resume, onClick = { onRecentClick(recentlyPlayed, resume) })
             }
         }
 
@@ -146,7 +150,7 @@ private fun HomeContent(
                 HomeTrack(
                     song = song,
                     section = recentlyPlayed,
-                    onSongClick = onSongClick,
+                    onSongClick = onRecentClick,
                     currentlyPlayingMediaId = currentlyPlayingMediaId,
                     isPlaying = isPlaying,
                 )
@@ -159,7 +163,7 @@ private fun HomeContent(
                 HomeTrack(
                     song = song,
                     section = popularSongs,
-                    onSongClick = onSongClick,
+                    onSongClick = onPopularClick,
                     currentlyPlayingMediaId = currentlyPlayingMediaId,
                     isPlaying = isPlaying,
                 )
