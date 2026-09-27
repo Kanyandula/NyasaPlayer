@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
@@ -27,8 +26,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -50,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.artwork.ArtworkThemeDefaults
 import com.example.nyasaplayer.auto.ui.motion.animateDecorativeColor
+import com.example.nyasaplayer.auto.ui.theme.CarOutline
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
@@ -70,6 +70,7 @@ import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
 private val FullPlayerAlbumArtSize = 400.dp
+private val AlbumArtCorner = 28.dp
 private val DefaultGlow = Color(ArtworkThemeDefaults.theme.fullPlayerGlow)
 private val PlayButtonSize = 96.dp
 private val PlayIconSize = 40.dp
@@ -87,6 +88,9 @@ private val SourceLabelGap = 14.dp
 
 private val TitleSize = 48.sp
 private val TitleTracking = (-0.03).em
+private val TitleLineHeight = 1.04.em
+private const val TabularDigits = "tnum"
+private val LikeIconSize = 26.dp
 private val ArtistSize = 24.sp
 private val SourceNameSize = 20.sp
 private val CaptionSize = 14.sp // the mockup's 12-13px captions, raised to the NFR-3 text floor
@@ -114,7 +118,6 @@ private val TimeColor = Color.White.copy(alpha = 0.84f)
 private val MutedColor = Color.White.copy(alpha = 0.75f)
 private val ScrubberRest = Color.White.copy(alpha = 0.24f)
 private val UpNextFill = Color.Black.copy(alpha = 0.34f)
-private val UpNextOutline = Color.White.copy(alpha = 0.12f)
 
 // The design's transport spacing, not a rounding slip: five controls at 23dp fit the panel.
 private val TransportGap = 23.dp
@@ -170,7 +173,7 @@ fun CarFullPlayerScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(FullPlayerAlbumArtSize)
-                    .clip(RoundedCornerShape(24.dp)),
+                    .clip(RoundedCornerShape(AlbumArtCorner)),
             )
 
             PlayerControlsPanel(
@@ -259,7 +262,7 @@ private fun UpNextStrip(
             .height(CarTouchTargetSize)
             .clip(shape)
             .background(UpNextFill)
-            .border(1.dp, UpNextOutline, shape)
+            .border(1.dp, CarOutline, shape)
             .clickable(onClickLabel = "Open queue", onClick = onClick)
             .padding(horizontal = UpNextPadding),
         verticalAlignment = Alignment.CenterVertically,
@@ -336,11 +339,12 @@ private fun PlayerTopBar(
         // Like sits here rather than on a row of its own, which the window has no height for, and
         // stays out of the transport row.
         Row(horizontalArrangement = Arrangement.spacedBy(TopBarIconGap)) {
+            // An outline heart either way, as the design draws it: liked is told by the gold ring and fill.
             CircleIconButton(
-                icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                icon = Icons.Filled.FavoriteBorder,
                 contentDescription = if (isLiked) "Unlike" else "Like",
                 size = CarTouchTargetSize,
-                tint = if (isLiked) NyasaGold else Color.White,
+                iconSize = LikeIconSize,
                 active = isLiked,
                 ringed = isLiked,
                 onClick = onLikeClick,
@@ -381,6 +385,7 @@ private fun TrackInfo(
             fontSize = TitleSize,
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = TitleTracking,
+            lineHeight = TitleLineHeight,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -408,13 +413,11 @@ private fun ProgressSlider(
         0f
     }
     val interactionSource = remember { MutableInteractionSource() }
-    val colors = SliderDefaults.colors(thumbColor = NyasaGold)
     Column(modifier = modifier) {
         Slider(
             value = progress,
             onValueChange = { fraction -> onSeek((fraction * playback.durationMs).toLong()) },
             modifier = Modifier.fillMaxWidth(),
-            colors = colors,
             interactionSource = interactionSource,
             // The slider is as tall as its tallest slot, and so is its touch area: a 76dp thumb slot
             // makes the seek bar a 76dp target. A height on the Slider itself does not — it pins its
@@ -435,25 +438,30 @@ private fun ProgressSlider(
                         .fillMaxWidth()
                         .height(ScrubberTrackHeight)
                         .clip(CircleShape)
-                        .background(ScrubberRest),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(state.value)
-                            .fillMaxHeight()
-                            .background(NyasaGold),
-                    )
-                }
+                        .background(ScrubberRest)
+                        // Read in the draw phase: each position tick redraws the fill, no relayout.
+                        .drawBehind { drawRect(NyasaGold, size = size.copy(width = size.width * state.value)) },
+                )
             },
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(formatDuration(playback.currentPositionMs), color = TimeColor, fontSize = TimeSize)
+            Text(
+                formatDuration(playback.currentPositionMs),
+                color = TimeColor,
+                fontSize = TimeSize,
+                style = LocalTextStyle.current.copy(fontFeatureSettings = TabularDigits),
+            )
             // Remaining, not total: the design counts down to the next track.
             val remainingMs = (playback.durationMs - playback.currentPositionMs).coerceAtLeast(0L)
-            Text("-${formatDuration(remainingMs)}", color = TimeColor, fontSize = TimeSize)
+            Text(
+                "-${formatDuration(remainingMs)}",
+                color = TimeColor,
+                fontSize = TimeSize,
+                style = LocalTextStyle.current.copy(fontFeatureSettings = TabularDigits),
+            )
         }
     }
 }
@@ -478,7 +486,6 @@ private fun MainControls(
             contentDescription = "Shuffle",
             size = CarTouchTargetSize,
             iconSize = TransportIconSize,
-            tint = if (playback.isShuffled) NyasaGold else Color.White,
             active = playback.isShuffled,
             onClick = onShuffleClick,
         )
@@ -514,7 +521,6 @@ private fun MainControls(
             contentDescription = "Repeat",
             size = CarTouchTargetSize,
             iconSize = TransportIconSize,
-            tint = if (repeating) NyasaGold else Color.White,
             active = repeating,
             onClick = onRepeatClick,
         )
@@ -568,10 +574,10 @@ private fun CircleIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     iconSize: androidx.compose.ui.unit.Dp = 28.dp,
-    tint: Color = Color.White,
     active: Boolean = false,
     ringed: Boolean = false,
 ) {
+    val tint = if (active) NyasaGold else Color.White
     IconButton(
         onClick = onClick,
         modifier = modifier
