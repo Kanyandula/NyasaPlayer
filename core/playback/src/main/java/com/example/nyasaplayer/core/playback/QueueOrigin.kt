@@ -14,7 +14,6 @@ sealed interface QueueOrigin {
     data object Favourites : QueueOrigin
     data object Downloads : QueueOrigin
     data object RecentlyPlayed : QueueOrigin
-    data object AllSongs : QueueOrigin
     data object None : QueueOrigin
 }
 
@@ -31,8 +30,7 @@ fun QueueOrigin.toFields(): Triple<String, String, String> = when (this) {
     QueueOrigin.Favourites -> Triple(KindFavourites, "", "")
     QueueOrigin.Downloads -> Triple(KindDownloads, "", "")
     QueueOrigin.RecentlyPlayed -> Triple(KindRecentlyPlayed, "", "")
-    QueueOrigin.AllSongs -> Triple(KindAllSongs, "", "")
-    QueueOrigin.None -> Triple(KindNone, "", "")
+    QueueOrigin.None -> Triple("", "", "")
 }
 
 /**
@@ -54,7 +52,6 @@ fun queueOriginOf(kind: String?, id: String?, name: String?): QueueOrigin {
         KindFavourites -> QueueOrigin.Favourites
         KindDownloads -> QueueOrigin.Downloads
         KindRecentlyPlayed -> QueueOrigin.RecentlyPlayed
-        KindAllSongs -> QueueOrigin.AllSongs
         else -> null
     } ?: QueueOrigin.None
 }
@@ -67,5 +64,3 @@ private const val KindSearch = "search"
 private const val KindFavourites = "favourites"
 private const val KindDownloads = "downloads"
 private const val KindRecentlyPlayed = "recentlyPlayed"
-private const val KindAllSongs = "allSongs"
-private const val KindNone = "none"

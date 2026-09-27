@@ -67,7 +67,7 @@ fun MediaController.sendRestoreState(restored: RestoredPlayback): ListenableFutu
 fun MediaController.sendSetQueue(
     songs: List<Song>,
     startIndex: Int,
-    origin: QueueOrigin = QueueOrigin.None,
+    origin: QueueOrigin,
 ): ListenableFuture<SessionResult> {
     val args = Bundle().apply {
         putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
@@ -83,7 +83,7 @@ fun MediaController.sendSetQueue(
 /** Replaces the queue with a shuffled [songs] and starts playing. */
 fun MediaController.sendShufflePlay(
     songs: List<Song>,
-    origin: QueueOrigin = QueueOrigin.None,
+    origin: QueueOrigin,
 ): ListenableFuture<SessionResult> {
     val args = Bundle().apply {
         putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())

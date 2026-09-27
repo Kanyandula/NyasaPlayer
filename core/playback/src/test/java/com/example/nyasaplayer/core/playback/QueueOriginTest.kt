@@ -20,7 +20,6 @@ class QueueOriginTest {
             QueueOrigin.Favourites,
             QueueOrigin.Downloads,
             QueueOrigin.RecentlyPlayed,
-            QueueOrigin.AllSongs,
             QueueOrigin.None,
         ).forEach { assertEquals(it, roundTrip(it)) }
     }

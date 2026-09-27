@@ -82,7 +82,7 @@ class TemplateQueueSyncTest {
 
     @Test
     fun template_playback_replaces_a_stale_launcher_queue() {
-        queueManager.setQueueShuffled(songs.values.toList(), QueueOrigin.AllSongs)
+        queueManager.setQueueShuffled(songs.values.toList(), QueueOrigin.RecentlyPlayed)
         applyQueueManagerToPlayer()
 
         playFromTemplate(listOf("c"), startIndex = 0)
