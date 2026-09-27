@@ -201,7 +201,7 @@ private fun UpNextStrip(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        Text("UP NEXT", color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        PlayerCaption("UP NEXT")
         CarTrackRow(
             title = song.title,
             artist = song.resolvedArtistName,
@@ -237,7 +237,7 @@ private fun PlayerTopBar(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(source.heading, color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                PlayerCaption(source.heading)
                 Text(
                     text = source.name,
                     color = Color.White,
@@ -254,6 +254,12 @@ private fun PlayerTopBar(
             onClick = onQueueClick,
         )
     }
+}
+
+/** The small uppercase caption over the source label and the Up Next strip. */
+@Composable
+private fun PlayerCaption(text: String, modifier: Modifier = Modifier) {
+    Text(text, modifier = modifier, color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
 }
 
 @Composable
