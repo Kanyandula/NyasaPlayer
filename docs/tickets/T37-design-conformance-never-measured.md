@@ -23,6 +23,7 @@ feed:
 | `CarTouchTargetMeasurementTest` | ≥76dp | 695 nodes, 0 below |
 | `CarTextContrastMeasurementTest` | ≥7:1 | 1103 text nodes, 0 below, 55 exempt |
 | `CarTextSizeMeasurementTest` | ≥14sp, ≥18sp for a control's own label | added late by T30, which **found two real violations** |
+| `CarTextOverflowMeasurementTest` | no text ellipsised, bar a named exemption | added 2026-09-28, which **found one real violation** |
 
 Those are floors. They cannot see a wrong type size, a wrong corner radius, a wrong spacing value,
 or a component built to the wrong shape — only one that is illegibly small or invisible.
@@ -88,6 +89,13 @@ Two halves, and the second is cheap only after the first.
   candidates: `CarUiCases.kt` already renders every screen, and `CarTextSizeMeasurementTest` already
   walks every text node — asserting *membership in the scale* is a smaller change than it looks, and
   it is exactly the class of check T30 proved worth having.
+
+  **Partly done, 2026-09-28.** `CarTextOverflowMeasurementTest` took that route for one property:
+  it reads `hasVisualOverflow` off the same `GetTextLayoutResult` the size suite already fetches, so
+  it cost a traversal that existed. It found the defect this ticket predicts — the full player's
+  48sp title was cut to "I will sing of your joy for..." on the AVD while all three floors passed
+  green, because an ellipsised string lays out at its truncated size and nothing reads as clipped.
+  The scales themselves are still unmeasured; that half of this bullet stands.
 
 ## Out Of Scope
 
