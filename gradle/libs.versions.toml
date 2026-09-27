@@ -1,6 +1,7 @@
 [versions]
 agp = "8.8.0"
 coilCompose = "2.7.0"
+palette = "1.0.0"
 credentialsVersion = "1.3.0"
 coreKtxVersion = "1.12.0"
 firebaseFirestoreKtx = "25.1.2"
@@ -48,6 +49,7 @@ androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "medi
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentialsVersion" }
 androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentialsVersion" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+androidx-palette = { module = "androidx.palette:palette", version.ref = "palette" }
 firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx", version.ref = "firebaseAuth" }
 firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
 google-googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleIdVersion" }
