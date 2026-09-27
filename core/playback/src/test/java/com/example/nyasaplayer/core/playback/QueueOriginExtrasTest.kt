@@ -3,13 +3,8 @@ package com.example.nyasaplayer.core.playback
 import android.content.Context
 import android.os.Bundle
 import android.os.Looper
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.session.MediaSession
 import androidx.test.core.app.ApplicationProvider
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -38,7 +33,7 @@ class QueueOriginExtrasTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        session = MediaSession.Builder(context, IdlePlayer()).setId("t02").build()
+        session = MediaSession.Builder(context, ReconnectPlayer()).setId("t02").build()
     }
 
     @After
@@ -103,15 +98,4 @@ class QueueOriginExtrasTest {
 
         assertEquals(QueueOrigin.None, collector.playbackState.value.queueOrigin)
     }
-}
-
-private class IdlePlayer : SimpleBasePlayer(Looper.getMainLooper()) {
-    override fun getState(): State =
-        State.Builder()
-            .setAvailableCommands(Player.Commands.Builder().addAllCommands().build())
-            .setPlaylist(listOf(MediaItemData.Builder("a").setMediaItem(MediaItem.EMPTY).build()))
-            .build()
-
-    override fun handlePrepare(): ListenableFuture<*> = Futures.immediateVoidFuture()
-    override fun handleRelease(): ListenableFuture<*> = Futures.immediateVoidFuture()
 }

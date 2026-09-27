@@ -11,7 +11,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.ExecutionException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -93,16 +92,9 @@ class ControllerConnection @Inject constructor(
     private fun build(): ListenableFuture<MediaController> =
         MediaController.Builder(context, sessionToken).setListener(extrasListener).buildAsync().also { built ->
             // Extras set before this controller connected arrive with the connection, not as a change.
+            // A controller that never connected is reported by the collectors, not here.
             built.addListener(
-                {
-                    try {
-                        _queueOrigin.value = built.get().sessionExtras.getQueueOrigin()
-                    } catch (_: ExecutionException) {
-                        // Never connected; the collectors report that themselves.
-                    } catch (_: java.util.concurrent.CancellationException) {
-                        // Released before it connected.
-                    }
-                },
+                { runCatching { built.get() }.onSuccess { _queueOrigin.value = it.sessionExtras.getQueueOrigin() } },
                 MoreExecutors.directExecutor(),
             )
         }

@@ -72,7 +72,6 @@ abstract class BasePlayerStateCollector(
     protected open fun onControllerFoundDisconnected() {}
 
     fun connectController() {
-        // Survives reconnects: the connection keeps the same flow across the controllers it builds.
         collectorScope.launch {
             connection.queueOrigin.collect { origin -> _playbackState.update { it.copy(queueOrigin = origin) } }
         }
