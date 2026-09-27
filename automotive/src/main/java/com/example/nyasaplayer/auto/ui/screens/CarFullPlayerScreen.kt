@@ -69,7 +69,9 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
-private val FullPlayerAlbumArtSize = 400.dp
+// The Now Playing design's sizes, centred as drawn: on a window wider than its 1024dp the spare
+// width goes to the margins.
+private val FullPlayerAlbumArtSize = 320.dp
 
 /** The design's right column; the transport row nearly fills it, as drawn. */
 private val PanelMaxWidth = 536.dp
