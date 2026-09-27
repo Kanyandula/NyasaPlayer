@@ -856,7 +856,7 @@ private fun playerCases(): List<CarUiCase> = listOf(
     PlayerCase("playing, liked, shuffle on, repeat all", PlayingSnapshot, liked = true),
     PlayerCase("paused, unliked, shuffle off, repeat off", PausedSnapshot, liked = false),
     PlayerCase("buffering, repeat one", BufferingSnapshot, liked = true),
-    // The length a real track reaches, which the design's column cut (CarTextOverflowMeasurementTest).
+    // The length a real track reaches, so the other suites judge the full player at it.
     PlayerCase("playing, a full-length title and artist", PlayingSnapshot.copy(currentSong = LongTitleSong), true),
     // Up Next (T04): PlayingSnapshot above has a next item; these are the two shapes without one.
     PlayerCase("last track, repeat off (no up next)", PausedSnapshot.copy(currentQueueIndex = Songs.lastIndex), false),
