@@ -26,11 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasAnyAncestor
@@ -1056,18 +1051,4 @@ private fun resultsCase(
         currentlyPlayingMediaId = NowPlaying.mediaId,
         isPlaying = true,
     )
-}
-
-/** Nodes carrying laid-out text, for the suites that measure it. */
-internal val HasText = SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)
-
-internal fun SemanticsNode.text(): String =
-    config.getOrNull(SemanticsProperties.Text)?.joinToString(" ")?.trim().orEmpty()
-
-/** What the text was actually laid out as, asked of the node itself rather than assumed. */
-internal fun SemanticsNode.textLayout(): TextLayoutResult? {
-    val action = config.getOrNull(SemanticsActions.GetTextLayoutResult) ?: return null
-    val results = mutableListOf<TextLayoutResult>()
-    action.action?.invoke(results)
-    return results.firstOrNull()
 }
