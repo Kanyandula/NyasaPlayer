@@ -41,7 +41,8 @@ class TemplateQueueSyncTest {
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         player = ExoPlayer.Builder(context).build()
-        // Same wiring as PlaybackService.playerListener.
+        // ponytail: hand copy of PlaybackService.playerListener's guard — the service isn't built in JVM
+        // tests, so a change to that guard must be mirrored here.
         player.addListener(
             object : Player.Listener {
                 override fun onTimelineChanged(timeline: Timeline, reason: Int) {

@@ -63,11 +63,16 @@ class PlaybackQueueManager @Inject constructor() {
      * Adopts [player]'s playlist when it was set by something other than this manager — the media
      * template, Assistant or Bluetooth play through `onAddMediaItems`, which never touches the queue.
      * A playlist this manager already holds keeps its order and shuffle state.
+     *
+     * ponytail: [queue] and [currentIndex] now mirror the player; making the player the only source
+     * of truth (keeping just the pre-shuffle order here) removes this sync, at the cost of rewriting
+     * the queue commands.
      */
     fun syncWith(player: Player): Unit = synchronized(lock) {
-        val items = (0 until player.mediaItemCount).map { player.getMediaItemAt(it) }
-        if (items.map { it.mediaId } != queueSongIds()) {
-            originalQueue = items.map { it.toSong() }
+        val ids = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }
+        // Ids first: our own applyQueueToPlayer changes match, and skip toSong()'s JSON parse.
+        if (ids != queueSongIds()) {
+            originalQueue = readQueue(player)
             queue = originalQueue
             isShuffled = false
         }

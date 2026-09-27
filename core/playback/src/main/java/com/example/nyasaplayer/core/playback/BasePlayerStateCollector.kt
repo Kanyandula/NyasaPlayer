@@ -312,8 +312,8 @@ abstract class BasePlayerStateCollector(
 }
 
 /** The queue as songs, in player order. */
-private fun readQueue(mc: MediaController): List<Song> =
-    (0 until mc.mediaItemCount).map { mc.getMediaItemAt(it).toSong() }
+internal fun readQueue(player: Player): List<Song> =
+    (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toSong() }
 
 /**
  * Awaits a session command's result code, mapping every failure to [SessionError.ERROR_UNKNOWN].
