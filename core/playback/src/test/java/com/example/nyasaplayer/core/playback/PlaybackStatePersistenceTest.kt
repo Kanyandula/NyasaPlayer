@@ -175,6 +175,38 @@ class PlaybackStatePersistenceTest {
         assertEquals(RepeatMode.All, restored.repeatMode)
     }
 
+    // ── Queue origin (T01) ──
+
+    @Test
+    fun origin_survivesSaveThenRestore() = runTest {
+        val origin = QueueOrigin.Album(id = "al1", name = "Kalindula")
+        songRepo.songs.value = listOf(song("a"), song("b"))
+
+        persistence.saveFinal(song("b"), 1_000L, listOf("a", "b"), 1, RepeatMode.Off, origin)
+
+        assertEquals(origin, requireNotNull(persistence.restore()).origin)
+    }
+
+    @Test
+    fun restore_stateSavedBeforeOrigins_restoresWithNoOrigin() = runTest {
+        userRepo.playbackState = savedState("a", listOf("a"), 0)
+        songRepo.songs.value = listOf(song("a"))
+
+        assertEquals(QueueOrigin.None, requireNotNull(persistence.restore()).origin)
+    }
+
+    @Test
+    fun restore_malformedOrigin_restoresTheQueueWithNoOrigin() = runTest {
+        userRepo.playbackState = savedState("a", listOf("a"), 0)
+            .copy(originKind = "playlist", originId = "", originName = "Road Trip")
+        songRepo.songs.value = listOf(song("a"))
+
+        val restored = requireNotNull(persistence.restore())
+
+        assertEquals(listOf("a"), restored.queue.map { it.mediaId })
+        assertEquals(QueueOrigin.None, restored.origin)
+    }
+
     // ── Downloaded songs (A9) ──
 
     @Test

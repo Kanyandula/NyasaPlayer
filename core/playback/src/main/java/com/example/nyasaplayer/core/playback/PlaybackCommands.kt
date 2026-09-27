@@ -18,7 +18,24 @@ object PlaybackCommands {
     const val KEY_START_INDEX = "startIndex"
     const val KEY_POSITION_MS = "positionMs"
     const val KEY_REPEAT_MODE = "repeatMode"
+    const val KEY_ORIGIN_KIND = "originKind"
+    const val KEY_ORIGIN_ID = "originId"
+    const val KEY_ORIGIN_NAME = "originName"
 }
+
+fun Bundle.putQueueOrigin(origin: QueueOrigin) {
+    val (kind, id, name) = origin.toFields()
+    putString(PlaybackCommands.KEY_ORIGIN_KIND, kind)
+    putString(PlaybackCommands.KEY_ORIGIN_ID, id)
+    putString(PlaybackCommands.KEY_ORIGIN_NAME, name)
+}
+
+/** [QueueOrigin.None] when the sender attached no origin. */
+fun Bundle.getQueueOrigin(): QueueOrigin = queueOriginOf(
+    getString(PlaybackCommands.KEY_ORIGIN_KIND),
+    getString(PlaybackCommands.KEY_ORIGIN_ID),
+    getString(PlaybackCommands.KEY_ORIGIN_NAME),
+)
 
 /**
  * Hands a [RestoredPlayback] to `PlaybackService`, which applies the queue paused.
@@ -32,6 +49,7 @@ fun MediaController.sendRestoreState(restored: RestoredPlayback): ListenableFutu
         putInt(PlaybackCommands.KEY_START_INDEX, restored.index)
         putLong(PlaybackCommands.KEY_POSITION_MS, restored.positionMs)
         putString(PlaybackCommands.KEY_REPEAT_MODE, restored.repeatMode.name)
+        putQueueOrigin(restored.origin)
     }
     return sendCustomCommand(
         SessionCommand(PlaybackCommands.CMD_RESTORE_STATE, Bundle.EMPTY),
@@ -49,10 +67,12 @@ fun MediaController.sendRestoreState(restored: RestoredPlayback): ListenableFutu
 fun MediaController.sendSetQueue(
     songs: List<Song>,
     startIndex: Int,
+    origin: QueueOrigin = QueueOrigin.None,
 ): ListenableFuture<SessionResult> {
     val args = Bundle().apply {
         putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
         putInt(PlaybackCommands.KEY_START_INDEX, startIndex)
+        putQueueOrigin(origin)
     }
     return sendCustomCommand(
         SessionCommand(PlaybackCommands.CMD_SET_QUEUE, Bundle.EMPTY),
@@ -61,9 +81,13 @@ fun MediaController.sendSetQueue(
 }
 
 /** Replaces the queue with a shuffled [songs] and starts playing. */
-fun MediaController.sendShufflePlay(songs: List<Song>): ListenableFuture<SessionResult> {
+fun MediaController.sendShufflePlay(
+    songs: List<Song>,
+    origin: QueueOrigin = QueueOrigin.None,
+): ListenableFuture<SessionResult> {
     val args = Bundle().apply {
         putBundle(PlaybackCommands.KEY_SONGS, songs.toBundle())
+        putQueueOrigin(origin)
     }
     return sendCustomCommand(
         SessionCommand(PlaybackCommands.CMD_SHUFFLE_PLAY, Bundle.EMPTY),

@@ -145,6 +145,7 @@ class ConnectedTransportTest {
             song = Song(mediaId = "b", title = "B"),
             positionMs = 42_000L,
             repeatMode = RepeatMode.All,
+            origin = QueueOrigin.Playlist(id = "p1", name = "Road Trip"),
         )
 
         controller.sendRestoreState(restored)
@@ -155,6 +156,15 @@ class ConnectedTransportTest {
         assertEquals(1, args.getInt(PlaybackCommands.KEY_START_INDEX))
         assertEquals(42_000L, args.getLong(PlaybackCommands.KEY_POSITION_MS))
         assertEquals(RepeatMode.All.name, args.getString(PlaybackCommands.KEY_REPEAT_MODE))
+        assertEquals(QueueOrigin.Playlist(id = "p1", name = "Road Trip"), args.getQueueOrigin())
+    }
+
+    @Test
+    fun sendSetQueue_carriesItsOrigin() {
+        controller.sendSetQueue(listOf(Song(mediaId = "a")), 0, QueueOrigin.Search("banda"))
+        idle()
+
+        assertEquals(QueueOrigin.Search("banda"), requireNotNull(callback.lastArgs).getQueueOrigin())
     }
 
     // ── Refusals: connected, declined by a guard, and silent (D62) ──

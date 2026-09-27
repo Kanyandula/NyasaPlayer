@@ -34,4 +34,9 @@ data class PlaybackState(
     val queueIndex: Int = 0,
     val repeatMode: String = "Off",
     val savedAt: Long? = null,
+    // Queue origin as primitives; decoded by `queueOriginOf` in :core:playback. Blank on states
+    // saved before origins existed.
+    val originKind: String = "",
+    val originId: String = "",
+    val originName: String = "",
 )

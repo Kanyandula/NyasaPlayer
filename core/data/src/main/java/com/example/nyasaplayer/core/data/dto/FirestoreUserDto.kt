@@ -79,6 +79,9 @@ data class FirestorePlaybackStateDto(
     val queueIndex: Int = 0,
     val repeatMode: String = "Off",
     val savedAt: Timestamp? = null,
+    val originKind: String = "",
+    val originId: String = "",
+    val originName: String = "",
 ) {
     fun toDomain() = PlaybackState(
         currentSongId = currentSongId,
@@ -87,6 +90,9 @@ data class FirestorePlaybackStateDto(
         queueIndex = queueIndex,
         repeatMode = repeatMode,
         savedAt = savedAt?.toDate()?.time,
+        originKind = originKind,
+        originId = originId,
+        originName = originName,
     )
 
     companion object {
@@ -97,6 +103,9 @@ data class FirestorePlaybackStateDto(
             queueIndex = state.queueIndex,
             repeatMode = state.repeatMode,
             savedAt = state.savedAt?.let { Timestamp(Date(it)) },
+            originKind = state.originKind,
+            originId = state.originId,
+            originName = state.originName,
         )
     }
 }

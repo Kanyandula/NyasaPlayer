@@ -21,7 +21,11 @@ class PlaybackQueueManager @Inject constructor() {
     var isShuffled: Boolean = false
         private set
 
-    fun setQueue(songs: List<Song>, startSong: Song): Song = synchronized(lock) {
+    var origin: QueueOrigin = QueueOrigin.None
+        private set
+
+    fun setQueue(songs: List<Song>, startSong: Song, origin: QueueOrigin): Song = synchronized(lock) {
+        this.origin = origin
         originalQueue = songs
         queue = songs
         isShuffled = false
@@ -29,15 +33,17 @@ class PlaybackQueueManager @Inject constructor() {
         queue[currentIndex]
     }
 
-    fun restoreQueue(orderedSongs: List<Song>, index: Int): Unit = synchronized(lock) {
+    fun restoreQueue(orderedSongs: List<Song>, index: Int, origin: QueueOrigin): Unit = synchronized(lock) {
+        this.origin = origin
         originalQueue = orderedSongs
         queue = orderedSongs
         isShuffled = false
         currentIndex = index.coerceIn(0, orderedSongs.lastIndex)
     }
 
-    fun setQueueShuffled(songs: List<Song>): Song? = synchronized(lock) {
+    fun setQueueShuffled(songs: List<Song>, origin: QueueOrigin): Song? = synchronized(lock) {
         if (songs.isEmpty()) return null
+        this.origin = origin
         originalQueue = songs
         queue = songs.shuffled()
         isShuffled = true
@@ -62,7 +68,8 @@ class PlaybackQueueManager @Inject constructor() {
     /**
      * Adopts [player]'s playlist when it was set by something other than this manager — the media
      * template, Assistant or Bluetooth play through `onAddMediaItems`, which never touches the queue.
-     * A playlist this manager already holds keeps its order and shuffle state.
+     * A playlist this manager already holds keeps its order, shuffle state and origin; an adopted one
+     * has no origin to name.
      *
      * ponytail: [queue] and [currentIndex] now mirror the player; making the player the only source
      * of truth (keeping just the pre-shuffle order here) removes this sync, at the cost of rewriting
@@ -73,6 +80,7 @@ class PlaybackQueueManager @Inject constructor() {
         // Ids first: our own applyQueueToPlayer changes match, and skip toSong()'s JSON parse.
         if (ids != queueSongIds()) {
             originalQueue = readQueue(player)
+            origin = QueueOrigin.None
             queue = originalQueue
             isShuffled = false
         }

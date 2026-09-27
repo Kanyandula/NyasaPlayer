@@ -82,7 +82,7 @@ class TemplateQueueSyncTest {
 
     @Test
     fun template_playback_replaces_a_stale_launcher_queue() {
-        queueManager.setQueueShuffled(songs.values.toList())
+        queueManager.setQueueShuffled(songs.values.toList(), QueueOrigin.AllSongs)
         applyQueueManagerToPlayer()
 
         playFromTemplate(listOf("c"), startIndex = 0)
@@ -90,17 +90,20 @@ class TemplateQueueSyncTest {
         assertEquals(listOf("c"), queueManager.queueSongIds())
         assertEquals(0, queueManager.currentIndex)
         assertEquals(false, queueManager.isShuffled)
+        // The launcher's origin described the old queue, not this one.
+        assertEquals(QueueOrigin.None, queueManager.origin)
     }
 
     @Test
     fun launcher_queue_keeps_its_shuffle_state_when_applied_to_the_player() {
-        queueManager.setQueueShuffled(songs.values.toList())
+        queueManager.setQueueShuffled(songs.values.toList(), QueueOrigin.Favourites)
         val shuffledOrder = queueManager.queueSongIds()
 
         applyQueueManagerToPlayer()
 
         assertTrue(queueManager.isShuffled)
         assertEquals(shuffledOrder, queueManager.queueSongIds())
+        assertEquals(QueueOrigin.Favourites, queueManager.origin)
     }
 
     @Test
