@@ -22,6 +22,7 @@ data class RestoredPlayback(
     val song: Song,
     val positionMs: Long,
     val repeatMode: RepeatMode,
+    val origin: QueueOrigin = QueueOrigin.None,
 )
 
 @Singleton
@@ -44,13 +45,14 @@ class PlaybackStatePersistence @Inject constructor(
         queueSongIds: List<String>,
         queueIndex: Int,
         repeatMode: RepeatMode,
+        origin: QueueOrigin,
     ) {
         val uid = userId ?: return
         scope.launch {
             try {
                 userRepository.savePlaybackState(
                     uid,
-                    buildState(currentSong, positionMs, queueSongIds, queueIndex, repeatMode),
+                    buildState(currentSong, positionMs, queueSongIds, queueIndex, repeatMode, origin),
                 )
             } catch (e: CancellationException) {
                 throw e
@@ -67,6 +69,7 @@ class PlaybackStatePersistence @Inject constructor(
         queueSongIds: List<String>,
         queueIndex: Int,
         repeatMode: RepeatMode,
+        origin: QueueOrigin,
     ) {
         val uid = userId ?: return
         val song = currentSong ?: return
@@ -75,7 +78,7 @@ class PlaybackStatePersistence @Inject constructor(
                 try {
                     userRepository.savePlaybackState(
                         uid,
-                        buildState(song, positionMs, queueSongIds, queueIndex, repeatMode),
+                        buildState(song, positionMs, queueSongIds, queueIndex, repeatMode, origin),
                     )
                 } catch (_: Exception) {
                     // Silent fail — final save is best-effort
@@ -120,6 +123,7 @@ class PlaybackStatePersistence @Inject constructor(
                 song = restoredSong,
                 positionMs = saved.positionMs,
                 repeatMode = restoredRepeatMode,
+                origin = queueOriginOf(saved.originKind, saved.originId, saved.originName),
             )
         } catch (e: CancellationException) {
             throw e
@@ -134,12 +138,19 @@ class PlaybackStatePersistence @Inject constructor(
         queueSongIds: List<String>,
         queueIndex: Int,
         repeatMode: RepeatMode,
-    ) = PlaybackState(
-        currentSongId = currentSong.mediaId,
-        positionMs = positionMs,
-        queueSongIds = queueSongIds,
-        queueIndex = queueIndex,
-        repeatMode = repeatMode.name,
-        savedAt = System.currentTimeMillis(),
-    )
+        origin: QueueOrigin,
+    ): PlaybackState {
+        val (originKind, originId, originName) = origin.toFields()
+        return PlaybackState(
+            currentSongId = currentSong.mediaId,
+            positionMs = positionMs,
+            queueSongIds = queueSongIds,
+            queueIndex = queueIndex,
+            repeatMode = repeatMode.name,
+            savedAt = System.currentTimeMillis(),
+            originKind = originKind,
+            originId = originId,
+            originName = originName,
+        )
+    }
 }

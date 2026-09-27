@@ -300,7 +300,7 @@ class PlaybackService : MediaLibraryService() {
         val startIndex = args.getInt(PlaybackCommands.KEY_START_INDEX, 0)
         val startSong = songs.getOrNull(startIndex) ?: songs.first()
 
-        queueManager.setQueue(songs, startSong)
+        queueManager.setQueue(songs, startSong, args.getQueueOrigin())
         applyQueueToPlayer()
         exoPlayer.play()
     }
@@ -310,7 +310,7 @@ class PlaybackService : MediaLibraryService() {
         val songs = songsBundle.toSongList()
         if (songs.isEmpty()) return
 
-        queueManager.setQueueShuffled(songs)
+        queueManager.setQueueShuffled(songs, args.getQueueOrigin())
         applyQueueToPlayer()
         exoPlayer.play()
     }
@@ -329,7 +329,7 @@ class PlaybackService : MediaLibraryService() {
             RepeatMode.Off
         }
 
-        queueManager.restoreQueue(songs, index)
+        queueManager.restoreQueue(songs, index, args.getQueueOrigin())
         applyRepeatMode(repeatMode)
         applyQueueToPlayer()
         exoPlayer.seekTo(queueManager.currentIndex, positionMs)
@@ -458,6 +458,7 @@ class PlaybackService : MediaLibraryService() {
             queueManager.queueSongIds(),
             queueManager.currentIndex,
             currentRepeatMode(),
+            queueManager.origin,
         )
     }
 
@@ -469,6 +470,7 @@ class PlaybackService : MediaLibraryService() {
             queueManager.queueSongIds(),
             queueManager.currentIndex,
             currentRepeatMode(),
+            queueManager.origin,
         )
     }
 
