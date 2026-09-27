@@ -1,11 +1,17 @@
 package com.example.nyasaplayer.core.playback
 
 import android.content.Context
+import android.os.Bundle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.ExecutionException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,6 +38,22 @@ class ControllerConnection @Inject constructor(
     private val lock = Any()
     private var future: ListenableFuture<MediaController>? = null
     private var consumers = 0
+
+    private val _queueOrigin = MutableStateFlow<QueueOrigin>(QueueOrigin.None)
+
+    /**
+     * The service's queue origin, which it publishes as session extras (T02).
+     *
+     * Here rather than on each collector because a controller takes exactly one
+     * [MediaController.Listener], at build time, and every collector shares this connection's.
+     */
+    val queueOrigin: StateFlow<QueueOrigin> = _queueOrigin.asStateFlow()
+
+    private val extrasListener = object : MediaController.Listener {
+        override fun onExtrasChanged(controller: MediaController, extras: Bundle) {
+            _queueOrigin.value = extras.getQueueOrigin()
+        }
+    }
 
     /**
      * The current connection, building one if nobody holds it yet.
@@ -69,5 +91,19 @@ class ControllerConnection @Inject constructor(
     }
 
     private fun build(): ListenableFuture<MediaController> =
-        MediaController.Builder(context, sessionToken).buildAsync()
+        MediaController.Builder(context, sessionToken).setListener(extrasListener).buildAsync().also { built ->
+            // Extras set before this controller connected arrive with the connection, not as a change.
+            built.addListener(
+                {
+                    try {
+                        _queueOrigin.value = built.get().sessionExtras.getQueueOrigin()
+                    } catch (_: ExecutionException) {
+                        // Never connected; the collectors report that themselves.
+                    } catch (_: java.util.concurrent.CancellationException) {
+                        // Released before it connected.
+                    }
+                },
+                MoreExecutors.directExecutor(),
+            )
+        }
 }

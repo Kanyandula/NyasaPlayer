@@ -1,6 +1,7 @@
 package com.example.nyasaplayer.core.playback
 
 import android.content.Context
+import android.os.Bundle
 import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -46,7 +47,9 @@ class TemplateQueueSyncTest {
         player.addListener(
             object : Player.Listener {
                 override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-                    if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) queueManager.syncWith(player)
+                    if (reason != Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) return
+                    queueManager.syncWith(player)
+                    session.setSessionExtras(Bundle().apply { putQueueOrigin(queueManager.origin) })
                 }
             },
         )
@@ -92,6 +95,7 @@ class TemplateQueueSyncTest {
         assertEquals(false, queueManager.isShuffled)
         // The launcher's origin described the old queue, not this one.
         assertEquals(QueueOrigin.None, queueManager.origin)
+        assertEquals(QueueOrigin.None, controller.sessionExtras.getQueueOrigin())
     }
 
     @Test
@@ -104,6 +108,7 @@ class TemplateQueueSyncTest {
         assertTrue(queueManager.isShuffled)
         assertEquals(shuffledOrder, queueManager.queueSongIds())
         assertEquals(QueueOrigin.Favourites, queueManager.origin)
+        assertEquals(QueueOrigin.Favourites, controller.sessionExtras.getQueueOrigin())
     }
 
     @Test

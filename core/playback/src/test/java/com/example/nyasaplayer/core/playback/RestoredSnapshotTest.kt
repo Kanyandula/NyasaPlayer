@@ -54,19 +54,23 @@ class RestoredSnapshotTest {
         index: Int,
         positionMs: Long = 0L,
         repeatMode: RepeatMode = RepeatMode.Off,
+        origin: QueueOrigin = QueueOrigin.None,
     ) = RestoredPlayback(
         queue = queue,
         index = index,
         song = queue[index],
         positionMs = positionMs,
         repeatMode = repeatMode,
+        origin = origin,
     )
 
     @Test
     fun applyRestored_publishesEveryFieldFromTheRestoredValue() {
         val queue = listOf(song("a"), song("b", durationMs = 222_000L), song("c"))
 
-        collector.applyRestored(restored(queue, index = 1, positionMs = 42_000L, RepeatMode.One))
+        val origin = QueueOrigin.Playlist(id = "p1", name = "Road Trip")
+
+        collector.applyRestored(restored(queue, index = 1, positionMs = 42_000L, RepeatMode.One, origin))
 
         val snapshot = collector.playbackState.value
         assertEquals("b", snapshot.currentSong?.mediaId)
@@ -76,6 +80,7 @@ class RestoredSnapshotTest {
         assertEquals(queue, snapshot.queue)
         assertEquals(3, snapshot.queueSize)
         assertEquals(1, snapshot.currentQueueIndex)
+        assertEquals(origin, snapshot.queueOrigin)
     }
 
     @Test
