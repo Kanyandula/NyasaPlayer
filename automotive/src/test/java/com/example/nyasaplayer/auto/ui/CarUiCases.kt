@@ -143,12 +143,6 @@ private fun CarUiCase.scrolling() = copy(scrollsList = true)
  */
 internal const val MeasurementQualifiers = "w1280dp-h800dp-xhdpi"
 
-/**
- * The full player's real height: the app window on the reference AVD (1080x600px at 120dpi) once
- * the OS status and climate bars are taken, per `dumpsys window` (h628dp). The 800dp canvas above
- * let a clipped Up Next strip pass (T05); see the harness-height entry in docs/BACKLOG.md.
- */
-private val AppWindowHeight = 628.dp
 
 /**
  * Renders each case in turn and hands it to [measure] once it is idle.
@@ -307,6 +301,19 @@ private fun InCrampedContentSlot(content: @Composable BoxScope.() -> Unit) {
  * live in — not a number chosen to make a point.
  */
 private val CrampedSlotHeight = 372.dp
+
+/** A full-window overlay at the height the app really gets, clipped so overflow reads as cut off. */
+@Composable
+private fun InAppWindow(content: @Composable BoxScope.() -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth().height(AppWindowHeight).clipToBounds(), content = content)
+}
+
+/**
+ * The app window on the reference AVD (1080x600px at 120dpi) once the OS status and climate bars
+ * are taken, per `dumpsys window` (h628dp). The 800dp canvas let a clipped Up Next strip pass
+ * (T05); see the harness-height entry in docs/BACKLOG.md.
+ */
+private val AppWindowHeight = 628.dp
 
 // ── Fixture data ──
 
@@ -795,7 +802,7 @@ private fun playerCases(): List<CarUiCase> = listOf(
     Triple("empty queue (no up next)", PausedSnapshot.copy(queue = emptyList(), queueSize = 0, currentQueueIndex = -1), false),
 ).map { (state, playback, liked) ->
     CarUiCase("CarFullPlayerScreen/$state") {
-        Box(modifier = Modifier.fillMaxWidth().height(AppWindowHeight).clipToBounds()) {
+        InAppWindow {
             CarFullPlayerScreen(
                 playback = playback,
                 onCollapseClick = {},
