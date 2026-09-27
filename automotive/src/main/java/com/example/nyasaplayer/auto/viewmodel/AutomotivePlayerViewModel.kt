@@ -177,7 +177,7 @@ class AutomotivePlayerViewModel @Inject constructor(
             extractor = artworkThemeExtractor,
         ).onEach { theme ->
             _uiState.update { it.copy(artworkTheme = theme) }
-        }.catch { /* The extractor never throws; a failed theme is the default one */ }
+        }.catch { /* Artwork theme flow is internal — errors are non-fatal */ }
             .launchIn(viewModelScope)
     }
 

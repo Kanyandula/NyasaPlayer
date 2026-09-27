@@ -16,13 +16,13 @@ import kotlinx.coroutines.flow.mapLatest
  * A cover of null (nothing playing) is the default theme, applied once parked.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-fun appliedArtworkTheme(
+internal fun appliedArtworkTheme(
     coverUrls: Flow<String?>,
     isDriving: Flow<Boolean>,
     extractor: ArtworkThemeExtractor,
 ): Flow<ArtworkTheme> = combine(
+    // Deduped here, not downstream: the snapshot ticks with every position poll.
     coverUrls.distinctUntilChanged().mapLatest(extractor::themeFor),
-    isDriving.distinctUntilChanged(),
+    isDriving,
 ) { theme, driving -> theme.takeUnless { driving } }
     .filterNotNull()
-    .distinctUntilChanged()

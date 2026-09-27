@@ -11,10 +11,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * T07 / D-T38.6: the car paints a new artwork theme only while parked. Driving holds whatever is
- * on screen; parking applies the current cover's theme.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppliedArtworkThemeTest {
 
@@ -33,10 +29,10 @@ class AppliedArtworkThemeTest {
 
     private fun finish(url: String, theme: ArtworkTheme) = pending.getValue(url).complete(theme)
 
-    private fun TestScope.applied(): List<ArtworkTheme> {
+    private fun TestScope.applied(using: ArtworkThemeExtractor = extractor): List<ArtworkTheme> {
         val out = mutableListOf<ArtworkTheme>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            appliedArtworkTheme(cover, driving, extractor).toList(out)
+            appliedArtworkTheme(cover, driving, using).toList(out)
         }
         return out
     }
@@ -111,11 +107,7 @@ class AppliedArtworkThemeTest {
     @Test
     fun the_same_cover_on_the_next_track_is_not_extracted_again() = runTest {
         var extractions = 0
-        val counting = ArtworkThemeExtractor { extractions++; themeA }
-        val out = mutableListOf<ArtworkTheme>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            appliedArtworkTheme(cover, driving, counting).toList(out)
-        }
+        applied(using = ArtworkThemeExtractor { extractions++; themeA })
 
         cover.value = "album"
         cover.value = "album"
