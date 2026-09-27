@@ -201,6 +201,7 @@ car UI body styles are typically far larger. Treat 14px as the floor to revisit,
 | White on sign-out fill `#C62828` (sign-out confirm, queue "Remove") | 5.6:1 | AA |
 | Error text `#FF8A80` (`CarErrorText`) on the auth screen's root background `#0D0D0D` | 8.5:1 | AAA |
 | Secondary `#ACACBC` on the dimmed ambient glow, worst drift frame (`#121E2B`) | 7.5:1 | AAA |
+| Secondary `#ACACBC` on the brightest artwork-derived glow — a white cover, conditioned, worst drift frame (`#1A1A1A`, measured; ratio computed from it) | 7.8:1 | AAA |
 | Gold `#C9A84C` nav-rail label on its 8% gold pill over chrome (`#201D1C`) | 7.3:1 | AAA |
 | Sign-out fill `#C62828` against card `#181824` (edge, non-text) | 3.1:1 | passes the 3:1 UI bar |
 | Disabled `#555568` on base | 2.7:1 | exempt — disabled text |
@@ -222,7 +223,17 @@ frame where its drift carries it furthest into the content region. Four rows are
 measured by it: the two on base `#0A0A0C` (the app paints `#0D0D0D`), the disabled row (exempt) and
 the non-text fill edge. The glow was the surface the flat-surface figures missed: at full strength
 it took secondary text to 5.5:1. Its tints' alphas (`CarAmbientBlue`, `CarAmbientPurple`) now cap
-each centre at no lighter than raised `#1E1E2A`, and the same test checks that cap. The nav-rail
+each centre at no lighter than raised `#1E1E2A`, and the same test checks that cap.
+
+**The glow follows the artwork, and the artwork supplies only hue (T38, 2026-09-27).** A white cover
+at the tints' alphas would take secondary text to 5.8:1, so every artwork colour is blended toward
+the root background until it composites no lighter than raised `#1E1E2A` (`ArtworkTheme.kt`). The
+two ambient tints are conditioned **as a stacked pair**, not one by one: each at the ceiling on its
+own went over it where the circles overlap at the drift's lowest frame (L 0.0144 against 0.0137),
+and stacked is the worst any window shape can do. The full player's glow is a single layer and
+keeps its own ceiling. `CarTextContrastMeasurementTest` measures white, yellow and cyan covers
+behind content at both drift frames and in a square window, and a raw white theme as a negative
+control that must break the ceiling. The nav-rail
 pill was 12% gold (6.75:1 for its label); it is 8%, not the 10% that first cleared 7:1, to keep a
 margin off the limit.
 
@@ -942,15 +953,16 @@ density before judging compliance; at ~1.0 density they map 1:1, above that they
 
 Motion is gated on the vehicle's UX-restriction state, not on taste.
 
-- **Parked:** the ambient background gradients may drift slowly, and their hue may follow the
-  current track's artwork. Screen changes cross-fade, and the navigation rail's active pill
-  slides between items.
-- **Driving:** all decorative motion stops. The ambient gradients freeze in place. Only motion
-  that carries information continues — the progress bar, the clock, and the play/pause state.
+- **Parked:** the ambient background gradients may drift slowly, and their hue follows the
+  current track's artwork, easing to a new cover's hue over 1.5s. The full player's glow follows it
+  too. Screen changes cross-fade, and the navigation rail's active pill slides between items.
+- **Driving:** all decorative motion stops. The ambient gradients freeze in place, and the artwork
+  hue holds: a track change while driving applies its hue only once parked. Only motion that
+  carries information continues — the progress bar, the clock, and the play/pause state.
 
 Nothing auto-scrolls, pulses, or parallaxes in either state. If the platform animator duration
 scale is `0` (`Settings.Global.ANIMATOR_DURATION_SCALE`), the decorative layer is disabled
-entirely even while parked.
+entirely even while parked. A parked artwork hue change still lands then, without easing.
 
 The original design doc recorded "no decorative motion" as a flat rule. Gating on parked
 vs driving is the same safety position, stated more precisely: it is motion *while the vehicle
