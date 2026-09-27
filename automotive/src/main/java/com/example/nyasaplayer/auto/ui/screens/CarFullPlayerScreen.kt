@@ -57,6 +57,7 @@ import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.icons.ChevronRightIcon
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
+import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatOneIcon
 import com.example.nyasaplayer.core.common.ui.icons.ShuffleIcon
@@ -69,8 +70,6 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
-// The Now Playing design's sizes, centred as drawn: on a window wider than its 1024dp the spare
-// width goes to the margins.
 private val FullPlayerAlbumArtSize = 320.dp
 
 /** The design's right column; the transport row nearly fills it, as drawn. */
@@ -195,7 +194,6 @@ fun CarFullPlayerScreen(
                 onLikeClick = onLikeClick,
                 onQueueClick = onQueueClick,
                 modifier = Modifier
-                    .weight(1f, fill = false)
                     .widthIn(max = PanelMaxWidth)
                     .fillMaxHeight(),
             )
@@ -275,15 +273,23 @@ private fun UpNextStrip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(UpNextGap),
     ) {
-        AsyncImage(
-            model = song?.resolvedCoverUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(UpNextArtSize)
-                .clip(RoundedCornerShape(UpNextArtCorner))
-                .background(CarRaised),
-        )
+        val tile = Modifier
+            .size(UpNextArtSize)
+            .clip(RoundedCornerShape(UpNextArtCorner))
+            .background(CarRaised)
+        if (song != null) {
+            AsyncImage(
+                model = song.resolvedCoverUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = tile,
+            )
+        } else {
+            // A queue glyph, not an empty tile that reads as artwork that failed to load.
+            Box(modifier = tile, contentAlignment = Alignment.Center) {
+                Icon(QueueMusicIcon, contentDescription = null, tint = MutedColor)
+            }
+        }
         Column(modifier = Modifier.weight(1f)) {
             PlayerCaption("UP NEXT")
             Text(
