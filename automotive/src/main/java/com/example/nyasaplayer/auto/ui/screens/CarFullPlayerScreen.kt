@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +45,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -70,10 +72,19 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
-private val FullPlayerAlbumArtSize = 320.dp
+/**
+ * The art is a square bounded by the height the window gives it and by a third of its width, so on
+ * a head unit wider than the design's 1024dp it grows with the screen rather than leaving the spare
+ * width as margin. [ArtMaxSize] to [PanelMaxWidth] keeps the design's 320:536 proportion.
+ */
+private val ArtMinSize = 320.dp
+private val ArtMaxSize = 480.dp
+private const val ArtWidthDivisor = 3
+private val ArtToPanelGap = 48.dp
+private val VerticalPadding = 24.dp
 
-/** The design's right column; the transport row nearly fills it, as drawn. */
-private val PanelMaxWidth = 536.dp
+/** The design's right column, at the width a 1440dp window can give it. */
+private val PanelMaxWidth = 760.dp
 private val AlbumArtCorner = 28.dp
 private val DefaultGlow = Color(ArtworkThemeDefaults.theme.fullPlayerGlow)
 private val PlayButtonSize = 96.dp
@@ -90,6 +101,7 @@ private val ControlsGap = 22.dp
 private val SourceLabelGap = 14.dp
 
 private val TitleSize = 48.sp
+private const val TitleMaxLines = 2
 private val TitleTracking = (-0.03).em
 private val TitleLineHeight = 1.04.em
 private const val TabularDigits = "tnum"
@@ -147,13 +159,14 @@ fun CarFullPlayerScreen(
     // The artwork's hue, pre-darkened to the CarRaised ceiling by the player's ArtworkTheme (T38).
     val glowColor by animateDecorativeColor(glow, animateGlow)
 
-    Box(
+    BoxWithConstraints(
         // Opaque for the same reason as the queue: a full-screen overlay, outside the chrome
         // contract (spec 2.2).
         modifier = modifier
             .fillMaxSize()
             .background(NyasaBackground),
     ) {
+        val artSize = artSizeFor(maxWidth, maxHeight)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -166,18 +179,18 @@ fun CarFullPlayerScreen(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = CarScreenMargin, vertical = 24.dp),
+                .padding(horizontal = CarScreenMargin, vertical = VerticalPadding),
             verticalAlignment = Alignment.CenterVertically,
-            // Centred: on a window wider than the design's, the spare width goes to the margins,
-            // not into a stretched column with empty space after the transport row.
-            horizontalArrangement = Arrangement.spacedBy(48.dp, Alignment.CenterHorizontally),
+            // Centred, though little is left to centre: art and panel both grow with the window,
+            // so the remainder is a few dp rather than the 440 the fixed sizes left at 1440dp.
+            horizontalArrangement = Arrangement.spacedBy(ArtToPanelGap, Alignment.CenterHorizontally),
         ) {
             AsyncImage(
                 model = song?.resolvedCoverUrl,
                 contentDescription = song?.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(FullPlayerAlbumArtSize)
+                    .size(artSize)
                     .clip(RoundedCornerShape(AlbumArtCorner)),
             )
 
@@ -194,6 +207,8 @@ fun CarFullPlayerScreen(
                 onLikeClick = onLikeClick,
                 onQueueClick = onQueueClick,
                 modifier = Modifier
+                    // No weight: the panel's rows fill the width they are offered, so the cap alone
+                    // sizes it to whatever is left beside the art (5db7634 removed the same no-op).
                     .widthIn(max = PanelMaxWidth)
                     .fillMaxHeight(),
             )
@@ -389,7 +404,8 @@ private fun TrackInfo(
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = TitleTracking,
             lineHeight = TitleLineHeight,
-            maxLines = 1,
+            // Two lines: a real track name does not fit one, and the panel has the height for it.
+            maxLines = TitleMaxLines,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
@@ -619,3 +635,7 @@ internal fun PlaybackSnapshot.moreAfterUpNext(): Int {
 
 private fun titleAndArtist(song: Song) =
     listOf(song.title, song.resolvedArtistName).filter(String::isNotBlank).joinToString(" · ")
+
+/** A square bounded by the height the window gives it and by a third of its width. */
+private fun artSizeFor(maxWidth: Dp, maxHeight: Dp): Dp =
+    minOf(maxHeight - VerticalPadding * 2, maxWidth / ArtWidthDivisor).coerceIn(ArtMinSize, ArtMaxSize)
