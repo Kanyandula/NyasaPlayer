@@ -4,10 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.TextUnitType
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -94,17 +91,9 @@ class CarTextSizeMeasurementTest {
         /** Sub-point differences are rounding in the layout, not a design decision. */
         const val Slack = 0.5f
 
-        val HasText = SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)
-
-        fun SemanticsNode.text(): String =
-            config.getOrNull(SemanticsProperties.Text)?.joinToString(" ")?.trim().orEmpty()
-
-        /** The size the text was laid out at, asked of the node itself rather than assumed. */
+        /** The size the text was laid out at. */
         fun SemanticsNode.fontSizeSp(): Float? {
-            val action = config.getOrNull(SemanticsActions.GetTextLayoutResult) ?: return null
-            val results = mutableListOf<TextLayoutResult>()
-            action.action?.invoke(results)
-            val size = results.firstOrNull()?.layoutInput?.style?.fontSize ?: return null
+            val size = textLayout()?.layoutInput?.style?.fontSize ?: return null
             return if (size.type == TextUnitType.Sp) size.value else null
         }
 

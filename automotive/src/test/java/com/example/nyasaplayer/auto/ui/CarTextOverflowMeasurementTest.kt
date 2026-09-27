@@ -1,13 +1,7 @@
 package com.example.nyasaplayer.auto.ui
 
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.text.TextLayoutResult
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -57,7 +51,7 @@ class CarTextOverflowMeasurementTest {
                 val text = node.text()
                 if (text.isBlank()) return@forEach
                 // No layout result: unmeasurable, and counted as such rather than passing quietly.
-                val overflows = node.overflows() ?: run {
+                val overflows = node.textLayout()?.hasVisualOverflow ?: run {
                     skipped++
                     return@forEach
                 }
@@ -91,18 +85,5 @@ class CarTextOverflowMeasurementTest {
             // The queue origin on the full player's top bar, beside a 76dp collapse and a 76dp like.
             "Late Night Drive Through the Rift Valley Highlands",
         )
-
-        val HasText = SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)
-
-        fun SemanticsNode.text(): String =
-            config.getOrNull(SemanticsProperties.Text)?.joinToString(" ")?.trim().orEmpty()
-
-        /** Whether the layout cut the text, asked of the node itself rather than assumed. */
-        fun SemanticsNode.overflows(): Boolean? {
-            val action = config.getOrNull(SemanticsActions.GetTextLayoutResult) ?: return null
-            val results = mutableListOf<TextLayoutResult>()
-            action.action?.invoke(results)
-            return results.firstOrNull()?.hasVisualOverflow
-        }
     }
 }

@@ -75,7 +75,7 @@ import com.example.nyasaplayer.core.playback.RepeatMode
 /**
  * The art is a square bounded by the height the window gives it and by a third of its width, so on
  * a head unit wider than the design's 1024dp it grows with the screen rather than leaving the spare
- * width as margin. [ArtMaxSize] to [PanelMaxWidth] keeps the design's 320:536 proportion.
+ * width as margin.
  */
 private val ArtMinSize = 320.dp
 private val ArtMaxSize = 480.dp
@@ -83,7 +83,7 @@ private const val ArtWidthDivisor = 3
 private val ArtToPanelGap = 48.dp
 private val VerticalPadding = 24.dp
 
-/** The design's right column, at the width a 1440dp window can give it. */
+/** The cap on the design's right column, which otherwise takes the width left beside the art. */
 private val PanelMaxWidth = 760.dp
 private val AlbumArtCorner = 28.dp
 private val DefaultGlow = Color(ArtworkThemeDefaults.theme.fullPlayerGlow)
@@ -101,7 +101,6 @@ private val ControlsGap = 22.dp
 private val SourceLabelGap = 14.dp
 
 private val TitleSize = 48.sp
-private const val TitleMaxLines = 2
 private val TitleTracking = (-0.03).em
 private val TitleLineHeight = 1.04.em
 private const val TabularDigits = "tnum"
@@ -181,8 +180,7 @@ fun CarFullPlayerScreen(
                 .fillMaxSize()
                 .padding(horizontal = CarScreenMargin, vertical = VerticalPadding),
             verticalAlignment = Alignment.CenterVertically,
-            // Centred, though little is left to centre: art and panel both grow with the window,
-            // so the remainder is a few dp rather than the 440 the fixed sizes left at 1440dp.
+            // Centred: art and panel both grow with the window, so only the remainder is margin.
             horizontalArrangement = Arrangement.spacedBy(ArtToPanelGap, Alignment.CenterHorizontally),
         ) {
             AsyncImage(
@@ -208,7 +206,7 @@ fun CarFullPlayerScreen(
                 onQueueClick = onQueueClick,
                 modifier = Modifier
                     // No weight: the panel's rows fill the width they are offered, so the cap alone
-                    // sizes it to whatever is left beside the art (5db7634 removed the same no-op).
+                    // sizes it to whatever is left beside the art.
                     .widthIn(max = PanelMaxWidth)
                     .fillMaxHeight(),
             )
@@ -405,7 +403,7 @@ private fun TrackInfo(
             letterSpacing = TitleTracking,
             lineHeight = TitleLineHeight,
             // Two lines: a real track name does not fit one, and the panel has the height for it.
-            maxLines = TitleMaxLines,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
