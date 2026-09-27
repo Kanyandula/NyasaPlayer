@@ -34,6 +34,8 @@ class AutomotiveApplication : Application(), ImageLoaderFactory {
     /**
      * The mobile app's cache policy (`NyasaPlayerApplication`), so the artwork theme's samples and
      * the covers on screen share one disk cache instead of each fetching the cover (T38 / D-T38.2).
+     * Not its crossfade: that animates every cover as it loads, driving or not (FR-2.8), and the
+     * car's default loader never did.
      */
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this)
@@ -44,7 +46,6 @@ class AutomotiveApplication : Application(), ImageLoaderFactory {
                     .maxSizePercent(IMAGE_CACHE_MAX_SIZE_PERCENT)
                     .build()
             }
-            .crossfade(true)
             .build()
 
     private companion object {
