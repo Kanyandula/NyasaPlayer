@@ -46,11 +46,11 @@ fun queueOriginOf(kind: String?, id: String?, name: String?): QueueOrigin {
     val named = n.isNotBlank()
     val identified = named && i.isNotBlank()
     return when (kind) {
-        KindPlaylist -> if (identified) QueueOrigin.Playlist(i, n) else null
-        KindAlbum -> if (identified) QueueOrigin.Album(i, n) else null
-        KindArtist -> if (identified) QueueOrigin.Artist(i, n) else null
-        KindGenre -> if (named) QueueOrigin.Genre(n) else null
-        KindSearch -> if (named) QueueOrigin.Search(n) else null
+        KindPlaylist -> QueueOrigin.Playlist(i, n).takeIf { identified }
+        KindAlbum -> QueueOrigin.Album(i, n).takeIf { identified }
+        KindArtist -> QueueOrigin.Artist(i, n).takeIf { identified }
+        KindGenre -> QueueOrigin.Genre(n).takeIf { named }
+        KindSearch -> QueueOrigin.Search(n).takeIf { named }
         KindFavourites -> QueueOrigin.Favourites
         KindDownloads -> QueueOrigin.Downloads
         KindRecentlyPlayed -> QueueOrigin.RecentlyPlayed
