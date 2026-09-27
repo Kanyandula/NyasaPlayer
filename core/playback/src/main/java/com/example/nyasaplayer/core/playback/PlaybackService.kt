@@ -425,7 +425,12 @@ class PlaybackService : MediaLibraryService() {
 
     private val playerListener = object : Player.Listener {
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
-            if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) queueManager.syncWith(exoPlayer)
+            if (reason != Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) return
+            queueManager.syncWith(exoPlayer)
+            // Every queue change passes here — the custom commands, restore, and external controllers —
+            // so this is the one place the origin is published. Session extras, not per-item metadata:
+            // the origin belongs to the whole queue.
+            mediaSession?.setSessionExtras(Bundle().apply { putQueueOrigin(queueManager.origin) })
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {

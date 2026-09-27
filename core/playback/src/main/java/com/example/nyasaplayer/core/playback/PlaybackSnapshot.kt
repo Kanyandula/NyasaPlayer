@@ -17,4 +17,6 @@ data class PlaybackSnapshot(
     val currentQueueIndex: Int = -1,
     /** Trying to play. True through buffering, unlike [isPlaying]; false for a restored-but-paused session. */
     val playWhenReady: Boolean = false,
+    /** Where the queue came from, published by the service as session extras. */
+    val queueOrigin: QueueOrigin = QueueOrigin.None,
 )

@@ -72,6 +72,9 @@ abstract class BasePlayerStateCollector(
     protected open fun onControllerFoundDisconnected() {}
 
     fun connectController() {
+        collectorScope.launch {
+            connection.queueOrigin.collect { origin -> _playbackState.update { it.copy(queueOrigin = origin) } }
+        }
         val mediaControllerFuture = connection.acquire()
         mediaControllerFuture.addListener(
             {
@@ -380,6 +383,7 @@ fun BasePlayerStateCollector.applyRestored(restored: RestoredPlayback) {
             queue = restored.queue,
             queueSize = restored.queue.size,
             currentQueueIndex = restored.index,
+            queueOrigin = restored.origin,
         )
     }
 }
