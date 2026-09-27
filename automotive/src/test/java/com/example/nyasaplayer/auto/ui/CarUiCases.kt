@@ -782,6 +782,9 @@ private fun playerCases(): List<CarUiCase> = listOf(
     Triple("playing, liked, shuffle on, repeat all", PlayingSnapshot, true),
     Triple("paused, unliked, shuffle off, repeat off", PausedSnapshot, false),
     Triple("buffering, repeat one", BufferingSnapshot, true),
+    // Up Next (T04): PlayingSnapshot above has a next item; these are the two shapes without one.
+    Triple("last track, repeat off (no up next)", PausedSnapshot.copy(currentQueueIndex = Songs.lastIndex), false),
+    Triple("empty queue (no up next)", PausedSnapshot.copy(queue = emptyList(), queueSize = 0, currentQueueIndex = -1), false),
 ).map { (state, playback, liked) ->
     CarUiCase("CarFullPlayerScreen/$state") {
         CarFullPlayerScreen(

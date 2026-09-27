@@ -44,8 +44,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
+import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
 import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatIcon
@@ -184,6 +186,30 @@ private fun PlayerControlsPanel(
         )
         Spacer(modifier = Modifier.height(16.dp))
         LikeButton(isLiked = isLiked, onClick = onLikeClick)
+        playback.upNext()?.let { next ->
+            Spacer(modifier = Modifier.height(16.dp))
+            UpNextStrip(song = next, onClick = onQueueClick)
+        }
+    }
+}
+
+/** The next track, as a row that opens the queue. [CarTrackRow] keeps it at the list row's height. */
+@Composable
+private fun UpNextStrip(
+    song: Song,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        PlayerCaption("UP NEXT")
+        CarTrackRow(
+            title = song.title,
+            artist = song.resolvedArtistName,
+            duration = formatDuration(song.durationMs),
+            isPlaying = false,
+            onClick = onClick,
+            coverUrl = song.resolvedCoverUrl,
+        )
     }
 }
 
@@ -211,7 +237,7 @@ private fun PlayerTopBar(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(source.heading, color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                PlayerCaption(source.heading)
                 Text(
                     text = source.name,
                     color = Color.White,
@@ -228,6 +254,12 @@ private fun PlayerTopBar(
             onClick = onQueueClick,
         )
     }
+}
+
+/** The small uppercase caption over the source label and the Up Next strip. */
+@Composable
+private fun PlayerCaption(text: String, modifier: Modifier = Modifier) {
+    Text(text, modifier = modifier, color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
 }
 
 @Composable
@@ -448,4 +480,14 @@ private fun buildArtistAlbumText(artist: String?, album: String?): String = buil
     if (!album.isNullOrBlank()) {
         append(" \u2022 $album")
     }
+}
+
+/**
+ * The track after the current one, or null when nothing follows: the queue's next item, or its
+ * first when repeat-all will wrap round to it.
+ */
+internal fun PlaybackSnapshot.upNext(): Song? {
+    if (currentQueueIndex !in queue.indices) return null
+    return queue.getOrNull(currentQueueIndex + 1)
+        ?: queue.first().takeIf { repeatMode == RepeatMode.All && queue.size > 1 }
 }
