@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
@@ -141,6 +142,7 @@ private fun CarUiCase.scrolling() = copy(scrollsList = true)
  * measurement to recover.
  */
 internal const val MeasurementQualifiers = "w1280dp-h800dp-xhdpi"
+
 
 /**
  * Renders each case in turn and hands it to [measure] once it is idle.
@@ -299,6 +301,19 @@ private fun InCrampedContentSlot(content: @Composable BoxScope.() -> Unit) {
  * live in — not a number chosen to make a point.
  */
 private val CrampedSlotHeight = 372.dp
+
+/** A full-window overlay at the height the app really gets, clipped so overflow reads as cut off. */
+@Composable
+private fun InAppWindow(content: @Composable BoxScope.() -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth().height(AppWindowHeight).clipToBounds(), content = content)
+}
+
+/**
+ * The app window on the reference AVD (1080x600px at 120dpi) once the OS status and climate bars
+ * are taken, per `dumpsys window` (h628dp). The 800dp canvas let a clipped Up Next strip pass
+ * (T05); see the harness-height entry in docs/BACKLOG.md.
+ */
+private val AppWindowHeight = 628.dp
 
 // ── Fixture data ──
 
@@ -787,17 +802,19 @@ private fun playerCases(): List<CarUiCase> = listOf(
     Triple("empty queue (no up next)", PausedSnapshot.copy(queue = emptyList(), queueSize = 0, currentQueueIndex = -1), false),
 ).map { (state, playback, liked) ->
     CarUiCase("CarFullPlayerScreen/$state") {
-        CarFullPlayerScreen(
-            playback = playback,
-            onCollapseClick = {},
-            onPlayPauseClick = {},
-            onSkipNextClick = {},
-            onSkipPreviousClick = {},
-            onShuffleClick = {},
-            onRepeatClick = {},
-            onSeek = {},
-            isLiked = liked,
-        )
+        InAppWindow {
+            CarFullPlayerScreen(
+                playback = playback,
+                onCollapseClick = {},
+                onPlayPauseClick = {},
+                onSkipNextClick = {},
+                onSkipPreviousClick = {},
+                onShuffleClick = {},
+                onRepeatClick = {},
+                onSeek = {},
+                isLiked = liked,
+            )
+        }
     }
 }
 

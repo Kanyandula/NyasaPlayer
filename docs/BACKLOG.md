@@ -79,7 +79,10 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   and the climate bar and measured ~347dp. Two card-clipping defects reached a device through a
   green suite because of it, and `the first content card ... drawn whole` still passes on the
   broken build (mutation-checked). Teaching `ContentSlot` the OS chrome would re-baseline all 120
-  cases, so it is its own piece of work.
+  cases, so it is its own piece of work. The full player has the same gap outside the slot: at the
+  800dp canvas T04's Up Next row passed while a 628dp AVD window clipped it off. T05 pins the
+  player cases to 628dp; setting the whole canvas to h628dp also squeezes the loading skeletons on
+  Home, Favourites and the three detail screens, and one Downloads row, which is the rest of this.
 - Detekt never scans test sources. `build.gradle.kts` scopes `source.setFrom(...)` to
   `*/src/main/java` only, so the 80-odd files under `src/test` are unlinted — an unused import in
   `CarTouchTargetMeasurementTest` passed a green `detekt` run and was found by review instead.

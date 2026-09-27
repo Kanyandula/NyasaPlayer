@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -45,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.ui.components.CarTrackRow
+import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Song
@@ -68,6 +68,14 @@ private val PlayButtonSize = 112.dp
 private val SkipButtonSize = 80.dp
 private val BufferingRingStroke = 5.dp
 private val BufferingRingInset = 16.dp
+
+// Sized to fit the app window, 628dp tall on the reference AVD once the car's bars are taken.
+private val PanelSectionGap = 24.dp
+private val UpNextGap = 16.dp
+private val TopBarIconGap = 24.dp
+
+// The design's transport spacing, not a rounding slip: five controls at 23dp fit the panel.
+private val TransportGap = 23.dp
 
 @Suppress("LongParameterList")
 @Composable
@@ -108,7 +116,7 @@ fun CarFullPlayerScreen(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 48.dp, vertical = 24.dp),
+                .padding(horizontal = CarScreenMargin, vertical = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(48.dp),
         ) {
@@ -165,17 +173,19 @@ private fun PlayerControlsPanel(
     ) {
         PlayerTopBar(
             source = playback.queueOrigin.sourceLabel(),
+            isLiked = isLiked,
             onCollapseClick = onCollapseClick,
+            onLikeClick = onLikeClick,
             onQueueClick = onQueueClick,
         )
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(PanelSectionGap))
         TrackInfo(
             title = song?.title ?: "",
             artistAlbum = buildArtistAlbumText(song?.resolvedArtistName, song?.albumName),
         )
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(PanelSectionGap))
         ProgressSlider(playback = playback, onSeek = onSeek)
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(PanelSectionGap))
         MainControls(
             playback = playback,
             onPlayPauseClick = onPlayPauseClick,
@@ -184,10 +194,8 @@ private fun PlayerControlsPanel(
             onShuffleClick = onShuffleClick,
             onRepeatClick = onRepeatClick,
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        LikeButton(isLiked = isLiked, onClick = onLikeClick)
         playback.upNext()?.let { next ->
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(UpNextGap))
             UpNextStrip(song = next, onClick = onQueueClick)
         }
     }
@@ -216,7 +224,9 @@ private fun UpNextStrip(
 @Composable
 private fun PlayerTopBar(
     source: SourceLabel?,
+    isLiked: Boolean,
     onCollapseClick: () -> Unit,
+    onLikeClick: () -> Unit,
     onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -247,12 +257,24 @@ private fun PlayerTopBar(
                 )
             }
         }
-        CircleIconButton(
-            icon = QueueMusicIcon,
-            contentDescription = "Queue",
-            size = CarTouchTargetSize,
-            onClick = onQueueClick,
-        )
+        // Like sits here rather than on a row of its own, which the window has no height for, and
+        // stays out of the transport row.
+        Row(horizontalArrangement = Arrangement.spacedBy(TopBarIconGap)) {
+            CircleIconButton(
+                icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = if (isLiked) "Unlike" else "Like",
+                size = CarTouchTargetSize,
+                iconSize = 24.dp,
+                tint = if (isLiked) NyasaGold else CarTextSecondary,
+                onClick = onLikeClick,
+            )
+            CircleIconButton(
+                icon = QueueMusicIcon,
+                contentDescription = "Queue",
+                size = CarTouchTargetSize,
+                onClick = onQueueClick,
+            )
+        }
     }
 }
 
@@ -343,7 +365,7 @@ private fun MainControls(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.spacedBy(TransportGap, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CircleIconButton(
@@ -353,7 +375,6 @@ private fun MainControls(
             tint = if (playback.isShuffled) NyasaGold else CarTextSecondary,
             onClick = onShuffleClick,
         )
-        Spacer(modifier = Modifier.width(16.dp))
         CircleIconButton(
             icon = SkipPreviousIcon,
             contentDescription = "Previous",
@@ -361,7 +382,6 @@ private fun MainControls(
             iconSize = 36.dp,
             onClick = onSkipPreviousClick,
         )
-        Spacer(modifier = Modifier.width(16.dp))
         Box(
             // Fixed at the button's size so the ring appearing never shifts the skip buttons.
             modifier = Modifier.size(PlayButtonSize),
@@ -372,7 +392,6 @@ private fun MainControls(
                 BufferingRing()
             }
         }
-        Spacer(modifier = Modifier.width(16.dp))
         CircleIconButton(
             icon = SkipNextIcon,
             contentDescription = "Next",
@@ -380,7 +399,6 @@ private fun MainControls(
             iconSize = 36.dp,
             onClick = onSkipNextClick,
         )
-        Spacer(modifier = Modifier.width(16.dp))
 
         val repeatIcon = if (playback.repeatMode == RepeatMode.One) RepeatOneIcon else RepeatIcon
         val repeatTint = if (playback.repeatMode != RepeatMode.Off) NyasaGold else CarTextSecondary
@@ -431,27 +449,6 @@ private fun BufferingRing(modifier: Modifier = Modifier) {
         color = NyasaGold,
         strokeWidth = BufferingRingStroke,
     )
-}
-
-@Composable
-private fun LikeButton(
-    isLiked: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        CircleIconButton(
-            icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = if (isLiked) "Unlike" else "Like",
-            size = CarTouchTargetSize,
-            iconSize = 24.dp,
-            tint = if (isLiked) NyasaGold else CarTextSecondary,
-            onClick = onClick,
-        )
-    }
 }
 
 @Composable
