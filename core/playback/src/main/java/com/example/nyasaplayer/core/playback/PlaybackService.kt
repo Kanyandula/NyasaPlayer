@@ -8,6 +8,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
@@ -423,6 +424,10 @@ class PlaybackService : MediaLibraryService() {
     // ── Player.Listener for auto-advance ──
 
     private val playerListener = object : Player.Listener {
+        override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+            if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) queueManager.syncWith(exoPlayer)
+        }
+
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             queueManager.currentIndex = exoPlayer.currentMediaItemIndex
             currentMediaId.value = mediaItem?.mediaId
