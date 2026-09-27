@@ -7,17 +7,17 @@ import android.util.LruCache
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import coil.ImageLoader
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CancellationException
 
 private const val TAG = "ArtworkTheme"
 
-/** Palette only needs a hue: a thumbnail is plenty, and far cheaper than the displayed cover. */
-private const val SampleSizePx = 128
+/** Palette only needs a hue, and scales anything larger down to this before quantizing. */
+private const val SampleSizePx = 112
 private const val CacheEntries = 64
 
 /** The car's theme for a cover. A seam so the player ViewModel can be tested without Coil (T07). */
@@ -33,7 +33,6 @@ fun interface ArtworkThemeExtractor {
 class PaletteArtworkThemeExtractor(
     private val context: Context,
     private val imageLoader: ImageLoader,
-    private val paletteDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ArtworkThemeExtractor {
 
     // ponytail: in-memory only. A process restart re-derives, which costs one thumbnail decode.
@@ -44,7 +43,7 @@ class PaletteArtworkThemeExtractor(
         cache.get(coverUrl)?.let { return it }
         // Failures are not cached, so a cover that failed offline is tried again once back online.
         val bitmap = loadSample(coverUrl) ?: return ArtworkThemeDefaults.theme
-        return withContext(paletteDispatcher) { artworkThemeFrom(Palette.from(bitmap).generate().swatches()) }
+        return withContext(Dispatchers.Default) { artworkThemeFrom(Palette.from(bitmap).generate().swatches()) }
             .also { cache.put(coverUrl, it) }
     }
 
@@ -55,6 +54,9 @@ class PaletteArtworkThemeExtractor(
             .size(SampleSizePx)
             // Palette reads pixels, which a hardware bitmap does not allow.
             .allowHardware(false)
+            // Its memory-cache key is the URL alone, so a cached sample would evict the full-size
+            // cover on screen. The theme cache above already stops a second extraction.
+            .memoryCachePolicy(CachePolicy.DISABLED)
             .build()
         (imageLoader.execute(request) as? SuccessResult)?.drawable?.toBitmap()
     } catch (e: CancellationException) {

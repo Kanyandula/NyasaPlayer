@@ -1,5 +1,8 @@
 package com.example.nyasaplayer.auto.artwork
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import com.example.nyasaplayer.auto.ui.theme.CarAmbientBlue
 import com.example.nyasaplayer.auto.ui.theme.CarAmbientPurple
@@ -17,8 +20,7 @@ import org.junit.Test
  */
 class ArtworkThemeTest {
 
-    private val background = NyasaBackground.toArgb()
-    private val ceiling = luminance(CarRaised.toArgb())
+    private val ceiling = CarRaised.luminance()
 
     private val white = 0xFFFFFFFF.toInt()
     private val yellow = 0xFFFFE000.toInt()
@@ -27,7 +29,7 @@ class ArtworkThemeTest {
     private val deepBlue = 0xFF0A1E3C.toInt()
 
     private fun alphaOf(color: Int) = color ushr 24
-    private fun renderedLuminance(tint: Int) = luminance(composite(tint, background))
+    private fun renderedLuminance(tint: Int) = Color(tint).compositeOver(NyasaBackground).luminance()
 
     @Test
     fun the_default_theme_is_what_ships_today() {

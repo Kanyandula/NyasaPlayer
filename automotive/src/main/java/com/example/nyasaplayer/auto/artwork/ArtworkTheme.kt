@@ -1,16 +1,15 @@
 package com.example.nyasaplayer.auto.artwork
 
 import androidx.annotation.ColorInt
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import com.example.nyasaplayer.auto.ui.theme.CarAmbientBlue
 import com.example.nyasaplayer.auto.ui.theme.CarAmbientPurple
 import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.core.common.ui.theme.NyasaBackground
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.pow
-import kotlin.math.roundToInt
 
 /**
  * The colours the car paints behind content: the ambient layer's two tints and the full player's
@@ -28,7 +27,7 @@ object ArtworkThemeDefaults {
     val theme = ArtworkTheme(
         ambientPrimary = CarAmbientBlue.toArgb(),
         ambientSecondary = CarAmbientPurple.toArgb(),
-        fullPlayerGlow = NyasaGoldDim.copy(alpha = FullPlayerGlowAlpha / MaxChannel.toFloat()).toArgb(),
+        fullPlayerGlow = NyasaGoldDim.copy(alpha = FullPlayerGlowAlpha / MaxChannel).toArgb(),
     )
 }
 
@@ -73,6 +72,10 @@ fun artworkThemeFrom(swatches: ArtworkSwatches): ArtworkTheme {
  * [seed] at [alpha], blended toward [background] only as far as it takes to composite no lighter
  * than [ceiling] — so bright and neon covers keep their hue but lose their light. Palette's raw
  * colour never reaches the screen; this is the only way through.
+ *
+ * Per tint, over the background it lands on. That is exact for the full player's single glow; where
+ * the ambient layer's two circles overlap they can add up past one centre on a near-square window,
+ * which the pixel test on the rendered layer (T08) is what catches.
  */
 @ColorInt
 fun conditionArtworkColor(
@@ -81,86 +84,46 @@ fun conditionArtworkColor(
     @ColorInt background: Int = NyasaBackground.toArgb(),
     @ColorInt ceiling: Int = CarRaised.toArgb(),
 ): Int {
-    val limit = luminance(ceiling)
-    fun tinted(towardBackground: Double) = withAlpha(mix(seed, background, towardBackground), alpha)
-    fun fits(towardBackground: Double) = luminance(composite(tinted(towardBackground), background)) <= limit
+    val base = Color(background)
+    val limit = Color(ceiling).luminance()
+    val opaque = Color(seed).copy(alpha = 1f)
+    fun tinted(towardBackground: Float) = mixSrgb(opaque, base, towardBackground).copy(alpha = alpha / MaxChannel)
+    fun fits(towardBackground: Float) = tinted(towardBackground).compositeOver(base).luminance() <= limit
 
-    if (fits(0.0)) return tinted(0.0)
+    if (fits(0f)) return tinted(0f).toArgb()
     // ponytail: bisection to within 1/1024 of the least blend that fits; a closed form needs the
     // sRGB curve inverted per channel, for no visible difference.
-    var low = 0.0
-    var high = 1.0
+    var low = 0f
+    var high = 1f
     repeat(BisectionSteps) {
         val mid = (low + high) / 2
         if (fits(mid)) high = mid else low = mid
     }
-    return tinted(high)
-}
-
-/** WCAG 2 relative luminance of an opaque colour. */
-internal fun luminance(@ColorInt color: Int): Double {
-    fun linear(channel: Int): Double {
-        val c = channel / MaxChannel.toDouble()
-        return if (c <= SrgbLinearThreshold) c / SrgbLinearDivisor else ((c + SrgbOffset) / SrgbScale).pow(SrgbGamma)
-    }
-    return RedWeight * linear(red(color)) + GreenWeight * linear(green(color)) + BlueWeight * linear(blue(color))
-}
-
-/** [top] drawn over opaque [bottom], as the canvas blends it: per channel, in sRGB. */
-@ColorInt
-internal fun composite(@ColorInt top: Int, @ColorInt bottom: Int): Int {
-    val a = alpha(top) / MaxChannel.toDouble()
-    fun channel(of: (Int) -> Int) = (of(top) * a + of(bottom) * (1 - a)).roundToInt()
-    return argb(MaxChannel, channel(::red), channel(::green), channel(::blue))
+    return tinted(high).toArgb()
 }
 
 /**
  * The first seed with a hue worth showing. Near-black and near-grey swatches are skipped: they
  * would darken the glow to nothing or wash it grey, and the design's tints are better than either.
  */
-private fun firstUsable(vararg seeds: Int?): Int? = seeds.firstOrNull { it != null && carriesHue(it) }
+private fun firstUsable(vararg seeds: Int?): Int? = seeds.firstOrNull { it != null && carriesHue(Color(it)) }
 
-private fun carriesHue(@ColorInt color: Int): Boolean {
-    val high = max(red(color), max(green(color), blue(color)))
-    val low = min(red(color), min(green(color), blue(color)))
-    val chroma = (high - low) / MaxChannel.toDouble()
-    return high >= MinSeedBrightness && chroma >= MinSeedChroma
+private fun carriesHue(color: Color): Boolean {
+    val high = maxOf(color.red, color.green, color.blue)
+    val low = minOf(color.red, color.green, color.blue)
+    return high >= MinSeedBrightness && high - low >= MinSeedChroma
 }
 
-@ColorInt
-private fun mix(@ColorInt from: Int, @ColorInt to: Int, amount: Double): Int {
-    fun channel(of: (Int) -> Int) = (of(from) + (of(to) - of(from)) * amount).roundToInt()
-    return argb(MaxChannel, channel(::red), channel(::green), channel(::blue))
-}
+/** A straight blend in sRGB, as the canvas composites; Compose's `lerp` works in Oklab instead. */
+private fun mixSrgb(from: Color, to: Color, amount: Float) = Color(
+    red = from.red + (to.red - from.red) * amount,
+    green = from.green + (to.green - from.green) * amount,
+    blue = from.blue + (to.blue - from.blue) * amount,
+)
 
-@ColorInt
-private fun withAlpha(@ColorInt color: Int, alpha: Int): Int = (color and RgbMask) or (alpha shl AlphaShift)
-
-private fun alpha(color: Int) = color ushr AlphaShift
-private fun red(color: Int) = (color shr RedShift) and ChannelMask
-private fun green(color: Int) = (color shr GreenShift) and ChannelMask
-private fun blue(color: Int) = color and ChannelMask
-private fun argb(a: Int, r: Int, g: Int, b: Int) =
-    (a shl AlphaShift) or (r shl RedShift) or (g shl GreenShift) or b
-
-private const val MaxChannel = 255
-private const val ChannelMask = 0xFF
-private const val RgbMask = 0x00FFFFFF
-private const val AlphaShift = 24
-private const val RedShift = 16
-private const val GreenShift = 8
+private const val MaxChannel = 255f
 private const val BisectionSteps = 10
 
-/** Seeds dimmer than this (max channel) or greyer than this (chroma) carry no hue to follow. */
-private const val MinSeedBrightness = 40
-private const val MinSeedChroma = 0.15
-
-// WCAG 2 sRGB linearisation and luminance weights.
-private const val SrgbLinearThreshold = 0.04045
-private const val SrgbLinearDivisor = 12.92
-private const val SrgbOffset = 0.055
-private const val SrgbScale = 1.055
-private const val SrgbGamma = 2.4
-private const val RedWeight = 0.2126
-private const val GreenWeight = 0.7152
-private const val BlueWeight = 0.0722
+/** Seeds dimmer than this (brightest channel) or greyer than this (chroma) carry no hue to follow. */
+private const val MinSeedBrightness = 40 / MaxChannel
+private const val MinSeedChroma = 0.15f
