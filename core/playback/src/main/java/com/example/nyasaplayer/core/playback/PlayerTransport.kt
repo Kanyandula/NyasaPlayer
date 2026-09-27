@@ -99,11 +99,13 @@ class PlayerTransport(
     }
 
     /** Queue-setting entry points, behind the same availability check as the transport controls. */
-    fun setQueue(songs: List<Song>, startIndex: Int): Boolean = withController {
-        it.sendSetQueue(songs, startIndex, QueueOrigin.None)
+    fun setQueue(songs: List<Song>, startIndex: Int, origin: QueueOrigin): Boolean = withController {
+        it.sendSetQueue(songs, startIndex, origin)
     }
 
-    fun shufflePlay(songs: List<Song>): Boolean = withController { it.sendShufflePlay(songs, QueueOrigin.None) }
+    fun shufflePlay(songs: List<Song>, origin: QueueOrigin): Boolean = withController {
+        it.sendShufflePlay(songs, origin)
+    }
 
     private inline fun withController(action: (MediaController) -> Unit): Boolean =
         controller().dispatch(onUnavailable, action)

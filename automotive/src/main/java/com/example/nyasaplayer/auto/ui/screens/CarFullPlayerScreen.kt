@@ -59,6 +59,7 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaGoldDim
 import com.example.nyasaplayer.core.common.ui.theme.NyasaOnGold
 import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
+import com.example.nyasaplayer.core.playback.QueueOrigin
 import com.example.nyasaplayer.core.playback.RepeatMode
 
 private val FullPlayerAlbumArtSize = 400.dp
@@ -162,7 +163,7 @@ private fun PlayerControlsPanel(
         verticalArrangement = Arrangement.Center,
     ) {
         PlayerTopBar(
-            albumName = song?.albumName?.ifBlank { "Now Playing" } ?: "Now Playing",
+            source = playback.queueOrigin.sourceLabel(),
             onCollapseClick = onCollapseClick,
             onQueueClick = onQueueClick,
         )
@@ -189,7 +190,7 @@ private fun PlayerControlsPanel(
 
 @Composable
 private fun PlayerTopBar(
-    albumName: String,
+    source: SourceLabel?,
     onCollapseClick: () -> Unit,
     onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -205,9 +206,22 @@ private fun PlayerTopBar(
             size = CarTouchTargetSize,
             onClick = onCollapseClick,
         )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("PLAYING FROM PLAYLIST", color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(albumName, color = Color.White, fontSize = 18.sp)
+        // No origin, no label: a single track has no collection behind it, and naming one would be
+        // the same lie the hardcoded "PLAYING FROM PLAYLIST" told.
+        if (source != null) {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(source.heading, color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    text = source.name,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         CircleIconButton(
             icon = QueueMusicIcon,
@@ -437,3 +451,21 @@ private fun buildArtistAlbumText(artist: String?, album: String?): String = buil
         append(" \u2022 $album")
     }
 }
+
+internal data class SourceLabel(val heading: String, val name: String)
+
+/**
+ * The full player's "Playing from" label, or null when the queue has no collection to name — which
+ * includes one whose name is blank, such as a detail screen tapped before its title loaded.
+ */
+internal fun QueueOrigin.sourceLabel(): SourceLabel? = when (this) {
+    is QueueOrigin.Playlist -> SourceLabel("PLAYING FROM PLAYLIST", name)
+    is QueueOrigin.Album -> SourceLabel("PLAYING FROM ALBUM", name)
+    is QueueOrigin.Artist -> SourceLabel("PLAYING FROM ARTIST", name)
+    is QueueOrigin.Genre -> SourceLabel("PLAYING FROM GENRE", name)
+    is QueueOrigin.Search -> SourceLabel("PLAYING FROM SEARCH", "\u201C$query\u201D").takeIf { query.isNotBlank() }
+    QueueOrigin.Favourites -> SourceLabel("PLAYING FROM", "Favourites")
+    QueueOrigin.Downloads -> SourceLabel("PLAYING FROM", "Downloads")
+    QueueOrigin.RecentlyPlayed -> SourceLabel("PLAYING FROM", "Recently Played")
+    QueueOrigin.None -> null
+}?.takeIf { it.name.isNotBlank() }
