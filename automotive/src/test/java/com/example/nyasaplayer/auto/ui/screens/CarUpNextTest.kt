@@ -71,8 +71,18 @@ class CarUpNextTest {
     }
 
     @Test
-    fun no_next_item_shows_no_strip() {
-        render(playing(2)) {}
+    fun the_last_track_still_offers_the_queue() {
+        var queueOpened = 0
+        render(playing(2)) { queueOpened++ }
+
+        composeRule.onNodeWithText("End of queue").performClick()
+
+        assertEquals(1, queueOpened)
+    }
+
+    @Test
+    fun an_empty_queue_shows_no_card() {
+        render(playing(-1, songs = emptyList())) {}
 
         composeRule.onNodeWithText("UP NEXT").assertDoesNotExist()
     }

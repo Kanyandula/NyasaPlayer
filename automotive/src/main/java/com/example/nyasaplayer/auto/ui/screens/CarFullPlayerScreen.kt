@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -56,7 +57,6 @@ import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.common.ui.icons.ChevronRightIcon
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
-import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatOneIcon
 import com.example.nyasaplayer.core.common.ui.icons.ShuffleIcon
@@ -70,6 +70,9 @@ import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
 private val FullPlayerAlbumArtSize = 400.dp
+
+/** The design's right column; the transport row nearly fills it, as drawn. */
+private val PanelMaxWidth = 536.dp
 private val AlbumArtCorner = 28.dp
 private val DefaultGlow = Color(ArtworkThemeDefaults.theme.fullPlayerGlow)
 private val PlayButtonSize = 96.dp
@@ -83,7 +86,6 @@ private val BufferingRingInset = 16.dp
 private val TopBarToTitleGap = 26.dp
 private val TitleToArtistGap = 8.dp
 private val ControlsGap = 22.dp
-private val TopBarIconGap = 24.dp
 private val SourceLabelGap = 14.dp
 
 private val TitleSize = 48.sp
@@ -165,7 +167,9 @@ fun CarFullPlayerScreen(
                 .fillMaxSize()
                 .padding(horizontal = CarScreenMargin, vertical = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(48.dp),
+            // Centred: on a window wider than the design's, the spare width goes to the margins,
+            // not into a stretched column with empty space after the transport row.
+            horizontalArrangement = Arrangement.spacedBy(48.dp, Alignment.CenterHorizontally),
         ) {
             AsyncImage(
                 model = song?.resolvedCoverUrl,
@@ -189,7 +193,8 @@ fun CarFullPlayerScreen(
                 onLikeClick = onLikeClick,
                 onQueueClick = onQueueClick,
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(1f, fill = false)
+                    .widthIn(max = PanelMaxWidth)
                     .fillMaxHeight(),
             )
         }
@@ -223,7 +228,6 @@ private fun PlayerControlsPanel(
             isLiked = isLiked,
             onCollapseClick = onCollapseClick,
             onLikeClick = onLikeClick,
-            onQueueClick = onQueueClick,
         )
         Spacer(modifier = Modifier.height(TopBarToTitleGap))
         TrackInfo(
@@ -240,17 +244,18 @@ private fun PlayerControlsPanel(
             onShuffleClick = onShuffleClick,
             onRepeatClick = onRepeatClick,
         )
-        playback.upNext()?.let { next ->
+        // Shown whenever there is a queue, with nothing next too: it is the player's only way into it.
+        if (playback.queue.isNotEmpty()) {
             Spacer(modifier = Modifier.height(ControlsGap))
-            UpNextStrip(song = next, more = playback.moreAfterUpNext(), onClick = onQueueClick)
+            UpNextStrip(song = playback.upNext(), more = playback.moreAfterUpNext(), onClick = onQueueClick)
         }
     }
 }
 
-/** The next track as a card that opens the queue; [more] counts what follows it. */
+/** The next track as a card that opens the queue; [more] counts what follows it. No [song]: the end. */
 @Composable
 private fun UpNextStrip(
-    song: Song,
+    song: Song?,
     more: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -269,7 +274,7 @@ private fun UpNextStrip(
         horizontalArrangement = Arrangement.spacedBy(UpNextGap),
     ) {
         AsyncImage(
-            model = song.resolvedCoverUrl,
+            model = song?.resolvedCoverUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -280,7 +285,7 @@ private fun UpNextStrip(
         Column(modifier = Modifier.weight(1f)) {
             PlayerCaption("UP NEXT")
             Text(
-                text = listOf(song.title, song.resolvedArtistName).filter { it.isNotBlank() }.joinToString(" · "),
+                text = song?.let(::titleAndArtist) ?: "End of queue",
                 color = Color.White,
                 fontSize = UpNextTitleSize,
                 fontWeight = FontWeight.Bold,
@@ -304,7 +309,6 @@ private fun PlayerTopBar(
     isLiked: Boolean,
     onCollapseClick: () -> Unit,
     onLikeClick: () -> Unit,
-    onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -336,26 +340,17 @@ private fun PlayerTopBar(
                 )
             }
         }
-        // Like sits here rather than on a row of its own, which the window has no height for, and
-        // stays out of the transport row.
-        Row(horizontalArrangement = Arrangement.spacedBy(TopBarIconGap)) {
-            // An outline heart either way, as the design draws it: liked is told by the gold ring and fill.
-            CircleIconButton(
-                icon = Icons.Filled.FavoriteBorder,
-                contentDescription = if (isLiked) "Unlike" else "Like",
-                size = CarTouchTargetSize,
-                iconSize = LikeIconSize,
-                active = isLiked,
-                ringed = isLiked,
-                onClick = onLikeClick,
-            )
-            CircleIconButton(
-                icon = QueueMusicIcon,
-                contentDescription = "Queue",
-                size = CarTouchTargetSize,
-                onClick = onQueueClick,
-            )
-        }
+        // The design's top bar: collapse, source, like. The queue opens from the Up Next card.
+        // An outline heart either way, as drawn: liked is told by the gold ring and fill.
+        CircleIconButton(
+            icon = Icons.Filled.FavoriteBorder,
+            contentDescription = if (isLiked) "Unlike" else "Like",
+            size = CarTouchTargetSize,
+            iconSize = LikeIconSize,
+            active = isLiked,
+            ringed = isLiked,
+            onClick = onLikeClick,
+        )
     }
 }
 
@@ -613,3 +608,6 @@ internal fun PlaybackSnapshot.moreAfterUpNext(): Int {
     val wraps = currentQueueIndex + 1 >= queue.size
     return (if (wraps) queue.size - 2 else queue.size - currentQueueIndex - 2).coerceAtLeast(0)
 }
+
+private fun titleAndArtist(song: Song) =
+    listOf(song.title, song.resolvedArtistName).filter(String::isNotBlank).joinToString(" · ")
