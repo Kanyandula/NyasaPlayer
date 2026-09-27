@@ -205,8 +205,10 @@ class CarTouchTargetMeasurementTest {
                 .fetchSemanticsNodes()
                 // A card collapsed to nothing would otherwise become "first" and mask a cut sibling.
                 .filter { it.size.height > 0 }
-            val first = cards.minByOrNull { it.boundsInWindow.top } ?: return@forEachCarUiCase
-            if (first.boundsInWindow.top > midWindow) return@forEachCarUiCase
+            // By layout position, not visible bounds: a card scrolled wholly out of view reports
+            // empty bounds at (0, 0), which would otherwise rank it first and read as "cut".
+            val first = cards.minByOrNull { it.positionInWindow.y } ?: return@forEachCarUiCase
+            if (first.positionInWindow.y > midWindow) return@forEachCarUiCase
             judged++
             if (first.boundsInWindow.height < first.size.height - 1f) {
                 cut += "${case.name} | laid out ${dp(first.size.height, density)} dp tall, " +

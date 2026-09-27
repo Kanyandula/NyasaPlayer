@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.nyasaplayer.auto.ui.components.CarContentCard
 import com.example.nyasaplayer.auto.ui.components.CarEmptyState
@@ -44,7 +46,14 @@ import com.example.nyasaplayer.core.common.models.Genre
 
 private val GridSpacing = 24.dp
 private val ListPadding = 24.dp
-private const val BrowseGridColumns = 4
+private const val MinBrowseColumns = 4
+
+/**
+ * The largest a genre card grows before the grid adds a column. Cards are square and flex to their
+ * column, so on a wide head unit four columns made each card ~270dp and pushed its label below the
+ * fold of a 628dp window. At 200dp the first row, labels included, fits the slot a car gives.
+ */
+private val MaxGenreCardSize = 200.dp
 private val ScrollbarGap = 8.dp
 private val ScrollbarWidth = 8.dp
 private val ScrollbarTrackCornerRadius = 4.dp
@@ -103,7 +112,8 @@ private fun BrowseGrid(
 ) {
     val listState = rememberLazyListState()
 
-    Box(modifier = modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val columns = browseColumns(maxWidth - ScrollbarWidth - ScrollbarGap)
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -115,7 +125,7 @@ private fun BrowseGrid(
             item { CarSectionHeader(title = "Browse by genre") }
             // Chunked rows rather than LazyVerticalGrid: the rest of this module lays out in
             // LazyColumn, and the scrollbar below reads LazyListState.
-            items(genres.chunked(BrowseGridColumns)) { rowGenres ->
+            items(genres.chunked(columns)) { rowGenres ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(GridSpacing),
@@ -130,7 +140,7 @@ private fun BrowseGrid(
                     }
                     // Pads a short final row so its cards match the width of a full row above,
                     // rather than stretching to fill the row on their own.
-                    repeat(BrowseGridColumns - rowGenres.size) {
+                    repeat(columns - rowGenres.size) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
@@ -151,31 +161,25 @@ private fun BrowseGrid(
  * Static placeholders, no shimmer — the ambient layer is the app's only decorative motion.
  *
  * **One row, not two.** BrowseGrid's cards are width-flexed and square, so a row is as tall as a
- * column is wide — about 166dp across the four columns of a 1024dp-wide screen. Two rows need
- * ~356dp, which fits the measurement harness's slot and *not* a real head unit's, so a second row
- * would pass CI and clip on the hardware. That asymmetry is why this stays at one.
- *
- * The figure falls out of `CarNavRailWidth`, `CarScreenMargin`, `GridSpacing`, `ScrollbarWidth`
- * and `BrowseGridColumns` — re-derive it rather than trusting it, because changing the column
- * count is exactly what made the numbers that used to sit here wrong.
- *
- * `CarTouchTargetMeasurementTest` tags these rows and asserts none is squeezed, but only against
- * the harness's slot; `docs/BACKLOG.md` records how much roomier that is than a car.
+ * column is wide — at most [MaxGenreCardSize], from [browseColumns]. Two rows would not fit a
+ * head unit's slot, so this stays at one. `CarTouchTargetMeasurementTest` tags these rows and
+ * asserts none is squeezed, on a canvas the size of a real head unit's app window.
  */
 @Composable
-private fun BrowseSkeleton(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(top = ListPadding, bottom = ListPadding, end = ScrollbarWidth + ScrollbarGap),
-    ) {
+private fun BrowseSkeleton(modifier: Modifier = Modifier) = BoxWithConstraints(
+    modifier = modifier
+        .fillMaxSize()
+        .padding(top = ListPadding, bottom = ListPadding, end = ScrollbarWidth + ScrollbarGap),
+) {
+    val columns = browseColumns(maxWidth)
+    Column {
         Row(
             modifier = Modifier
                 .testTag(SkeletonRowTag)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(GridSpacing),
         ) {
-            repeat(BrowseGridColumns) {
+            repeat(columns) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -187,6 +191,10 @@ private fun BrowseSkeleton(modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** As many columns as keep a card at or under [MaxGenreCardSize] across [width], and at least four. */
+private fun browseColumns(width: Dp): Int =
+    ((width + GridSpacing) / (MaxGenreCardSize + GridSpacing)).toInt().coerceAtLeast(MinBrowseColumns)
 
 private fun computeScrollbarInfo(listState: LazyListState): ScrollbarInfo? {
     val layoutInfo = listState.layoutInfo
