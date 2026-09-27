@@ -289,9 +289,8 @@ private fun LibraryRow(
  * double-counts and Compose coerces the second row short.
  * `BrowseSkeleton` spaces its rows the same way for the same reason.
  *
- * Hand-derived, and unasserted: `libraryCase("loading")` renders at `MeasurementQualifiers`
- * (1280x800), not the 1024x720 this was worked out for, and the suite's clipping check skips
- * non-interactive nodes.
+ * Asserted: the rows carry `SkeletonRowTag`, and `CarTouchTargetMeasurementTest` measures them on
+ * a head unit's real app window (1440x628dp), where the slot leaves 292dp after this padding.
  */
 @Composable
 private fun LibrarySkeleton(modifier: Modifier = Modifier) {

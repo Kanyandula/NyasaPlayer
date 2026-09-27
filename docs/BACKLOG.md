@@ -73,16 +73,6 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   glyphs (Apache-2.0) copied verbatim, and the repo has no NOTICE file, no OSS-licenses screen,
   and nothing under Settings' About. Pre-existing and repo-wide, not introduced by any one icon.
   A NOTICE file is the cheap fix if this ever matters for distribution.
-- The measurement harness models ~133dp more vertical room than a real head unit.
-  `InContentSlot` (`CarUiCases.kt`) subtracts the app's own chrome — nav rail, system bar,
-  mini-player, margins — leaving 480dp at 1024x768, but the device also loses the OS status bar
-  and the climate bar and measured ~347dp. Two card-clipping defects reached a device through a
-  green suite because of it, and `the first content card ... drawn whole` still passes on the
-  broken build (mutation-checked). Teaching `ContentSlot` the OS chrome would re-baseline all 120
-  cases, so it is its own piece of work. The full player has the same gap outside the slot: at the
-  800dp canvas T04's Up Next row passed while a 628dp AVD window clipped it off. T05 pins the
-  player cases to 628dp; setting the whole canvas to h628dp also squeezes the loading skeletons on
-  Home, Favourites and the three detail screens, and one Downloads row, which is the rest of this.
 - Detekt never scans test sources. `build.gradle.kts` scopes `source.setFrom(...)` to
   `*/src/main/java` only, so the 80-odd files under `src/test` are unlinted — an unused import in
   `CarTouchTargetMeasurementTest` passed a green `detekt` run and was found by review instead.
