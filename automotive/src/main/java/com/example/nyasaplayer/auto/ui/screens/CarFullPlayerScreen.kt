@@ -1,6 +1,8 @@
 package com.example.nyasaplayer.auto.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,10 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
@@ -25,8 +27,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,15 +45,17 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.nyasaplayer.auto.artwork.ArtworkThemeDefaults
-import com.example.nyasaplayer.auto.ui.components.CarTrackRow
 import com.example.nyasaplayer.auto.ui.motion.animateDecorativeColor
+import com.example.nyasaplayer.auto.ui.theme.CarOutline
+import com.example.nyasaplayer.auto.ui.theme.CarRaised
 import com.example.nyasaplayer.auto.ui.theme.CarScreenMargin
-import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.models.Song
+import com.example.nyasaplayer.core.common.ui.icons.ChevronRightIcon
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
 import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.RepeatIcon
@@ -66,17 +70,57 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
-private val FullPlayerAlbumArtSize = 400.dp
+private val FullPlayerAlbumArtSize = 320.dp
+
+/** The design's right column; the transport row nearly fills it, as drawn. */
+private val PanelMaxWidth = 536.dp
+private val AlbumArtCorner = 28.dp
 private val DefaultGlow = Color(ArtworkThemeDefaults.theme.fullPlayerGlow)
-private val PlayButtonSize = 112.dp
-private val SkipButtonSize = 80.dp
+private val PlayButtonSize = 96.dp
+private val PlayIconSize = 40.dp
+private val TransportIconSize = 30.dp
 private val BufferingRingStroke = 5.dp
 private val BufferingRingInset = 16.dp
 
-// Sized to fit the app window, 628dp tall on the reference AVD once the car's bars are taken.
-private val PanelSectionGap = 24.dp
-private val UpNextGap = 16.dp
-private val TopBarIconGap = 24.dp
+// The mockup's vertical rhythm (docs: AAOS Now Playing plan, "What the design asks for"). The seek
+// bar's 76dp touch box already holds ~34dp of air above its track, so nothing is added there.
+private val TopBarToTitleGap = 26.dp
+private val TitleToArtistGap = 8.dp
+private val ControlsGap = 22.dp
+private val SourceLabelGap = 14.dp
+
+private val TitleSize = 48.sp
+private val TitleTracking = (-0.03).em
+private val TitleLineHeight = 1.04.em
+private const val TabularDigits = "tnum"
+private val LikeIconSize = 26.dp
+private val ArtistSize = 24.sp
+private val SourceNameSize = 20.sp
+private val CaptionSize = 14.sp // the mockup's 12-13px captions, raised to the NFR-3 text floor
+private val CaptionTracking = 0.1.em
+private val TimeSize = 18.sp
+
+private val ScrubberTrackHeight = 8.dp
+private val ScrubberThumbSize = 20.dp
+
+private val UpNextCorner = 18.dp
+private val UpNextArtSize = 48.dp
+private val UpNextArtCorner = 10.dp
+private val UpNextPadding = 18.dp
+private val UpNextGap = 14.dp
+private val UpNextTitleSize = 20.sp
+private val UpNextMoreSize = 17.sp
+private val UpNextChevronSize = 20.dp
+
+private val ButtonFill = Color.White.copy(alpha = 0.13f)
+private val ActiveFill = NyasaGold.copy(alpha = 0.18f)
+private val LikedRing = 2.dp
+private val CaptionColor = Color.White.copy(alpha = 0.7f)
+private val ArtistColor = Color.White.copy(alpha = 0.86f)
+private val TimeColor = Color.White.copy(alpha = 0.84f)
+private val MutedColor = Color.White.copy(alpha = 0.75f)
+private val ScrubberRest = Color.White.copy(alpha = 0.24f)
+private val UpNextFill = Color.Black.copy(alpha = 0.34f)
 
 // The design's transport spacing, not a rounding slip: five controls at 23dp fit the panel.
 private val TransportGap = 23.dp
@@ -124,7 +168,9 @@ fun CarFullPlayerScreen(
                 .fillMaxSize()
                 .padding(horizontal = CarScreenMargin, vertical = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(48.dp),
+            // Centred: on a window wider than the design's, the spare width goes to the margins,
+            // not into a stretched column with empty space after the transport row.
+            horizontalArrangement = Arrangement.spacedBy(48.dp, Alignment.CenterHorizontally),
         ) {
             AsyncImage(
                 model = song?.resolvedCoverUrl,
@@ -132,7 +178,7 @@ fun CarFullPlayerScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(FullPlayerAlbumArtSize)
-                    .clip(RoundedCornerShape(24.dp)),
+                    .clip(RoundedCornerShape(AlbumArtCorner)),
             )
 
             PlayerControlsPanel(
@@ -148,7 +194,7 @@ fun CarFullPlayerScreen(
                 onLikeClick = onLikeClick,
                 onQueueClick = onQueueClick,
                 modifier = Modifier
-                    .weight(1f)
+                    .widthIn(max = PanelMaxWidth)
                     .fillMaxHeight(),
             )
         }
@@ -182,16 +228,14 @@ private fun PlayerControlsPanel(
             isLiked = isLiked,
             onCollapseClick = onCollapseClick,
             onLikeClick = onLikeClick,
-            onQueueClick = onQueueClick,
         )
-        Spacer(modifier = Modifier.height(PanelSectionGap))
+        Spacer(modifier = Modifier.height(TopBarToTitleGap))
         TrackInfo(
             title = song?.title ?: "",
             artistAlbum = buildArtistAlbumText(song?.resolvedArtistName, song?.albumName),
         )
-        Spacer(modifier = Modifier.height(PanelSectionGap))
         ProgressSlider(playback = playback, onSeek = onSeek)
-        Spacer(modifier = Modifier.height(PanelSectionGap))
+        Spacer(modifier = Modifier.height(ControlsGap))
         MainControls(
             playback = playback,
             onPlayPauseClick = onPlayPauseClick,
@@ -200,29 +244,69 @@ private fun PlayerControlsPanel(
             onShuffleClick = onShuffleClick,
             onRepeatClick = onRepeatClick,
         )
-        playback.upNext()?.let { next ->
-            Spacer(modifier = Modifier.height(UpNextGap))
-            UpNextStrip(song = next, onClick = onQueueClick)
+        // Shown whenever there is a queue, with nothing next too: it is the player's only way into it.
+        if (playback.queue.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(ControlsGap))
+            UpNextStrip(song = playback.upNext(), more = playback.moreAfterUpNext(), onClick = onQueueClick)
         }
     }
 }
 
-/** The next track, as a row that opens the queue. [CarTrackRow] keeps it at the list row's height. */
+/** The next track as a card that opens the queue; [more] counts what follows it. No [song]: the end. */
 @Composable
 private fun UpNextStrip(
-    song: Song,
+    song: Song?,
+    more: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        PlayerCaption("UP NEXT")
-        CarTrackRow(
-            title = song.title,
-            artist = song.resolvedArtistName,
-            duration = formatDuration(song.durationMs),
-            isPlaying = false,
-            onClick = onClick,
-            coverUrl = song.resolvedCoverUrl,
+    val shape = RoundedCornerShape(UpNextCorner)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(CarTouchTargetSize)
+            .clip(shape)
+            .background(UpNextFill)
+            .border(1.dp, CarOutline, shape)
+            .clickable(onClickLabel = "Open queue", onClick = onClick)
+            .padding(horizontal = UpNextPadding),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(UpNextGap),
+    ) {
+        val tile = Modifier
+            .size(UpNextArtSize)
+            .clip(RoundedCornerShape(UpNextArtCorner))
+            .background(CarRaised)
+        if (song != null) {
+            AsyncImage(
+                model = song.resolvedCoverUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = tile,
+            )
+        } else {
+            // A queue glyph, not an empty tile that reads as artwork that failed to load.
+            Box(modifier = tile, contentAlignment = Alignment.Center) {
+                Icon(QueueMusicIcon, contentDescription = null, tint = MutedColor)
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            PlayerCaption("UP NEXT")
+            Text(
+                text = song?.let(::titleAndArtist) ?: "End of queue",
+                color = Color.White,
+                fontSize = UpNextTitleSize,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (more > 0) Text("$more more", color = MutedColor, fontSize = UpNextMoreSize)
+        Icon(
+            imageVector = ChevronRightIcon,
+            contentDescription = null,
+            tint = MutedColor,
+            modifier = Modifier.size(UpNextChevronSize),
         )
     }
 }
@@ -233,7 +317,6 @@ private fun PlayerTopBar(
     isLiked: Boolean,
     onCollapseClick: () -> Unit,
     onLikeClick: () -> Unit,
-    onQueueClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -248,46 +331,48 @@ private fun PlayerTopBar(
             onClick = onCollapseClick,
         )
         // No origin, no label: a single track has no collection behind it to name.
-        if (source != null) {
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = SourceLabelGap),
+        ) {
+            if (source != null) {
                 PlayerCaption(source.heading)
                 Text(
                     text = source.name,
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = SourceNameSize,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
-        // Like sits here rather than on a row of its own, which the window has no height for, and
-        // stays out of the transport row.
-        Row(horizontalArrangement = Arrangement.spacedBy(TopBarIconGap)) {
-            CircleIconButton(
-                icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = if (isLiked) "Unlike" else "Like",
-                size = CarTouchTargetSize,
-                iconSize = 24.dp,
-                tint = if (isLiked) NyasaGold else CarTextSecondary,
-                onClick = onLikeClick,
-            )
-            CircleIconButton(
-                icon = QueueMusicIcon,
-                contentDescription = "Queue",
-                size = CarTouchTargetSize,
-                onClick = onQueueClick,
-            )
-        }
+        // The design's top bar: collapse, source, like. The queue opens from the Up Next card.
+        // An outline heart either way, as drawn: liked is told by the gold ring and fill.
+        CircleIconButton(
+            icon = Icons.Filled.FavoriteBorder,
+            contentDescription = if (isLiked) "Unlike" else "Like",
+            size = CarTouchTargetSize,
+            iconSize = LikeIconSize,
+            active = isLiked,
+            ringed = isLiked,
+            onClick = onLikeClick,
+        )
     }
 }
 
-/** The small uppercase caption over the source label and the Up Next strip. */
+/** The small uppercase caption over the source label and in the Up Next card. */
 @Composable
 private fun PlayerCaption(text: String, modifier: Modifier = Modifier) {
-    Text(text, modifier = modifier, color = CarTextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    Text(
+        text,
+        modifier = modifier,
+        color = CaptionColor,
+        fontSize = CaptionSize,
+        fontWeight = FontWeight.ExtraBold,
+        letterSpacing = CaptionTracking,
+    )
 }
 
 @Composable
@@ -300,17 +385,20 @@ private fun TrackInfo(
         Text(
             text = title,
             color = Color.White,
-            fontSize = 36.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = TitleSize,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = TitleTracking,
+            lineHeight = TitleLineHeight,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = artistAlbum,
-            color = CarTextSecondary,
-            fontSize = 24.sp,
+            color = ArtistColor,
+            fontSize = ArtistSize,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = TitleToArtistGap),
         )
     }
 }
@@ -328,33 +416,55 @@ private fun ProgressSlider(
         0f
     }
     val interactionSource = remember { MutableInteractionSource() }
-    val colors = SliderDefaults.colors(
-        thumbColor = Color.White,
-        activeTrackColor = NyasaGold,
-        inactiveTrackColor = Color.White.copy(alpha = 0.2f),
-    )
     Column(modifier = modifier) {
         Slider(
             value = progress,
             onValueChange = { fraction -> onSeek((fraction * playback.durationMs).toLong()) },
             modifier = Modifier.fillMaxWidth(),
-            colors = colors,
             interactionSource = interactionSource,
             // The slider is as tall as its tallest slot, and so is its touch area: a 76dp thumb slot
             // makes the seek bar a 76dp target. A height on the Slider itself does not — it pins its
             // own minimum and ignores ours. The thumb and track still draw at their usual size.
             thumb = {
                 Box(modifier = Modifier.height(CarTouchTargetSize), contentAlignment = Alignment.Center) {
-                    SliderDefaults.Thumb(interactionSource = interactionSource, colors = colors)
+                    Box(
+                        modifier = Modifier
+                            .size(ScrubberThumbSize)
+                            .clip(CircleShape)
+                            .background(NyasaGold),
+                    )
                 }
+            },
+            track = { state ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(ScrubberTrackHeight)
+                        .clip(CircleShape)
+                        .background(ScrubberRest)
+                        // Read in the draw phase: each position tick redraws the fill, no relayout.
+                        .drawBehind { drawRect(NyasaGold, size = size.copy(width = size.width * state.value)) },
+                )
             },
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(formatDuration(playback.currentPositionMs), color = CarTextSecondary, fontSize = 18.sp)
-            Text(formatDuration(playback.durationMs), color = CarTextSecondary, fontSize = 18.sp)
+            Text(
+                formatDuration(playback.currentPositionMs),
+                color = TimeColor,
+                fontSize = TimeSize,
+                style = LocalTextStyle.current.copy(fontFeatureSettings = TabularDigits),
+            )
+            // Remaining, not total: the design counts down to the next track.
+            val remainingMs = (playback.durationMs - playback.currentPositionMs).coerceAtLeast(0L)
+            Text(
+                "-${formatDuration(remainingMs)}",
+                color = TimeColor,
+                fontSize = TimeSize,
+                style = LocalTextStyle.current.copy(fontFeatureSettings = TabularDigits),
+            )
         }
     }
 }
@@ -371,21 +481,22 @@ private fun MainControls(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(TransportGap, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(TransportGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CircleIconButton(
             icon = ShuffleIcon,
             contentDescription = "Shuffle",
             size = CarTouchTargetSize,
-            tint = if (playback.isShuffled) NyasaGold else CarTextSecondary,
+            iconSize = TransportIconSize,
+            active = playback.isShuffled,
             onClick = onShuffleClick,
         )
         CircleIconButton(
             icon = SkipPreviousIcon,
             contentDescription = "Previous",
-            size = SkipButtonSize,
-            iconSize = 36.dp,
+            size = CarTouchTargetSize,
+            iconSize = TransportIconSize,
             onClick = onSkipPreviousClick,
         )
         Box(
@@ -401,18 +512,19 @@ private fun MainControls(
         CircleIconButton(
             icon = SkipNextIcon,
             contentDescription = "Next",
-            size = SkipButtonSize,
-            iconSize = 36.dp,
+            size = CarTouchTargetSize,
+            iconSize = TransportIconSize,
             onClick = onSkipNextClick,
         )
 
         val repeatIcon = if (playback.repeatMode == RepeatMode.One) RepeatOneIcon else RepeatIcon
-        val repeatTint = if (playback.repeatMode != RepeatMode.Off) NyasaGold else CarTextSecondary
+        val repeating = playback.repeatMode != RepeatMode.Off
         CircleIconButton(
             icon = repeatIcon,
             contentDescription = "Repeat",
             size = CarTouchTargetSize,
-            tint = repeatTint,
+            iconSize = TransportIconSize,
+            active = repeating,
             onClick = onRepeatClick,
         )
     }
@@ -435,7 +547,7 @@ private fun PlayPauseButton(
             imageVector = if (isPlaying) PauseIcon else Icons.Default.PlayArrow,
             contentDescription = if (isPlaying) "Pause" else "Play",
             tint = NyasaOnGold,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(PlayIconSize),
         )
     }
 }
@@ -465,14 +577,17 @@ private fun CircleIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     iconSize: androidx.compose.ui.unit.Dp = 28.dp,
-    tint: Color = Color.White,
+    active: Boolean = false,
+    ringed: Boolean = false,
 ) {
+    val tint = if (active) NyasaGold else Color.White
     IconButton(
         onClick = onClick,
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.1f)),
+            .background(if (active) ActiveFill else ButtonFill)
+            .then(if (ringed) Modifier.border(LikedRing, NyasaGold, CircleShape) else Modifier),
     ) {
         Icon(icon, contentDescription, tint = tint, modifier = Modifier.size(iconSize))
     }
@@ -494,3 +609,13 @@ internal fun PlaybackSnapshot.upNext(): Song? {
     return queue.getOrNull(currentQueueIndex + 1)
         ?: queue.first().takeIf { repeatMode == RepeatMode.All && queue.size > 1 }
 }
+
+/** How many tracks follow the one [upNext] shows: the "5 more" beside it. */
+internal fun PlaybackSnapshot.moreAfterUpNext(): Int {
+    if (upNext() == null) return 0
+    val wraps = currentQueueIndex + 1 >= queue.size
+    return (if (wraps) queue.size - 2 else queue.size - currentQueueIndex - 2).coerceAtLeast(0)
+}
+
+private fun titleAndArtist(song: Song) =
+    listOf(song.title, song.resolvedArtistName).filter(String::isNotBlank).joinToString(" · ")
