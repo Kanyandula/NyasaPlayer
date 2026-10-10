@@ -130,6 +130,7 @@ Where that rule produces a different number, the implementation target is author
 | Touch target | 76px | **76.dp** | agree — `CarTouchTargetSize` was already 76.dp, arrived at independently |
 | Mini-player height | 88px | **112.dp** | `CarMiniPlayerHeight` predates this design, exceeds its intent, and clears the touch target with room |
 | Card corner radius | 20px | **20.dp** | design wins; the existing 16.dp had no recorded rationale |
+| Nav rail width | 80px | **176.dp** | labels sit beside their icons at the 18px label floor, which 80 cannot hold (D78) |
 
 The 88px mini-player figures below are therefore **correct for the prototype and wrong for
 the implementation**. They are left as-is rather than overwritten so this document continues
@@ -176,13 +177,14 @@ Both floors are measured by `CarTextSizeMeasurementTest` (T30), from what Compos
 than from the source, so a size inherited from a theme is judged as the driver sees it.
 
 **The 18px label floor means a button or CTA's own label** — the text a driver reads to know what
-the control does. A tab label under an icon in the rail is not one: the rail is 80px wide, and
-"Favourites" at 18px does not fit beside its icon. Those take the 14px text floor (owner, 2026-09-16,
-closing the gap between this rule and the rail spec below, which drew 13px).
+the control does. The rail's tab labels are held to it too. They were exempt while they sat under
+their icons in an 80px rail, where "Favourites" at 18px did not fit (owner, 2026-09-16); D78 put
+them beside their icons and retired the exemption.
 
-The smallest text actually rendered is 14px — the rail's tab labels. Artist names in track rows are
-15px. Both satisfy the rule above, but neither is generous for a glance from the driver's seat, and
-car UI body styles are typically far larger. Treat 14px as the floor to revisit, not as a target.
+The smallest text actually rendered is 14px — captions and the mini-player's timestamps. Artist
+names in track rows are 15px. Both satisfy the rule above, but neither is generous for a glance from
+the driver's seat, and car UI body styles are typically far larger. Treat 14px as the floor to
+revisit, not as a target.
 
 ### Contrast, measured
 
@@ -330,7 +332,7 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   vectors for them, and there is no wiring to real system state, so shipping them would mean
   static icons claiming a full battery and a connected radio — a lie the driver may act on.
   On AAOS the OEM system bar generally owns these. The bar ships as wordmark · search ·
-  settings · avatar · clock.
+  settings · clock; the avatar was in it until it moved to the rail (D77).
 - **D11 — No Browse filter chips.** Screen 4 lists them. `Genre` is `id`, `name`, `color`,
   `imageUrl`, `popularity`, `songIds` — nothing backs "mood" or "category", so any chip set would
   be invented taxonomy. **Data blocker:** a genre taxonomy field in Firestore. The grid is
@@ -911,6 +913,37 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   against the OEM bar below. The top hairline became a `border` on the same shape, because a
   straight line drawn from corner to corner would leave the curves and cross empty space. The
   border draws on all four edges, so the bar also gets a 1dp line against the rail.
+- **D77 — The profile entry leaves the system bar for the bottom of the rail.** §Chrome holds the
+  top bar's right cluster to "exactly those seven items in that order — no more, no fewer, no
+  substitutions", and lists the rail's items as Home, Browse, Library, Favourites. Both change. The
+  bar loses its avatar and keeps search, settings and the clock. The rail gains a row under its
+  four tabs: the signed-in account's Google photo and first name. D73 made the rail run full
+  height, which freed the 112dp the bar used to cut off, and a photo with a name says whose
+  account this is where a generic person icon did not. The row has the tabs' geometry, but it is
+  not a tab: it takes no pill and is never gold, because gold is how the rail says "selected" and
+  a permanently gold item would compete with the active tab. It announces as a button. There is
+  no divider above it. A `CarDivider` hairline measures 1.22:1 against `CarChrome` and is invisible
+  at viewing distance; the gap and the circular avatar do the separating. It sits
+  `(CarMiniPlayerHeight - 88dp) / 2` = 12dp above the rail's bottom, so its centre is on the
+  mini-player's across the seam. That is derived rather than written as 12, and it does not
+  depend on whether anything is playing, so the row never moves when the bar appears. The photo
+  is Firebase Auth's `photoUrl`, not a Firestore read. The initial is drawn underneath it, so a
+  slow, failed or offline load leaves the initial rather than an empty circle; accounts with no
+  display name get the person icon and "Profile". The row stays enabled while driving (GB-1);
+  the gate refuses the profile sheet under `NO_SETUP` with the same message the avatar got
+  (OG-6). The cost is height. The rail now needs 452dp, so the window needs 532dp: 96dp spare on
+  the 1440x800 reference and 62dp on a 1024x768 unit while online; offline, the banner above the
+  rail takes its own height out of that. A 1024x600 unit clips the row, though the four tabs alone
+  already overflowed it by 4dp (`docs/BACKLOG.md`).
+- **D78 — The rail is 176dp wide, with each label beside its icon.** §Chrome's rail is 80px, with a
+  14px label under a 28px icon. Stacked, every destination took two scan lines to read, which is the
+  one thing a driver cannot spend. One line costs width: "Favourites" at 18sp ends 147dp from the
+  rail's leading edge, leaving 29dp of rail and 21dp inside the selection pill. At that width the
+  labels take the 18px label floor (§Typography). The selection pill is 64dp tall, centred in the
+  88dp row. 88dp is what the touch target costs; the pill has no such duty, and at 176dp wide a
+  full-height pill read as a panel rather than a selection. The rail costs the content area 96dp, so
+  Browse's grid columns drop from ~190dp to ~166dp on a 1024dp unit. Shipped 2026-09-22 (#97) and
+  recorded here after the fact.
 
 ## Components
 
@@ -963,8 +996,8 @@ control by deleting its wrapper.
 Three changes were structural rather than padding:
 
 - **The system bar is 80 tall, not 48.** A 48px bar cannot contain a 76px target, and this
-  bar holds app controls (search, settings, avatar) rather than only OS status icons. If the
-  OEM draws the status row itself, the app's own bar still needs this height.
+  bar holds app controls (search and settings; the avatar too, until D77) rather than only OS
+  status icons. If the OEM draws the status row itself, the app's own bar still needs this height.
 - **Filter chips are 76 tall** (were 56) and **pill buttons 76** (were 64).
 - **The mini-player's artwork and title are a single target**, not two. They were 64 x 64 and
   230 x 43 separately; merged they are 314 x 76, and tapping anywhere on the "now playing"

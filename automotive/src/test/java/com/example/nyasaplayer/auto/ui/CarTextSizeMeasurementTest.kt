@@ -109,17 +109,24 @@ class CarTextSizeMeasurementTest {
         }
 
         fun SemanticsNode.isInteractiveLabel(): Boolean {
-            val control = generateSequence(this) { it.parent }.firstOrNull { node ->
+            val lineage = generateSequence(this) { it.parent }
+            val control = lineage.firstOrNull { node ->
                 SemanticsActions.OnClick in node.config ||
                     SemanticsActions.OnLongClick in node.config ||
                     SemanticsProperties.ToggleableState in node.config
             } ?: return false
+            // Text under clearAndSetSemantics is decorative, like the profile row's initial:
+            // TalkBack never reads it, so it is not the label and does not count against one.
+            // The unmerged tree still holds it, which is why this has to ask.
+            if (lineage.takeWhile { it.id != control.id }.any { it.config.isClearingSemantics }) return false
             return control.textDescendants() == 1
         }
 
         /** How many separate texts the control holds: one means this text is its label. */
         fun SemanticsNode.textDescendants(): Int =
-            generateSequence(listOf(this)) { level -> level.flatMap { it.children }.ifEmpty { null } }
+            generateSequence(listOf(this)) { level ->
+                level.filterNot { it.config.isClearingSemantics }.flatMap { it.children }.ifEmpty { null }
+            }
                 .flatten()
                 .count { SemanticsProperties.Text in it.config }
     }

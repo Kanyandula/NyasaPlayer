@@ -480,23 +480,31 @@ private val SquareWindow = 700.dp
 internal const val ContentSlotTag = "contentSlot"
 
 private fun chromeCases(): List<CarUiCase> = listOf(
-    CarUiCase("CarSystemBar") { CarSystemBar(onSearchClick = {}, onSettingsClick = {}, onAvatarClick = {}) },
+    CarUiCase("CarSystemBar") { CarSystemBar(onSearchClick = {}, onSettingsClick = {}) },
     CarUiCase("OfflineBanner/offline") {
         OfflineBanner(isOffline = true, modifier = Modifier.padding(top = CarSystemBarHeight))
     },
 ) + CarScreen.entries.map { tab ->
-    CarUiCase("CarNavRail/$tab selected") {
-        CarNavRail(
-            currentScreen = tab,
-            onSelectTab = {},
-            // Full height: the mini-player is inset beside the rail, not under it (D73).
-            modifier = Modifier.padding(top = CarSystemBarHeight),
-        )
-    }
+    CarUiCase("CarNavRail/$tab selected") { Rail(tab, displayName = "Miracle Banda") }
 } + listOf(
+    CarUiCase("CarNavRail/profile without a name") { Rail(CarScreen.Home, displayName = "") },
     CarUiCase("CarMiniPlayer/playing") { InMiniPlayerSlot { MiniPlayer(PlayingSnapshot) } },
     CarUiCase("CarMiniPlayer/paused") { InMiniPlayerSlot { MiniPlayer(PausedSnapshot) } },
 )
+
+@Composable
+private fun Rail(tab: CarScreen, displayName: String) {
+    CarNavRail(
+        currentScreen = tab,
+        onSelectTab = {},
+        displayName = displayName,
+        // Blank, like every case's image: a real URL would reach Coil, which deadlocks here.
+        photoUrl = "",
+        onProfileClick = {},
+        // Full height: the mini-player is inset beside the rail, not under it (D73).
+        modifier = Modifier.padding(top = CarSystemBarHeight),
+    )
+}
 
 /** The mini-player's slot: the bottom of the window, beside the rail rather than under it (D73). */
 @Composable

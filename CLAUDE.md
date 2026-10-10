@@ -30,7 +30,7 @@ open app/build/reports/lint-results-debug.html
 `install-hooks.sh` writes. Treat Detekt and Lint as manual gates and run them in every
 verification command; do not report "the hook passed".
 
-Unit tests span five modules — `:automotive` (43 files) is the largest, then `:core:data` (21), `:core:playback` (12), `:app` (2), `:core:common` (2). Run all with `./gradlew test`.
+Unit tests span five modules — `:automotive` holds most of them, then `:core:data` and `:core:playback`; `:app` and `:core:common` have a couple each. Run all with `./gradlew test`.
 
 ## Architecture
 

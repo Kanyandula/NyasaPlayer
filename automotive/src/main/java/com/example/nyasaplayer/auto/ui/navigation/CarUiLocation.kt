@@ -3,7 +3,10 @@ package com.example.nyasaplayer.auto.ui.navigation
 /** Conditional overlays shown above a tab. Not navigation destinations. */
 enum class CarOverlay { FullPlayer, Queue }
 
-/** Full-screen sheets reached from the system bar rather than the rail. */
+/**
+ * Full-screen sheets over the shell rather than tabs: search and settings open from the system bar,
+ * profile from the row under the rail's tabs (D77). None of them is a rail destination.
+ */
 enum class CarSheet { Settings, Profile, Search }
 
 /**

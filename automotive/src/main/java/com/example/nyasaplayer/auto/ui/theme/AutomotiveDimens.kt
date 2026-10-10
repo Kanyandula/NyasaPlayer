@@ -35,8 +35,8 @@ val CarMiniPlayerProgressMaxWidth = 400.dp
 // fold it in here if the two rows should match.
 val CarControlGap = 24.dp
 
-// Top system bar. 80 and not 48 because it carries app-tappable controls (search,
-// settings, avatar) and a 48dp bar cannot contain a 76dp target.
+// Top system bar. 80 and not 48 because it carries app-tappable controls (search and
+// settings; the avatar moved to the rail, D77) and a 48dp bar cannot contain a 76dp target.
 val CarSystemBarHeight = 80.dp
 
 // Left navigation rail. 176 and not 80: the tab label sits beside its icon rather than under

@@ -145,8 +145,8 @@ class FakeAuthRepository(userId: String? = DefaultUserId) : AuthRepository {
      * Backed by a `StateFlow`, so emitting the session that is already current is not an event —
      * the same conflation the real `distinctUntilChanged` performs.
      */
-    fun emitSession(userId: String?, displayName: String = "") {
-        sessions.value = AuthSession(userId = userId, displayName = displayName)
+    fun emitSession(userId: String?, displayName: String = "", photoUrl: String = "") {
+        sessions.value = AuthSession(userId = userId, displayName = displayName, photoUrl = photoUrl)
     }
 
     override val currentUser: FirebaseUser? = null

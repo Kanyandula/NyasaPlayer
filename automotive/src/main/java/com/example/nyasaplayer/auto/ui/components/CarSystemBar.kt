@@ -23,7 +23,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nyasaplayer.auto.ui.theme.CarChrome
@@ -31,7 +30,6 @@ import com.example.nyasaplayer.auto.ui.theme.CarSystemBarHeight
 import com.example.nyasaplayer.auto.ui.theme.CarTextDisabled
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.core.common.ui.icons.MusicNoteIcon
-import com.example.nyasaplayer.core.common.ui.icons.ProfileIcon
 import com.example.nyasaplayer.core.common.ui.icons.SearchIcon
 import com.example.nyasaplayer.core.common.ui.icons.SettingsIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
@@ -45,7 +43,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private val LogoSize = 40.dp
 private val ControlIconSize = 24.dp
-private val AvatarIconSize = 32.dp
 private val ControlSpacing = 8.dp
 
 /**
@@ -56,15 +53,14 @@ private val ControlSpacing = 8.dp
  * as a wordmark plus a right-hand control cluster, and having tabs in both places is how a
  * driver's muscle memory breaks between screens.
  *
- * All three controls open a sheet: [onSearchClick] the search sheet (A6), [onSettingsClick] and
- * [onAvatarClick] settings and the profile switcher (A7). The gate refuses the latter two while
- * the vehicle is moving; this bar does not know that and does not need to.
+ * Both controls open a sheet: [onSearchClick] the search sheet (A6), [onSettingsClick] settings
+ * (A7). The gate refuses settings while the vehicle is moving; this bar does not know that and
+ * does not need to. The profile entry moved to the bottom of [CarNavRail] (D77).
  */
 @Composable
 fun CarSystemBar(
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onAvatarClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -80,7 +76,6 @@ fun CarSystemBar(
         SystemBarControls(
             onSearchClick = onSearchClick,
             onSettingsClick = onSettingsClick,
-            onAvatarClick = onAvatarClick,
         )
         ClockDisplay(modifier = Modifier.padding(start = 16.dp))
     }
@@ -117,7 +112,7 @@ private fun AppLogo(modifier: Modifier = Modifier) {
 }
 
 /**
- * Search, settings and profile — all three live since A7.
+ * Search and settings, both live since A7. Profile was the third until it moved to the rail (D77).
  *
  * The disabled path in [SystemBarControl] is kept, not dead: it is how the next control that
  * arrives before its destination announces itself, which is what FR-2.6 asks for.
@@ -128,7 +123,6 @@ private fun AppLogo(modifier: Modifier = Modifier) {
 private fun SystemBarControls(
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onAvatarClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -138,7 +132,6 @@ private fun SystemBarControls(
     ) {
         SystemBarControl(SearchIcon, "Search", onClick = onSearchClick)
         SystemBarControl(SettingsIcon, "Settings", onClick = onSettingsClick)
-        SystemBarControl(ProfileIcon, "Profile", iconSize = AvatarIconSize, onClick = onAvatarClick)
     }
 }
 
@@ -152,7 +145,6 @@ private fun SystemBarControl(
     icon: ImageVector,
     contentDescription: String,
     modifier: Modifier = Modifier,
-    iconSize: Dp = ControlIconSize,
     onClick: (() -> Unit)? = null,
 ) {
     Box(
@@ -165,7 +157,7 @@ private fun SystemBarControl(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = if (onClick == null) CarTextDisabled else CarTextSecondary,
-            modifier = Modifier.size(iconSize),
+            modifier = Modifier.size(ControlIconSize),
         )
     }
 }
