@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -307,7 +308,6 @@ private fun AuthenticatedApp(
                 },
                 onSelectTab = selectTab,
                 onExpandPlayer = openFullPlayer,
-                onQueueClick = openQueue,
                 decorativeMotionEnabled = motionEnabled,
                 onTogglePlayPause = playerViewModel::togglePlayPause,
                 onSkipNext = playerViewModel::skipNext,
@@ -645,7 +645,6 @@ private fun BrowseShell(
     onAvatarClick: () -> Unit,
     onSelectTab: (CarScreen) -> Unit,
     onExpandPlayer: () -> Unit,
-    onQueueClick: () -> Unit,
     decorativeMotionEnabled: Boolean,
     onTogglePlayPause: () -> Unit,
     onSkipNext: () -> Unit,
@@ -691,163 +690,167 @@ private fun BrowseShell(
                 animateSelection = decorativeMotionEnabled,
             )
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(CarScreenMargin),
-            ) {
-                when (currentScreen) {
-                    CarScreen.Home -> CarHomeScreen(
-                        recentlyPlayed = rememberVisible(contentState.recentlyPlayed, restrictions),
-                        popularSongs = rememberVisible(contentState.popularSongs, restrictions),
-                        isLoading = contentState.isLoading,
-                        errorMessage = contentState.errorMessage,
-                        onRecentClick = { songs, song -> onSongClick(songs, song, QueueOrigin.RecentlyPlayed) },
-                        // Popular Now is a chart, not a collection the driver owns: no label.
-                        onPopularClick = { songs, song -> onSongClick(songs, song, QueueOrigin.None) },
-                        onRetry = onRetry,
-                        onBrowseClick = { onSelectTab(CarScreen.Browse) },
-                        currentlyPlayingMediaId = currentlyPlayingMediaId,
-                        isPlaying = isPlaying,
-                    )
-
-                    CarScreen.Browse -> CarBrowseScreen(
-                        genres = rememberVisible(contentState.genres, restrictions),
-                        onGenreClick = onGenreClick,
-                        onLibraryClick = { onSelectTab(CarScreen.Library) },
-                        isLoading = contentState.isLoading,
-                        errorMessage = contentState.errorMessage,
-                        onRetry = onRetry,
-                    )
-
-                    CarScreen.Library -> when (val destination = drillDown) {
-                        is CarDestination.Artist -> {
-                            val artistSongs = remember(
-                                contentState.likedSongs,
-                                destination.artistId,
-                                restrictions,
-                            ) {
-                                artistLikedSongs(
-                                    contentState.likedSongs,
-                                    destination.artistId,
-                                    restrictions,
-                                )
-                            }
-                            val artistCoverUrl = remember(
-                                contentState.favoriteArtists,
-                                destination.artistId,
-                            ) {
-                                contentState.favoriteArtists
-                                    .firstOrNull { it.artistId == destination.artistId }
-                                    ?.coverUrl
-                                    .orEmpty()
-                            }
-                            // Remembered: a fresh origin each position tick would defeat skipping below.
-                            val artistOrigin = remember(destination) {
-                                QueueOrigin.Artist(destination.artistId, destination.artistName)
-                            }
-                            CarArtistLikedSongsScreen(
-                                artistName = destination.artistName,
-                                artistCoverUrl = artistCoverUrl,
-                                likedSongs = artistSongs,
-                                pendingUnlikes = contentState.pendingUnlikes,
-                                onBackClick = onBackFromDetail,
-                                onSongClick = { song -> onSongClick(artistSongs, song, artistOrigin) },
-                                onPlayAll = { onPlayTracks(artistSongs, artistOrigin) },
-                                onShufflePlay = { onShuffleTracks(artistSongs, artistOrigin) },
-                                // Live list: the row leaves on the next emission (D25).
-                                onLikeToggle = likeToggle(onLikeToggle, freeze = false),
-                                currentlyPlayingMediaId = currentlyPlayingMediaId,
-                                isPlaying = isPlaying,
-                            )
-                        }
-
-                        is CarDestination.Downloads -> CarDownloadsScreen(
-                            items = contentState.downloads,
-                            // The platform's own answer, not a driving guess: the screen stays
-                            // viewable in motion and only its mutations are refused.
-                            isDriving = restrictions.isDistractionOptimized,
-                            maxItems = restrictions.maxCumulativeContentItems,
-                            onBackClick = onBackFromDetail,
-                            onSongClick = { songs, song -> onSongClick(songs, song, QueueOrigin.Downloads) },
-                            onRemove = onRemoveDownload,
-                            onRemoveAll = onRemoveAllDownloads,
-                            onRetry = onRetryDownload,
-                            onBrowseClick = { onSelectTab(CarScreen.Browse) },
-                            currentlyPlayingMediaId = currentlyPlayingMediaId,
-                            isPlaying = isPlaying,
-                        )
-
-                        is CarDestination.Album,
-                        is CarDestination.Playlist,
-                        is CarDestination.CatalogArtist,
-                        -> DetailRoute(
-                            destination = destination,
-                            detail = contentState.detail,
-                            restrictions = restrictions,
-                            onBackClick = onBackFromDetail,
-                            onPlayTracks = onPlayTracks,
-                            onShuffleTracks = onShuffleTracks,
-                            onSongClick = onSongClick,
-                            currentlyPlayingMediaId = currentlyPlayingMediaId,
-                            isPlaying = isPlaying,
-                            onRetry = onRetryDetail,
-                            downloads = contentState.downloads,
-                            onDownloadAlbum = onDownloadAlbum,
-                        )
-
-                        null -> CarLibraryScreen(
+            // The mini-player sits under the content, not under the rail: the rail runs to the
+            // bottom and the bar starts where it ends (D73).
+            Column(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(CarScreenMargin),
+                ) {
+                    when (currentScreen) {
+                        CarScreen.Home -> CarHomeScreen(
                             recentlyPlayed = rememberVisible(contentState.recentlyPlayed, restrictions),
-                            playlists = rememberVisible(contentState.playlists, restrictions),
-                            albums = rememberVisible(contentState.albums, restrictions),
-                            favoriteArtists = rememberVisible(
-                                contentState.favoriteArtists,
-                                restrictions,
-                            ),
-                            likedSongCount = contentState.likedSongs.size,
-                            // Library's only song rows are its recently played shelf.
-                            onSongClick = { songs, song -> onSongClick(songs, song, QueueOrigin.RecentlyPlayed) },
-                            onPlaylistClick = onPlaylistClick,
-                            onAlbumClick = onAlbumClick,
-                            onArtistClick = onArtistClick,
-                            onFavouritesClick = { onSelectTab(CarScreen.Favourites) },
+                            popularSongs = rememberVisible(contentState.popularSongs, restrictions),
+                            isLoading = contentState.isLoading,
+                            errorMessage = contentState.errorMessage,
+                            onRecentClick = { songs, song -> onSongClick(songs, song, QueueOrigin.RecentlyPlayed) },
+                            // Popular Now is a chart, not a collection the driver owns: no label.
+                            onPopularClick = { songs, song -> onSongClick(songs, song, QueueOrigin.None) },
+                            onRetry = onRetry,
                             onBrowseClick = { onSelectTab(CarScreen.Browse) },
-                            onDownloadsClick = onDownloadsClick,
                             currentlyPlayingMediaId = currentlyPlayingMediaId,
                             isPlaying = isPlaying,
+                        )
+
+                        CarScreen.Browse -> CarBrowseScreen(
+                            genres = rememberVisible(contentState.genres, restrictions),
+                            onGenreClick = onGenreClick,
+                            onLibraryClick = { onSelectTab(CarScreen.Library) },
                             isLoading = contentState.isLoading,
                             errorMessage = contentState.errorMessage,
                             onRetry = onRetry,
                         )
-                    }
 
-                    CarScreen.Favourites -> CarFavouritesRoute(
-                        contentState = contentState,
-                        restrictions = restrictions,
-                        onSongClick = { songs, song -> onSongClick(songs, song, QueueOrigin.Favourites) },
-                        onPlayTracks = { songs -> onPlayTracks(songs, QueueOrigin.Favourites) },
-                        onShuffleTracks = { songs -> onShuffleTracks(songs, QueueOrigin.Favourites) },
-                        onLikeToggle = onLikeToggle,
-                        onBrowseClick = { onSelectTab(CarScreen.Browse) },
-                        onRetry = onRetry,
-                        currentlyPlayingMediaId = currentlyPlayingMediaId,
-                        isPlaying = isPlaying,
+                        CarScreen.Library -> when (val destination = drillDown) {
+                            is CarDestination.Artist -> {
+                                val artistSongs = remember(
+                                    contentState.likedSongs,
+                                    destination.artistId,
+                                    restrictions,
+                                ) {
+                                    artistLikedSongs(
+                                        contentState.likedSongs,
+                                        destination.artistId,
+                                        restrictions,
+                                    )
+                                }
+                                val artistCoverUrl = remember(
+                                    contentState.favoriteArtists,
+                                    destination.artistId,
+                                ) {
+                                    contentState.favoriteArtists
+                                        .firstOrNull { it.artistId == destination.artistId }
+                                        ?.coverUrl
+                                        .orEmpty()
+                                }
+                                // Remembered: a fresh origin each position tick would defeat skipping below.
+                                val artistOrigin = remember(destination) {
+                                    QueueOrigin.Artist(destination.artistId, destination.artistName)
+                                }
+                                CarArtistLikedSongsScreen(
+                                    artistName = destination.artistName,
+                                    artistCoverUrl = artistCoverUrl,
+                                    likedSongs = artistSongs,
+                                    pendingUnlikes = contentState.pendingUnlikes,
+                                    onBackClick = onBackFromDetail,
+                                    onSongClick = { song -> onSongClick(artistSongs, song, artistOrigin) },
+                                    onPlayAll = { onPlayTracks(artistSongs, artistOrigin) },
+                                    onShufflePlay = { onShuffleTracks(artistSongs, artistOrigin) },
+                                    // Live list: the row leaves on the next emission (D25).
+                                    onLikeToggle = likeToggle(onLikeToggle, freeze = false),
+                                    currentlyPlayingMediaId = currentlyPlayingMediaId,
+                                    isPlaying = isPlaying,
+                                )
+                            }
+
+                            is CarDestination.Downloads -> CarDownloadsScreen(
+                                items = contentState.downloads,
+                                // The platform's own answer, not a driving guess: the screen stays
+                                // viewable in motion and only its mutations are refused.
+                                isDriving = restrictions.isDistractionOptimized,
+                                maxItems = restrictions.maxCumulativeContentItems,
+                                onBackClick = onBackFromDetail,
+                                onSongClick = { songs, song -> onSongClick(songs, song, QueueOrigin.Downloads) },
+                                onRemove = onRemoveDownload,
+                                onRemoveAll = onRemoveAllDownloads,
+                                onRetry = onRetryDownload,
+                                onBrowseClick = { onSelectTab(CarScreen.Browse) },
+                                currentlyPlayingMediaId = currentlyPlayingMediaId,
+                                isPlaying = isPlaying,
+                            )
+
+                            is CarDestination.Album,
+                            is CarDestination.Playlist,
+                            is CarDestination.CatalogArtist,
+                            -> DetailRoute(
+                                destination = destination,
+                                detail = contentState.detail,
+                                restrictions = restrictions,
+                                onBackClick = onBackFromDetail,
+                                onPlayTracks = onPlayTracks,
+                                onShuffleTracks = onShuffleTracks,
+                                onSongClick = onSongClick,
+                                currentlyPlayingMediaId = currentlyPlayingMediaId,
+                                isPlaying = isPlaying,
+                                onRetry = onRetryDetail,
+                                downloads = contentState.downloads,
+                                onDownloadAlbum = onDownloadAlbum,
+                            )
+
+                            null -> CarLibraryScreen(
+                                recentlyPlayed = rememberVisible(contentState.recentlyPlayed, restrictions),
+                                playlists = rememberVisible(contentState.playlists, restrictions),
+                                albums = rememberVisible(contentState.albums, restrictions),
+                                favoriteArtists = rememberVisible(
+                                    contentState.favoriteArtists,
+                                    restrictions,
+                                ),
+                                likedSongCount = contentState.likedSongs.size,
+                                // Library's only song rows are its recently played shelf.
+                                onSongClick = { songs, song -> onSongClick(songs, song, QueueOrigin.RecentlyPlayed) },
+                                onPlaylistClick = onPlaylistClick,
+                                onAlbumClick = onAlbumClick,
+                                onArtistClick = onArtistClick,
+                                onFavouritesClick = { onSelectTab(CarScreen.Favourites) },
+                                onBrowseClick = { onSelectTab(CarScreen.Browse) },
+                                onDownloadsClick = onDownloadsClick,
+                                currentlyPlayingMediaId = currentlyPlayingMediaId,
+                                isPlaying = isPlaying,
+                                isLoading = contentState.isLoading,
+                                errorMessage = contentState.errorMessage,
+                                onRetry = onRetry,
+                            )
+                        }
+
+                        CarScreen.Favourites -> CarFavouritesRoute(
+                            contentState = contentState,
+                            restrictions = restrictions,
+                            onSongClick = { songs, song -> onSongClick(songs, song, QueueOrigin.Favourites) },
+                            onPlayTracks = { songs -> onPlayTracks(songs, QueueOrigin.Favourites) },
+                            onShuffleTracks = { songs -> onShuffleTracks(songs, QueueOrigin.Favourites) },
+                            onLikeToggle = onLikeToggle,
+                            onBrowseClick = { onSelectTab(CarScreen.Browse) },
+                            onRetry = onRetry,
+                            currentlyPlayingMediaId = currentlyPlayingMediaId,
+                            isPlaying = isPlaying,
+                        )
+                    }
+                }
+
+                if (playerState.playback.currentSong != null) {
+                    CarMiniPlayer(
+                        playback = playerState.playback,
+                        onTogglePlayPause = onTogglePlayPause,
+                        onSkipNext = onSkipNext,
+                        onSkipPrevious = onSkipPrevious,
+                        onExpand = onExpandPlayer,
+                        isLiked = playerState.isCurrentSongLiked,
+                        onLikeClick = onLikeClick,
                     )
                 }
             }
-        }
-
-        if (playerState.playback.currentSong != null) {
-            CarMiniPlayer(
-                playback = playerState.playback,
-                onTogglePlayPause = onTogglePlayPause,
-                onSkipNext = onSkipNext,
-                onSkipPrevious = onSkipPrevious,
-                onExpand = onExpandPlayer,
-                isLiked = playerState.isCurrentSongLiked,
-                onLikeClick = onLikeClick,
-                onQueueClick = onQueueClick,
-            )
         }
     }
 }

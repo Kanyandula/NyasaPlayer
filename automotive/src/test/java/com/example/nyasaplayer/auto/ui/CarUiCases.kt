@@ -489,7 +489,8 @@ private fun chromeCases(): List<CarUiCase> = listOf(
         CarNavRail(
             currentScreen = tab,
             onSelectTab = {},
-            modifier = Modifier.padding(top = CarSystemBarHeight, bottom = CarMiniPlayerHeight),
+            // Full height: the mini-player is inset beside the rail, not under it (D73).
+            modifier = Modifier.padding(top = CarSystemBarHeight),
         )
     }
 } + listOf(
@@ -497,9 +498,16 @@ private fun chromeCases(): List<CarUiCase> = listOf(
     CarUiCase("CarMiniPlayer/paused, unliked") { AtBottom { MiniPlayer(PausedSnapshot, isLiked = false) } },
 )
 
+/** The mini-player's slot: the bottom of the window, beside the rail rather than under it (D73). */
 @Composable
 private fun AtBottom(content: @Composable BoxScope.() -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter, content = content)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(start = CarNavRailWidth),
+        contentAlignment = Alignment.BottomCenter,
+        content = content,
+    )
 }
 
 @Composable

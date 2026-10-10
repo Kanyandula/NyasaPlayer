@@ -1,14 +1,17 @@
 package com.example.nyasaplayer.auto.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,8 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -32,14 +33,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.nyasaplayer.auto.ui.theme.CarCardCornerRadius
+import com.example.nyasaplayer.auto.ui.theme.CarControlGap
 import com.example.nyasaplayer.auto.ui.theme.CarDivider
 import com.example.nyasaplayer.auto.ui.theme.CarGlass
 import com.example.nyasaplayer.auto.ui.theme.CarListArtSize
 import com.example.nyasaplayer.auto.ui.theme.CarMiniPlayerHeight
+import com.example.nyasaplayer.auto.ui.theme.CarMiniPlayerProgressMaxWidth
 import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
 import com.example.nyasaplayer.core.common.ui.icons.PauseIcon
-import com.example.nyasaplayer.core.common.ui.icons.QueueMusicIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipNextIcon
 import com.example.nyasaplayer.core.common.ui.icons.SkipPreviousIcon
 import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
@@ -48,7 +51,11 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 
 private val PlayButtonSize = 80.dp
-private val TopBorderWidth = 1.dp
+private val BorderWidth = 1.dp
+
+// Only the interior corner rounds: the other three edges sit against the rail, the screen edge
+// and the car's own bottom bar (D76).
+private val BarShape = RoundedCornerShape(topStart = CarCardCornerRadius)
 
 @Suppress("LongParameterList")
 @Composable
@@ -61,7 +68,6 @@ fun CarMiniPlayer(
     modifier: Modifier = Modifier,
     isLiked: Boolean = false,
     onLikeClick: () -> Unit = {},
-    onQueueClick: () -> Unit = {},
 ) {
     val song = playback.currentSong ?: return
 
@@ -69,27 +75,34 @@ fun CarMiniPlayer(
         modifier = modifier
             .fillMaxWidth()
             .height(CarMiniPlayerHeight)
+            // Clipped first so the background and the tap ripple follow the rounded corner.
+            .clip(BarShape)
             .background(CarGlass)
-            .drawBehind {
-                drawLine(CarDivider, Offset.Zero, Offset(size.width, 0f), TopBorderWidth.toPx())
-            }
+            .border(BorderWidth, CarDivider, BarShape)
             .clickable(onClick = onExpand)
             .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        NowPlayingInfo(
-            title = song.title,
-            artist = song.resolvedArtistName,
-            coverUrl = song.resolvedCoverUrl,
-            modifier = Modifier.weight(1f),
-        )
-        ProgressSection(
-            currentPositionMs = playback.currentPositionMs,
-            durationMs = playback.durationMs,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 24.dp),
-        )
+        // Not `weight(1f).widthIn(max)` on the progress block: a Row hands a weighted child an
+        // exact width, so the cap would never bind.
+        BoxWithConstraints(modifier = Modifier.weight(1f)) {
+            val progressWidth = minOf(maxWidth / 2, CarMiniPlayerProgressMaxWidth)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NowPlayingInfo(
+                    title = song.title,
+                    artist = song.resolvedArtistName,
+                    coverUrl = song.resolvedCoverUrl,
+                    modifier = Modifier.weight(1f),
+                )
+                ProgressSection(
+                    currentPositionMs = playback.currentPositionMs,
+                    durationMs = playback.durationMs,
+                    modifier = Modifier
+                        .width(progressWidth)
+                        .padding(horizontal = 24.dp),
+                )
+            }
+        }
         MiniPlayerControls(
             isPlaying = playback.isPlaying,
             isLiked = isLiked,
@@ -98,16 +111,6 @@ fun CarMiniPlayer(
             onSkipNext = onSkipNext,
             onSkipPrevious = onSkipPrevious,
         )
-        // The queue was reachable only from the full player; the design ends the
-        // mini-player with it.
-        IconButton(onClick = onQueueClick, modifier = Modifier.carTouchTarget()) {
-            Icon(
-                imageVector = QueueMusicIcon,
-                contentDescription = "Queue",
-                tint = Color.White,
-                modifier = Modifier.size(28.dp),
-            )
-        }
     }
 }
 
@@ -163,7 +166,7 @@ private fun MiniPlayerControls(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(CarControlGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(
