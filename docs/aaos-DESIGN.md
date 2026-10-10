@@ -882,27 +882,35 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   get 296dp, so the device's real subtitle "America's Newest Praise & Worship Favourites" (327dp at
   16sp) would truncate. D74–D75 bring that to 440dp, against 384dp full width. `CarUiCases.kt`'s
   mini-player and rail cases follow the inset, so the measurement suites see the layout that ships.
-- **D74 — The queue button leaves the mini-player; the heart stays.** §Chrome ends the bar with a
-  queue button. The heart carries the song's state (it shows whether the song is liked), and
-  liking is the most time-critical action in the app, because the song ends. The queue button
-  carried no state, was the bar's only control without a circular wash, and opened a
-  destination one tap from the full player. OG-8 still holds: `gate()` refuses only on a sheet,
-  active text entry and drill depth. The queue is a `CarOverlay`, which is none of those, so it is
-  never gated. The route while driving is mini-player → full player → Up Next card → queue. OG-8
-  asks for *available*, not one tap.
+- **D74 — The queue and like buttons leave the mini-player.** §Chrome ends the bar with heart,
+  previous, play/pause, next and queue; it now carries previous, play/pause and next. The queue
+  button carried no state, was the bar's only control without a circular wash, and opened a
+  destination one tap from the full player. The first version of this entry kept the heart, on the
+  grounds that it shows whether the song is liked and that liking is time-critical because the
+  song ends. That was reversed the same day (2026-10-10) to give its width to the track bar (D75)
+  without taking any from the title and artist. The full player already had a heart and the like
+  state, so nothing moved there; what the bar loses is the cost. Liking now takes two taps, the
+  bar and then the full player's heart, while driving as well as parked. And the bar no longer
+  shows whether the current song is liked. OG-8 still holds for the queue: `gate()` refuses only
+  on a sheet, active text entry and drill depth. The queue is a `CarOverlay`, which is none of
+  those, so it is never gated. The route while driving is mini-player → full player → Up Next card
+  → queue. OG-8 asks for *available*, not one tap.
 - **D75 — The progress block is capped, not just weighted.** It shared the row equally with the
-  title and artist, which inset gives it ~418dp for two timestamps and a 4dp line. It now takes
-  the share an equal weight would give it, up to `CarMiniPlayerProgressMaxWidth` (300dp), and the
-  title and artist take the rest. It is a cap and not a size: on a 1024dp unit the share is ~210dp
-  and the cap never binds, while a fixed 300dp would leave the title and artist 24dp. There, the
-  subtitle truncates in every layout, today's full-width bar included. The gaps between controls
-  go from 16 to `CarControlGap` (24dp) for Design for Driving's 23dp minimum, paid for by the width
-  this and D74 free.
-- **D76 — The bar's top-left corner is rounded at `CarCardCornerRadius`.** §Chrome's bar is
-  square. Inset, it has one interior corner; the other three edges sit against the rail, the
-  screen edge and the car's bottom bar. The top hairline became a `border` on the same shape,
-  because a straight line drawn from corner to corner would leave the curve and cross empty
-  space. The border draws on all four edges, so the bar also gets a 1dp line against the rail.
+  title and artist, which inset gives it ~468dp for two timestamps and a 4dp line. It now takes
+  the share an equal weight would give it, up to `CarMiniPlayerProgressMaxWidth` (400dp), and the
+  title and artist take the rest: 440dp, which fits the 327dp subtitle above. The cap was 300dp
+  while the heart stayed. The heart's 100dp went to the block, and its own padding went from 24
+  to 12dp, so the track runs 296dp rather than 172dp (measured on the reference unit with 14sp
+  timestamps). The title and artist keep exactly what they had. It is a cap and not a size: on a 1024dp unit the share is ~260dp and the cap never
+  binds, while a fixed 400dp would leave the title and artist 24dp. There, the subtitle truncates
+  in every layout, the old full-width bar included. The gaps between controls go from 16 to
+  `CarControlGap` (24dp) for Design for Driving's 23dp minimum, paid for by the width that the
+  removals in D74 free.
+- **D76 — The bar's top corners are rounded at `CarCardCornerRadius`.** §Chrome's bar is square.
+  The top edge is the bar's only free edge, so both its corners round. The bottom two stay square
+  against the OEM bar below. The top hairline became a `border` on the same shape, because a
+  straight line drawn from corner to corner would leave the curves and cross empty space. The
+  border draws on all four edges, so the bar also gets a 1dp line against the rail.
 
 ## Components
 
