@@ -930,8 +930,9 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   display name get the person icon and "Profile". The row stays enabled while driving (GB-1);
   the gate refuses the profile sheet under `NO_SETUP` with the same message the avatar got
   (OG-6). The cost is height. The rail now needs 452dp, so the window needs 532dp: 96dp spare on
-  the 1440x800 reference and 62dp on a 1024x768 unit. A 1024x600 unit clips the row, though the
-  four tabs alone already overflowed it by 4dp (`docs/BACKLOG.md`).
+  the 1440x800 reference and 62dp on a 1024x768 unit while online; offline, the banner above the
+  rail takes its own height out of that. A 1024x600 unit clips the row, though the four tabs alone
+  already overflowed it by 4dp (`docs/BACKLOG.md`).
 
 ## Components
 

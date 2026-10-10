@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.example.nyasaplayer.auto.ui.navigation.CarScreen
 import com.example.nyasaplayer.auto.ui.theme.CarMiniPlayerHeight
+import com.example.nyasaplayer.auto.ui.theme.CarSystemBarHeight
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -37,12 +38,12 @@ class CarNavRailTest {
     private var profileClicks = 0
 
     @Test
-    fun `the profile row's centre sits on the mini-player's centre`() {
+    fun `the profile row's centre sits half a mini-player above the rail's bottom`() {
         setRail(displayName = "Miracle Banda")
 
         val rail = composeRule.onNodeWithTag(RailTag).getBoundsInRoot()
         val row = composeRule.onNodeWithText("Miracle").getBoundsInRoot()
-        // The bar is bottom-anchored beside the rail, so its centre is half its height up.
+        // The rail and the bar both end at the window's bottom, so that is the bar's centre.
         val rowCentreAboveBottom = rail.bottom - (row.top + row.bottom) / 2
         assertEquals((CarMiniPlayerHeight / 2).value, rowCentreAboveBottom.value, 0.5f)
     }
@@ -54,8 +55,7 @@ class CarNavRailTest {
         val row = composeRule.onNodeWithText("Miracle")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
-        // The avatar's initial is decorative. Merged in, it would make this a two-text control,
-        // which the text-size suite stops checking against the 18sp label floor.
+        // The avatar's initial is decorative: merged in, TalkBack would read "M, Miracle".
         val texts = row.fetchSemanticsNode().config[SemanticsProperties.Text].map { it.text }
         assertEquals(listOf("Miracle"), texts)
 
@@ -72,12 +72,13 @@ class CarNavRailTest {
 
     @Test
     fun `the first name and initial come from the display name`() {
-        assertEquals("Miracle", firstName("Miracle Banda"))
-        assertEquals("Miracle", firstName("Miracle"))
-        assertEquals("Miracle", firstName("  Miracle Banda"))
-        assertEquals("", firstName("   "))
-        assertEquals("M", initialOf(firstName("miracle banda")))
-        assertEquals("", initialOf(firstName("")))
+        assertEquals("Miracle", firstNameOf("Miracle Banda"))
+        assertEquals("Miracle", firstNameOf("Miracle"))
+        assertEquals("Miracle", firstNameOf("  Miracle Banda"))
+        assertEquals("Miracle", firstNameOf("Miracle\u00A0Banda"))
+        assertEquals("", firstNameOf("   "))
+        assertEquals("M", initialOf(firstNameOf("miracle banda")))
+        assertEquals("", initialOf(firstNameOf("")))
     }
 
     private fun setRail(displayName: String) {
@@ -97,5 +98,5 @@ class CarNavRailTest {
 }
 
 /** The reference head unit's rail: the 628dp window less the 80dp system bar. */
-private val RailHeight = 548.dp
+private val RailHeight = 628.dp - CarSystemBarHeight
 private const val RailTag = "rail"

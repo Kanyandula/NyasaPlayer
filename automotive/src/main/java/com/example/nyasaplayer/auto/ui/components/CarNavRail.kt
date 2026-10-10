@@ -138,10 +138,8 @@ fun CarNavRail(
                     onClick = { onSelectTab(destination) },
                 )
             }
-            // ponytail: the rail now needs 452dp (five 88dp rows and this inset), so the window
-            // needs 532dp: 96dp spare on the 1440x800 reference, 62dp on a 1024x768 unit. A
-            // 1024x600 unit clips the row by 104dp (the tabs alone already overflow it by 4), and
-            // the cases only run at 628dp. Scroll the rail if a unit that short ships.
+            // ponytail: no scrolling; the rail needs a 532dp window, and a shorter one clips this
+            // row (D77, BACKLOG).
             Spacer(Modifier.weight(1f))
             ProfileRow(displayName = displayName, photoUrl = photoUrl, onClick = onProfileClick)
             Spacer(Modifier.height(ProfileBottomInset))
@@ -160,7 +158,7 @@ private fun ProfileRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val firstName = firstName(displayName)
+    val firstName = firstNameOf(displayName)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -218,9 +216,10 @@ private fun ProfileRow(
     }
 }
 
-internal fun firstName(displayName: String): String = displayName.trim().substringBefore(' ')
+internal fun firstNameOf(displayName: String): String = displayName.trim().takeWhile { !it.isWhitespace() }
 
-internal fun initialOf(firstName: String): String = firstName.take(1).uppercase()
+// ponytail: the first UTF-16 unit, so a name that starts with an emoji draws half of it.
+internal fun initialOf(name: String): String = name.take(1).uppercase()
 
 @Composable
 private fun CarNavRailItem(
