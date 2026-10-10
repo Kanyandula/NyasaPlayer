@@ -171,11 +171,14 @@ screen under `automotive/src/main/java/.../ui/`:
 - **Size from the window, not from a constant.** A layout tuned to one head unit's width leaves the
   rest as dead margin. The full player derives its art from `min(windowHeight - padding, width/3)`
   and lets its column take what is left up to a cap; copy that shape rather than a fixed dp pair.
-- **Four measurement suites are the contract**, all fed by `CarUiCases.kt`'s cases and run by
+- **Three measurement suites are the contract**, all fed by `CarUiCases.kt`'s cases and run by
   `./gradlew :automotive:testOemDebugUnitTest`: `CarTouchTargetMeasurementTest` (>=76dp),
-  `CarTextSizeMeasurementTest` (>=14sp, >=18sp for a control's own label),
-  `CarTextContrastMeasurementTest` (>=7:1) and `CarTextOverflowMeasurementTest` (nothing ellipsised
-  but a named exemption). A property with no suite behind it is a property that drifts — see T37.
+  `CarTextSizeMeasurementTest` (>=14sp, >=18sp for a control's own label) and
+  `CarTextContrastMeasurementTest` (>=7:1). A property with no suite behind it is a property that
+  drifts — see T37.
+- **Truncation is not one of them.** Robolectric's fallback font metrics make `hasVisualOverflow`
+  flag nearly every text node, so an overflow suite was tried and removed (2026-09-28). A cut-off
+  title passes all three suites; check text length on the emulator with a real-length case.
 
 ## Firebase Setup
 
@@ -195,7 +198,7 @@ migration.
 
 ## Known Gaps
 
-- Tests: `:core:data` covers entities, converters, offline repos and sync backoff; `:automotive` holds the largest suite, including the `CarTouchTargetMeasurementTest` / `CarTextContrastMeasurementTest` / `CarTextSizeMeasurementTest` / `CarTextOverflowMeasurementTest` compliance measurements
+- Tests: `:core:data` covers entities, converters, offline repos and sync backoff; `:automotive` holds the largest suite, including the `CarTouchTargetMeasurementTest` / `CarTextContrastMeasurementTest` / `CarTextSizeMeasurementTest` compliance measurements
 - README "Not Yet Implemented" section tracks planned features (queue management, artist/album detail screens, etc.)
 
 ### Error handling that IS in place
