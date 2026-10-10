@@ -901,11 +901,11 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   title and artist take the rest: 440dp, which fits the 327dp subtitle above. The cap was 300dp
   while the heart stayed. The heart's 100dp went to the block, and its own padding went from 24
   to 12dp, so the track runs 296dp rather than 172dp (measured on the reference unit with 14sp
-  timestamps). The title and artist keep exactly what they had. It is a cap and not a size: on a 1024dp unit the share is ~260dp and the cap never
-  binds, while a fixed 400dp would leave the title and artist 24dp. There, the subtitle truncates
-  in every layout, the old full-width bar included. The gaps between controls go from 16 to
-  `CarControlGap` (24dp) for Design for Driving's 23dp minimum, paid for by the width that the
-  removals in D74 free.
+  timestamps). The title and artist keep exactly what they had. It is a cap and not a size: on a
+  1024dp unit the share is ~260dp and the cap never binds, while a fixed 400dp would leave the
+  title and artist 24dp. There, the subtitle truncates in every layout, the old full-width bar
+  included. The gaps between controls go from 16 to `CarControlGap` (24dp) for Design for
+  Driving's 23dp minimum, paid for by the width that the removals in D74 free.
 - **D76 — The bar's top corners are rounded at `CarCardCornerRadius`.** §Chrome's bar is square.
   The top edge is the bar's only free edge, so both its corners round. The bottom two stay square
   against the OEM bar below. The top hairline became a `border` on the same shape, because a
