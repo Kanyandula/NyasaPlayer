@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,11 +51,13 @@ import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 private val PlayButtonSize = 80.dp
 private val BorderWidth = 1.dp
 
-// Only the interior corner rounds: the other three edges sit against the rail, the screen edge
-// and the car's own bottom bar (D76).
-private val BarShape = RoundedCornerShape(topStart = CarCardCornerRadius)
+// The top edge is the bar's only free edge, so both its corners round; the bottom two stay square
+// against the car's own bar below (D76).
+private val BarShape = RoundedCornerShape(
+    topStart = CarCardCornerRadius,
+    topEnd = CarCardCornerRadius,
+)
 
-@Suppress("LongParameterList")
 @Composable
 fun CarMiniPlayer(
     playback: PlaybackSnapshot,
@@ -66,8 +66,6 @@ fun CarMiniPlayer(
     onSkipPrevious: () -> Unit,
     onExpand: () -> Unit,
     modifier: Modifier = Modifier,
-    isLiked: Boolean = false,
-    onLikeClick: () -> Unit = {},
 ) {
     val song = playback.currentSong ?: return
 
@@ -99,14 +97,12 @@ fun CarMiniPlayer(
                     durationMs = playback.durationMs,
                     modifier = Modifier
                         .width(progressWidth)
-                        .padding(horizontal = 24.dp),
+                        .padding(horizontal = 12.dp),
                 )
             }
         }
         MiniPlayerControls(
             isPlaying = playback.isPlaying,
-            isLiked = isLiked,
-            onLikeClick = onLikeClick,
             onTogglePlayPause = onTogglePlayPause,
             onSkipNext = onSkipNext,
             onSkipPrevious = onSkipPrevious,
@@ -157,8 +153,6 @@ private fun NowPlayingInfo(
 @Composable
 private fun MiniPlayerControls(
     isPlaying: Boolean,
-    isLiked: Boolean,
-    onLikeClick: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
@@ -169,21 +163,6 @@ private fun MiniPlayerControls(
         horizontalArrangement = Arrangement.spacedBy(CarControlGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
-            onClick = onLikeClick,
-            modifier = Modifier
-                .size(CarTouchTargetSize)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.1f)),
-        ) {
-            Icon(
-                imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = if (isLiked) "Unlike" else "Like",
-                tint = if (isLiked) NyasaGold else CarTextSecondary,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-
         IconButton(
             onClick = onSkipPrevious,
             modifier = Modifier

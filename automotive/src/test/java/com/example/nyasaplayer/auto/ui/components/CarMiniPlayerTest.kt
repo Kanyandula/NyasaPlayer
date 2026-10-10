@@ -22,9 +22,9 @@ import org.robolectric.annotation.Config
 /**
  * The progress block's width is capped, not fixed (D75).
  *
- * Measured from the elapsed time's left edge to the heart's, so it reads layout only and not
- * Robolectric's font metrics. `weight(1f).widthIn(max)` looks like the same cap and never binds,
- * which the 1440dp case catches.
+ * Measured between node edges — the art, the elapsed time and the previous button — so it reads
+ * layout only and not Robolectric's font metrics. `weight(1f).widthIn(max)` looks like the same
+ * cap and never binds, which the 1440dp case catches.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w1440dp-h800dp")
@@ -35,21 +35,20 @@ class CarMiniPlayerTest {
 
     @Test
     fun `beside the rail on a 1440dp unit the progress block stops at its cap`() {
-        // The share would be ~418dp, so the cap binds.
-        assertEquals(
-            CarMiniPlayerProgressMaxWidth.value,
-            progressBlockWidth(barWidth = 1440.dp - CarNavRailWidth).value,
-            0.5f,
-        )
+        // The share would be ~468dp, so the cap binds.
+        val (_, progress) = blockWidths(barWidth = 1440.dp - CarNavRailWidth)
+        assertEquals(CarMiniPlayerProgressMaxWidth.value, progress.value, 0.5f)
     }
 
     @Test
     fun `on a 1024dp unit the cap does not bind and the block keeps its equal share`() {
-        // 848dp of bar, less 48dp of padding and 380dp of controls, halved.
-        assertEquals(210f, progressBlockWidth(barWidth = 1024.dp - CarNavRailWidth).value, 0.5f)
+        // ~260dp each: an equal split, which a fixed width would break.
+        val (identity, progress) = blockWidths(barWidth = 1024.dp - CarNavRailWidth)
+        assertEquals(identity.value, progress.value, 0.5f)
     }
 
-    private fun progressBlockWidth(barWidth: Dp): Dp {
+    /** The title-and-artist block's width, then the progress block's. */
+    private fun blockWidths(barWidth: Dp): Pair<Dp, Dp> {
         composeRule.setContent {
             CarMiniPlayer(
                 playback = PlaybackSnapshot(
@@ -64,12 +63,15 @@ class CarMiniPlayerTest {
                 modifier = Modifier.width(barWidth),
             )
         }
-        // Unmerged: the bar is one clickable, so the merged tree folds the time into the whole bar.
-        val elapsedLeft = composeRule.onNodeWithText("1:34", useUnmergedTree = true).getBoundsInRoot().left
-        val heartLeft = composeRule.onNodeWithContentDescription("Like").getBoundsInRoot().left
-        // The block's 24dp start padding sits before the elapsed time.
-        return heartLeft - elapsedLeft + ProgressStartPadding
+        // Unmerged: the bar is one clickable, so the merged tree folds its children into the bar.
+        val artLeft = composeRule.onNodeWithContentDescription("Track A", useUnmergedTree = true)
+            .getBoundsInRoot().left
+        // The block's start padding sits before the elapsed time.
+        val progressLeft = composeRule.onNodeWithText("1:34", useUnmergedTree = true)
+            .getBoundsInRoot().left - ProgressStartPadding
+        val transportLeft = composeRule.onNodeWithContentDescription("Previous").getBoundsInRoot().left
+        return (progressLeft - artLeft) to (transportLeft - progressLeft)
     }
 }
 
-private val ProgressStartPadding = 24.dp
+private val ProgressStartPadding = 12.dp

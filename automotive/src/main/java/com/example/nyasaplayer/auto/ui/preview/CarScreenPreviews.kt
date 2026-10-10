@@ -263,8 +263,6 @@ private fun MiniPlayerPreview() {
             onSkipNext = {},
             onSkipPrevious = {},
             onExpand = {},
-            isLiked = true,
-            onLikeClick = {},
         )
     }
 }

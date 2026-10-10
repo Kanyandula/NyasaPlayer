@@ -24,7 +24,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
     /**
      * Row #1, removal half. Screen 8 defers row removal until refresh. The deferral is
      * implemented entirely inside `toggleFavourite`, so an unlike performed anywhere else —
-     * the mini player heart, which BrowseShell draws on every tab, or the phone, since the
+     * the full player's heart, which opens over any tab, or the phone, since the
      * Firestore listener is live — drops the row immediately and reflows the list under the
      * driver's finger.
      */
@@ -90,7 +90,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
         vm.toggleFavourite("a", freeze = false)
         advanceUntilIdle()
 
-        // The server drops a, then a is re-liked from the mini player or the phone; neither
+        // The server drops a, then a is re-liked from the full player or the phone; neither
         // touches pendingUnlikes. Both emissions must be distinct values — a StateFlow conflates
         // a reassignment of an equal value, and an earlier version of this test set [a, b] twice
         // and so never drove an emission at all.

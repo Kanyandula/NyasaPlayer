@@ -353,7 +353,6 @@ private fun AuthenticatedApp(
                         }
                     }
                 },
-                onLikeClick = playerViewModel::toggleLike,
                 onLikeToggle = { song, freeze ->
                     scope.launch {
                         if (!contentViewModel.toggleFavourite(song.mediaId, freeze = freeze)) {
@@ -664,7 +663,6 @@ private fun BrowseShell(
     onBackFromDetail: () -> Unit,
     onShuffleTracks: (List<Song>, QueueOrigin) -> Unit,
     onPlayTracks: (List<Song>, QueueOrigin) -> Unit,
-    onLikeClick: () -> Unit,
     onGenreClick: (Genre) -> Unit,
     onLikeToggle: (Song, Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -846,8 +844,6 @@ private fun BrowseShell(
                         onSkipNext = onSkipNext,
                         onSkipPrevious = onSkipPrevious,
                         onExpand = onExpandPlayer,
-                        isLiked = playerState.isCurrentSongLiked,
-                        onLikeClick = onLikeClick,
                     )
                 }
             }

@@ -494,8 +494,8 @@ private fun chromeCases(): List<CarUiCase> = listOf(
         )
     }
 } + listOf(
-    CarUiCase("CarMiniPlayer/playing, liked") { InMiniPlayerSlot { MiniPlayer(PlayingSnapshot, isLiked = true) } },
-    CarUiCase("CarMiniPlayer/paused, unliked") { InMiniPlayerSlot { MiniPlayer(PausedSnapshot, isLiked = false) } },
+    CarUiCase("CarMiniPlayer/playing") { InMiniPlayerSlot { MiniPlayer(PlayingSnapshot) } },
+    CarUiCase("CarMiniPlayer/paused") { InMiniPlayerSlot { MiniPlayer(PausedSnapshot) } },
 )
 
 /** The mini-player's slot: the bottom of the window, beside the rail rather than under it (D73). */
@@ -511,14 +511,13 @@ private fun InMiniPlayerSlot(content: @Composable BoxScope.() -> Unit) {
 }
 
 @Composable
-private fun MiniPlayer(playback: PlaybackSnapshot, isLiked: Boolean) {
+private fun MiniPlayer(playback: PlaybackSnapshot) {
     CarMiniPlayer(
         playback = playback,
         onTogglePlayPause = {},
         onSkipNext = {},
         onSkipPrevious = {},
         onExpand = {},
-        isLiked = isLiked,
     )
 }
 
