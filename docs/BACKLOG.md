@@ -63,7 +63,7 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   (`docs/T13_VERIFICATION.md`, 2026-09-19). Ticketed as T33.
 - `AutomotiveContentViewModel` is past detekt's function threshold and now owns downloads too; its file-level `TooManyFunctions` note says the next slice to touch it should split it, and A9 added to it instead (PRD §6.3 names the content VM as screen 15's data source). Ticketed as T34.
 - `CarNavRail` maps `CarScreen` twice — `iconFor()` and `labelFor()` are back-to-back `when`
-  blocks over the same enum (`CarNavRail.kt:150,157`). `:app` already solved this shape with a
+  blocks over the same enum (in `CarNavRail.kt`). `:app` already solved this shape with a
   data-driven `NavItem(route, labelResId, icon)` list (`NyasaBottomNavBar.kt:42`). Low risk today:
   both `when`s are exhaustive, so a new `CarScreen` fails to compile in both places. But
   `labelFor` returns hardcoded strings where `:app` uses `@StringRes`, so **the rail is not
