@@ -247,7 +247,7 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 | 10 | CarPlaylistScreen | Library → playlist | Play, shuffle, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
 | 11 | CarAlbumScreen | Library → album, or search result | Play, download, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
 | 12 | CarFullPlayerScreen | Mini-player artwork/title | Play/pause, skip, seek, shuffle, repeat, like, queue | buffering, error → 19 | **Allowed** — playback control | Player VM | A5 |
-| 13 | CarQueueScreen | Mini-player queue icon, or full player | **P:** skip to, remove, clear · **D:** skip to only | empty queue | Viewable; edit actions refused, list truncated | Player VM | A5 |
+| 13 | CarQueueScreen | Full player's Up Next card (the mini-player's queue icon left in `aaos-DESIGN.md` D74) | **P:** skip to, remove, clear · **D:** skip to only | empty queue | Viewable; edit actions refused, list truncated | Player VM | A5 |
 | 14 | CarSettingsScreen | System bar: settings | Toggle prefs, sign out | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
 | 15 | CarDownloadsScreen | Library → Downloads chip | **P:** remove one, remove all · **D:** view only | empty, in-progress | Viewable; delete actions refused | Content VM | A9 |
 | 16 | CarNoConnectionScreen — *not a screen: offline play fails fast into the error overlay; the banner stays (D71)* | Network loss | — | — | Allowed | NetworkMonitor | A8 |

@@ -874,6 +874,35 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   falls back to the slow failure. A pure tracker keyed by network handle holds the rule; the monitor
   registers before it seeds, and only API 24–25 keep a synchronous read inside a callback. Mobile
   changes with it.
+- **D73 — The mini-player is inset beside the rail, and the rail runs full height.** §Layout has the
+  rail stop at the top of a full-width bar. Spanning the 1440dp reference unit, the bar ran under
+  the 176dp rail and cut it off 112dp above the bottom edge. `BrowseShell` now puts the bar in the
+  content column, so it starts flush at the rail's edge (x = 176dp), not at the content's 48dp
+  margin. The figures (2026-10-10): inset with the old five controls, the title and artist would
+  get 296dp, so the device's real subtitle "America's Newest Praise & Worship Favourites" (327dp at
+  16sp) would truncate. D74–D75 bring that to 440dp, against 384dp full width. `CarUiCases.kt`'s
+  mini-player and rail cases follow the inset, so the measurement suites see the layout that ships.
+- **D74 — The queue button leaves the mini-player; the heart stays.** §Chrome ends the bar with a
+  queue button. The heart carries the song's state (it shows whether the song is liked), and
+  liking is the most time-critical action in the app, because the song ends. The queue button
+  carried no state, was the bar's only control without a circular wash, and opened a
+  destination one tap from the full player. OG-8 still holds: `gate()` refuses only on a sheet,
+  active text entry and drill depth. The queue is a `CarOverlay`, which is none of those, so it is
+  never gated. The route while driving is mini-player → full player → Up Next card → queue. OG-8
+  asks for *available*, not one tap.
+- **D75 — The progress block is capped, not just weighted.** It shared the row equally with the
+  title and artist, which inset gives it ~418dp for two timestamps and a 4dp line. It now takes
+  the share an equal weight would give it, up to `CarMiniPlayerProgressMaxWidth` (300dp), and the
+  title and artist take the rest. It is a cap and not a size: on a 1024dp unit the share is ~210dp
+  and the cap never binds, while a fixed 300dp would leave the title and artist 24dp. There, the
+  subtitle truncates in every layout, today's full-width bar included. The gaps between controls
+  go from 16 to `CarControlGap` (24dp) for Design for Driving's 23dp minimum, paid for by the width
+  this and D74 free.
+- **D76 — The bar's top-left corner is rounded at `CarCardCornerRadius`.** §Chrome's bar is
+  square. Inset, it has one interior corner; the other three edges sit against the rail, the
+  screen edge and the car's bottom bar. The top hairline became a `border` on the same shape,
+  because a straight line drawn from corner to corner would leave the curve and cross empty
+  space. The border draws on all four edges, so the bar also gets a 1dp line against the rail.
 
 ## Components
 
@@ -887,7 +916,7 @@ rule: a one-off button is how a 76dp target or contrast rule regresses.
 |---|---|
 | `CarSystemBar` / current `CarTopBar` | Evolve the existing top bar into the shared 80dp system bar; do not create per-screen bars |
 | `CarNavRail` | New shared rail; every destination screen uses the same instance and active-state logic |
-| `CarMiniPlayer` | Reuse and re-theme the existing component; add the queue button and combined artwork/title target |
+| `CarMiniPlayer` | Reuse and re-theme the existing component; add the queue button and combined artwork/title target. The queue button later left again (D74) |
 | `CarPillButton` / primary CTA | New shared 76dp button primitive for gold and ghost actions |
 | `CarChip` | Not built. A6's browse-by shortcuts use `CarPillButton`'s ghost variant (D39); build the chip only when a second consumer needs selected/segmented states |
 | `CarContentCard` | New shared card primitive for album, playlist, mix, genre and recommendation cards |

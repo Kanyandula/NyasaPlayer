@@ -76,7 +76,7 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 |---|---|---|
 | `CarSystemBar` / evolved `CarTopBar` | One 80dp shared top bar: wordmark, search, settings, avatar, clock/status | normal, driving-restricted affordance, focus |
 | `CarNavRail` | One 80dp shared rail for Home, Browse, Library, Favourites | selected, unselected, focused, disabled only if a destination is unavailable |
-| `CarMiniPlayer` | Re-theme existing component; artwork/title is one target; add queue button | playing, paused, buffering, error, no item |
+| `CarMiniPlayer` | Re-theme existing component; artwork/title is one target; add queue button (removed again, `aaos-DESIGN.md` D74) | playing, paused, buffering, error, no item |
 | `CarPillButton` | Shared gold/ghost/destructive-safe button primitive | enabled, focused, disabled, loading |
 | `CarIconButton` | Shared circular/square icon target wrapper | enabled, focused, selected, disabled |
 | `CarChip` | Shared filter / browse-by / segmented chip — built, `CarControls.kt`. A6 browse-by still uses the ghost `CarPillButton` (D39) | selected, unselected, focused, disabled |
