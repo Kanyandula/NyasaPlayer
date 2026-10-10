@@ -96,7 +96,7 @@ Multi-module Gradle project:
 │   │                               #   Album/Playlist/Artist detail, Settings, ProfileSwitcher,
 │   │                               #   ArtistLikedSongs, EmptyFavourites, Auth
 │   ├── components/                 # CarMiniPlayer, CarNavRail, CarSystemBar, CarModal,
-│   │                               #   CarTrackRow, CarSignOutConfirmation, ... (21 files)
+│   │                               #   CarTrackRow, CarSignOutConfirmation, ...
 │   ├── navigation/                 # CarScreen (4 rail tabs), CarDestination, CarUiLocation, gate()
 │   └── theme/                      # AutomotiveColors, AutomotiveDimens
 ├── viewmodel/                      # AutomotiveAuthViewModel, AutomotiveContentViewModel,
@@ -190,8 +190,9 @@ was reversed on 2026-08-02 — see `docs/AAOS_PRD.md` §3.3.
   search, deep drill-down, queue mutation and download deletion are refused while driving;
   transport, seek, queue skip-to and tab switching stay available. Starting to drive inside
   a restricted screen **evicts** you to a permitted one with an explanation (FR-2.5).
-- **Measured compliance**: 695 interactive nodes ≥ 76dp, 1103 text nodes ≥ 7:1 contrast,
-  both by automated Compose measurement tests. Evidence: `docs/AAOS_SHIP_RECORD.md`.
+- **Measured compliance**: every interactive node ≥ 76dp, every text ≥ 14sp (18sp for a control's
+  label) and ≥ 7:1 contrast, measured by three Compose test suites on every test run. At ship
+  (2026-09-16) that was 695 interactive and 1103 text nodes: `docs/AAOS_SHIP_RECORD.md`.
 
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)

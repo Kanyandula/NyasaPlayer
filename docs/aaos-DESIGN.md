@@ -130,6 +130,7 @@ Where that rule produces a different number, the implementation target is author
 | Touch target | 76px | **76.dp** | agree — `CarTouchTargetSize` was already 76.dp, arrived at independently |
 | Mini-player height | 88px | **112.dp** | `CarMiniPlayerHeight` predates this design, exceeds its intent, and clears the touch target with room |
 | Card corner radius | 20px | **20.dp** | design wins; the existing 16.dp had no recorded rationale |
+| Nav rail width | 80px | **176.dp** | labels sit beside their icons at the 18px label floor, which 80 cannot hold (D78) |
 
 The 88px mini-player figures below are therefore **correct for the prototype and wrong for
 the implementation**. They are left as-is rather than overwritten so this document continues
@@ -176,13 +177,14 @@ Both floors are measured by `CarTextSizeMeasurementTest` (T30), from what Compos
 than from the source, so a size inherited from a theme is judged as the driver sees it.
 
 **The 18px label floor means a button or CTA's own label** — the text a driver reads to know what
-the control does. A tab label under an icon in the rail is not one: the rail is 80px wide, and
-"Favourites" at 18px does not fit beside its icon. Those take the 14px text floor (owner, 2026-09-16,
-closing the gap between this rule and the rail spec below, which drew 13px).
+the control does. The rail's tab labels are held to it too. They were exempt while they sat under
+their icons in an 80px rail, where "Favourites" at 18px did not fit (owner, 2026-09-16); D78 put
+them beside their icons in a 176dp rail at 18px and retired the exemption.
 
-The smallest text actually rendered is 14px — the rail's tab labels. Artist names in track rows are
-15px. Both satisfy the rule above, but neither is generous for a glance from the driver's seat, and
-car UI body styles are typically far larger. Treat 14px as the floor to revisit, not as a target.
+The smallest text actually rendered is 14px — captions and the mini-player's timestamps. Artist
+names in track rows are 15px. Both satisfy the rule above, but neither is generous for a glance from
+the driver's seat, and car UI body styles are typically far larger. Treat 14px as the floor to
+revisit, not as a target.
 
 ### Contrast, measured
 
@@ -933,6 +935,16 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   the 1440x800 reference and 62dp on a 1024x768 unit while online; offline, the banner above the
   rail takes its own height out of that. A 1024x600 unit clips the row, though the four tabs alone
   already overflowed it by 4dp (`docs/BACKLOG.md`).
+- **D78 — The rail is 176dp wide, with each label beside its icon.** §Chrome's rail is 80px, with
+  a 14px label under a 28px icon. Stacked, every destination took two scan lines to read, which is
+  the one thing a driver cannot spend. One line costs width: "Favourites" at 18sp ends 147dp from
+  the rail's leading edge, leaving 29dp of rail and 21dp inside the selection pill. At that width
+  the labels take the 18px label floor, and the rail-tab exemption in §Typography is gone;
+  `CarTextSizeMeasurementTest` holds them to it. The selection pill is 64dp tall, centred in the
+  88dp row, not the row's full height. 88dp is what the touch target costs; the pill has no such
+  duty, and at 176dp wide a full-height pill read as a panel rather than a selection. The rail
+  costs the content area 96dp, so Browse's grid columns drop from ~190dp to ~166dp on a 1024dp
+  unit. Shipped 2026-09-22 (#97) and recorded here after the fact.
 
 ## Components
 

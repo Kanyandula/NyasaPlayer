@@ -317,10 +317,10 @@ made by habit.
 
 ### 7.2 Chrome contract
 
-Three regions render identically on every screen: an 80dp system bar, an 80dp navigation rail,
-and the persistent mini-player. This is a contract rather than a guideline because the original
-generated designs drifted — six screens produced six different system bars, and only two of six
-carried the rail.
+Three regions render identically on every screen: an 80dp system bar, a 176dp navigation rail
+(`aaos-DESIGN.md` D78), and the persistent mini-player. This is a contract rather than a guideline
+because the original generated designs drifted — six screens produced six different system bars,
+and only two of six carried the rail.
 
 ### 7.3 Motion
 
