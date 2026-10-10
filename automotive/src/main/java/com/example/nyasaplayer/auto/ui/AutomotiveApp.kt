@@ -99,6 +99,7 @@ fun AutomotiveApp(
         AuthenticatedApp(
             onSignOut = authViewModel::signOut,
             userDisplayName = authState.displayName,
+            userPhotoUrl = authState.photoUrl,
         )
     }
 }
@@ -144,6 +145,7 @@ internal fun AuthGate(
 private fun AuthenticatedApp(
     onSignOut: () -> Unit,
     userDisplayName: String,
+    userPhotoUrl: String,
     modifier: Modifier = Modifier,
     playerViewModel: AutomotivePlayerViewModel = hiltViewModel(),
     contentViewModel: AutomotiveContentViewModel = hiltViewModel(),
@@ -297,7 +299,9 @@ private fun AuthenticatedApp(
                 playerState = playerState,
                 contentState = contentState,
                 onSettingsClick = { sheet = CarSheet.Settings },
-                onAvatarClick = { sheet = CarSheet.Profile },
+                displayName = userDisplayName,
+                photoUrl = userPhotoUrl,
+                onProfileClick = { sheet = CarSheet.Profile },
                 // The search control opens the search view, not whatever results were left
                 // over from an earlier trip. The draft query survives, so re-running it is one
                 // press away.
@@ -641,7 +645,9 @@ private fun BrowseShell(
     contentState: AutomotiveContentState,
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onAvatarClick: () -> Unit,
+    displayName: String,
+    photoUrl: String,
+    onProfileClick: () -> Unit,
     onSelectTab: (CarScreen) -> Unit,
     onExpandPlayer: () -> Unit,
     decorativeMotionEnabled: Boolean,
@@ -675,7 +681,6 @@ private fun BrowseShell(
         CarSystemBar(
             onSearchClick = onSearchClick,
             onSettingsClick = onSettingsClick,
-            onAvatarClick = onAvatarClick,
         )
 
         // Above the rail: an app-level condition, not screen content.
@@ -685,6 +690,9 @@ private fun BrowseShell(
             CarNavRail(
                 currentScreen = currentScreen,
                 onSelectTab = onSelectTab,
+                displayName = displayName,
+                photoUrl = photoUrl,
+                onProfileClick = onProfileClick,
                 animateSelection = decorativeMotionEnabled,
             )
 
@@ -998,7 +1006,8 @@ private fun DetailRoute(
 }
 
 /**
- * The two sheets the system bar's gear and avatar open (A7).
+ * The two account sheets: settings from the system bar's gear, profile from the rail's profile
+ * row (A7, D77).
  *
  * Together because they are one decision — both are parked-only, both show the same account, and
  * both hand the same sign-out request back to the shell rather than confirming it themselves.
