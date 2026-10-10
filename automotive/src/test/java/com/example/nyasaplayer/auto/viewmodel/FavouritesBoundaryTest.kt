@@ -90,7 +90,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
         vm.toggleFavourite("a", freeze = false)
         advanceUntilIdle()
 
-        // The server drops a, then a is re-liked from the mini player or the phone; neither
+        // The server drops a, then a is re-liked from the full player or the phone; neither
         // touches pendingUnlikes. Both emissions must be distinct values — a StateFlow conflates
         // a reassignment of an equal value, and an earlier version of this test set [a, b] twice
         // and so never drove an emission at all.

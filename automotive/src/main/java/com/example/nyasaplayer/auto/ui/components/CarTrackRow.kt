@@ -148,7 +148,7 @@ private fun Modifier.likeAccessibility(onLikeToggle: (() -> Unit)?, isLiked: Boo
  * its descendants and makes the heart a semantics node of its own, outside the row's merge. The
  * row's `customActions` only make it *reachable* by rotary — without a description here that
  * second focus stop announces nothing but "double-tap to activate", and activating it silently
- * unlikes a song. Matches the mini player's like control.
+ * unlikes a song.
  */
 @Composable
 private fun LikeHeart(isLiked: Boolean, onLikeToggle: () -> Unit, modifier: Modifier = Modifier) {

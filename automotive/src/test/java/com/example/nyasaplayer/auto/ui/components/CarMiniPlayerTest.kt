@@ -23,8 +23,8 @@ import org.robolectric.annotation.Config
  * The progress block's width is capped, not fixed (D75).
  *
  * Measured between node edges — the art, the elapsed time and the previous button — so it reads
- * layout only and not Robolectric's font metrics. `weight(1f).widthIn(max)` looks like the same cap and never binds,
- * which the 1440dp case catches.
+ * layout only and not Robolectric's font metrics. `weight(1f).widthIn(max)` looks like the same
+ * cap and never binds, which the 1440dp case catches.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w1440dp-h800dp")

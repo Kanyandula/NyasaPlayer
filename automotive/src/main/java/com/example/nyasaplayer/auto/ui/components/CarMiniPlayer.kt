@@ -58,7 +58,6 @@ private val BarShape = RoundedCornerShape(
     topEnd = CarCardCornerRadius,
 )
 
-@Suppress("LongParameterList")
 @Composable
 fun CarMiniPlayer(
     playback: PlaybackSnapshot,
