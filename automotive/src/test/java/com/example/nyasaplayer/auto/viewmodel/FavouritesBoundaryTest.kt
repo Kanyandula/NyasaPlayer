@@ -24,7 +24,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
     /**
      * Row #1, removal half. Screen 8 defers row removal until refresh. The deferral is
      * implemented entirely inside `toggleFavourite`, so an unlike performed anywhere else —
-     * the mini player heart, which BrowseShell draws on every tab, or the phone, since the
+     * the full player's heart, which opens over any tab, or the phone, since the
      * Firestore listener is live — drops the row immediately and reflows the list under the
      * driver's finger.
      */

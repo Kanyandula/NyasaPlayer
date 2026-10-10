@@ -25,10 +25,10 @@ val CarMiniPlayerHeight = 112.dp
 /**
  * The most width the mini-player's progress block takes: a cap, not a size. Below it the block
  * takes the share an equal weight would give it; above it the title and artist take the rest. On a
- * 1440dp head unit the share is ~418dp and the cap binds; on a 1024dp unit it is ~210dp and the cap
- * never binds, where a fixed 300 would leave the title and artist ~24dp (D75).
+ * 1440dp head unit the share is ~468dp and the cap binds; on a 1024dp unit it is ~260dp and the cap
+ * never binds, where a fixed 400 would leave the title and artist ~24dp (D75).
  */
-val CarMiniPlayerProgressMaxWidth = 300.dp
+val CarMiniPlayerProgressMaxWidth = 400.dp
 
 // Gap between the mini-player's controls. Design for Driving wants at least 23dp between touch
 // targets. ponytail: the full player keeps its private 23dp TransportGap, the design's rhythm;
