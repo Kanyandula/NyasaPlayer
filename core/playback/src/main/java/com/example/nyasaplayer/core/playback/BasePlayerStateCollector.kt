@@ -5,6 +5,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
@@ -26,6 +27,7 @@ import kotlin.coroutines.resume
 
 private const val TAG = "PlayerStateCollector"
 
+@UnstableApi
 abstract class BasePlayerStateCollector(
     private val connection: ControllerConnection,
     private val collectorScope: CoroutineScope,
@@ -328,6 +330,7 @@ internal fun readQueue(player: Player): List<Song> =
  * File-level because `BasePlayerStateCollector` sits on detekt's 16-function class ceiling, and this
  * touches nothing of its state.
  */
+@UnstableApi
 private suspend fun ListenableFuture<SessionResult>.awaitResultCode(): Int =
     suspendCancellableCoroutine { continuation ->
         addListener(
@@ -366,6 +369,7 @@ fun Int.toAppRepeatMode(): RepeatMode = when (this) {
  * File-level, like `awaitResultCode` above: it needs nothing private, and the class sits at
  * detekt's function ceiling (D23 — a threshold is not answered with a suppression).
  */
+@UnstableApi
 fun BasePlayerStateCollector.applyRestored(restored: RestoredPlayback) {
     updateSnapshot {
         it.copy(
