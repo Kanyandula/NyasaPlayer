@@ -348,8 +348,8 @@ private val Songs = listOf(
 private val NowPlaying = Songs[1]
 
 /**
- * A real title and artist from the catalogue, at the length the design's 536dp column could not
- * hold: on the AVD this rendered as "I will sing of your joy for..." with the artist cut too.
+ * A real title and artist from the catalogue, at the length the old 536dp column could not hold:
+ * on the AVD this rendered as "I will sing of your joy for..." with the artist cut too.
  */
 private val LongTitleSong = Song(
     mediaId = "s7",
@@ -856,7 +856,7 @@ private fun playerCases(): List<CarUiCase> = listOf(
     PlayerCase("playing, liked, shuffle on, repeat all", PlayingSnapshot, liked = true),
     PlayerCase("paused, unliked, shuffle off, repeat off", PausedSnapshot, liked = false),
     PlayerCase("buffering, repeat one", BufferingSnapshot, liked = true),
-    // The length a real track reaches, so the other suites judge the full player at it.
+    // A real-length title and artist, so the three suites measure the player with them in place.
     PlayerCase("playing, a full-length title and artist", PlayingSnapshot.copy(currentSong = LongTitleSong), true),
     // Up Next (T04): PlayingSnapshot above has a next item; these are the two shapes without one.
     PlayerCase("last track, repeat off (no up next)", PausedSnapshot.copy(currentQueueIndex = Songs.lastIndex), false),

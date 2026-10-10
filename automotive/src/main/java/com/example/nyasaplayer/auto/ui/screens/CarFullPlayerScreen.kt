@@ -72,11 +72,6 @@ import com.example.nyasaplayer.core.common.util.formatDuration
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import com.example.nyasaplayer.core.playback.RepeatMode
 
-/**
- * The art is a square bounded by the height the window gives it and by a third of its width, so on
- * a head unit wider than the design's 1024dp it grows with the screen rather than leaving the spare
- * width as margin.
- */
 private val ArtMinSize = 320.dp
 private val ArtMaxSize = 480.dp
 private const val ArtWidthDivisor = 3
@@ -634,6 +629,9 @@ internal fun PlaybackSnapshot.moreAfterUpNext(): Int {
 private fun titleAndArtist(song: Song) =
     listOf(song.title, song.resolvedArtistName).filter(String::isNotBlank).joinToString(" · ")
 
-/** A square bounded by the height the window gives it and by a third of its width. */
+/**
+ * A square bounded by the height the window gives it and by a third of its width, so a wider head
+ * unit grows the art rather than its margins.
+ */
 private fun artSizeFor(maxWidth: Dp, maxHeight: Dp): Dp =
     minOf(maxHeight - VerticalPadding * 2, maxWidth / ArtWidthDivisor).coerceIn(ArtMinSize, ArtMaxSize)
