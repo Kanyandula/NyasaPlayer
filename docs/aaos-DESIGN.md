@@ -179,7 +179,7 @@ than from the source, so a size inherited from a theme is judged as the driver s
 **The 18px label floor means a button or CTA's own label** — the text a driver reads to know what
 the control does. The rail's tab labels are held to it too. They were exempt while they sat under
 their icons in an 80px rail, where "Favourites" at 18px did not fit (owner, 2026-09-16); D78 put
-them beside their icons in a 176dp rail at 18px and retired the exemption.
+them beside their icons and retired the exemption.
 
 The smallest text actually rendered is 14px — captions and the mini-player's timestamps. Artist
 names in track rows are 15px. Both satisfy the rule above, but neither is generous for a glance from
@@ -935,16 +935,15 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   the 1440x800 reference and 62dp on a 1024x768 unit while online; offline, the banner above the
   rail takes its own height out of that. A 1024x600 unit clips the row, though the four tabs alone
   already overflowed it by 4dp (`docs/BACKLOG.md`).
-- **D78 — The rail is 176dp wide, with each label beside its icon.** §Chrome's rail is 80px, with
-  a 14px label under a 28px icon. Stacked, every destination took two scan lines to read, which is
-  the one thing a driver cannot spend. One line costs width: "Favourites" at 18sp ends 147dp from
-  the rail's leading edge, leaving 29dp of rail and 21dp inside the selection pill. At that width
-  the labels take the 18px label floor, and the rail-tab exemption in §Typography is gone;
-  `CarTextSizeMeasurementTest` holds them to it. The selection pill is 64dp tall, centred in the
-  88dp row, not the row's full height. 88dp is what the touch target costs; the pill has no such
-  duty, and at 176dp wide a full-height pill read as a panel rather than a selection. The rail
-  costs the content area 96dp, so Browse's grid columns drop from ~190dp to ~166dp on a 1024dp
-  unit. Shipped 2026-09-22 (#97) and recorded here after the fact.
+- **D78 — The rail is 176dp wide, with each label beside its icon.** §Chrome's rail is 80px, with a
+  14px label under a 28px icon. Stacked, every destination took two scan lines to read, which is the
+  one thing a driver cannot spend. One line costs width: "Favourites" at 18sp ends 147dp from the
+  rail's leading edge, leaving 29dp of rail and 21dp inside the selection pill. At that width the
+  labels take the 18px label floor (§Typography). The selection pill is 64dp tall, centred in the
+  88dp row. 88dp is what the touch target costs; the pill has no such duty, and at 176dp wide a
+  full-height pill read as a panel rather than a selection. The rail costs the content area 96dp, so
+  Browse's grid columns drop from ~190dp to ~166dp on a 1024dp unit. Shipped 2026-09-22 (#97) and
+  recorded here after the fact.
 
 ## Components
 

@@ -254,7 +254,7 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 | 17 | CarEmptyFavouritesScreen | Favourites with none liked | Browse music | — | Allowed | Content VM | A4 |
 | 18 | CarLoadingScreen — *satisfied by the per-screen skeletons in Home, Browse and Library (D71)* | Initial content load | none | — | Allowed | Content VM | A8 |
 | 19 | CarPlaybackErrorOverlay | Playback failure | Retry, Skip next, Dismiss | — | **Allowed** — must be dismissible while driving | Player VM | A8 |
-| 20 | CarProfileSwitcherScreen | Rail: profile row (`aaos-DESIGN.md` D77) | Switch, add profile | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
+| 20 | CarProfileSwitcherScreen | Rail: profile row (`aaos-DESIGN.md` D77) | Sign out to use another account — no picker, one account remembered (D66) | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
 
 **Cross-cutting requirements that apply to every screen**, and are therefore not repeated per
 row: the chrome contract (NFR-4), the 76dp touch target (NFR-1), contrast (NFR-2), text sizing
