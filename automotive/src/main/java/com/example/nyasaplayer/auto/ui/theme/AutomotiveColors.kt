@@ -39,7 +39,7 @@ val CarScrim = Color(0xCC000000)
 val CarOutline = Color(0x1FFFFFFF)
 
 /**
- * Hairline divider between chrome regions — the mini-player's top border.
+ * Hairline divider between chrome regions — the mini-player's border.
  *
  * 8% white per the design, deliberately lighter than [CarOutline]'s 12%: that one outlines
  * an interactive control, this one separates two surfaces.

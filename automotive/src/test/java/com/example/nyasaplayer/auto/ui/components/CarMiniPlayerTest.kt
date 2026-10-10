@@ -8,6 +8,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.nyasaplayer.auto.ui.theme.CarMiniPlayerProgressMaxWidth
+import com.example.nyasaplayer.auto.ui.theme.CarNavRailWidth
 import com.example.nyasaplayer.core.common.models.Song
 import com.example.nyasaplayer.core.playback.PlaybackSnapshot
 import org.junit.Assert.assertEquals
@@ -33,14 +35,18 @@ class CarMiniPlayerTest {
 
     @Test
     fun `beside the rail on a 1440dp unit the progress block stops at its cap`() {
-        // 1440 - 176 rail: the share would be ~418dp, so the cap binds.
-        assertEquals(300f, progressBlockWidth(barWidth = 1264.dp).value, 0.5f)
+        // The share would be ~418dp, so the cap binds.
+        assertEquals(
+            CarMiniPlayerProgressMaxWidth.value,
+            progressBlockWidth(barWidth = 1440.dp - CarNavRailWidth).value,
+            0.5f,
+        )
     }
 
     @Test
     fun `on a 1024dp unit the cap does not bind and the block keeps its equal share`() {
-        // 1024 - 176 rail, less 48dp of padding and 380dp of controls, halved.
-        assertEquals(210f, progressBlockWidth(barWidth = 848.dp).value, 0.5f)
+        // 848dp of bar, less 48dp of padding and 380dp of controls, halved.
+        assertEquals(210f, progressBlockWidth(barWidth = 1024.dp - CarNavRailWidth).value, 0.5f)
     }
 
     private fun progressBlockWidth(barWidth: Dp): Dp {
@@ -64,8 +70,6 @@ class CarMiniPlayerTest {
         // The block's 24dp start padding sits before the elapsed time.
         return heartLeft - elapsedLeft + ProgressStartPadding
     }
-
-    private companion object {
-        val ProgressStartPadding = 24.dp
-    }
 }
+
+private val ProgressStartPadding = 24.dp

@@ -883,9 +883,9 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   16sp) would truncate. D74–D75 bring that to 440dp, against 384dp full width. `CarUiCases.kt`'s
   mini-player and rail cases follow the inset, so the measurement suites see the layout that ships.
 - **D74 — The queue button leaves the mini-player; the heart stays.** §Chrome ends the bar with a
-  queue button. The heart is the bar's only control that carries state (it shows whether the song
-  is liked), and liking is the most time-critical action in the app, because the song ends. The
-  queue button carried no state, was the bar's only control without a circular wash, and opened a
+  queue button. The heart carries the song's state (it shows whether the song is liked), and
+  liking is the most time-critical action in the app, because the song ends. The queue button
+  carried no state, was the bar's only control without a circular wash, and opened a
   destination one tap from the full player. OG-8 still holds: `gate()` refuses only on a sheet,
   active text entry and drill depth. The queue is a `CarOverlay`, which is none of those, so it is
   never gated. The route while driving is mini-player → full player → Up Next card → queue. OG-8

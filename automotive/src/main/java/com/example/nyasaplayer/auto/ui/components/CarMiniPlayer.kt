@@ -75,7 +75,7 @@ fun CarMiniPlayer(
         modifier = modifier
             .fillMaxWidth()
             .height(CarMiniPlayerHeight)
-            // Clipped first so the background and the tap ripple follow the rounded corner.
+            // Clip first so the background and ripple follow the corner.
             .clip(BarShape)
             .background(CarGlass)
             .border(BorderWidth, CarDivider, BarShape)
