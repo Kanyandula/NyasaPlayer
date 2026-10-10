@@ -157,6 +157,29 @@ Common Detekt fixes: `MagicNumber` → extract to `const val`; `ModifierMissing`
 
 Dark theme only. Key colors: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED). Five surface levels with increasing lightness. Gradient buttons via `Brush.horizontalGradient`. Custom `ImageVector` icons in `core/common/.../ui/icons/NyasaIcons.kt`.
 
+### The car surface
+
+Separate constraints, and the ones that drift are the ones nothing measures. Before changing any
+screen under `automotive/src/main/java/.../ui/`:
+
+- **Sizes come from `auto/ui/theme/AutomotiveDimens.kt`**, not from literals. `CarTouchTargetSize`
+  is 76dp and is the floor for every interactive element.
+- **The reference head unit is 1440x800dp** (the AVD is 1080x600px at 120dpi), of which the app
+  window gets **628dp** once the OS status and climate bars are taken. It is not 1024x768, and it is
+  not the 1920x1080 CSS-px canvas `docs/aaos-DESIGN.md` is authored on — that document's §Units
+  gives the conversion rule, and anything taken from it needs converting first.
+- **Size from the window, not from a constant.** A layout tuned to one head unit's width leaves the
+  rest as dead margin. The full player derives its art from `min(windowHeight - padding, width/3)`
+  and lets its column take what is left up to a cap; copy that shape rather than a fixed dp pair.
+- **Three measurement suites are the contract**, all fed by `CarUiCases.kt`'s cases and run by
+  `./gradlew :automotive:testOemDebugUnitTest`: `CarTouchTargetMeasurementTest` (>=76dp),
+  `CarTextSizeMeasurementTest` (>=14sp, >=18sp for a control's own label) and
+  `CarTextContrastMeasurementTest` (>=7:1). A property with no suite behind it is a property that
+  drifts — see T37.
+- **Truncation is not one of them.** Robolectric's fallback font metrics make `hasVisualOverflow`
+  flag nearly every text node, so an overflow suite was tried and removed (2026-09-28). A cut-off
+  title passes all three suites; check text length on the emulator with a real-length case.
+
 ## Firebase Setup
 
 Requires `app/google-services.json`. Firebase console must have:

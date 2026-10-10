@@ -87,6 +87,23 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   `*/src/main/java` only, so the 80-odd files under `src/test` are unlinted — an unused import in
   `CarTouchTargetMeasurementTest` passed a green `detekt` run and was found by review instead.
   Pre-existing, and adding the test roots will surface a backlog of its own.
+- The full player's transport row does not fill the column it sits in. Five controls at 76/76/96/76/76
+  with 23dp gaps come to 492dp; the column is capped at 760dp on a 1440dp window, so ~268dp sits
+  empty after repeat. This is the same slack #108 removed by narrowing the column to the design's
+  536dp — sizing art and column from the window (2026-09-28) bought back the screen's side margins
+  and spent some of it here. It reads as left-alignment rather than a hole, because the scrubber and
+  the Up Next card span the full width and hold the right edge, so it is recorded rather than
+  ticketed. If it ever stops reading that way the knobs are a narrower cap or a respaced transport,
+  and the design's 23dp rhythm is what a respace would cost.
+- The car's queue sheet opens on tracks already played, under a heading about what is next. Parked,
+  `queueDisplayItems` (`QueueDisplayItem.kt:22`) lists the whole queue from index 0 and
+  `CarQueueScreen` never scrolls to `currentIndex`, so the sheet headed "Up Next · 4 songs" showed
+  five earlier Gospel tracks while the current one and the Up Next card's "Jesu, Joy of Man's
+  Desiring" sat below the fold (AVD, 2026-10-10, a restored queue). The card and the sheet read the
+  same snapshot and agree; only the starting scroll misleads. Driving pages differently — the
+  capped list starts at the current item, but only once it falls past the first page — and was not
+  checked. The likely fix is `rememberLazyListState(initialFirstVisibleItemIndex = currentIndex)`
+  for the parked list.
 - The three Robolectric measurement classes can fail as a group under parallel Gradle workers,
   with `NoSuchMethodError` and "Could not write XML test results"; `--max-workers=1` passes
   cleanly. Reported by a review of PR #95 and reproduced there on a fresh daemon. Not reproduced

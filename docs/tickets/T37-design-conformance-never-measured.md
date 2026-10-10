@@ -89,6 +89,14 @@ Two halves, and the second is cheap only after the first.
   walks every text node — asserting *membership in the scale* is a smaller change than it looks, and
   it is exactly the class of check T30 proved worth having.
 
+  **Tried for truncation, 2026-09-28, and removed.** The full player's 48sp title was cut to "I will
+  sing of your joy for..." on the AVD while all three floors passed green — the defect this ticket
+  predicts. A `CarTextOverflowMeasurementTest` reading `hasVisualOverflow` off the size suite's
+  `GetTextLayoutResult` was added to catch it, and flagged 1118 of ~1150 text nodes, "Home" and
+  "Retry" among them: overflow is judged on measured glyph advances, which Robolectric's fallback
+  font metrics get wrong. Truncation needs a device-rendered check. The scale-membership checks
+  above read declared values, not measured ones, so this bullet stands.
+
 ## Out Of Scope
 
 - Reopening the 2026-04-23 template-only decision. It was reversed on 2026-08-02 and PRD §3.3 is
