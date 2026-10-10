@@ -104,6 +104,10 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   capped list starts at the current item, but only once it falls past the first page — and was not
   checked. The likely fix is `rememberLazyListState(initialFirstVisibleItemIndex = currentIndex)`
   for the parked list.
+- The car's rail has no minimum window height. With the profile row (D77) it needs 452dp, so the
+  window needs 532dp; a 1024x600 head unit clips the row by 104dp, and its four tabs alone already
+  overflowed by 4dp. No minimum is documented and the measurement cases only run at a 628dp
+  window, so nothing would catch it. A scrolling rail is the fix if a unit that short ships.
 - The three Robolectric measurement classes can fail as a group under parallel Gradle workers,
   with `NoSuchMethodError` and "Could not write XML test results"; `--max-workers=1` passes
   cleanly. Reported by a review of PR #95 and reproduced there on a fresh daemon. Not reproduced

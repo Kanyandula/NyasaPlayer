@@ -330,7 +330,7 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   vectors for them, and there is no wiring to real system state, so shipping them would mean
   static icons claiming a full battery and a connected radio — a lie the driver may act on.
   On AAOS the OEM system bar generally owns these. The bar ships as wordmark · search ·
-  settings · avatar · clock.
+  settings · clock; the avatar was in it until it moved to the rail (D77).
 - **D11 — No Browse filter chips.** Screen 4 lists them. `Genre` is `id`, `name`, `color`,
   `imageUrl`, `popularity`, `songIds` — nothing backs "mood" or "category", so any chip set would
   be invented taxonomy. **Data blocker:** a genre taxonomy field in Firestore. The grid is
@@ -911,6 +911,27 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   against the OEM bar below. The top hairline became a `border` on the same shape, because a
   straight line drawn from corner to corner would leave the curves and cross empty space. The
   border draws on all four edges, so the bar also gets a 1dp line against the rail.
+- **D77 — The profile entry leaves the system bar for the bottom of the rail.** §Chrome holds the
+  top bar's right cluster to "exactly those seven items in that order — no more, no fewer, no
+  substitutions", and lists the rail's items as Home, Browse, Library, Favourites. Both change. The
+  bar loses its avatar and keeps search, settings and the clock. The rail gains a row under its
+  four tabs: the signed-in account's Google photo and first name. D73 made the rail run full
+  height, which freed the 112dp the bar used to cut off, and a photo with a name says whose
+  account this is where a generic person icon did not. The row has the tabs' geometry, but it is
+  not a tab: it takes no pill and is never gold, because gold is how the rail says "selected" and
+  a permanently gold item would compete with the active tab. It announces as a button. There is
+  no divider above it. A `CarDivider` hairline measures 1.22:1 against `CarChrome` and is invisible
+  at viewing distance; the gap and the circular avatar do the separating. It sits
+  `(CarMiniPlayerHeight - 88dp) / 2` = 12dp above the rail's bottom, so its centre is on the
+  mini-player's across the seam. That is derived rather than written as 12, and it does not
+  depend on whether anything is playing, so the row never moves when the bar appears. The photo
+  is Firebase Auth's `photoUrl`, not a Firestore read. The initial is drawn underneath it, so a
+  slow, failed or offline load leaves the initial rather than an empty circle; accounts with no
+  display name get the person icon and "Profile". The row stays enabled while driving (GB-1);
+  the gate refuses the profile sheet under `NO_SETUP` with the same message the avatar got
+  (OG-6). The cost is height. The rail now needs 452dp, so the window needs 532dp: 96dp spare on
+  the 1440x800 reference and 62dp on a 1024x768 unit. A 1024x600 unit clips the row, though the
+  four tabs alone already overflowed it by 4dp (`docs/BACKLOG.md`).
 
 ## Components
 
@@ -963,8 +984,8 @@ control by deleting its wrapper.
 Three changes were structural rather than padding:
 
 - **The system bar is 80 tall, not 48.** A 48px bar cannot contain a 76px target, and this
-  bar holds app controls (search, settings, avatar) rather than only OS status icons. If the
-  OEM draws the status row itself, the app's own bar still needs this height.
+  bar holds app controls (search and settings; the avatar too, until D77) rather than only OS
+  status icons. If the OEM draws the status row itself, the app's own bar still needs this height.
 - **Filter chips are 76 tall** (were 56) and **pill buttons 76** (were 64).
 - **The mini-player's artwork and title are a single target**, not two. They were 64 x 64 and
   230 x 43 separately; merged they are 314 x 76, and tapping anywhere on the "now playing"
