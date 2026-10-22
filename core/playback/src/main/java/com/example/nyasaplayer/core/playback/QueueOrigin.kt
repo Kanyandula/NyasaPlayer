@@ -19,7 +19,7 @@ sealed interface QueueOrigin {
 
 /**
  * The origin as three primitives — kind, id, name — so Bundles and Firestore never carry a class.
- * Kinds are fixed strings rather than class names, which R8 renames.
+ * Kinds are fixed strings rather than class names, which R8 would rename.
  */
 fun QueueOrigin.toFields(): Triple<String, String, String> = when (this) {
     is QueueOrigin.Playlist -> Triple(KindPlaylist, id, name)

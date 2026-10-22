@@ -27,7 +27,7 @@ interface SongDao {
 
     /**
      * Popularity order, not match quality: this is the ordering `MediaBrowseTree.search()` serves
-     * to Assistant, and the launcher's song section matches it (spec 3.5). [query] must already
+     * to Assistant, and the launcher's song section matches it (D43). [query] must already
      * be normalized — see `escapeLikeArgument`.
      */
     @Query(

@@ -23,7 +23,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * T06: real covers through Coil and Palette, on the JVM.
+ * Real covers through Coil and Palette, on the JVM.
  *
  * Coil runs part of every request on the main dispatcher, so a test that blocks the main thread
  * waiting for it deadlocks. [themeFor] asks from a background coroutine and pumps the main looper.

@@ -14,13 +14,13 @@ import javax.inject.Singleton
 
 /**
  * Matches `MediaBrowseTree`'s browse limit. The two song paths must not fork on limit, trimming
- * or ordering (spec 3.5), and this is the launcher half of that.
+ * or ordering (D47), and this is the launcher half of that.
  */
 private const val SongLimit = 50
 
 /**
  * Smaller than the song limit and not the thing that protects the driver: the cumulative driving
- * cap trims what is actually rendered (spec 3.6). This only bounds the ranking work.
+ * cap trims what is actually rendered (D81). This only bounds the ranking work.
  */
 private const val SecondaryLimit = 20
 
@@ -39,10 +39,10 @@ private const val PlaylistPriority = 3
  * one typed result set.
  *
  * It talks to the repositories, never to `AutomotiveContentState`: filtering whatever the tabs
- * happened to have collected would turn cache timing into false "no results" (spec 3.3).
+ * happened to have collected would turn cache timing into false "no results".
  *
  * Failures are not caught here. A partial result set would be a wrong answer wearing the shape of
- * a right one, so the ViewModel's existing all-or-error handling stays the only policy (R8).
+ * a right one, so the ViewModel's existing all-or-error handling stays the only policy.
  */
 @Singleton
 class AutomotiveCatalogSearch @Inject constructor(
@@ -134,7 +134,7 @@ private val AutomotiveSearchResult.popularity: Int
  *
  * Deliberately not re-sorted: each repository already returns its own type in a deterministic
  * match order, and re-ranking songs here would order them differently from
- * `MediaBrowseTree.search()`, which serves Assistant the repository's order (spec 3.5). The
+ * `MediaBrowseTree.search()`, which serves Assistant the repository's order (D43). The
  * comparator above is only for choosing which single card is featured.
  */
 private fun <T : AutomotiveSearchResult> List<T>.withoutFeatured(

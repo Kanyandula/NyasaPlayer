@@ -10,11 +10,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * All three system-bar controls are live from A7.
- *
- * Settings and profile spent A2–A6 rendering disabled, which is the correct way to show a control
- * with nowhere to go (FR-2.6) and exactly the state this locks the bar out of now that they have
- * sheets: a disabled control swallows its click, so these clicks would count zero.
+ * All three system-bar controls are live. A disabled control — the right way to show one with
+ * nowhere to go (FR-2.6, D3) — swallows its click, so a regression to it would count zero here.
  */
 @RunWith(RobolectricTestRunner::class)
 class CarSystemBarTest {

@@ -99,7 +99,7 @@ class FirebasePlaylistRepository @Inject constructor(
     }
 }
 
-/** Exact name, then prefix, then substring — the spec's match-quality order (3.2). */
+/** Exact name, then prefix, then substring — the match-quality order the DAO searches use (D43). */
 private fun nameMatchTier(name: String, lowercaseNeedle: String): Int {
     val lowercaseName = name.lowercase()
     return when {

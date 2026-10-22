@@ -169,7 +169,7 @@ class AutomotivePlayerViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    /** The current cover's theme, applied only while parked (T07 / D-T38.6). */
+    /** The current cover's theme, applied only while parked (D-T38.6). */
     private fun observeArtworkTheme() {
         appliedArtworkTheme(
             coverUrls = stateCollector.playbackState.map { it.currentSong?.resolvedCoverUrl },

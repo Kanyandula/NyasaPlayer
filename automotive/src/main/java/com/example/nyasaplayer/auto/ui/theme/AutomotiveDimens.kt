@@ -5,17 +5,16 @@ import androidx.compose.ui.unit.dp
 // All values are dp. The design document is authored in CSS px on a 1920x1080 canvas;
 // see the "Units" section of docs/aaos-DESIGN.md for the conversion rule.
 
-// CTS-compliant minimum touch target (76dp >= 76dp requirement)
+// The floor for every interactive element; CarTouchTargetMeasurementTest enforces it.
 val CarTouchTargetSize = 76.dp
 
 // Standard album art / avatar thumbnail used in lists
 val CarListArtSize = 80.dp
 
 // Default CarContentCard width and art size (album/playlist/genre/artist tiles), and the
-// footprint their loading skeletons (BrowseSkeleton, LibrarySkeleton) reserve to match
+// footprint LibrarySkeleton reserves to match
 val CarContentCardSize = 130.dp
 
-// Standard card corner radius
 val CarCardCornerRadius = 20.dp
 
 // Mini player bar height. Kept at 112 rather than the design's 88: this value predates
@@ -46,14 +45,10 @@ val CarSystemBarHeight = 80.dp
 // the Browse grid's columns from ~190dp to ~166dp.
 val CarNavRailWidth = 176.dp
 
-// Filter chip height
 val CarChipHeight = 76.dp
 
-// Pill button height
 val CarPillButtonHeight = 76.dp
 
-// Track / content list row height
 val CarListRowHeight = 80.dp
 
-// Screen edge margin
 val CarScreenMargin = 48.dp

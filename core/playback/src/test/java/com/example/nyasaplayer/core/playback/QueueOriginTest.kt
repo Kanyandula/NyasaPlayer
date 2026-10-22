@@ -3,7 +3,7 @@ package com.example.nyasaplayer.core.playback
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** T01: the origin survives its primitive form, and anything unreadable becomes [QueueOrigin.None]. */
+/** The origin survives its primitive form, and anything unreadable becomes [QueueOrigin.None]. */
 class QueueOriginTest {
 
     private fun roundTrip(origin: QueueOrigin): QueueOrigin =

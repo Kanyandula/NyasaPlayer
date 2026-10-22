@@ -17,9 +17,8 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * The ViewModel had no tests at all: its constructor took `FirebaseSyncManager`, a concrete class
- * wrapping Firestore and four DAOs, and `:automotive` has no mocking library. `CatalogSync` is
- * what makes it constructible here (T2).
+ * `CatalogSync` is what makes the ViewModel constructible here: `FirebaseSyncManager` is a concrete
+ * class wrapping Firestore and four DAOs, and `:automotive` has no mocking library (D51).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AutomotiveAuthViewModelTest {

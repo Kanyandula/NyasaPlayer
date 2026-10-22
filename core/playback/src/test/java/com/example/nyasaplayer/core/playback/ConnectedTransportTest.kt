@@ -200,7 +200,7 @@ class ConnectedTransportTest {
         assertEquals(0, unavailableReports)
     }
 
-    // ── The condition T11 could not reach ──
+    // ── A controller that was connected and is not any more (T11) ──
 
     @Test
     fun releasedController_isNotConnected_andEveryCommandRefuses() {

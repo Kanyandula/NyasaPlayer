@@ -88,8 +88,8 @@ private val TransportIconSize = 30.dp
 private val BufferingRingStroke = 5.dp
 private val BufferingRingInset = 16.dp
 
-// The mockup's vertical rhythm (docs: AAOS Now Playing plan, "What the design asks for"). The seek
-// bar's 76dp touch box already holds ~34dp of air above its track, so nothing is added there.
+// The Now Playing mockup's vertical rhythm. The seek bar's 76dp touch box already holds ~34dp of
+// air above its track, so nothing is added there.
 private val TopBarToTitleGap = 26.dp
 private val TitleToArtistGap = 8.dp
 private val ControlsGap = 22.dp
@@ -155,7 +155,7 @@ fun CarFullPlayerScreen(
 
     BoxWithConstraints(
         // Opaque for the same reason as the queue: a full-screen overlay, outside the chrome
-        // contract (spec 2.2).
+        // contract (aaos-DESIGN.md, Chrome).
         modifier = modifier
             .fillMaxSize()
             .background(NyasaBackground),

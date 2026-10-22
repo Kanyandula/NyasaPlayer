@@ -11,7 +11,7 @@ import org.junit.Test
 
 /**
  * The driving cap counts cards, not sections: four sections each capped at
- * `maxCumulativeContentItems` would render four times what the platform allowed (spec 3.6).
+ * `maxCumulativeContentItems` would render four times what the platform allowed (D81).
  */
 class SearchResultCapTest {
 

@@ -45,7 +45,7 @@ private val SubtitleSize = 20.sp
  * Rows render from [songs], which the caller supplies as the frozen list when one is in effect and
  * the live list otherwise. A row whose id is in [pendingUnlikes] shows a hollow heart but keeps its
  * place: the contract defers row removal until refresh, because a list that reflows under the
- * driver's finger turns a mis-tap into a wrong action. See spec D19.
+ * driver's finger turns a mis-tap into a wrong action. See D19.
  */
 @Suppress("LongParameterList")
 @Composable

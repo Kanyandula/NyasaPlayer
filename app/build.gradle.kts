@@ -106,7 +106,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.google.googleid)
 
-    // ExoPlayer
+    // Media3
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.session)
@@ -119,7 +119,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
-    // Lifecycle ViewModel and LiveData
+    // Lifecycle
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx.v262)
 

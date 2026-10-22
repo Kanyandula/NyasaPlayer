@@ -30,8 +30,7 @@ import com.example.nyasaplayer.auto.ui.theme.CarTextSecondary
 /**
  * "Sign Out?" — the one confirmation, shared by Settings and the profile switcher.
  *
- * Lived privately in `CarLibraryScreen` from A3 until A7 took sign-out off that screen (D68, closing D14).
- * It renders from the shell rather than from either sheet, so the two entry points cannot drift
+ * It renders from the shell rather than from either sheet (D68), so the two entry points cannot drift
  * into two differently-worded confirmations, and so the same eviction that clears a sheet when the
  * vehicle starts moving clears this too.
  */

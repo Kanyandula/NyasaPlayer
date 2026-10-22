@@ -280,6 +280,10 @@ Content occupies the region bounded by those three, with a 48dp screen margin.
 These three regions are a fixed contract. Render them pixel-identical on every screen.
 Do not restyle, reorder, resize, or omit them from screen to screen.
 
+The contract covers every rail destination and every screen in the content region. The full
+player and the queue are full-screen overlays outside it, painted opaque, and the auth gate comes
+before there is a signed-in user to draw a rail for.
+
 ### Top system bar
 
 ```
@@ -626,6 +630,13 @@ A3, D19 on from later phases — and cited by number from the code.
   play. The launcher's "Top result" slot has no media-session equivalent either, so the parity
   claim is that both surfaces return the same songs under the same limit, with the section order
   matching once the featured song is removed — not that the two lists are identical.
+- **D81 — Search's driving cap is cumulative across the result screen, and a tap acts only on what
+  was visible (T4).** While driving, the results are flattened in rendered order — featured,
+  songs, albums, artists, playlists — capped once with `cap()`, then re-sectioned. Capping each
+  section on its own would let four sections render four times `maxCumulativeContentItems`. A song
+  tap plays from the visible song results only; album, artist and playlist taps close search and
+  open detail at depth 1, which is why a result keeps its type down to the tap handler. No tap may
+  use an uncapped or stale list holding items the driver could not see.
 
 - **D48 — Auth state is a repository flow, not a listener in the ViewModel.** `AuthRepository`
   exposes `authSession: Flow<AuthSession>`, a Firebase-free pair of user id and display name, and

@@ -25,7 +25,7 @@ import org.robolectric.RobolectricTestRunner
  * The collector never asks its [ControllerConnection] for anything until `connectController()`, which
  * this never calls — so no controller is ever built, and every assertion below is about the snapshot
  * alone. Robolectric is here only because a `ControllerConnection` needs a `Context` and a
- * `SessionToken` to exist (T14); before that it took a future and needed neither.
+ * `SessionToken` to exist.
  */
 @RunWith(RobolectricTestRunner::class)
 class RestoredSnapshotTest {

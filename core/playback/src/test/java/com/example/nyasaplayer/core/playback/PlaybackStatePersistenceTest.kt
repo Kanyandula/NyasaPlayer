@@ -174,7 +174,7 @@ class PlaybackStatePersistenceTest {
         assertEquals(RepeatMode.All, restored.repeatMode)
     }
 
-    // ── Queue origin (T01) ──
+    // ── Queue origin ──
 
     @Test
     fun origin_survivesSaveThenRestore() = runTest {

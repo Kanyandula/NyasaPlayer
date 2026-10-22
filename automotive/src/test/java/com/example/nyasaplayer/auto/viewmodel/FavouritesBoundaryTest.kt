@@ -16,7 +16,10 @@ import org.junit.Test
  * and readers of it that are never reconciled.
  *
  * `FavouritesSnapshotTest` covers the inside of the model and every one of its behaviours is
- * mutation-verified. These cover the outside, which nothing did — see ledger rows #1, #2 and #3.
+ * mutation-verified. These cover the outside, which nothing did.
+ *
+ * "Row #N" numbers the defects this file pins, and later rows cite earlier ones. Each KDoc
+ * describes its defect as found, before the fix; the test is what holds the fix in place.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FavouritesBoundaryTest : FavouritesTestCase() {
@@ -46,7 +49,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
 
     /**
      * Row #1, insertion half. `likedSongs` is ordered `likedAt DESCENDING`
-     * (FirebaseUserRepository.kt:51) and `likeSong` stamps `Timestamp.now()` (:66), so a like
+     * (`FirebaseUserRepository`) and `likeSong` stamps `Timestamp.now()`, so a like
      * from any other writer lands at index 0 and shifts every row down one row height. The
      * hero `item {}` at scroll position 0 is un-keyed, so LazyColumn's key-based anchoring
      * does not hold the list still.
@@ -67,11 +70,11 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
 
     /**
      * Row #2. `pendingUnlikes` is one set with two writers on two tabs and one lifecycle hook,
-     * the tab-keyed effect at AutomotiveApp.kt:154. Leaving the artist drill-down sets
+     * the tab-keyed effect in `AutomotiveApp`. Leaving the artist drill-down sets
      * `drillDown = null` without changing `currentScreen`, so the effect does not re-run and
      * nothing clears the pend. `openFavourites()` deliberately clears nothing (D20), so the
      * pend arrives on screen 8 and paints a song that *is* liked with a hollow heart —
-     * `isLiked = mediaId !in pendingUnlikes`, CarFavouriteMusicScreen.kt:107.
+     * `isLiked = mediaId !in pendingUnlikes` in `CarFavouriteMusicScreen`.
      *
      * Closed by clearing pends in `openFavourites()` *guarded on there being no freeze*. That is
      * not D20's clear, which protects a freeze and the pends behind it: on screen 8 a pend always
@@ -110,8 +113,8 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
 
     /**
      * Row #3. Both liked-songs catches set `likedSongsLoaded = true` and neither sets
-     * `errorMessage`, so AutomotiveApp.kt:480-481 hands screen 8 `isLoading = false`,
-     * `errorMessage = null` and an empty list — and CarFavouriteMusicScreen.kt:81 falls to the
+     * `errorMessage`, so `CarFavouritesRoute` handed screen 8 `isLoading = false`,
+     * `errorMessage = null` and an empty list — and `CarFavouriteMusicScreen` fell to the
      * empty branch. A driver whose liked songs failed to load is told they have none, and
      * offered a CTA off the tab. Screen 8's contract puts this in the error branch with a retry (D34).
      */
@@ -155,7 +158,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
             vm.contentState.value.likedSongsLoaded,
         )
         // Row #10: the skeleton is only reachable if the error is cleared too — the error branch
-        // is tested first (CarFavouriteMusicScreen.kt:71), so a retry that resets the flag but
+        // is tested first in `CarFavouriteMusicScreen`, so a retry that resets the flag but
         // leaves the message still renders the error it was retried out of.
         assertNull(
             "retryLoad() must clear the error Favourites reads, not just the loaded flag",
@@ -165,14 +168,14 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
 
     // ponytail: no local helper — these assert on AutomotiveContentState.favouritesError /
     // .favouritesLoading, the same derivations AutomotiveApp binds into the screen. A hand-mirror
-    // here is what let mutation Q3 survive: two copies of one decision drift silently.
+    // here once let a mutation survive: two copies of one decision drift silently.
 
     /**
-     * Row #8, the mirror of #7. `errorMessage` has three producers — `observeGenres` (:147),
-     * `observeAlbums` (:156) and `reportLikedSongsFailure` — and screen 8 reads it directly.
-     * A genres failure therefore paints "Something went wrong" over the empty state, because
-     * `CarFavouriteMusicScreen.kt:71` tests `errorMessage != null && songs.isEmpty()` before the
-     * empty branch at :81. Whether the genres catalogue loaded has nothing to do with whether
+     * Row #8, the mirror of #7. `errorMessage` has three producers — `observeGenres`,
+     * `observeAlbums` and `reportLikedSongsFailure` — and screen 8 read it directly.
+     * A genres failure therefore painted "Something went wrong" over the empty state, because
+     * `CarFavouriteMusicScreen` tests `errorMessage != null && songs.isEmpty()` before the
+     * empty branch. Whether the genres catalogue loaded has nothing to do with whether
      * the driver has favourites, and D21 wants screen 17 reachable whenever the library is empty.
      */
     @Test
@@ -197,7 +200,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
      * six abort on a null user id (`?: return`), so a Retry taken in that state leaves the
      * user-scoped flows dead with their flags reset — and having also cleared both error fields,
      * it removes the Retry affordance that got the driver here. Row #5 fixed this shape in
-     * `reloadUserContent` (`?: return` at :137); `loadContent` was never audited for it.
+     * `reloadUserContent` (its `?: return`); `loadContent` was never audited for it.
      */
     @Test
     fun retryWithNoUserId_mustNotStrandFavouritesOnTheSkeleton() = runTest {
@@ -233,7 +236,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
      * `likedSongsLoaded = true` and an empty list — and the *server* snapshot carrying the real
      * library then satisfies the hold and is withheld for the rest of the visit. Screen 8 shows
      * "No favourites yet" plus a CTA off the tab to a driver who has liked songs: the false empty
-     * state §4.1 rules out, reintroduced one layer up by row #1's fix.
+     * state row #3 rules out, reintroduced one layer up by row #1's fix.
      */
     @Test
     fun coldStartEmptyCacheThenServer_mustNotWithholdTheRealLibrary() = runTest {
@@ -366,7 +369,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
      * skeleton for the whole first Firestore round trip.
      */
     @Test
-    fun userSwitch_clearsBothErrorFields() = runTest {
+    fun userSwitch_clearsTheFavouritesError() = runTest {
         songs.songs.value = listOf(song("a"))
         val vm = viewModel()
         songs.throwOnceOnGetSongsByIds = IllegalStateException("transient Room failure")
@@ -411,7 +414,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
     /**
      * Row #9, raised by qa from a surviving mutation. Row #7's fix retires the shared
      * `errorMessage` only when it *matches* the liked-songs message. Replacing that value-match
-     * with an unconditional `errorMessage = null` left all 66 tests green, so the discriminating
+     * with an unconditional `errorMessage = null` left every other test green, so the discriminating
      * half of the fix was undefended — and it is the half that stops a liked-songs success from
      * wiping a failure that genres or albums reported. Same shape as row #6.
      */
@@ -439,7 +442,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
      * clears `errorMessage`, and it is the single point every successful load routes through —
      * so an error retires nowhere. Once a transient failure has recovered invisibly (songs are
      * non-empty, so screen 8 skips the error branch), the stale value outranks screen 17 the next
-     * time the library is genuinely empty: `CarFavouriteMusicScreen.kt:71` tests `errorMessage`
+     * time the library is genuinely empty: `CarFavouriteMusicScreen` tests `errorMessage`
      * before `songs.isEmpty()`. D21 requires screen 17 to stay reachable.
      */
     @Test
@@ -468,7 +471,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
     /**
      * Row #6, raised by qa from a surviving mutation, not by red.
      *
-     * `reloadUserContent()` clears `heldLikedSongs`. Deleting that line left all 63 tests green,
+     * `reloadUserContent()` clears `heldLikedSongs`. Deleting that line left every other test green,
      * so nothing defended it — the same shape as the A3 guard that was removed unnoticed.
      *
      * It is load-bearing: the hold survives a user switch otherwise. A is on Favourites when an
@@ -502,7 +505,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
     }
 
     /**
-     * Row #5. `reloadUserContent()`'s guard at :105 only protects the same-user case. A null
+     * Row #5. `reloadUserContent()`'s same-user guard only protects the same-user case. A null
      * `currentUserId` is not equal to the old one, so it falls through, cancels all three
      * user-scoped collectors and clears their state — and then the three restarts each hit
      * their own `?: return` and no-op. Nothing recovers it short of process death.
@@ -533,15 +536,15 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
         val state = vm.contentState.value
         assertFalse(
             "Favourites is stranded: !likedSongsLoaded renders FavouritesSkeleton " +
-                "(CarFavouriteMusicScreen.kt:79) and a null error means no Retry is reachable",
+                "(CarFavouriteMusicScreen) and a null error means no Retry is reachable",
             state.favouritesLoading && state.favouritesError == null,
         )
     }
 
     /**
-     * Row #5, D20 half. The same fall-through clears `favourites` and `pendingUnlikes` at
-     * :118-119. A night-mode flip is D20's own worked example, so the freeze is destroyed
-     * mid-drive by the one path the decision exists to rule out.
+     * Row #5, D20 half. The same fall-through cleared `favourites` and `pendingUnlikes`. A
+     * night-mode flip is D20's own worked example, so the freeze was destroyed mid-drive by the
+     * one path the decision exists to rule out.
      */
     @Test
     fun nullUserIdOnRecreation_mustNotDestroyTheFreeze() = runTest {

@@ -14,9 +14,10 @@ import org.robolectric.RobolectricTestRunner
 /**
  * T31: what an external controller gets when it asks for songs by media id.
  *
- * `onAddMediaItems` serves Assistant, Bluetooth, system media resumption and the car template's
- * `playFromMediaId`. Before T31 it handed back catalogue URLs, so a downloaded song would not play
- * offline with its file sitting on the device.
+ * `onAddMediaItems` serves Assistant, Bluetooth and the car template's `playFromMediaId`. (System
+ * media resumption goes through `onPlaybackResumption`, which `PlaybackService` does not override.)
+ * Before T31 it handed back catalogue URLs, so a downloaded song would not play offline with its
+ * file sitting on the device.
  *
  * Robolectric because `toMediaItem` builds a `Bundle` and parses a `Uri`.
  */

@@ -17,15 +17,11 @@ import javax.inject.Singleton
 /**
  * Owns the process's connection to `PlaybackService`, and can build another one.
  *
- * Before this existed, `PlaybackModule` provided a single `@Singleton`
- * `ListenableFuture<MediaController>` and every collector released *that* future when its ViewModel
- * was cleared. `SharedControllerFutureTest` shows what followed: the future is idempotent and
- * release is terminal, so the next ViewModel injected the same instance with `isConnected == false`
- * and every command failed for the rest of the process's life. Backing out of the app and returning
- * was enough to trigger it (T14).
- *
- * So releasing is now reference-counted — a consumer says only that *it* is finished — and there is
- * a way to build a fresh connection when the current one is no good.
+ * Releasing is reference-counted — a consumer says only that *it* is finished — and [reconnect]
+ * builds a fresh connection when the current one is no good. A shared future cannot work: Media3's
+ * controller futures are idempotent and release is terminal, so one consumer releasing it would
+ * hand every later consumer a disconnected controller for the rest of the process's life
+ * (`SharedControllerFutureTest`, D65).
  */
 @UnstableApi
 @Singleton
@@ -41,7 +37,7 @@ class ControllerConnection @Inject constructor(
     private val _queueOrigin = MutableStateFlow<QueueOrigin>(QueueOrigin.None)
 
     /**
-     * The service's queue origin, which it publishes as session extras (T02).
+     * The service's queue origin, which it publishes as session extras.
      *
      * Here rather than on each collector because a controller takes exactly one
      * [MediaController.Listener], at build time, and every collector shares this connection's.

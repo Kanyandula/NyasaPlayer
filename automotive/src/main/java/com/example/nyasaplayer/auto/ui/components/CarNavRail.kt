@@ -41,16 +41,15 @@ import com.example.nyasaplayer.core.common.ui.theme.NyasaGold
 private val RailItemHeight = 88.dp
 private val RailIconSize = 28.dp
 
-// Beside the icon there is room for the 18sp interactive-label floor, so the label takes it
-// rather than the 14sp text floor it sat on while it was stacked underneath.
+// Beside the icon there is room for the 18sp interactive-label floor, so the label takes it.
 private val RailLabelSize = 18.sp
 private val RailItemPaddingStart = 20.dp
 private val RailIconLabelGap = 16.dp
 private val RailPillInset = 8.dp
 private val RailPillRadius = 20.dp
 
-// Shorter than the row it marks: 88dp is what CarTouchTargetSize costs the tap area, and at the
-// full height on a 176dp rail the highlight read as a panel rather than a selection.
+// Shorter than the 88dp row it marks: the row keeps its tap area, and at the full height on a
+// 176dp rail the highlight read as a panel rather than a selection.
 private val RailPillHeight = 64.dp
 private val RailPillVerticalInset = (RailItemHeight - RailPillHeight) / 2
 
@@ -62,10 +61,7 @@ private const val ActivePillAlpha = 0.08f
 private const val PillSlideDurationMs = 220
 
 /**
- * The left navigation rail. One of the three chrome regions.
- *
- * Navigation used to live in the top bar; the design puts it here, and exactly one item is
- * active per screen.
+ * The left navigation rail. One of the three chrome regions; exactly one item is active per screen.
  *
  * **Never disabled while driving.** FR-2.7 lists tab switching as always available, so this
  * component takes no restriction state at all — there is nothing here to gate.

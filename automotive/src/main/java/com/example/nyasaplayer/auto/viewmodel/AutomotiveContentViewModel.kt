@@ -1,8 +1,7 @@
 @file:Suppress(
-    // 22 functions against detekt's threshold of 16 inside classes. A6 moved search out; this
-    // class still owns genres, albums, playlists, recently-played, liked songs, popular, detail
-    // and favourites — the next slice to touch it should split it rather than suppress again.
-    // See spec D23.
+    // Over detekt's threshold of 16 functions inside classes: this class owns genres, albums,
+    // playlists, recently-played, liked songs, popular, detail, favourites and downloads. Split it
+    // (T34, docs/BACKLOG.md) rather than suppress again. See D23.
     "TooManyFunctions",
 )
 
@@ -140,10 +139,9 @@ class AutomotiveContentViewModel @Inject constructor(
     }
 
     private fun loadContent() {
-        // Cancel before relaunching. loadContent() used to be reachable only from init, so
-        // this was latent; retryLoad() puts it behind a button a driver may tap repeatedly,
-        // and each call otherwise leaks a Room collector and a Firestore snapshot listener
-        // for the life of the ViewModel.
+        // Cancel before relaunching: retryLoad() puts this behind a button a driver may tap
+        // repeatedly, and each call would otherwise leak a Room collector and a Firestore
+        // snapshot listener for the life of the ViewModel.
         cancelCatalogueJobs()
         _contentState.update {
             // likedSongsLoaded too: without it Favourites keeps whatever it was showing —
@@ -430,7 +428,7 @@ class AutomotiveContentViewModel @Inject constructor(
      *
      * The effect that calls this re-runs on every Activity recreation — a night-mode flip
      * mid-drive — so a visit already in progress must survive it untouched: a freeze that exists
-     * is never re-taken and never released here, nor are the pends behind it (spec D20).
+     * is never re-taken and never released here, nor are the pends behind it (D20).
      */
     fun openFavourites() {
         _contentState.update {
@@ -458,8 +456,8 @@ class AutomotiveContentViewModel @Inject constructor(
      *
      * [freeze] is the caller's screen contract, not a preference. `CarFavouritesScreen` passes
      * true: the first unlike of a visit freezes the list as it stands *before* the removal lands,
-     * so the row cannot move under the driver (spec D19). `CarArtistLikedSongsScreen` passes
-     * false: its list is deliberately live and removes rows immediately (spec D25), and a freeze
+     * so the row cannot move under the driver (D19). `CarArtistLikedSongsScreen` passes
+     * false: its list is deliberately live and removes rows immediately (D25), and a freeze
      * taken there would otherwise leak into the next Favourites visit — the effect that calls
      * [closeFavourites] is keyed on the tab, and the drill-down never leaves the Library tab.
      * A `freeze = false` call still records the pending unlike and still performs the write.
@@ -599,7 +597,7 @@ data class AutomotiveContentState(
     // Liked songs alone: [isLoading] is flipped false by the first genres or albums emission,
     // both from Room, while liked songs still need a Firestore round trip plus a song resolve.
     // Favourites reads this instead, or it offers "No favourites yet" — and a CTA off the tab —
-    // to a driver who does have favourites, which §4.1 of the spec rules out.
+    // to a driver who does have favourites (D34).
     val likedSongsLoaded: Boolean = false,
     val playlists: List<Playlist> = emptyList(),
     val favourites: List<Song>? = null,
