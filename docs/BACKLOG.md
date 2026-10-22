@@ -67,11 +67,8 @@ items were filed under (`docs/CODING_GUIDELINES.md` → References in comments a
 - `:app`'s backup rules are the template default (`allowBackup="true"`, no include or exclude), so
   cloud backup and device transfer take the whole data directory: Room, preferences, downloaded
   files and Crashlytics' unsent reports. Decide explicit excludes, or `allowBackup="false"`.
-- `firestore.rules` has no `homeFeed` match, though the app reads `homeFeed/default` and the live
-  rules allow it. Deploying the repo's Firestore rules would hide the home feed from everyone; deploy
-  rules with `--only storage` until it matches the live rules. `firebase.json`'s `database` target
-  and `database.rules.json` are dead (no Realtime Database instance, no code uses it), and
-  `:core:data` still depends on `firebase-database`.
+- `:core:data` still depends on `firebase-database`, though no code uses the Realtime Database and
+  the project has no instance.
 - `:app` may not need `media3-exoplayer` or `media3-ui` — it imports neither. Unverified without a
   build.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
