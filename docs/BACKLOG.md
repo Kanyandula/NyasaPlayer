@@ -70,6 +70,9 @@ items were filed under; their files are readable in git with `git show 48e1442:d
 - `SongDownloadManager.cancelDownload` has no caller on either surface.
 - `CarSystemBar`'s disabled-control branch is unreachable: every caller passes a click handler.
 - Mobile Home's notifications button does nothing (`HomeScreen.kt`, `onClick = { /* notifications */ }`).
+- `:app`'s backup rules are the template default (`allowBackup="true"`, no include or exclude), so
+  cloud backup and device transfer take the whole data directory: Room, preferences, downloaded
+  files and Crashlytics' unsent reports. Decide explicit excludes, or `allowBackup="false"`.
 - `:app` may not need `media3-exoplayer` or `media3-ui` — it imports neither. Unverified without a
   build.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).

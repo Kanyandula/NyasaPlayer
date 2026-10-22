@@ -18,7 +18,7 @@ import org.junit.Test
  * `FavouritesSnapshotTest` covers the inside of the model and every one of its behaviours is
  * mutation-verified. These cover the outside, which nothing did.
  *
- * "Row #N" numbers the defects this file pins, and later rows cite earlier ones. Each KDoc
+ * "Row #N" numbers the defects this file pins, and rows cross-reference each other. Each KDoc
  * describes its defect as found, before the fix; the test is what holds the fix in place.
  */
 @OptIn(ExperimentalCoroutinesApi::class)

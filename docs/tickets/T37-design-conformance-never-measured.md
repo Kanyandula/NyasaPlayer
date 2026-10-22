@@ -33,7 +33,8 @@ or a component built to the wrong shape — only one that is illegibly small or 
 concern is not theoretical: the type floors were "an unmeasured prose claim" until something
 measured them, and two screens were wrong.
 
-**First, what is *not* the problem.** `docs/AAOS_UI_REDESIGN_PLAN.md`'s 2026-04-23 "template only,
+**First, what is *not* the problem.** `docs/AAOS_UI_REDESIGN_PLAN.md`'s (removed; history in
+`docs/AAOS_ARCHITECTURE.md` §6) 2026-04-23 "template only,
 no custom screens" decision is contradicted by every custom screen that ships — and that is
 sanctioned, not drift. That document carries a `⛔ SUPERSEDED — 2026-08-02` banner, and PRD §3.3
 records the reversal: the custom launcher is the product. The governing documents are the PRD, the

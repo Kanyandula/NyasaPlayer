@@ -155,5 +155,6 @@ leaves unchecked the one variant whose manifest Play reviews.
 
 Debug builds of both flavors carry two exported activities that release builds do not:
 `ui-test-manifest`'s `ComponentActivity` and `ui-tooling`'s `PreviewActivity`, both from
-`debugImplementation`. Accepted rather than suppressed — debug builds go only to verification head
-units — and confirmed absent from `playstoreRelease`, the manifest Play's review reads.
+`debugImplementation`. Accepted rather than suppressed, on the condition that debug APKs never go
+beyond the owner's own devices and emulators; confirmed absent from `playstoreRelease`, the
+manifest Play's review reads.

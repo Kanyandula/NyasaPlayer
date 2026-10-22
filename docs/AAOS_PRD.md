@@ -228,8 +228,8 @@ from a row, the row names the `aaos-DESIGN.md` decision (Dn) that records why.
 
 **This table is the traceability matrix.** Every screen names its entry point, its primary
 actions, the states it must handle, and what it does while driving. A screen is not complete
-until every column is satisfied. Per-screen acceptance criteria lived in each phase's spec (in git
-history since 2026-10-22); this table is what they were written against, so nothing was silently
+until every column is satisfied. Per-screen acceptance criteria lived in each phase's spec (removed;
+they stay in git history); this table is what they were written against, so nothing was silently
 dropped.
 
 Data sources are existing repository components: `AutomotiveContentViewModel` (catalogue,

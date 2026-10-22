@@ -93,7 +93,9 @@ clearing a field (`aaos-DESIGN.md` D63), but a fair way to publish state.
 - No `setUserId` — nothing identifies the signed-in user.
 - No Firebase uid.
 - No email.
-- No song, queue or search text, in custom keys, logs, or exception messages.
+- No song, queue or search text in custom keys, logs, or the messages of exceptions this code
+  records. A fatal crash is captured as thrown, so a library or Firebase exception's own message
+  could carry an id or a Firestore path.
 - `FirebaseCrashlytics.log` is not called anywhere in the codebase; existing `Log.w`/`Log.e` calls
   stay in logcat only.
 - No custom non-fatals beyond the one listed above: `recordException` is called from exactly one
