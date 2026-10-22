@@ -3,19 +3,16 @@
 `docs/AAOS_PRD.md` is finished as written before anything here is picked up (owner, 2026-09-15).
 One line per item. An item becomes a `docs/tickets/` entry only when it is picked up, or if it turns
 out to be a bug a driver or user would hit, or a safety gap. Ticket numbers below are the ones the
-items were filed under; their files are readable in git with `git show 48e1442:docs/tickets/<file>`.
+items were filed under (`docs/CODING_GUIDELINES.md` → References in comments and docs).
 
 ## Filed, parked
 
-- **T20** — an audio-quality preference. Nothing in `PlaybackService` reads one, so a row would
-  persist a value no one observes (D70). First check whether the catalogue has more than one
+- **T20** — an audio-quality preference (D70). First check whether the catalogue has more than one
   rendition per song; if not, it is a backend ticket.
-- **T19** — car phone and email sign-in; deferred past ship, the PRD's §12 exception (D70).
-  `AuthRepository` already has both methods. Typing is refused under `NO_KEYBOARD`, and a head unit
-  with no SIM should not be offered phone sign-in at all.
-- **T18** — car PIN opt-in; deferred past ship, the PRD's §12 exception (D67). Spec first what the
-  PIN protects, where its salted hash lives and what happens after N failures — or close it by
-  dropping US-3. What must not ship is a PIN that gates nothing.
+- **T19** — car phone and email sign-in, deferred past ship by the PRD's §12 exception (D70).
+  `AuthRepository` has both methods; a head unit with no SIM should not offer phone sign-in.
+- **T18** — car PIN opt-in, deferred past ship by the PRD's §12 exception (D67). Spec what the PIN
+  protects, where its hash lives and the lockout first — or drop US-3.
 - **T8** — hoisting the search draft query out of the app-root state. The mechanism is real (a
   keystroke invalidates `AuthenticatedApp`), the cost is not: all 109 composables are skippable and
   seven keystrokes dropped 0 frames on a healthy emulator (2026-08-21). Reopen if typing lag is
@@ -29,12 +26,9 @@ items were filed under; their files are readable in git with `git show 48e1442:d
   `TooManyFunctions` suppression can be deleted.
 - **T35** — four owed device checks, none a suspected bug: on mobile, T3's D55 index fix and T7's
   skeletons; on the car, T13's `skipNext` repeat-all wrap and a driving-state pass after T13/T14.
-  The phone sitting of 2026-09-19 cleared five others (T10, T13, T14, T25, T29) and not these.
-- **T36** — 32 of `:core:playback`'s tests were never challenged by the 2026-09-19 mutation sweep:
-  17 in `MediaBrowseTreeTest` (`getItem` and `search` mutations did not compile), 5 in
-  `PlayableItemsTest` (covered by T31/T32's own mutation checks), 4 in `ConnectedTransportTest`, 3 in
-  `ControllerConnectionTest`, 2 in `PlaybackStatePersistenceTest`, 1 in `SharedControllerFutureTest`.
-  No weakness shown, none ruled out. Method: `docs/CODING_GUIDELINES.md` → Testing.
+- **T36** — 32 of `:core:playback`'s tests went unchallenged by the 2026-09-19 mutation sweep, 17 of
+  them in `MediaBrowseTreeTest` (its `getItem`/`search` mutations did not compile). The full list is
+  `docs/TEST_MUTATION_SWEEP.md` at `48e1442`; method: `docs/CODING_GUIDELINES.md` → Testing.
 - **T37** — PRD §12 criterion 1 says the screens "match `docs/aaos-DESIGN.md`"; only three floors
   were ever measured, so there is **no evidence either way**. Each finding says whether it was
   checked against the source; nothing in it is a priority anyone set
@@ -108,6 +102,10 @@ items were filed under; their files are readable in git with `git show 48e1442:d
   800dp canvas the Up Next row passed while a 628dp AVD window clipped it off. #103 pins the
   player cases to 628dp; setting the whole canvas to h628dp also squeezes the loading skeletons on
   Home, Favourites and the three detail screens, and one Downloads row, which is the rest of this.
+- `./gradlew test` runs most suites twice: `:automotive`'s as both `oem` and `playstore` (they
+  differ only by manifest, and no test reads the flavor), and the `:core:*` modules' in debug and
+  release. `testDebugUnitTest :automotive:testOemDebugUnitTest` runs each once; the lasting fix is a
+  `beforeVariants` rule disabling those host-test variants.
 - Detekt never scans test sources. `build.gradle.kts` scopes `source.setFrom(...)` to
   `*/src/main/java` only, so the 90-odd files under `src/test` are unlinted — an unused import in
   `CarTouchTargetMeasurementTest` passed a green `detekt` run and was found by review instead.

@@ -94,6 +94,16 @@ an "asserts nothing happened" test needs the mutation that makes something happe
 with no `tests completed` line in Gradle's output as invalid, not as a pass: a compile failure in
 `ksp` reports zero failed tests.
 
+## References in comments and docs
+
+- **`Dn`** is a numbered decision in `docs/aaos-DESIGN.md` (parts of one are `Dn.m`). The
+  crash-reporting decisions are written **`T24 Dn`** and live in `docs/CRASH_REPORTING.md`.
+- **`Tn`** names a ticket, and **A1–A9** a PRD phase (`docs/AAOS_PRD.md` §9). A ticket file lives
+  in `docs/tickets/` only while it is open; otherwise the item is a line in `docs/BACKLOG.md`.
+- Closed tickets, per-run verification records and design specs and plans were removed from the
+  tree; they stay readable at commit `48e1442` (`git ls-tree --name-only 48e1442 docs/` to list,
+  `git show 48e1442:<path>` to read).
+
 ## Commit Workflow
 
 A pre-commit hook is *available*, but **do not assume it is running.**

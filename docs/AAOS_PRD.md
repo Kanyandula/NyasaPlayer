@@ -112,9 +112,10 @@ the shipped manifest, so an activity declared with a launcher intent filter is p
 or not a flag hides it at runtime. The `playstore` product flavor ships a manifest with no
 launcher activity and only `PlaybackService`; the `oem` flavor adds the launcher.
 
-This supersedes the 2026-04-23 redesign plan's §1. The plan was removed on 2026-10-22; the Option B
-reasoning it held is `docs/AAOS_ARCHITECTURE.md` §6, and the Play rules it interpreted are
-`docs/AAOS_COMPLIANCE.md` → External Rules Interpreted.
+This supersedes the 2026-04-23 redesign plan's §1. What that plan held lives on in three places:
+the two-surface inventory in the root `CLAUDE.md` → AAOS rendering, the Option B reasoning in
+`docs/AAOS_ARCHITECTURE.md` §6, and the Play rules it interpreted in `docs/AAOS_COMPLIANCE.md` →
+External Rules Interpreted.
 
 ---
 
@@ -128,8 +129,7 @@ input in motion.
 restriction signals do not distinguish them — so the app cannot either. Restrictions apply to
 the surface, not the person.
 
-**Context of use.** A landscape head unit (the layout reference is 1440×800dp, `aaos-DESIGN.md`
-§Units), dark cabin, glare, vibration, and a
+**Context of use.** A landscape head unit (reference: `aaos-DESIGN.md` §Units), dark cabin, glare, vibration, and a
 vehicle that can transition from parked to moving **at any moment** — including while the user
 is mid-interaction. That last property drives one of the more consequential requirements
 (FR-2.5).
@@ -223,14 +223,13 @@ by gating an entry point; this one cannot.
 
 ### 6.3 Functional — screens
 
-Twenty screens. What shipped against each is `docs/AAOS_SHIP_RECORD.md`; where the build deviates
-from a row, the row names the `aaos-DESIGN.md` decision (Dn) that records why.
+Twenty screens, as specified. As built, with the decision behind each deviation:
+`docs/AAOS_SCREEN_CONTRACT.md`; what shipped against §12: `docs/AAOS_SHIP_RECORD.md`.
 
 **This table is the traceability matrix.** Every screen names its entry point, its primary
 actions, the states it must handle, and what it does while driving. A screen is not complete
-until every column is satisfied. Per-screen acceptance criteria lived in each phase's spec (removed;
-they stay in git history); this table is what they were written against, so nothing was silently
-dropped.
+until every column is satisfied. Per-screen acceptance criteria lived in each phase's spec; this
+table is what they were written against, so nothing was silently dropped.
 
 Data sources are existing repository components: `AutomotiveContentViewModel` (catalogue,
 liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `AutomotiveAuthViewModel`
@@ -238,10 +237,10 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 
 | # | Screen | Entry point | Primary actions | States | While driving | Data | Phase |
 |---|---|---|---|---|---|---|---|
-| 1 | CarAuthScreen | App launch when signed out | Google / phone / email sign-in — *phone and email deferred (D70, T19)* | loading, error | **Refused** — parked only | Auth VM | A7 |
-| 2 | CarPinOptInScreen — *deferred (D67, T18)* | After first sign-in | Enter PIN, Enable, Not now | partial entry, error | **Refused** — `NO_SETUP` | Auth VM | A7 |
-| 3 | CarHomeScreen | Rail: Home (default) | Play a recent item, open a mix — *no mixes: the backend has no recommender (D1)* | loading, empty, error | Allowed; lists truncated | Content VM | A2 |
-| 4 | CarBrowseScreen | Rail: Browse | Filter by chip, open a genre — *no chips (D11); a genre card shuffle-plays it (D9)* | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
+| 1 | CarAuthScreen | App launch when signed out | Google / phone / email sign-in | loading, error | **Refused** — parked only | Auth VM | A7 |
+| 2 | CarPinOptInScreen | After first sign-in | Enter PIN, Enable, Not now | partial entry, error | **Refused** — `NO_SETUP` | Auth VM | A7 |
+| 3 | CarHomeScreen | Rail: Home (default) | Play a recent item, open a mix | loading, empty, error | Allowed; lists truncated | Content VM | A2 |
+| 4 | CarBrowseScreen | Rail: Browse | Filter by chip, open a genre | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
 | 5 | CarSearchScreen | System bar: search | Type via system IME when allowed, voice prompt, recent, browse-by shortcuts | idle, recent-empty, no query | Text entry refused; voice offered | Search VM | A6 |
 | 6 | CarSearchResultsScreen | Submitting a search | Top song result, song rows, clear/back | loading, empty results, error | Results allowed; active text entry refused | Search VM | A6 |
 | 7 | CarLibraryScreen | Rail: Library | Open playlist, album or artist | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
@@ -251,13 +250,13 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 | 11 | CarAlbumScreen | Library → album, or search result | Play, download, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
 | 12 | CarFullPlayerScreen | Mini-player artwork/title | Play/pause, skip, seek, shuffle, repeat, like, queue | buffering, error → 19 | **Allowed** — playback control | Player VM | A5 |
 | 13 | CarQueueScreen | Full player's Up Next card (the mini-player's queue icon left in `aaos-DESIGN.md` D74) | **P:** skip to, remove, clear · **D:** skip to only | empty queue | Viewable; edit actions refused, list truncated | Player VM | A5 |
-| 14 | CarSettingsScreen | System bar: settings | Toggle prefs, sign out — *account, sign out and about only (D70)* | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
-| 15 | CarDownloadsScreen | Library → Downloads card | **P:** remove one, remove all · **D:** view only | empty, in-progress | Viewable; delete actions refused | Content VM | A9 |
+| 14 | CarSettingsScreen | System bar: settings | Toggle prefs, sign out | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
+| 15 | CarDownloadsScreen | Library → Downloads chip | **P:** remove one, remove all · **D:** view only | empty, in-progress | Viewable; delete actions refused | Content VM | A9 |
 | 16 | CarNoConnectionScreen — *not a screen: offline play fails fast into the error overlay; the banner stays (D71)* | Network loss | — | — | Allowed | NetworkMonitor | A8 |
 | 17 | CarEmptyFavouritesScreen | Favourites with none liked | Browse music | — | Allowed | Content VM | A4 |
 | 18 | CarLoadingScreen — *satisfied by the per-screen skeletons in Home, Browse and Library (D71)* | Initial content load | none | — | Allowed | Content VM | A8 |
 | 19 | CarPlaybackErrorOverlay | Playback failure | Retry, Skip next, Dismiss | — | **Allowed** — must be dismissible while driving | Player VM | A8 |
-| 20 | CarProfileSwitcherScreen | System bar: avatar | Switch, add profile — *one remembered account, no picker (D66)* | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
+| 20 | CarProfileSwitcherScreen | System bar: avatar | Switch, add profile | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
 
 **Cross-cutting requirements that apply to every screen**, and are therefore not repeated per
 row: the chrome contract (NFR-4), the 76dp touch target (NFR-1), contrast (NFR-2), text sizing
@@ -292,8 +291,8 @@ contract owns implementation completeness.
 - **`android.car.jar` is `compileOnly`** and its stub methods throw `RuntimeException("Stub!")`.
   Platform types therefore cannot appear in JVM unit tests, which dictates that restriction
   logic is written as pure functions over primitives.
-- **Design figures are CSS px on a 1920×1080 canvas**, not dp. The conversion rule, and the
-  1440×800dp reference head unit the layout is checked on, are `docs/aaos-DESIGN.md` §Units.
+- **Design figures are CSS px on a 1920×1080 canvas**, not dp. The conversion rule and the
+  reference head unit the layout is checked on are `docs/aaos-DESIGN.md` §Units.
 - **Dark theme only.**
 
 ---
@@ -466,7 +465,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 | ~~Q1~~ | ~~Can the emulator be put into a driving state, and how?~~ **Resolved 2026-08-08: yes, and it is scriptable — but only on a `userdebug` image.** Recipe and the AVD comparison are in `docs/AAOS_DRIVING_STATE_TESTING.md`. | — | Closed |
 | ~~Q2~~ | ~~How does text entry work on a head unit — on-screen keyboard when parked, voice-only when driving? The 20 screens do not solve this; the prototype only draws a disabled field.~~ **Resolved 2026-08-20:** A6 uses the platform/system IME when `UX_RESTRICTIONS_NO_KEYBOARD` is absent and replaces editing with a system/Assistant voice-search prompt when it is present. The app draws no custom keyboard and records no audio. A6 shipped song-only submitted results; T4 added album, artist and playlist result cards to the launcher, while the media-session path stays song-only (D43-D47). | — | Closed |
 | Q3 | Is 14sp (the smallest text; artist names are 15sp) acceptable at arm's length, or should the floor rise? | Device testing | Type scale across all phases |
-| ~~Q4~~ | ~~Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted?~~ **Resolved 2026-08-02: bannered, not deleted. Deleted 2026-10-22**, once its load-bearing parts lived elsewhere: the two-surface inventory in the root `CLAUDE.md` → AAOS rendering, the Play policy reasoning in `AAOS_COMPLIANCE.md` and `AAOS_ARCHITECTURE.md` §6. | — | Closed |
+| ~~Q4~~ | ~~Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted?~~ **Resolved 2026-08-02: bannered, not deleted. Deleted 2026-10-22 (§3.3).** | — | Closed |
 | ~~Q5~~ | ~~Does Downloads belong in the custom launcher, given it is content browse rather than settings?~~ **Resolved 2026-08-03:** yes for the `oem` launcher. The screen is part of A9 (moved from A8 by D71); delete/remove actions remain parked-only, and the `playstore` path can expose offline content through the media browse tree if needed later. | — | Closed |
 
 ---
@@ -490,7 +489,7 @@ The programme is complete when:
    Play submission decision, not for this release.
 6. Detekt reports zero issues.
 7. ~~The redesign plan no longer contradicts the shipped architecture.~~ **Done** — superseded banner
-   added 2026-08-02; the plan was removed 2026-10-22.
+   added 2026-08-02 (§3.3).
 
 Where `main` stood against every criterion above at ship (2026-09-16), with the evidence and what
 was still owed: `docs/AAOS_SHIP_RECORD.md`.

@@ -122,11 +122,8 @@ AAOS rendering — two surfaces, both live:
   `docs/AAOS_SCREEN_CONTRACT.md` (screens and shared components), `docs/AAOS_COMPLIANCE.md`
   (gates and Play policy), `docs/aaos-DESIGN.md` (visual design and the numbered decisions, Dn).
   The superseded 2026-04-23 "template only" decision is `docs/AAOS_ARCHITECTURE.md` §6.
-- `Dn` in comments is a decision in `docs/aaos-DESIGN.md` (the crash-reporting ones are written
-  `T24 Dn`, in `docs/CRASH_REPORTING.md`). `Tn` in comments and docs names a ticket. Ticket files
-  other than T37 were removed on 2026-10-22; open ones are lines in `docs/BACKLOG.md`, and all stay
-  readable with `git show 48e1442:docs/tickets/<file>` (verification records likewise, under
-  `docs/`).
+- `Dn`, `T24 Dn` and `Tn` in comments and docs, and where removed tickets and records went:
+  `docs/CODING_GUIDELINES.md` → References in comments and docs.
 - **A change under `:core:playback` is a change to both surfaces.** Verify mobile and car, or say
   which one was left out and why.
 

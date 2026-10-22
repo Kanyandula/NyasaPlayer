@@ -80,13 +80,11 @@ surface's collector overrides (T27).
 Non-fatals are delivered on the next launch or with the next fatal, and Crashlytics keeps only the
 eight most recent between sends.
 
-**What a report means.** `BasePlayerStateCollector.onControllerLost()` also logs, once per rebuild
-attempt, whether the controller it found was `null` or `disconnected`. `null` is expected — a tap
-before the first connection resolved — and stays in logcat. `disconnected` is the state nobody has
-reproduced on a device since the app stopped releasing its own controller (`aaos-DESIGN.md` D65);
-**a report of this non-fatal reopens the dead-controller investigation**. Whoever reopens it: the
-push would be a `MediaController.Listener` on the `Builder` in `ControllerConnection` — rejected for
-clearing a field (`aaos-DESIGN.md` D63), but a fair way to publish state.
+**What a report means.** A report of this non-fatal reopens the dead-controller investigation: no
+one has reproduced `disconnected` on a device since the app stopped releasing its own controller
+(`aaos-DESIGN.md` D65). A `null` controller — a tap before the first connection — stays in logcat.
+Whoever reopens it: a `MediaController.Listener` on `ControllerConnection`'s `Builder` is a fair way
+to publish state; D63 rejected it only for clearing a field.
 
 ## What is never sent
 

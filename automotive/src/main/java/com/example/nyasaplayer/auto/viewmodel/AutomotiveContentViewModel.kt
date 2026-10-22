@@ -1,7 +1,5 @@
 @file:Suppress(
-    // Over detekt's threshold of 16 functions inside classes: this class owns genres, albums,
-    // playlists, recently-played, liked songs, popular, detail, favourites and downloads. Split it
-    // (T34, docs/BACKLOG.md) rather than suppress again. See D23.
+    // Over detekt's 16-function class threshold; split it (T34) rather than suppress again (D23).
     "TooManyFunctions",
 )
 

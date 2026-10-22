@@ -34,8 +34,7 @@ current product decision is **dual-track by build variant**:
 surface, Assistant voice playback/search, media-session controls, queue persistence and
 cross-device resume.
 
-**Target display:** landscape head unit; the layout reference is 1440 x 800dp with a 628dp app
-window (`aaos-DESIGN.md` §Units).
+**Target display:** landscape head unit; reference unit in `aaos-DESIGN.md` §Units.
 **Min SDK:** 29.
 **`<uses name="media" />`:** required for the preserved Play Store AAOS media variant.
 
@@ -115,11 +114,11 @@ AAOS 6-tap limit.
 | `onGetSearchResult(query, page, pageSize)` | Paginated search results |
 | `onCustomCommand` | Handles `CMD_SET_QUEUE`, `CMD_SHUFFLE_PLAY`, `CMD_RESTORE_STATE`, `CMD_TOGGLE_SHUFFLE`, `CMD_TOGGLE_LIKE` |
 
-System media resumption is not supported: media3 routes it through `onPlaybackResumption`, which
-`PlaybackService` does not override. The queue's origin (what the queue plays from) reaches
-controllers as session extras, set on every timeline change and read by `ControllerConnection`.
-Browse items carry the stream URL, not a downloaded file; it is `onAddMediaItems` that resolves
-downloads — worth knowing before making browse items directly playable.
+- System media resumption is not supported: media3 routes it through `onPlaybackResumption`,
+  which `PlaybackService` does not override.
+- The queue's origin (what the queue plays from) reaches controllers as session extras, set on
+  every timeline change and read by `ControllerConnection`.
+- Browse items carry the stream URL, not a downloaded file; `onAddMediaItems` resolves downloads.
 
 ### MediaMetadata contract
 
@@ -172,10 +171,7 @@ Both surfaces hold one: `PlayerViewModel` polls position at 250ms, `AutomotivePl
 ## Variant-specific UI Surfaces (`:automotive`)
 
 What each flavor must and must not declare, and what the `oem` launcher must refuse while driving,
-is `AAOS_COMPLIANCE.md` (`oem` gates OG-1..11, `playstore` gates MG-1..7). In short: `oem`'s
-`AutomotiveActivity` is the launcher and declares `distractionOptimized=true`; `playstore` declares
-no launcher and is host-rendered from `PlaybackService`; voice search goes through
-Assistant/system search into `PlaybackService.onSearch`, and the app never records audio.
+is `AAOS_COMPLIANCE.md` (`oem` gates OG-1..11, `playstore` gates MG-1..7).
 
 A future standalone parked-only activity (settings, say, for MG-4) would take this shape:
 
@@ -269,11 +265,6 @@ are sufficient. See `firestore.rules`.
 - `docs/AAOS_COMPLIANCE.md` — `oem` / `playstore` manifest and runtime gates, and how to check them.
 - `docs/aaos-DESIGN.md` — visual design and the numbered design decisions.
 - `docs/AAOS_SHIP_RECORD.md` — where the app stood against each PRD §12 criterion at ship.
-
-Voice search can be checked with
-`adb shell am start -a android.intent.action.MEDIA_PLAY_FROM_SEARCH ...`, which resolves through
-`PlaybackService.onSearch`.
-
 ---
 
 ## Key file references

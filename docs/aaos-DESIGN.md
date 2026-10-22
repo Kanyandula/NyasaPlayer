@@ -181,9 +181,8 @@ static mockups.
 Both floors are measured by `CarTextSizeMeasurementTest` (T30), from what Compose laid out rather
 than from the source, so a size inherited from a theme is judged as the driver sees it.
 
-**The 18px label floor means a control's own label** — the text a driver reads to know what the
-control does, including the rail's tab labels. Those sat under their icons at 14px, exempt from the
-floor, until the rail widened to 176dp and put them beside the icons at 18sp; the exemption is gone.
+**The 18sp label floor means a control's own label** — the text a driver reads to know what the
+control does, the rail's tab labels included.
 
 The smallest text rendered is 14sp: the mini-player's timestamps, the full player's captions and the
 Home hero's label. Artist names in track rows are 15sp. Both satisfy the rule above, but neither is
@@ -1014,7 +1013,7 @@ and PR descriptions use the old numbers), and D81 after T4's D43–D47.
   straight line drawn from corner to corner would leave the curves and cross empty space. The
   border draws on all four edges, so the bar also gets a 1dp line against the rail.
 - **D77 — The ambient glow and the full player's glow take their hue from the current cover
-  (T38).** Code cites the parts as D-T38.1–.6:
+  (T38).** Its parts, D77.1–.6:
   - **.1** Extraction is driven by the current song's cover URL, not by a composable: the app-root
     ambient layer depends on no `AsyncImage`, so the theme survives the full player hiding
     `BrowseShell`. Keyed on the URL, so tracks sharing a cover share one extraction.
@@ -1076,9 +1075,8 @@ Three changes were structural rather than padding:
   bar holds app controls (search, settings, avatar) rather than only OS status icons. If the
   OEM draws the status row itself, the app's own bar still needs this height.
 - **Filter chips are 76 tall** (were 56) and **pill buttons 76** (were 64).
-- **The mini-player's artwork and title are a single target**, not two. They were 64 x 64 and
-  230 x 43 separately; merged they are 314 x 76, and tapping anywhere on the "now playing"
-  block opens the player. The whole mini-player is that target now.
+- **The whole mini-player is one target** that opens the player. The design had separate 64 x 64
+  artwork and 230 x 43 title targets.
 
 Run the measurement after any layout change — several violations were introduced by otherwise
 harmless styling.
@@ -1119,12 +1117,6 @@ These mirror `CarUxRestrictions` defaults; the app takes the real values from
 | Queue edits | Queue remains viewable and skip-to remains available; remove and clear are refused, and the list truncates to the reported cap |
 | Downloads edits | Downloads remain viewable; delete/remove actions are refused |
 
-Entering a restricted screen is refused with an explanatory panel rather than a silent
-no-op. Starting to drive while already inside a restricted screen **evicts** you from it —
-gating entry alone is not sufficient, since the vehicle can start moving at any time.
-
-Tab switching, playback transport, seeking, queue view/skip-to, and download viewing stay
-available while driving. Setup, typed search, deletion, removal and clear actions do not.
 Queue reorder ships in no state (D26).
 
 Not enforced: no cumulative item count is carried *across* a browse session, and

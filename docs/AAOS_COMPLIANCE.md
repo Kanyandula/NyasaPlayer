@@ -120,7 +120,7 @@ submission decision, not on every commit.
 | HR-4 | Now Playing metadata matches title, artist and artwork |
 | HR-5 | Queue is populated and skip-to works |
 | HR-6 | Search returns results through `onSearch` / `onGetSearchResult` |
-| HR-7 | Assistant voice playback works end to end |
+| HR-7 | Assistant voice playback works end to end (`adb shell am start -a android.intent.action.MEDIA_PLAY_FROM_SEARCH ...` resolves through `PlaybackService.onSearch`) |
 | HR-8 | Custom actions such as like/unlike appear and reflect state |
 
 Now Playing may render on `FLAG_SECURE` distant-display surfaces, so screenshot verification is
@@ -140,18 +140,13 @@ not on the PATH):
 
 ```bash
 ./gradlew :automotive:assembleOemDebug :automotive:assemblePlaystoreDebug
-# OG-2: non-zero
-aapt2 dump xmltree --file AndroidManifest.xml \
-  automotive/build/outputs/apk/oem/debug/automotive-oem-debug.apk | grep -c distractionOptimized
-# OG-1 / MG-1: non-zero for oem, 0 for playstore
-aapt2 dump xmltree --file AndroidManifest.xml \
-  automotive/build/outputs/apk/oem/debug/automotive-oem-debug.apk | grep -c android.intent.category.LAUNCHER
-aapt2 dump xmltree --file AndroidManifest.xml \
-  automotive/build/outputs/apk/playstore/debug/automotive-playstore-debug.apk | grep -c android.intent.category.LAUNCHER
+m() { aapt2 dump xmltree --file AndroidManifest.xml automotive/build/outputs/apk/$1/debug/automotive-$1-debug.apk; }
+m oem | grep -c distractionOptimized                       # OG-2: non-zero
+m oem | grep -c android.intent.category.LAUNCHER           # OG-1: non-zero
+m playstore | grep -c android.intent.category.LAUNCHER     # MG-1: 0
 ```
 
-Lint both flavors (`:automotive:lintOemDebug :automotive:lintPlaystoreDebug`): linting only `oem`
-leaves unchecked the one variant whose manifest Play reviews.
+Lint both flavors (`docs/CODING_GUIDELINES.md` → Android Lint).
 
 Debug builds of both flavors carry two exported activities that release builds do not:
 `ui-test-manifest`'s `ComponentActivity` and `ui-tooling`'s `PreviewActivity`, both from
