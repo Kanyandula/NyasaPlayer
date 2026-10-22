@@ -18,6 +18,10 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if false;
     }
+    match /homeFeed/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
 
     // User data — scoped to authenticated user
     match /users/{uid} {

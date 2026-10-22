@@ -11,8 +11,7 @@ https://preview--nyasa-harmony-suite.lovable.app/screens
 | Jetpack Compose + Material3 | UI framework |
 | Kotlin | Language |
 | Hilt | Dependency injection |
-| Firebase Firestore | Song/genre/artist/album data, playlists, user state |
-| Firebase Realtime Database | Home feed sections |
+| Firebase Firestore | Song/genre/artist/album data, home feed, playlists, user state |
 | Firebase Auth | Email/password + Google Sign-In |
 | Room | Local database (offline-first catalog) |
 | ExoPlayer (Media3 1.5.1) | Audio playback |
@@ -130,7 +129,7 @@ See `docs/AAOS_PRD.md` §3.3.
 
 ### Home Screen (HomeScreen)
 - Header with profile avatar placeholder, greeting ("Welcome back"), notification bell icon
-- Dynamic sections loaded from Firebase Realtime Database
+- Dynamic sections loaded from Firestore (`homeFeed/default`)
 - Three layout types: `horizontal_scroll` (LazyRow cards), `grid` (2x2 Quick Picks), `list` (song rows)
 - Section headers with "See All" + chevron
 
@@ -275,8 +274,7 @@ was reversed on 2026-08-02 — see `docs/AAOS_PRD.md` §3.3.
 5. In Firebase Console:
    - Enable **Authentication** → Email/Password provider
    - Enable **Authentication** → Google provider
-   - Set up **Firestore** collections: `songs`, `genres`, `artists`, `albums`
-   - Set up **Realtime Database** for home feed sections
+   - Set up **Firestore** collections: `songs`, `genres`, `artists`, `albums`, `homeFeed`
 6. Build and run: `./gradlew assembleDebug`
 
 ## Build

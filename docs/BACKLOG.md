@@ -67,6 +67,8 @@ items were filed under (`docs/CODING_GUIDELINES.md` → References in comments a
 - `:app`'s backup rules are the template default (`allowBackup="true"`, no include or exclude), so
   cloud backup and device transfer take the whole data directory: Room, preferences, downloaded
   files and Crashlytics' unsent reports. Decide explicit excludes, or `allowBackup="false"`.
+- `:core:data` still depends on `firebase-database`, though no code uses the Realtime Database and
+  the project has no instance.
 - `:app` may not need `media3-exoplayer` or `media3-ui` — it imports neither. Unverified without a
   build.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).

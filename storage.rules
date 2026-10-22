@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Catalog media. Apps stream through tokenized download URLs and uploads go through the
+    // console or admin credentials; both bypass these rules, which gate only SDK and REST access.
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
