@@ -201,9 +201,10 @@ was reversed on 2026-08-02 — see `docs/AAOS_PRD.md` §3.3.
   search, deep drill-down, queue mutation and download deletion are refused while driving;
   transport, seek, queue skip-to and tab switching stay available. Starting to drive inside
   a restricted screen **evicts** you to a permitted one with an explanation (FR-2.5).
-- **Measured compliance**: every interactive node ≥ 76dp, every text pair ≥ 7:1 and every text
-  size ≥ 14sp, measured by `CarTouchTargetMeasurementTest`, `CarTextContrastMeasurementTest` and
-  `CarTextSizeMeasurementTest`. Counts at ship: `docs/AAOS_SHIP_RECORD.md`.
+- **Measured compliance**: every interactive node ≥ 76dp, every text ≥ 14sp (18sp for a control's
+  label) and every text pair ≥ 7:1, measured by `CarTouchTargetMeasurementTest`,
+  `CarTextSizeMeasurementTest` and `CarTextContrastMeasurementTest` on every test run. Counts at
+  ship (2026-09-16): `docs/AAOS_SHIP_RECORD.md`.
 
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)

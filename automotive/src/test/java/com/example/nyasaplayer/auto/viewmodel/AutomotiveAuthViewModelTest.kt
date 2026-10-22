@@ -37,13 +37,14 @@ class AutomotiveAuthViewModelTest {
 
     @Test
     fun `a signed-in session renders authenticated`() = runTest {
-        auth.emitSession(userId = DefaultUserId, displayName = "Miracle")
+        auth.emitSession(userId = DefaultUserId, displayName = "Miracle", photoUrl = PhotoUrl)
         val vm = viewModel()
 
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.isAuthenticated)
         assertEquals("Miracle", vm.uiState.value.displayName)
+        assertEquals(PhotoUrl, vm.uiState.value.photoUrl)
         assertTrue(sync.isRunning)
     }
 
@@ -61,7 +62,7 @@ class AutomotiveAuthViewModelTest {
     /** The failure T2 was filed for: a session revoked elsewhere, with nothing on screen saying so. */
     @Test
     fun `a session revoked elsewhere leaves the shell and stops sync`() = runTest {
-        auth.emitSession(userId = DefaultUserId)
+        auth.emitSession(userId = DefaultUserId, displayName = "Miracle", photoUrl = PhotoUrl)
         val vm = viewModel()
         advanceUntilIdle()
         assertTrue(vm.uiState.value.isAuthenticated)
@@ -72,6 +73,7 @@ class AutomotiveAuthViewModelTest {
         assertFalse(vm.uiState.value.isAuthenticated)
         assertEquals(1, sync.stopCount)
         assertEquals("", vm.uiState.value.displayName)
+        assertEquals("", vm.uiState.value.photoUrl)
     }
 
     @Test
@@ -222,3 +224,5 @@ class AutomotiveAuthViewModelTest {
         assertFalse(sync.isRunning)
     }
 }
+
+private const val PhotoUrl = "https://lh3.googleusercontent.com/a/photo"

@@ -10,6 +10,7 @@ package com.example.nyasaplayer.core.data.api
 data class AuthSession(
     val userId: String? = null,
     val displayName: String = "",
+    val photoUrl: String = "",
 ) {
     val isAuthenticated: Boolean get() = !userId.isNullOrBlank()
 }

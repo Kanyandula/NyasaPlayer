@@ -76,8 +76,8 @@ visible drift.
 
 | Component | Reuse / build requirement | Required states |
 |---|---|---|
-| `CarSystemBar` | One 80dp shared top bar: logo and wordmark, search, settings, avatar, clock | normal, focus |
-| `CarNavRail` | One 176dp shared rail for Home, Browse, Library, Favourites; icon beside an 18sp label | selected, unselected, focused |
+| `CarSystemBar` | One 80dp shared top bar: logo and wordmark, search, settings, clock (the profile entry is in the rail, `aaos-DESIGN.md` D82) | normal, focus |
+| `CarNavRail` | One 176dp shared rail for Home, Browse, Library, Favourites, icon beside an 18sp label, with the profile row under the tabs (`aaos-DESIGN.md` D82, D83) | selected, unselected, focused |
 | `CarMiniPlayer` | One target that opens the full player; previous, play/pause, next (`aaos-DESIGN.md` D73–D76) | playing, paused, buffering, error, no item |
 | `CarPillButton` | Shared gold/ghost/destructive-safe button primitive | enabled, focused, disabled, loading |
 | `CarChip` | Filter / segmented chip, built in `CarControls.kt` but with no production caller: browse-by uses the ghost `CarPillButton` (D39) and Browse has no filter chips (D11) | selected, unselected, focused, disabled |

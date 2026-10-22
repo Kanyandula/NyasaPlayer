@@ -82,7 +82,7 @@ items were filed under (`docs/CODING_GUIDELINES.md` → References in comments a
   (T14's, renamed 2026-09-19; T27 hit the same wall). Testing it needs a seam that can hold a
   rebuild open.
 - `CarNavRail` maps `CarScreen` twice — `iconFor()` and `labelFor()` are back-to-back `when`
-  blocks over the same enum. `:app` already solved this shape with a
+  blocks over the same enum (in `CarNavRail.kt`). `:app` already solved this shape with a
   data-driven `NavItem(route, labelResId, icon)` list (`NyasaBottomNavBar.kt:42`). Low risk today:
   both `when`s are exhaustive, so a new `CarScreen` fails to compile in both places. But
   `labelFor` returns hardcoded strings where `:app` uses `@StringRes`, so **the rail is not
@@ -127,6 +127,11 @@ items were filed under (`docs/CODING_GUIDELINES.md` → References in comments a
   capped list starts at the current item, but only once it falls past the first page — and was not
   checked. The likely fix is `rememberLazyListState(initialFirstVisibleItemIndex = currentIndex)`
   for the parked list.
+- The car's rail has no minimum window height. With the profile row (D82) it needs 452dp, so the
+  window needs 532dp, plus the offline banner's height when offline; a 1024x600 head unit clips the
+  row by 104dp, and its four tabs alone already overflowed by 4dp. No minimum is documented and the
+  measurement cases only run at a 628dp window, so nothing would catch it. A scrolling rail is the
+  fix if a unit that short ships.
 - The three Robolectric measurement classes can fail as a group under parallel Gradle workers,
   with `NoSuchMethodError` and "Could not write XML test results"; `--max-workers=1` passes
   cleanly. Reported by a review of PR #95 and reproduced there on a fresh daemon. Not reproduced

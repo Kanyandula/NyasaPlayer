@@ -92,4 +92,8 @@ class FirebaseAuthRepository @Inject constructor(
 }
 
 private fun FirebaseUser?.toSession(): AuthSession =
-    AuthSession(userId = this?.uid, displayName = this?.displayName.orEmpty())
+    AuthSession(
+        userId = this?.uid,
+        displayName = this?.displayName.orEmpty(),
+        photoUrl = this?.photoUrl?.toString().orEmpty(),
+    )

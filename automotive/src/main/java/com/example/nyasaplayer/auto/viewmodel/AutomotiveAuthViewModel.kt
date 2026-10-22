@@ -25,6 +25,7 @@ data class CarAuthUiState(
     val isAuthenticated: Boolean = false,
     val errorMessage: String? = null,
     val displayName: String = "",
+    val photoUrl: String = "",
 )
 
 @HiltViewModel
@@ -38,6 +39,7 @@ class AutomotiveAuthViewModel @Inject constructor(
         CarAuthUiState(
             isAuthenticated = authRepository.isAuthenticated,
             displayName = authRepository.currentUser?.displayName.orEmpty(),
+            photoUrl = authRepository.currentUser?.photoUrl?.toString().orEmpty(),
         ),
     )
     val uiState: StateFlow<CarAuthUiState> = _uiState.asStateFlow()
@@ -74,13 +76,13 @@ class AutomotiveAuthViewModel @Inject constructor(
     private fun applySession(session: AuthSession) {
         if (session.isAuthenticated) {
             _uiState.update {
-                it.copy(isAuthenticated = true, displayName = session.displayName)
+                it.copy(isAuthenticated = true, displayName = session.displayName, photoUrl = session.photoUrl)
             }
         } else {
             // errorMessage is left alone: a failed sign-in sets it and does not change auth
             // state, so clearing here would erase the reason the driver is still on this screen.
             _uiState.update {
-                it.copy(isAuthenticated = false, isLoading = false, displayName = "")
+                it.copy(isAuthenticated = false, isLoading = false, displayName = "", photoUrl = "")
             }
         }
     }
