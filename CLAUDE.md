@@ -54,7 +54,7 @@ Unit tests span all five modules; `:automotive` holds by far the largest suite. 
 - **`:automotive`** (`com.example.nyasaplayer.auto`) — AAOS. Ships **both** a custom Compose launcher and, via `:core:playback`'s `PlaybackService`, the media source the OEM template browses. See "AAOS rendering" below.
 
 ```
-Firestore / Realtime DB / Firebase Auth
+Firestore / Firebase Auth
         ↓
    FirebaseSyncManager              — live Firestore → Room sync (:core:data)
         ↓
@@ -139,7 +139,7 @@ Offline-first for catalog data (songs, artists, genres, albums): `FirebaseSyncMa
 | `OfflineArtistRepository` | Room (`ArtistDao`) | synced from Firestore `artists` |
 | `OfflineAlbumRepository` | Room (`AlbumDao`) | synced from Firestore `albums` |
 | `UserRepository` | Firestore | `users/{uid}` (the profile document), `users/{uid}/likedSongs`, `users/{uid}/recentlyPlayed`, `users/{uid}/playbackState/current` |
-| `HomeFeedRepository` | Realtime Database | home feed sections |
+| `HomeFeedRepository` | Firestore | `homeFeed/default` (home feed sections) |
 | `PlaylistRepository` | Firestore | `users/{uid}/playlists` |
 
 Room entities live in `core/data/.../local/entity/`, DAOs in `core/data/.../local/dao/`, and the database class in `core/data/.../local/NyasaDatabase.kt`. `FirebaseSyncManager` (`core/data/.../sync/`) keeps snapshot listeners on `songs`, `artists`, `genres` and `albums`, syncing each into Room with retry; the phone starts it in `Application.onCreate`, the car only once signed in (`CatalogSync`, bound in `SyncModule`).

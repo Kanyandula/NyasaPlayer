@@ -251,10 +251,10 @@ Phone-paired sign-in is preferred (pair once on phone, AAOS inherits) but not im
 `CarAuthScreen` signs in with play-services `GoogleSignIn` (the intent flow; mobile uses
 Credential Manager), so the user signs in once per device.
 
-### Firestore security
+### Security rules
 
-Existing rules (catalog read-only for authenticated users; user data scoped to `uid`)
-are sufficient. See `firestore.rules`.
+Catalog read-only for authenticated users, user data scoped to `uid` (`firestore.rules`); Storage
+denies all writes, and the apps read media through tokenized download URLs (`storage.rules`).
 
 ---
 
