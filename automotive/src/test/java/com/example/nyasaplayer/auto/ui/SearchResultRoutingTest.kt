@@ -10,7 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Where each kind of result card goes when the driver taps it (spec 3.6). */
+/** Where each kind of result card goes when the driver taps it (D81). */
 class SearchResultRoutingTest {
 
     private var played: Pair<List<Song>, Song>? = null

@@ -13,7 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** T03: the full player names where the queue came from, and names nothing when it came from nowhere. */
+/** The full player names where the queue came from, and names nothing when it came from nowhere. */
 @RunWith(RobolectricTestRunner::class)
 class CarSourceLabelTest {
 

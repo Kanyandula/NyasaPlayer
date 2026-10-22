@@ -20,7 +20,7 @@ private const val TAG = "ArtworkTheme"
 private const val SampleSizePx = 112
 private const val CacheEntries = 64
 
-/** The car's theme for a cover. A seam so the player ViewModel can be tested without Coil (T07). */
+/** The car's theme for a cover. A seam so the player ViewModel can be tested without Coil. */
 fun interface ArtworkThemeExtractor {
     suspend fun themeFor(coverUrl: String?): ArtworkTheme
 }

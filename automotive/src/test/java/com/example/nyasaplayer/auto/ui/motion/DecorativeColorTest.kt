@@ -22,7 +22,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * T08: an artwork hue eases in only when decorative motion is allowed. With motion off — driving, or
+ * An artwork hue eases in only when decorative motion is allowed. With motion off — driving, or
  * animations switched off — a new colour still lands, at once.
  */
 @RunWith(RobolectricTestRunner::class)

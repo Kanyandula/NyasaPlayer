@@ -23,7 +23,7 @@ interface ArtistDao {
      * Artists matching [query] on name, best match first.
      *
      * Name only: `genres` is a JSON-encoded list column, and matching it would mean a LIKE over
-     * serialized text that also hits ids and punctuation (spec 3.2). [query] must already be
+     * serialized text that also hits ids and punctuation (D45). [query] must already be
      * LIKE-escaped — see `escapeLikeArgument`.
      */
     @Query(

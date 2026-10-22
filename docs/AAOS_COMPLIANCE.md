@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Applies to** | `:automotive` AAOS upgrade |
-| **Status** | Binding for A1 and later AAOS UI phases |
+| **Status** | Binding for any `:automotive` change |
 | **Date** | 2026-08-03 |
 | **Primary PRD** | `docs/AAOS_PRD.md` |
 | **Notion** | https://app.notion.com/p/3b0728b1385d81afbfade86ccddd1eeb |
@@ -50,7 +50,7 @@ References:
 The `oem` flavor is intentionally not the Play media submission artifact. The `playstore`
 flavor exists so that a future Play path remains viable without contaminating the product UI.
 
-Crash reporting and what it sends are inventoried in `docs/CRASH_REPORTING.md` (T24, T25).
+Crash reporting and what it sends are inventoried in `docs/CRASH_REPORTING.md`.
 
 ## `oem` Gates
 
@@ -70,9 +70,8 @@ Run these against the merged `oem` APK manifest and emulator behavior.
 | OG-10 | The app does not request `RECORD_AUDIO` and does not implement an in-app audio recorder for voice search |
 | OG-11 | Decorative animation freezes while driving and is disabled when platform animator duration scale is `0` |
 
-OG-2 should land only after the behavior behind it is true. Adding the metadata before A1's
-restriction, touch-target and contrast gates pass would make a false safety claim to the
-platform.
+OG-2 is a safety claim to the platform, so it landed only once the restriction, touch-target and
+contrast gates behind it passed (A1). A change that breaks one of those breaks the claim.
 
 ## `playstore` Gates
 
@@ -121,7 +120,7 @@ submission decision, not on every commit.
 | HR-4 | Now Playing metadata matches title, artist and artwork |
 | HR-5 | Queue is populated and skip-to works |
 | HR-6 | Search returns results through `onSearch` / `onGetSearchResult` |
-| HR-7 | Assistant voice playback works end to end |
+| HR-7 | Assistant voice playback works end to end (`adb shell am start -a android.intent.action.MEDIA_PLAY_FROM_SEARCH ...` resolves through `PlaybackService.onSearch`) |
 | HR-8 | Custom actions such as like/unlike appear and reflect state |
 
 Now Playing may render on `FLAG_SECURE` distant-display surfaces, so screenshot verification is
@@ -136,6 +135,21 @@ not always available. Use `dumpsys media_session` for playback state and custom 
 | `automotive/src/playstore` | Adds no launcher activity |
 | `:core:playback` | Contributes `PlaybackService` through manifest merging |
 
-The verification commands in
-`docs/superpowers/plans/2026-08-02-aaos-foundation-restrictions.md` Task 13 are the first
-implementation of these gates.
+Checking the merged manifests (`aapt2` is under `$ANDROID_HOME/build-tools/<version>/` if it is
+not on the PATH):
+
+```bash
+./gradlew :automotive:assembleOemDebug :automotive:assemblePlaystoreDebug
+m() { aapt2 dump xmltree --file AndroidManifest.xml automotive/build/outputs/apk/$1/debug/automotive-$1-debug.apk; }
+m oem | grep -c distractionOptimized                       # OG-2: non-zero
+m oem | grep -c android.intent.category.LAUNCHER           # OG-1: non-zero
+m playstore | grep -c android.intent.category.LAUNCHER     # MG-1: 0
+```
+
+Lint both flavors (`docs/CODING_GUIDELINES.md` → Android Lint).
+
+Debug builds of both flavors carry two exported activities that release builds do not:
+`ui-test-manifest`'s `ComponentActivity` and `ui-tooling`'s `PreviewActivity`, both from
+`debugImplementation`. Accepted rather than suppressed, on the condition that debug APKs never go
+beyond the owner's own devices and emulators; confirmed absent from `playstoreRelease`, the
+manifest Play's review reads.

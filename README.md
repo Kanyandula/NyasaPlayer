@@ -63,18 +63,20 @@ Multi-module Gradle project:
 ├── SongMediaItemMapper.kt          # Song <-> MediaItem conversion
 ├── PlaybackCommands.kt             # Custom SessionCommand constants
 ├── PlaybackQueueManager.kt         # Queue state, shuffle, repeat modes
-├── PlaybackStatePersistence.kt     # Firestore-backed save/restore of queue, position, repeat
+├── QueueOrigin.kt                  # What the queue plays from, published as session extras
+├── PlaybackStatePersistence.kt     # Firestore-backed save/restore of queue, position, repeat, origin
 ├── BasePlayerStateCollector.kt     # Shared MediaController event/polling base class
 ├── ControllerConnection.kt         # MediaController lifecycle and reconnection
 ├── PlayerUiState.kt / PlaybackSnapshot.kt / PlayerTransport.kt
+├── PlayableItems.kt                # Media ids -> playable items, downloaded file first
 ├── OfflinePlayback.kt              # Shared isPlayableNow / isStreamStalledOffline rules
-└── di/PlaybackModule.kt            # Provides SessionToken and shared playback dependencies
+└── di/PlaybackModule.kt            # Provides the SessionToken
 
 :app  (com.example.nyasaplayer)
 ├── MainActivity.kt
 ├── di/AppModule.kt                 # Firestore, FirebaseAuth, ApplicationContext
 ├── navigation/                     # RootNavigation, NyasaPlayerNavigation, NyasaBottomNavBar
-├── player/PlayerViewModel.kt       # Extends BasePlayerStateCollector (250ms polling)
+├── player/PlayerViewModel.kt       # Wraps a BasePlayerStateCollector (250ms polling)
 ├── screens/
 │   ├── NyasaPlayerApp.kt          # Main app shell with bottom nav
 │   ├── auth/                       # LoginScreen, SignUpScreen, AuthViewModel, SignUpViewModel
@@ -88,21 +90,26 @@ Multi-module Gradle project:
 :automotive  (com.example.nyasaplayer.auto)
 # The custom Compose launcher IS the AAOS product (oem flavor). The OEM media
 # template remains live in parallel, rendered from :core:playback's PlaybackService.
-├── AutomotiveActivity.kt           # oem launcher entry point, distractionOptimized=true
+├── AutomotiveApplication.kt        # Hilt application; starts CrashReporter, owns the Coil loader
+├── artwork/                        # ArtworkTheme + extractor: contrast-safe hue from the cover
+├── search/                         # AutomotiveCatalogSearch (multi-entity launcher search)
 ├── ui/
+│   ├── AutomotiveActivity.kt       # oem launcher entry point, distractionOptimized=true
 │   ├── AutomotiveApp.kt            # Nav root: auth gate → rail tabs → overlays and sheets
-│   ├── screens/                    # 17 screens — Home, Browse, Library, Favourites,
-│   │                               #   Search(+Results), FullPlayer, Queue, Downloads,
-│   │                               #   Album/Playlist/Artist detail, Settings, ProfileSwitcher,
-│   │                               #   ArtistLikedSongs, EmptyFavourites, Auth
+│   ├── screens/                    # Home, Browse, Library, Favourites, Search(+Results),
+│   │                               #   FullPlayer, Queue, Downloads, Album/Playlist/Artist
+│   │                               #   detail, Settings, ProfileSwitcher, ArtistLikedSongs,
+│   │                               #   EmptyFavourites, Auth
 │   ├── components/                 # CarMiniPlayer, CarNavRail, CarSystemBar, CarModal,
-│   │                               #   CarTrackRow, CarSignOutConfirmation, ... (21 files)
+│   │                               #   CarTrackRow, CarSignOutConfirmation, ...
+│   ├── motion/                     # Decorative motion, frozen while driving
 │   ├── navigation/                 # CarScreen (4 rail tabs), CarDestination, CarUiLocation, gate()
+│   ├── preview/                    # Compose previews of the car screens
 │   └── theme/                      # AutomotiveColors, AutomotiveDimens
 ├── viewmodel/                      # AutomotiveAuthViewModel, AutomotiveContentViewModel,
 │                                   #   AutomotivePlayerViewModel, AutomotiveSearchViewModel,
 │                                   #   CarUxRestrictionsHandler
-└── di/AutoAppModule.kt             # Firebase + ApplicationContext for the automotive process
+└── di/AutoAppModule.kt             # Firebase, ApplicationContext, ArtworkThemeExtractor
 ```
 
 Build variants: `:automotive` ships `oem` (custom launcher, the product) and `playstore`
@@ -118,8 +125,8 @@ See `docs/AAOS_PRD.md` §3.3.
 ### Authentication (Firebase Auth)
 - **Login Screen**: Email/password fields, "Forgot password?" link, gradient "Sign In" button, Google Sign-In via Credential Manager API, "OR" divider, navigation to Sign Up
 - **Sign Up Screen**: Registration with email/password, navigation back to Login
-- **AuthRepository**: `signInWithEmail()`, `signUpWithEmail()`, `signInWithCredential()`, `sendPasswordResetEmail()`, `signOut()`, `authStateFlow()`, `isAuthenticated`
-- **Navigation**: Proper `popUpTo(inclusive = true)` prevents back-navigating to splash/login after auth
+- **AuthRepository**: `currentUser`, `currentUserId`, `isAuthenticated`, `authSession` (a `Flow<AuthSession>`), `signInWithEmail()`, `signUpWithEmail()`, `signInWithCredential()`, `sendPasswordResetEmail()`, `signOut()`
+- **Navigation**: Proper `popUpTo(inclusive = true)` prevents back-navigating to login after auth
 
 ### Home Screen (HomeScreen)
 - Header with profile avatar placeholder, greeting ("Welcome back"), notification bell icon
@@ -140,9 +147,13 @@ See `docs/AAOS_PRD.md` §3.3.
 - "Shuffle Play" gradient button
 - Song list with artwork, title, artist, duration, overflow menu
 
+### Playlists
+- `PlaylistDetailScreen`, `PlaylistViewModel`, `FirebasePlaylistRepository`: create, add and remove
+  songs, album-art grid covers
+
 ### Profile Screen
 - Profile header with avatar placeholder, display name, email
-- Menu items: Liked Songs, Audio Quality, Settings, About
+- Menu items: Liked Songs, Downloads, Audio Quality, Settings, About
 - Sign Out functionality
 
 ### Music Player
@@ -152,20 +163,20 @@ See `docs/AAOS_PRD.md` §3.3.
 - **Queue management**: `PlaybackQueueManager` handles queue state, skip next/previous, shuffle (keeps current song at index 0), repeat modes (Off/All/One)
 - **Like/unlike**: Optimistic UI toggle with Firestore persistence; real-time like-state observation via snapshot listener
 - **Background playback**: `PlaybackService` foreground service keeps audio playing when app is backgrounded
-- **State persistence**: `PlaybackStatePersistence` saves/restores queue, position and repeat mode through `UserRepository` (Firestore), so playback resumes across app restarts and across devices
+- **State persistence**: `PlaybackStatePersistence` saves/restores queue, position, repeat mode and queue origin through `UserRepository` (Firestore), so playback resumes across app restarts and across devices
 - **Recently played**: Logged per song play, displayed in Home screen
-- **Error handling**: `PlayerError` model routes playback errors to ErrorBanner in ExpandedPlayer and non-playback errors (sync, restore) to Snackbar; `CoroutineExceptionHandler` safety net in all ViewModels
+- **Error handling**: `PlayerError` model routes playback errors to ErrorBanner in ExpandedPlayer and non-playback errors (sync, restore) to Snackbar; `CoroutineExceptionHandler` safety net in every `:app` ViewModel
 - **Offline UX**: Persistent offline banner across all screens; fail-fast playback (shows error instead of infinite buffering); `NetworkMonitor` singleton detects connectivity changes in real-time
 
 ### Offline-First Data (Room)
-- **Room database**: Songs, artists, genres cached locally via `NyasaDatabase`
-- **Firebase sync**: `FirebaseSyncManager` syncs Firestore collections → Room on app startup
-- **Offline repositories**: `OfflineSongRepository`, `OfflineArtistRepository`, `OfflineGenreRepository` read from Room DAOs
+- **Room database**: Songs, artists, genres, albums cached locally via `NyasaDatabase`
+- **Firebase sync**: `FirebaseSyncManager` keeps Firestore snapshot listeners syncing into Room
+- **Offline repositories**: `OfflineSongRepository`, `OfflineArtistRepository`, `OfflineGenreRepository`, `OfflineAlbumRepository` read from Room DAOs
 - **Image caching**: Coil configured with `respectCacheHeaders(false)` and 10% disk cache for offline artwork
 
 ### Downloads & Offline Playback
 - **Download songs**: Tap overflow menu on any song to download for offline playback
-- **Downloads screen**: Accessible from Library, shows all downloaded songs with storage summary
+- **Downloads screen**: Accessible from Profile, shows all downloaded songs with storage summary
 - **Offline playback**: Downloaded songs play from local file when offline; non-downloaded songs show error
 - **Download management**: Remove individual downloads or all at once (with confirmation dialog)
 - **Progress tracking**: Room `DownloadEntity` tracks status (Pending/Downloading/Completed/Failed)
@@ -181,8 +192,8 @@ was reversed on 2026-08-02 — see `docs/AAOS_PRD.md` §3.3.
   champagne-gold identity — Home, Browse, Library, Favourites, Search, Full Player, Queue,
   Downloads, Album/Playlist/Artist detail, Settings, Profile Switcher, Auth. Screen 2
   (PIN opt-in, T18) and phone/email sign-in (T19) are deferred past ship.
-- **OEM media template**: Declared `<uses name="media" />`; root → [Recently Played, Genres,
-  Artists, All Songs, Liked Songs] browse tree from `MediaBrowseTree`, search via
+- **OEM media template**: Declared `<uses name="media" />`; root → [Recently Played, Liked Songs,
+  Genres, Artists, All Songs] browse tree from `MediaBrowseTree`, search via
   `onSearch` / `onGetSearchResult`, queue driving `Player.setMediaItems`. Discovery needs
   both service actions plus `androidx.car.app.launchable` metadata **on the service**.
 - **Driving restrictions**: `CarUxRestrictionsHandler` reads `CarUxRestrictionsManager` —
@@ -190,14 +201,15 @@ was reversed on 2026-08-02 — see `docs/AAOS_PRD.md` §3.3.
   search, deep drill-down, queue mutation and download deletion are refused while driving;
   transport, seek, queue skip-to and tab switching stay available. Starting to drive inside
   a restricted screen **evicts** you to a permitted one with an explanation (FR-2.5).
-- **Measured compliance**: 695 interactive nodes ≥ 76dp, 1103 text nodes ≥ 7:1 contrast,
-  both by automated Compose measurement tests. Evidence: `docs/AAOS_SHIP_RECORD.md`.
+- **Measured compliance**: every interactive node ≥ 76dp, every text pair ≥ 7:1 and every text
+  size ≥ 14sp, measured by `CarTouchTargetMeasurementTest`, `CarTextContrastMeasurementTest` and
+  `CarTextSizeMeasurementTest`. Counts at ship: `docs/AAOS_SHIP_RECORD.md`.
 
 ### Design System
 - Dark theme throughout: `NyasaBackground` (#0D0D0D), `NyasaPrimary` (#A855F7), `NyasaPrimaryDark` (#7C3AED)
 - Surface hierarchy: Surface1-5 with increasing lightness
-- Text hierarchy: White → TextSecondary (70% white) → TextTertiary (50% white)
-- Custom `ImageVector` icons: MusicNote, Email, Lock, ChevronRight, Notification, Heart, MoreVert, Settings, Home, Search, Library, Profile, Play, Pause, SkipNext, SkipPrevious
+- Text hierarchy: White → TextSecondary (70% white) → TextTertiary (40% white)
+- Custom `ImageVector` icons in `core/common/.../ui/icons/NyasaIcons.kt`
 - Gradient buttons using `Brush.horizontalGradient`
 - Glow effects via `shadow()` with colored `ambientColor`/`spotColor`
 
@@ -218,7 +230,6 @@ was reversed on 2026-08-02 — see `docs/AAOS_PRD.md` §3.3.
 | Album detail screen | Not started | No route or screen |
 | "See All" section expansion | Stub | Home headers have chevrons but no navigation callback |
 | Queue management UI (mobile) | Not started | Queue managed internally; no phone screen to view/reorder. The car has `CarQueueScreen` |
-| Playlist creation / management | Implemented | `PlaylistDetailScreen`, `PlaylistViewModel`, `FirebasePlaylistRepository`; create, add/remove songs, album art grid covers |
 | User profile editing | Not started | No edit screen or update flow |
 | Onboarding / genre selection | Not started | No onboarding flow after sign-up |
 
@@ -272,4 +283,8 @@ was reversed on 2026-08-02 — see `docs/AAOS_PRD.md` §3.3.
 ```bash
 ./gradlew assembleDebug    # Debug build
 ./gradlew assembleRelease  # Release build
+./gradlew test             # Unit tests, all modules
 ```
+
+Code style, Detekt, Lint and testing conventions: `docs/CODING_GUIDELINES.md`. The car's design,
+compliance and architecture docs are under `docs/` (start with `docs/AAOS_PRD.md`).

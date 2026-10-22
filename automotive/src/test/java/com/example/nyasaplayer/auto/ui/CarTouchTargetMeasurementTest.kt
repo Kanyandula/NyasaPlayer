@@ -114,11 +114,12 @@ class CarTouchTargetMeasurementTest {
     /**
      * No loading placeholder is cut off by the slot it is drawn in.
      *
-     * Skeleton row counts are hand-derived constants — `SkeletonRowCount` in `CarRowSkeleton` and
-     * `CarLibraryScreen`, and the single row in `BrowseSkeleton` — chosen so the placeholder fits
-     * the content slot. Nothing enforced them: each skeleton is a plain `Column` that silently
-     * clips whatever overflows, and the check above never visited them because a placeholder is
-     * not interactive. This is the assertion those KDocs were standing in for.
+     * Skeleton row counts are hand-derived constants — `CarRowSkeleton`'s `rows` (default
+     * `DefaultSkeletonRowCount`), `SkeletonRowCount` in `CarLibraryScreen`, and the single row in
+     * `BrowseSkeleton` — chosen so the placeholder fits the content slot. Nothing enforced them:
+     * each skeleton is a plain `Column` that silently clips whatever overflows, and the check above
+     * never visited them because a placeholder is not interactive. This is the assertion those
+     * KDocs were standing in for.
      *
      * Runs over every case, not just the ones named "loading", so a skeleton reachable from a
      * state nobody thought to name is covered too.
@@ -191,9 +192,9 @@ class CarTouchTargetMeasurementTest {
      * shorter head unit.
      *
      * **What this cannot see.** `InContentSlot` models the app's own chrome only, so the slot is
-     * taller than a real head unit's and the 180dp `CarContentCardSize` that prompted this test
-     * still passes here — mutation-checked, not assumed. Measured in `docs/BACKLOG.md`; what the
-     * test does hold is the invariant, against a card gross enough to overrun even that slot.
+     * taller than a real head unit's and the 180dp card size that prompted this test still passes
+     * here — mutation-checked, not assumed. Measured in `docs/BACKLOG.md`; what the test does hold
+     * is the invariant, against a card gross enough to overrun even that slot.
      */
     @Test
     @Config(qualifiers = "w1024dp-h768dp-xhdpi")

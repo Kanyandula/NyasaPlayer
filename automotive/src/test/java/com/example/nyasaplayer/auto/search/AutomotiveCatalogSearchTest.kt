@@ -68,7 +68,7 @@ class AutomotiveCatalogSearchTest {
 
     /**
      * Featured is picked with the cross-type comparator; the section below it stays in the order
-     * the repository returned, which is what Assistant is served (spec 3.5).
+     * the repository returned, which is what Assistant is served (D43).
      */
     @Test
     fun `the featured pick ranks across types while the section keeps repository order`() = runTest {

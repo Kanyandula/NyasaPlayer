@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Applies to** | `:core:data`'s `firebase-crashlytics` SDK (T25), used by `:app` and `:automotive` |
+| **Applies to** | `:core:data`'s `firebase-crashlytics` SDK, used by `:app` and `:automotive` |
 | **Sources read** | Firebase pages 2026-09-14; the firebase-crashlytics 19.4.4 AAR 2026-09-15 — see each row below |
 
-This is the inventory T24 D8 asks for: what this configuration sends, what it never sends, how
-collection is switched, and how long Firebase keeps it.
+This is the inventory T24 D8 (§Decisions) asks for: what this configuration sends, what it never
+sends, how collection is switched, and how long Firebase keeps it.
 
 ## What is sent
 
@@ -27,7 +27,7 @@ Sessions as a dependency, so its collection applies too.
 - Screen rotation, proximity sensor status, app background state
 - A boolean indicating whether the device was jailbroken/rooted
 - Git commit SHA of the build (root path is the `$PROJECT_DIR` placeholder) — privacy page;
-  observed in the release APK, `docs/T25_VERIFICATION.md`
+  observed in each release APK and empty in debug (2026-09-14)
 
 ### Per the Play data-disclosure page (https://firebase.google.com/docs/android/play-data-disclosure)
 
@@ -46,14 +46,13 @@ The Play data-disclosure page also lists conditional collection — custom keys,
 IDs, custom non-fatal stack traces, and (with Analytics present) breadcrumb logs of user actions.
 Of those, only the one custom key below applies here; for the rest see "What is never sent".
 
-### Observed in this build (device settings via `docs/T25_VERIFICATION.md`; firebase-crashlytics 19.4.4 / firebase-sessions 2.1.2, read from the AAR)
+### Observed in this build (device settings read on the car emulator, 2026-09-14; firebase-crashlytics 19.4.4 / firebase-sessions 2.1.2, read from the AAR)
 
-- ANR reports: the device's cached settings carry `"collect_anrs":true` (`docs/T25_VERIFICATION.md`,
-  "The car"), and Crashlytics 19.4.4 reports ANRs from `ApplicationExitInfo` on API 30+, not just
-  crashes.
+- ANR reports: the release build's cached settings carry `"collect_anrs":true`, and Crashlytics
+  19.4.4 reports ANRs from `ApplicationExitInfo` on API 30+, not just crashes.
 - Firebase Sessions events also carry a Firebase Installations auth token and process details
   (process name, pid, importance). The token is the installation's own token, not the signed-in
-  user's Firebase Auth token — D8 still holds.
+  user's Firebase Auth token — T24 D8 still holds.
 
 ### Custom keys
 
@@ -81,12 +80,20 @@ surface's collector overrides (T27).
 Non-fatals are delivered on the next launch or with the next fatal, and Crashlytics keeps only the
 eight most recent between sends.
 
+**What a report means.** A report of this non-fatal reopens the dead-controller investigation: no
+one has reproduced `disconnected` on a device since the app stopped releasing its own controller
+(`aaos-DESIGN.md` D65). A `null` controller — a tap before the first connection — stays in logcat.
+Whoever reopens it: a `MediaController.Listener` on `ControllerConnection`'s `Builder` is a fair way
+to publish state; D63 rejected it only for clearing a field.
+
 ## What is never sent
 
 - No `setUserId` — nothing identifies the signed-in user.
 - No Firebase uid.
 - No email.
-- No song, queue or search text, in custom keys, logs, or exception messages.
+- No song, queue or search text in custom keys, logs, or the messages of exceptions this code
+  records. A fatal crash is captured as thrown, so a library or Firebase exception's own message
+  could carry an id or a Firestore path.
 - `FirebaseCrashlytics.log` is not called anywhere in the codebase; existing `Log.w`/`Log.e` calls
   stay in logcat only.
 - No custom non-fatals beyond the one listed above: `recordException` is called from exactly one
@@ -109,16 +116,27 @@ eight most recent between sends.
   ```
   `FirebaseCrashlytics` logs the enqueue to DataTransport; the HTTP upload shows under tag
   `TRuntime.CctTransportBackend` (Info level, no `setprop` needed for it). In debug,
-  `FirebaseCrashlytics` logs that automatic collection is disabled.
+  `FirebaseCrashlytics` logs that automatic collection is disabled. The enqueue line does not
+  always appear; the Info-level upload with a 200 and the event on the dashboard are the evidence.
+- The build ID is 32 zeros (`Mapping file ID is: 000…`). That is not a missing ID: neither app
+  minifies, so there is no mapping file to identify. A missing ID stops the SDK at launch with "The
+  Crashlytics build ID is missing", which means that app module lacks the plugin (T24 D3 below).
 - While collection is off, a debug build still records its crashes on the device, unsent — a
   report file exists under `files/.crashlytics.v3/com.example.nyasaplayer/priority-reports/<id>`,
-  observed at that path (`docs/T25_VERIFICATION.md`, "The car"), and no upload happens. Those stored
-  reports are sent once a build with collection on runs in the same data directory, so uninstall the
-  debug build before installing a release build signed with the same key on top of it
-  (`docs/tickets/T25-crashlytics-in-core-data.md`, Notes — "Signing a release build to test with").
+  and no upload happens. Those stored reports are sent once a build with collection on runs in the
+  same data directory.
+- To test a release build: neither app has a release `signingConfig`, so `assembleRelease` produces
+  an unsigned APK. Sign it locally with `apksigner` and the debug keystore, and **uninstall the debug
+  build first** — the two share a package, so its stored reports would upload.
+- To start the car without its activity, as the system media center does: force-stop the app, then
+  `adb shell am start --user 10 -a android.car.intent.action.MEDIA_TEMPLATE -e android.car.intent.extra.MEDIA_COMPONENT com.example.nyasaplayer/com.example.nyasaplayer.core.playback.PlaybackService`.
+  `dumpsys activity services com.example.nyasaplayer` should show `PlaybackService` bound by
+  `com.android.car.media`, with no `AutomotiveActivity` in `dumpsys activity activities`.
+- To force a crash: `adb shell am crash <pid>`. On API 35 `am crash <package>` returns 0 and does
+  nothing; the pid form works on both images.
 - Custom keys are recorded on the device whether or not collection is on, so a debug build shows
   them (file names from the 19.4.4 AAR's `FileStore` and `MetaDataStore`; seen on both emulators,
-  `docs/T26_VERIFICATION.md`). `--user 10` is the car emulator's driver
+  2026-09-15). `--user 10` is the car emulator's driver
   (`adb shell am get-current-user`); leave it out on a phone:
   ```
   adb shell run-as --user 10 com.example.nyasaplayer cat \
@@ -143,6 +161,42 @@ Release builds go to the owner's devices and testers only, so collection is on b
 consent UI (T24 D8). That assumption is load-bearing: shipping beyond the owner and testers — a
 wider test group, an OEM partner, or a Play submission — reopens consent and a Play Data safety
 declaration.
+
+## Decisions
+
+Taken 2026-09-13 for the crash-reporting story (T24) and cited from the code as "T24 Dn".
+
+- **T24 D1 — One Firebase app, one Crashlytics stream.** Both apps build
+  `applicationId = "com.example.nyasaplayer"` against one Firebase project, so they are one Firebase
+  Android client. The car does not get its own id; reports are told apart by the `surface` key (T24 D6).
+- **T24 D2 — The SDK lives in `:core:data`**, which already carries the Firebase dependencies and the
+  `@Singleton`-started-by-both-`Application`s pattern. `:core:common` has no Firebase at all, and a
+  backend SDK there would be on the classpath of everything. As an `implementation` dependency,
+  Crashlytics types stay out of the apps' compile classpath, so every call goes through
+  `CrashReporter`.
+- **T24 D3 — The Crashlytics Gradle plugin is the one per-app piece.** The SDK refuses to start without
+  the build ID the plugin generates into the app's resources, before any collection check — so a
+  debug build with collection off dies at startup too. A `RequireBuildId=false` resource would let
+  `:core:data` skip the plugin. Rejected: the build ID ties a crash to its R8 mapping, and the day an
+  app minifies, the flag would leave every stack trace obfuscated.
+- **T24 D4 — Debug builds are switched off by the manifest flag in `:core:data`'s debug source set.**
+  The runtime alternative, `setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)`, takes effect on
+  the *next* run, so a debug build's first launch reports; the override persists and beats the
+  manifest, so it outlives a reinstall of another build type; and `:core:data` has no `BuildConfig`.
+- **T24 D5 — `firebase-crashlytics` 19.4.4, plugin 3.0.8.** 19.4.4 is the last BoM 33 release and asks
+  for exactly the `firebase-common` 21.0.0 the other Firebase libraries resolve to. 20.x belongs to
+  BoM 34, which pulls `firebase-common` 22.0.0 underneath `-ktx` artifacts that generation stopped
+  publishing — so upgrading Crashlytics is the KTX migration.
+- **T24 D6 — Car vs phone is a custom key, set once in shared code, from `Application.onCreate`.** Not
+  from an activity: the system media center starts `PlaybackService` without `AutomotiveActivity`
+  ever running, and those crashes need the tag too. The key describes the device, not the APK.
+- **T24 D7 — The dead-controller tripwire is the one non-fatal, for `disconnected` only.** The way out of
+  `:core:playback` is a `protected open` hook on `BasePlayerStateCollector`, which each surface's
+  collector forwards to `CrashReporter`, so `:core:playback` gains no dependency and its tests never
+  touch Firebase.
+- **T24 D8 — Privacy means writing down what is sent.** Release builds go to the owner's devices and
+  testers only, so collection is on in release with no consent UI (see "The audience assumption").
+  This file is the inventory; nothing that identifies a person is sent.
 
 ## Extending this file
 

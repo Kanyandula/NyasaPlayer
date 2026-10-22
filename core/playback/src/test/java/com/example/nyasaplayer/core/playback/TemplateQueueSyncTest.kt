@@ -23,7 +23,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
 /**
- * T00: the media template, Assistant and Bluetooth play by media id through `onAddMediaItems`,
+ * The media template, Assistant and Bluetooth play by media id through `onAddMediaItems`,
  * bypassing the custom commands that fill [PlaybackQueueManager]. The service's timeline listener
  * syncs the manager from the player, so `saveState` persists the queue actually playing rather
  * than the last one the custom launcher set.

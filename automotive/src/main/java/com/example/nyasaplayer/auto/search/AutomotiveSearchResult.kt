@@ -10,7 +10,7 @@ import com.example.nyasaplayer.core.common.models.Song
  * One search hit, with its type intact.
  *
  * The type survives all the way to the tap handler because each one goes somewhere different: a
- * song plays, the other three open a detail screen (spec 3.6).
+ * song plays, the other three open a detail screen (D81).
  */
 sealed interface AutomotiveSearchResult {
     /** Type-prefixed so two entities that share an id cannot collide in a list key. */
@@ -45,7 +45,7 @@ sealed interface AutomotiveSearchResult {
         override val title: String get() = playlist.name
         override val subtitle: String get() = "${playlist.songIds.size} songs"
 
-        /** Playlists carry no artwork of their own; detail uses its first track's (spec 5). */
+        /** Playlists carry no artwork of their own; detail uses its first track's. */
         override val artworkUrl: String get() = ""
     }
 }
@@ -87,7 +87,7 @@ data class AutomotiveSearchResults(
  * The cap is cumulative across the whole screen, not per section: flatten in rendered order —
  * featured, songs, albums, artists, playlists — cap that, then re-section what survived. Capping
  * each section on its own would let four sections of `maxCumulativeContentItems` render four
- * times the platform's allowance (spec 3.6).
+ * times the platform's allowance (D81).
  */
 fun AutomotiveSearchResults.capped(restrictions: UxRestrictionState): AutomotiveSearchResults {
     if (!restrictions.isDistractionOptimized) return this

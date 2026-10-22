@@ -7,7 +7,7 @@
         Play's AAOS media category rejects apps that ship custom activities for playback
         or browse. The playstore flavor therefore declares no launcher activity and
         exposes only PlaybackService, which the OEM media template renders against.
-        See docs/superpowers/specs/2026-08-02-aaos-foundation-restrictions-design.md 6
+        See docs/AAOS_PRD.md 3.3 and docs/AAOS_COMPLIANCE.md (oem gates).
     -->
     <application>
         <activity
@@ -25,11 +25,11 @@
 
                 This declaration asserts the activity meets the driver-distraction
                 guidelines: the 76dp touch targets, the contrast floor, and the
-                restriction gating. It is only honest once those are in place, which
-                is why it lands here and not earlier.
+                restriction gating. Break one of those and this becomes a false claim.
 
-                Parked-only activities added in later phases - sign-in, PIN opt-in, profile
-                switcher, settings - must NOT declare it. See AAOS_PRD.md gate OG-3.
+                A separate parked-only activity must NOT declare it; parked-only screens
+                inside this activity are refused by gate() instead. See AAOS_COMPLIANCE.md
+                gates OG-3 and OG-4.
             -->
             <meta-data
                 android:name="distractionOptimized"

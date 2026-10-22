@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.mapLatest
 
 /**
- * The artwork theme to paint, from the current cover and whether the car is moving (D-T38.6).
+ * The artwork theme to paint, from the current cover and whether the car is moving (D77.6).
  *
  * One extraction per cover, and a newer cover cancels an older one still running, so a stale
  * result can never land. While driving nothing is emitted: the theme already on screen holds —

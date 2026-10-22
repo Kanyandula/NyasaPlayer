@@ -9,9 +9,8 @@ import com.example.nyasaplayer.core.common.models.Song
 /**
  * Every transport action both surfaces perform, in one place.
  *
- * Before this existed each ViewModel opened thirteen methods with `controller ?: return` and then
- * talked to the `MediaController` itself, which is how the two surfaces drifted apart on restore
- * (see D61) and how a dead controller turned every button into a silent no-op (T11).
+ * Shared so the two surfaces cannot drift apart (D61, D62), and so a dead controller reports
+ * instead of turning every button into a silent no-op (T11, D63).
  *
  * **What the `Boolean` means: the controller was reached.** It does *not* mean the operation had an
  * effect. [skipToQueueItem] still ignores an out-of-range index, [removeFromQueue] still ignores the
@@ -89,7 +88,7 @@ class PlayerTransport(
         )
     }
 
-    /** Queue mutations, split out because the parent class sits on detekt's function ceiling. */
+    /** Queue mutations, split out to keep this class under detekt's function ceiling. */
     val queue: QueueTransport = QueueTransport(controller, onUnavailable)
 
     /** Stops playback and empties the queue — mobile's dismiss. */
@@ -153,17 +152,15 @@ class QueueTransport(
  *
  * `internal` because the collector's reads answer with it too (T15).
  *
- * File-level rather than a member because `PlayerTransport` sits exactly on detekt's 16-function
- * class threshold, and a suppression is not how this project answers that (D23).
+ * File-level rather than a member: it keeps `PlayerTransport` under detekt's 16-function class
+ * threshold without a suppression (D23).
  */
 internal fun MediaController?.connectedOrNull(): MediaController? = this?.takeIf { it.isConnected }
 
 /**
  * Runs [action] against this controller if it is connected; otherwise reports and does nothing.
  *
- * File-level for the same reason as [connectedOrNull] — the class is at the function ceiling. The
- * next operation added to `PlayerTransport` will not fit, and that is the moment to split the queue
- * operations out rather than to suppress the rule.
+ * File-level for the same reason as [connectedOrNull].
  */
 private inline fun MediaController?.dispatch(
     onUnavailable: () -> Unit,

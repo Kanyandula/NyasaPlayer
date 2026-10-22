@@ -19,7 +19,7 @@ class UxFlagsTest {
         items: Int = Int.MAX_VALUE,
     ) = toUxState(flags, distractionOptimized, depth, items)
 
-    // --- the regression this whole task exists for ---
+    // --- NO_TEXT_MESSAGE is not NO_KEYBOARD ---
 
     @Test
     fun noTextMessageFlagAlone_doesNotSetNoTextEntry() {

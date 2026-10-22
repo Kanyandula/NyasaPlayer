@@ -10,7 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** T03: a Home tap reports its own section, which is what decides the "Playing from" label. */
+/** A Home tap reports its own section, which is what decides the "Playing from" label. */
 @RunWith(RobolectricTestRunner::class)
 class CarHomeSectionClickTest {
 

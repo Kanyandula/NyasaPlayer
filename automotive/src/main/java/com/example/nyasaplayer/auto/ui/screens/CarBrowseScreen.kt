@@ -60,7 +60,7 @@ private const val ScrollbarAnimationDurationMs = 150
  *
  * No filter chips: `Genre` is id, name, color, imageUrl, popularity and songIds, and nothing
  * backs "mood" or "category". Any chip set would be invented taxonomy (D11). No search field:
- * screen 4 lists none, screens 5 and 6 own it, and A6 relocates it (D10).
+ * screen 4 lists none, and search lives in the system bar's sheet, screens 5 and 6 (D10).
  */
 @Composable
 fun CarBrowseScreen(

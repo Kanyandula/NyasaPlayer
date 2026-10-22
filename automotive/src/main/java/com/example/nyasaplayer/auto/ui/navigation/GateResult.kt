@@ -29,15 +29,13 @@ private const val ReasonDepth =
  *
  * Playback transport, seeking, queue view/skip-to and tab switching are never denied.
  *
- * Every sheet branch is live: Search from A6, Settings and Profile from A7. AutomotiveApp's
- * carUiLocation() reports whichever sheet is open, and `textEntryActive` comes from the search
- * ViewModel's editing flag.
+ * AutomotiveApp's carUiLocation() reports whichever sheet is open, and `textEntryActive` comes
+ * from the search ViewModel's editing flag.
  *
- * This function gates LOCATIONS, not ACTIONS. Queue remove/reorder/clear and download
- * deletion are parked-only, but they are actions inside a permitted location, so they are
- * not expressible here. The owning screen reads UxRestrictionState.isDistractionOptimized
- * directly — see CarQueueScreen, which already does exactly this. Do not add action cases
- * to this function.
+ * This function gates LOCATIONS, not ACTIONS. Queue remove/clear and download deletion are
+ * parked-only, but they are actions inside a permitted location, so they are not expressible
+ * here. The owning screen decides from the driving state the shell hands it — see
+ * CarQueueScreen. Do not add action cases to this function.
  */
 fun gate(location: CarUiLocation, state: UxRestrictionState): GateResult {
     if (!state.isDistractionOptimized) return GateResult.Allowed

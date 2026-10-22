@@ -21,12 +21,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
 /**
- * What happens to a **shared** controller future when one consumer releases it (T14, step 1).
+ * What happens to a **shared** controller future when one consumer releases it — the Media3
+ * behaviour `ControllerConnection` exists to avoid (T14, D65).
  *
- * `PlaybackModule` provides a single `@Singleton ListenableFuture<MediaController>`, and both
- * ViewModels call `BasePlayerStateCollector.releaseController()` — which is
- * `MediaController.releaseFuture(...)` on that shared future — from `onCleared()`. This models
- * exactly that sequence: one consumer finishes, and a second one asks the same future for a
+ * Before `ControllerConnection`, `PlaybackModule` provided a single `@Singleton
+ * ListenableFuture<MediaController>` and both ViewModels released it from `onCleared()`. This
+ * models that sequence: one consumer finishes, and a second one asks the same future for a
  * controller.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -56,7 +56,7 @@ class SharedControllerFutureTest {
         idle()
         assertTrue("a fresh controller should be connected", first.isConnected)
 
-        // What onCleared() does today, on a future the whole process shares.
+        // What onCleared() did before ControllerConnection, on a future the whole process shares.
         MediaController.releaseFuture(future)
         idle()
 

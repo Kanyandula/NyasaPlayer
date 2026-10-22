@@ -6,7 +6,7 @@ package com.example.nyasaplayer.core.data.offline
  *
  * Trimming belongs here rather than in each caller because two of them are the same search from
  * the driver's point of view — the car launcher and Assistant through `MediaBrowseTree` — and a
- * trim in only one of them makes " grace " mean different things on the two paths (spec 3.5).
+ * trim in only one of them makes " grace " mean different things on the two paths (D44).
  *
  * Without it a driver searching for "50%" matches the whole catalogue, and "_" matches any single
  * character. The backslash itself is escaped first, or escaping "%" would produce a second

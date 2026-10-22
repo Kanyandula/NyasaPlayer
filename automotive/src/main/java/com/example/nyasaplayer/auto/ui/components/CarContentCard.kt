@@ -59,9 +59,8 @@ private const val DisabledAlpha = 0.4f
 /**
  * One card for album, playlist, genre and artist.
  *
- * Replaces `CategoryCard`, `FeaturedPlaylistCard`, `AlbumListItem` and `ArtistAvatar`. Its four
- * states are the inventory's required set: normal, focused (the system focus ring, not painted
- * here), playing ([isPlaying] golds the title) and unavailable ([enabled] = false).
+ * Its four states are the inventory's required set: normal, focused (the system focus ring, not
+ * painted here), playing ([isPlaying] golds the title) and unavailable ([enabled] = false).
  */
 @Composable
 fun CarContentCard(

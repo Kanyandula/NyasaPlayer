@@ -20,7 +20,7 @@ import org.robolectric.RobolectricTestRunner
  *
  * Assistant reads the browse tree; the driver reads the launcher. If trimming, the limit or the
  * ordering forks between them, the same spoken and typed query answer differently — which is the
- * parity boundary T4 committed to (spec 3.5). Non-song cards are launcher-only enrichment and
+ * parity boundary T4 committed to (D47). Non-song cards are launcher-only enrichment and
  * are deliberately absent from the media-session results.
  *
  * What this proves precisely: neither *caller* adds divergence on top of one shared repository

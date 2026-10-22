@@ -82,7 +82,7 @@ private val LibraryShortcuts = listOf("Albums", "Artists", "Playlists")
  * false the screen has no editable field at all: it renders a prompt pointing at system/Assistant
  * voice search, which is the only voice path the app has. Nothing here records audio, and the
  * prompt is deliberately not clickable — a voice button with no wired action would be exactly the
- * silent no-op FR-2.6 prohibits (spec D31).
+ * silent no-op FR-2.6 prohibits (D31).
  *
  * Submitted results are screen 6's job; this screen never renders them.
  */

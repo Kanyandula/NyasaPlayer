@@ -11,7 +11,8 @@ This project follows the official Kotlin and Android conventions:
 Key points:
 - **Max line length**: 120 characters
 - **Trailing commas**: Required on both call sites and declaration sites
-- **Imports**: No wildcard imports; ordered alphabetically
+- **Imports**: No wildcard imports; ordered by Detekt's `ImportOrdering` (`*`, then `java`, `javax`,
+  `kotlin`, then aliases)
 - **Composable functions**: Use PascalCase (enforced by Detekt config)
 - **Modifiers**: Every public composable that emits UI must accept a `Modifier` parameter with a default of `Modifier`
 
@@ -19,29 +20,35 @@ Key points:
 
 ### Detekt
 
-[Detekt](https://detekt.dev/) is configured at the project root and runs against all source files.
+[Detekt](https://detekt.dev/) is configured at the project root. It scans each module's
+`src/main/java` (plus `app/src/main/kotlin`), not test sources.
 
 - **Config file**: `config/detekt/detekt.yml`
 - **Compose rules**: Provided by [compose-rules](https://github.com/mrmans0n/compose-rules) (`io.nlopez.compose.rules:detekt`)
 - **Run manually**: `./gradlew detekt`
 - **Report location**: `build/reports/detekt/detekt.html`
 
-The configuration enforces `maxIssues: 0`, meaning any issue will fail the build.
+The configuration enforces `maxIssues: 0`: any finding not already in `detekt-baseline.xml` fails
+the build. `./gradlew detektBaseline` absorbs every current finding into that file — never run it
+to turn a red build green. Prefer splitting to suppressing a size threshold: the file-level
+`TooManyFunctions` suppressions that exist are recorded debt (`aaos-DESIGN.md` D23), not precedent.
 
 ### Android Lint
 
-Android Lint is configured per-module.
+Only `:app` configures Lint (`lintConfig = file("lint.xml")`); `:core:*` and `:automotive` run the
+default severities.
 
-- **Config file**: `app/lint.xml`
-- **Run manually**:
+- **Run manually** (both `:automotive` flavors — linting only `oem` leaves the Play-facing manifest
+  unchecked):
 
   ```bash
   ./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug \
-            :core:playback:lintDebug :automotive:lintOemDebug
+            :core:playback:lintDebug :automotive:lintOemDebug :automotive:lintPlaystoreDebug
   ```
-- **Report location**: `app/build/reports/lint-results-debug.html`
+- **Reports**: `<module>/build/reports/lint-results-<variant>.html`, e.g.
+  `automotive/build/reports/lint-results-oemDebug.html`
 
-Custom severity overrides in `lint.xml`:
+Severity overrides in `app/lint.xml` (`:app` only):
 | Issue | Severity | Reason |
 |-------|----------|--------|
 | `ContentDescription` | Error | Accessibility is non-negotiable |
@@ -49,6 +56,21 @@ Custom severity overrides in `lint.xml`:
 | `MissingTranslation` | Warning | Catch missing translations early |
 | `UnusedResources` | Warning | Keep the project clean |
 | `InvalidPackage` | Ignore | False positive from transitive gRPC/Firebase deps |
+
+### Common issues and fixes
+
+| Issue | Fix |
+|-------|-----|
+| `MagicNumber` | Extract the number to a `const val` or named parameter |
+| `MaxLineLength` | Break the line at a logical point (before `.`, after `,`) |
+| `FunctionNaming` for Composables | Ensure the function is annotated with `@Composable` — PascalCase is allowed for composables |
+| `ModifierMissing` | Add a `modifier: Modifier = Modifier` parameter to your composable |
+| `ModifierWithoutDefault` | Add `= Modifier` as the default value for your modifier parameter |
+| `RememberMissing` | Wrap expensive computations inside composables with `remember { }` |
+| `ViewModelInjection` | Inject ViewModels via `hiltViewModel()` at the top-level composable, pass state down |
+| `ContentDescription` (Lint) | Add `contentDescription` to `Image` and `Icon` composables, or use `null` with a comment explaining why |
+| `HardcodedText` (Lint) | Extract the string to `res/values/strings.xml` |
+| `UnusedResources` (Lint) | Remove unused drawables, strings, layouts, etc. |
 
 ## Testing
 
@@ -59,11 +81,28 @@ Write tests for:
 3. **Edge Cases** — Null inputs, empty collections, boundary values, error states
 4. **Integration Points** — Repository-to-network boundaries, database queries, navigation
 
-Test naming convention — `methodUnderTest_condition_expectedResult`:
+Test naming convention — `methodUnderTest_condition_expectedResult`, or a backtick sentence (the
+`:automotive` norm):
 ```kotlin
 @Test
 fun getSongsByIds_emptyList_returnsEmpty() = runTest { }
 ```
+
+A test proves something only if breaking the code fails it. When checking that by mutation: a
+predicate needs both constants tried — a test asserting `true` cannot detect "always true" — and
+an "asserts nothing happened" test needs the mutation that makes something happen. Treat a run
+with no `tests completed` line in Gradle's output as invalid, not as a pass: a compile failure in
+`ksp` reports zero failed tests.
+
+## References in comments and docs
+
+- **`Dn`** is a numbered decision in `docs/aaos-DESIGN.md` (parts of one are `Dn.m`). The
+  crash-reporting decisions are written **`T24 Dn`** and live in `docs/CRASH_REPORTING.md`.
+- **`Tn`** names a ticket, and **A1–A9** a PRD phase (`docs/AAOS_PRD.md` §9). A ticket file lives
+  in `docs/tickets/` only while it is open; otherwise the item is a line in `docs/BACKLOG.md`.
+- Closed tickets, per-run verification records and design specs and plans were removed from the
+  tree; they stay readable at commit `48e1442` (`git ls-tree --name-only 48e1442 docs/` to list,
+  `git show 48e1442:<path>` to read).
 
 ## Commit Workflow
 
@@ -92,14 +131,4 @@ Or via Gradle:
 2. Runs lint — fails the commit if any lint errors are found
 
 The hook's lint invocation predates `:core:playback` and `:automotive`; run those two
-yourself regardless of hook state.
-
-### Bypassing the hook
-
-In rare cases (e.g., work-in-progress commits), you can skip the hook:
-
-```bash
-git commit --no-verify -m "WIP: work in progress"
-```
-
-Use this sparingly. All checks must pass before merging.
+yourself regardless of hook state. All checks must pass before merging.

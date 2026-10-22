@@ -14,7 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * T06 / T38: the artwork supplies hue, the app keeps supplying luminance. Every conditioned tint,
+ * T38: the artwork supplies hue, the app keeps supplying luminance. Every conditioned tint,
  * at its calibrated alpha over the background it lands on, must be no lighter than CarRaised —
  * the surface secondary text is measured on at 7.4:1.
  */
@@ -113,7 +113,7 @@ class ArtworkThemeTest {
 
     @Test
     fun the_ambient_tints_stacked_on_each_other_stay_under_the_ceiling() {
-        // The worst the two circles can do is overlap completely; the pair is held to that (T08).
+        // The worst the two circles can do is overlap completely; the pair is held to that.
         for (seed in listOf(white, yellow, cyan, neonGreen)) {
             val theme = artworkThemeFromSeeds(seed, seed)
             val stacked = Color(theme.ambientSecondary)

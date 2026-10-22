@@ -15,7 +15,7 @@ if ! ./gradlew detekt --no-daemon --quiet; then
     echo "!! Detekt found issues. Commit aborted."
     echo "   Run './gradlew detekt' to see the full report."
     echo "   HTML report: build/reports/detekt/detekt.html"
-    echo "   See docs/PRODUCTIVITY_TIPS.md for help fixing common issues."
+    echo "   See docs/CODING_GUIDELINES.md for help fixing common issues."
     exit 1
 fi
 echo "  Detekt passed."
@@ -28,7 +28,7 @@ if ! ./gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug --no-d
     echo "!! Lint found errors. Commit aborted."
     echo "   Run './gradlew :app:lintDebug :core:common:lintDebug :core:data:lintDebug' to see the full report."
     echo "   HTML report: app/build/reports/lint-results-debug.html"
-    echo "   See docs/PRODUCTIVITY_TIPS.md for help fixing common issues."
+    echo "   See docs/CODING_GUIDELINES.md for help fixing common issues."
     exit 1
 fi
 echo "  Lint passed."

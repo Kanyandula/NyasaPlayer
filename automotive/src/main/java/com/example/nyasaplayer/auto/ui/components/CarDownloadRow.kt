@@ -203,7 +203,7 @@ private fun RowActions(
             )
         }
         // Absent while a download is running: there is no file to remove yet, and cancelling
-        // mid-flight is not a screen-15 action (it stays on SongDownloadManager for the phone).
+        // mid-flight is not a screen-15 action.
         if (item.status != DownloadStatus.Downloading) {
             RowAction(
                 icon = Icons.Filled.Delete,

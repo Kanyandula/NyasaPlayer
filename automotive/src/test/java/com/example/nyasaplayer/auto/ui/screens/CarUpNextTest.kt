@@ -14,7 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** T04: the full player shows the next track, derived from the queue, and opens the queue on tap. */
+/** The full player shows the next track, derived from the queue, and opens the queue on tap. */
 @RunWith(RobolectricTestRunner::class)
 class CarUpNextTest {
 
