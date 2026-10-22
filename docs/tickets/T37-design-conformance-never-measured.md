@@ -5,6 +5,9 @@
 - **Status:** Filed 2026-09-19 after an audit of the shipped car UI against the live design
   documents. **8 of the 11 findings below are verified against the source; 3 are not. Each row says
   which.** An earlier version of this ticket claimed all of them were checked — see Notes.
+  **2026-10-22:** the other tickets, the verification records and `AAOS_UI_REDESIGN_PLAN.md` were
+  removed from the tree (readable in git at `48e1442`). Some quoted design-doc lines below were
+  corrected in the same change; the quotes are as filed.
 - **Verification Command:** `./gradlew :automotive:testDebugUnitTest` (the three measurement tests),
   plus whatever this ticket adds
 - **Design Reference:** `docs/aaos-DESIGN.md` (frontmatter type and spacing scales, §Components,

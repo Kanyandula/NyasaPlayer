@@ -101,8 +101,8 @@ rounded:
 spacing:
   margin-screen: 48px
   system-bar-height: 80px
-  nav-rail-width: 80px
-  mini-player-height: 88px   # prototype value. Implementation target is 112dp — see "Units"
+  nav-rail-width: 176px      # was 80 with the label under the icon — see "Units"
+  mini-player-height: 88px   # design value. Implementation target is 112dp — see "Units"
   touch-target-min: 76px
   padding-card: 24px
   gutter-grid: 24px
@@ -113,12 +113,11 @@ spacing:
 
 ## Units — read before using any number here
 
-**Every figure in this document is CSS px on a 1920 x 1080 canvas.** The prototypes
-(`aaos-screens.html`, `aaos-app.html`) render in those units. The Android implementation is
-in **dp**, and the two are not interchangeable.
+**The design was drawn in CSS px on a 1920 x 1080 canvas; the implementation is in dp.** The
+frontmatter and the visual specs below keep that canvas's px figures. The sizes that bind live in
+`automotive/.../ui/theme/AutomotiveDimens.kt`, and where the two differ, the code is authoritative.
 
-Conversion rule, settled in
-`docs/superpowers/specs/2026-08-02-aaos-foundation-restrictions-design.md` §2:
+Conversion rule, settled in A1:
 
 > Design px maps to dp 1:1, treating this canvas as a 1920 x 1080 dp logical space —
 > **except** where existing code already holds a considered value, which wins.
@@ -130,13 +129,19 @@ Where that rule produces a different number, the implementation target is author
 | Touch target | 76px | **76.dp** | agree — `CarTouchTargetSize` was already 76.dp, arrived at independently |
 | Mini-player height | 88px | **112.dp** | `CarMiniPlayerHeight` predates this design, exceeds its intent, and clears the touch target with room |
 | Card corner radius | 20px | **20.dp** | design wins; the existing 16.dp had no recorded rationale |
+| Nav rail width | 80px | **176.dp** | the tab label sits beside its icon at 18sp, not under it at 14 (`CarNavRailWidth`) |
 
-The 88px mini-player figures below are therefore **correct for the prototype and wrong for
-the implementation**. They are left as-is rather than overwritten so this document continues
-to describe the HTML it documents.
+The nav-rail *item* height is 88 and converts 1:1 to 88.dp; it is unrelated to the mini-player.
 
-Note the nav-rail *item* height is also 88 — that one is unrelated to the mini-player and
-converts 1:1 to 88.dp.
+**The reference head unit is 1440 x 800dp, not this canvas.** It is the Play AVD
+(`Automotive_Distant_Display_with_Google_Play`, 1080 x 600px at 120dpi), and the app window gets
+628dp of its height once the OS status and climate bars are drawn (`dumpsys window`). The
+measurement harness renders on a 1280 x 800dp canvas, with full-window overlays clipped to that
+628dp (`CarUiCases.kt`).
+
+**Size from the window, not from a constant.** A layout tuned to one head unit's width leaves the
+rest as dead margin. The full player derives its art from `min(windowHeight - padding, width/3)`
+and lets its column take what is left up to a cap; copy that shape rather than a fixed dp pair.
 
 **dp is density-independent, but physical size is not.** These numbers are correct for the
 logical space; they are not a substitute for checking a real head unit.
@@ -144,7 +149,7 @@ logical space; they are not a substitute for checking a real head unit.
 ## Brand & Style
 
 Nyasa Music for Android Automotive OS. A premium in-car entertainment surface on a
-fixed 1920 x 1080 landscape display, dark mode only. The feeling is quiet luxury and
+landscape head unit, dark mode only. The feeling is quiet luxury and
 technical precision: deep obsidian black for OLED contrast at night, champagne gold
 reserved strictly for what is active or actionable, and nothing decorative competing
 for the driver's attention.
@@ -167,22 +172,22 @@ screen. Never render any other product, brand, or placeholder name.
 
 ## Typography
 
-Hanken Grotesk throughout. No text may render below 14px, and no interactive label below
-18px, so it stays legible at arm's length in a moving vehicle. Letter spacing is `0` in
-the Android implementation; do not carry over generated negative tracking from the static
-mockups.
+Designed in Hanken Grotesk; the app bundles no font and renders the platform default. No text may
+render below 14sp, and no interactive label below 18sp, so it stays legible at arm's length in a
+moving vehicle. Letter spacing is `0`; do not carry over generated negative tracking from the
+static mockups.
 
 Both floors are measured by `CarTextSizeMeasurementTest` (T30), from what Compose laid out rather
 than from the source, so a size inherited from a theme is judged as the driver sees it.
 
-**The 18px label floor means a button or CTA's own label** — the text a driver reads to know what
-the control does. A tab label under an icon in the rail is not one: the rail is 80px wide, and
-"Favourites" at 18px does not fit beside its icon. Those take the 14px text floor (owner, 2026-09-16,
-closing the gap between this rule and the rail spec below, which drew 13px).
+**The 18px label floor means a control's own label** — the text a driver reads to know what the
+control does, including the rail's tab labels. Those sat under their icons at 14px, exempt from the
+floor, until the rail widened to 176dp and put them beside the icons at 18sp; the exemption is gone.
 
-The smallest text actually rendered is 14px — the rail's tab labels. Artist names in track rows are
-15px. Both satisfy the rule above, but neither is generous for a glance from the driver's seat, and
-car UI body styles are typically far larger. Treat 14px as the floor to revisit, not as a target.
+The smallest text rendered is 14sp: the mini-player's timestamps, the full player's captions and the
+Home hero's label. Artist names in track rows are 15sp. Both satisfy the rule above, but neither is
+generous for a glance from the driver's seat, and car UI body styles are typically far larger. Treat
+14sp as the floor to revisit, not as a target.
 
 ### Contrast, measured
 
@@ -260,16 +265,15 @@ blanket "AAA" claim false. It is now `#ACACBC`. The binding surface is raised `#
 
 ## Layout
 
-Fixed 1920 x 1080 landscape. Every screen composes the same three regions in the same
-place so the driver's muscle memory holds across the app:
+Every screen composes the same three regions in the same place so the driver's muscle memory
+holds across the app:
 
-1. **Top system bar** — full width, 80px tall, pinned to the top.
-2. **Left navigation rail** — 80px wide, spanning from below the system bar down to the
-   top of the mini-player.
-3. **Persistent mini-player** — full width, 88px tall, pinned to the bottom.
-   (Implementation target: **112.dp**, not 88 — see "Units".)
+1. **Top system bar** — full width, 80dp tall, pinned to the top.
+2. **Left navigation rail** — 176dp wide, from below the system bar to the bottom edge.
+3. **Persistent mini-player** — 112dp tall, pinned to the bottom of the content column, starting
+   at the rail's edge rather than spanning under it (D73).
 
-Content occupies the region bounded by those three, with a 48px screen margin.
+Content occupies the region bounded by those three, with a 48dp screen margin.
 
 ## Chrome (identical on every screen)
 
@@ -279,29 +283,29 @@ Do not restyle, reorder, resize, or omit them from screen to screen.
 ### Top system bar
 
 ```
-Height: 80px, full bleed, background #111118
-Left:   "Nyasa Music" wordmark, gold #C9A84C, 20px weight 700, single line, 24px from left edge
-Right, in this exact order, 24px from right edge:
-        search icon, settings icon, circular avatar (32px), clock "10:41 PM",
-        wi-fi icon, bluetooth icon, battery icon
-Icon size: 24px, color #FFFFFF at 80% opacity
+Height: 80dp, full bleed, background #111118
+Left:   40dp gold circle with a music-note glyph, then the "Nyasa Music" wordmark,
+        gold #C9A84C, 20sp bold, single line, 24dp from the left edge
+Right, in this exact order, 24dp from the right edge:
+        search icon, settings icon, circular avatar (32dp), clock
+Icon size: 24dp
 The three tappable items (search, settings, avatar) each sit in a 76x76 hit area,
 which is why the bar is 80 tall rather than 48. Spacing comes from those hit areas.
 ```
 
 The wordmark never wraps to two lines and never changes size between screens. The right
-cluster is always exactly those seven items in that order — no more, no fewer, no
-substitutions.
+cluster is always those four items in that order. The design's wi-fi, bluetooth and battery
+icons are not drawn (D7).
 
 ### Left navigation rail
 
 ```
-Width: 80px, background #111118
+Width: 176dp, background #111118
 Items, top to bottom: Home, Browse, Library, Favourites
-Item height: 88px, icon 28px above a 14px label (was 13px, below the type floor above)
+Item height: 88dp; 28dp icon with an 18sp label beside it, 20dp start inset, 16dp gap
 Rest state:   icon and label #ACACBC
-Active state: icon and label #C9A84C inside a rounded-full pill of
-              rgba(201,168,76,0.12) with a soft 32px gold glow
+Active state: icon and label #C9A84C inside a 64dp-tall, 20dp-radius pill of
+              8% gold, no glow (see §Contrast, measured)
 ```
 
 Exactly one item is active per screen, indicated by color and pill only.
@@ -309,17 +313,35 @@ Exactly one item is active per screen, indicated by color and pill only.
 ### Persistent mini-player
 
 ```
-Height: 88px in the prototype; 112.dp in the implementation (see "Units")
-Background #181824, 1px top border rgba(255,255,255,0.08)
-Left:   64px album art at 8px radius, then title 18px #FFFFFF over artist 15px #ACACBC.
-        Art and title are ONE target (314x76) that opens the full player, not two.
-Center: progress bar, 4px tall, gold #C9A84C fill on #2A2A38 track, inside a 76px-tall
-        seek target
-Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each in a 76x76 area
+Height: 112dp; top corners rounded at 20dp (D76)
+Background #181824, 1dp border rgba(255,255,255,0.08)
+Left:   80dp album art at 12dp radius, then title 20sp #FFFFFF over artist 16sp #ACACBC
+Center: elapsed time and duration at 14sp around a 4dp progress bar, gold #C9A84C fill on
+        20% white; capped at 400dp (D75). An indicator, not a seek target (D6)
+Right:  previous and next in 76dp circles of 10% white, play/pause in an 80dp gold circle,
+        24dp apart (D74, D75)
+The whole bar is one target that opens the full player.
 ```
 
-**Implementation deviations** (spec §7):
+**Implementation deviations and decisions.** Numbered across phases — D1–D7 from A2, D8–D18 from
+A3, D19 on from later phases — and cited by number from the code.
 
+- **D1 — Home ships Continue Listening, Popular Now and a resume hero; "Your Mixes" and
+  "Recommended" are dropped, not renamed.** The backend has no recommender, and a truthful section
+  title beats dressing `genres` up as personalisation. Genre discovery belongs to Browse.
+- **D2 — The rail ships all four items.** Hiding one would change the rail's shape when its screen
+  arrived, which the fixed-chrome contract forbids; two surfaces rendering identical content is a
+  visible bug. **Closed by A4**, which built Favourites.
+- **D3 — A control that ships ahead of its feature renders visibly disabled, not hidden and not
+  behind a dialog.** FR-2.6 prohibits silent no-ops — a control that looks live and does nothing.
+  A visibly disabled control is honest state. **Closed for the system bar by A6 and A7**, which made
+  search, settings and avatar live.
+- **D4 — No `androidx.palette`; the ambient layer ships as the fixed blue/purple two-tone.** The
+  design makes an artwork-following hue optional, and extracting it needs a dependency, bitmap
+  access, off-main-thread work and fallbacks. **Superseded by D77** (T38).
+- **D5 — No quick-access grid on Home.** Three of its four actions are rail destinations, and two
+  navigation systems on one screen is the muscle-memory problem the chrome contract prevents. The
+  fourth, Radio, had no implementation.
 - **The progress bar is not a seek target (D6).** A seek gesture cannot coexist with the
   row-wide tap-to-expand: the whole mini-player row is one clickable, and narrowing it to fit
   a precision control trades the largest, most forgiving target in the app for a gesture that
@@ -329,8 +351,17 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
 - **Wi-fi, bluetooth and battery are not rendered (D7).** `core.common.ui.icons` has no
   vectors for them, and there is no wiring to real system state, so shipping them would mean
   static icons claiming a full battery and a connected radio — a lie the driver may act on.
-  On AAOS the OEM system bar generally owns these. The bar ships as wordmark · search ·
+  On AAOS the OEM system bar generally owns these. The bar ships as logo and wordmark · search ·
   settings · avatar · clock.
+- **D8 — Library's categories are horizontal carousels, so album, playlist and artist detail sit at
+  drill depth 1.** Tiles that open list screens would push every detail screen to depth 2, which a
+  real head unit's `maxContentDepth` refuses while driving — unreachable in the vehicle it was
+  designed for.
+- **D9 — No genre detail screen; tapping a Browse card shuffle-plays the genre.** None of the 20
+  designed screens is a genre screen, and playing on tap is what the contract's "Play/open
+  category" means without one.
+- **D10 — Browse has no search field.** Screen 4 lists none; screens 5 and 6 own search, reached
+  from the system bar (A6).
 - **D11 — No Browse filter chips.** Screen 4 lists them. `Genre` is `id`, `name`, `color`,
   `imageUrl`, `popularity`, `songIds` — nothing backs "mood" or "category", so any chip set would
   be invented taxonomy. **Data blocker:** a genre taxonomy field in Firestore. The grid is
@@ -345,12 +376,31 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   module touches seven `:app` files — `NyasaPlayerNavigation`, `PlayerViewModel`,
   `SongOverflowWithDownload`, `DownloadsViewModel`, `LibraryScreen`, `PlaylistDetailScreen`,
   `SearchScreen` — and belongs to A9, which owns car downloads and needs it anyway
-  (moved from A8 by D71).
+  (moved from A8 by D71). **Closed by A9 (PR #67):** `SongDownloadManager` moved to `:core:data`,
+  and the album screen carries a parked-only Download button with its progress state.
+- **D13 — Library's Downloads entry is never hidden.** It rendered disabled from A3 until A9 built
+  screen 15, so Library did not change shape when downloads landed (D3's reasoning).
 - **D14 — Sign-out stays on `CarLibraryScreen`** with its confirmation overlay, marked for
   deletion in A7. It belongs on screen 14, but removing it in A3 leaves no way to sign out of the
   vehicle at all, since the system bar's avatar is disabled until A7 (A2 D3).
   **Closed by D68:** A7 built screen 14, and the Library carries no account chrome now.
   D18's playlist-artwork gap is unaffected; only the header changed.
+- **D15 — The car has read-only playlist access; `PlaylistRepository`'s write methods stay unused.**
+  Creating and editing playlists is in no PRD phase, and it is parked-only, keyboard-bound work the
+  restriction layer would refuse anyway.
+- **D16 — `CarDestination.Artist` carries `artistName` alongside `artistId`, and the artist screen
+  never resolves against `favoriteArtists` or clears itself when the artist is absent.**
+  `rememberSaveable` restores `drillDown` synchronously after process death, while `likedSongs` —
+  and so `favoriteArtists`, derived from it — is still empty pending Firestore's first emission. Any
+  "resolve the artist or clear the destination" rule fires in that gap and drops the user back to
+  Library on every restore. The track list is a live filter over `likedSongs`, correctly empty until
+  it loads.
+- **D17 — `openDetail` resolves a playlist with `getPlaylists(userId).first()`, not from
+  `contentState.playlists`, and `PlaylistRepository` gains no `getPlaylistById`.**
+  `LaunchedEffect(drillDown)` fires once and does not re-run when data arrives, so what `openDetail`
+  reads must be there on the first call, including the one after process death.
+  `contentState.playlists` is empty in exactly D16's gap; `first()` suspends until the emission
+  instead of racing it. The cost is a wrong error offline rather than a hang.
 - **D18 — Library's playlist cards render the gold placeholder, not the first resolved track's
   artwork.** The spec defines playlist artwork as the first resolved track's `resolvedCoverUrl`
   (same derivation `deriveFavoriteArtists()` uses for artist avatars), and `CarPlaylistScreen`
@@ -389,7 +439,7 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   `CarLikedTrackRow` would duplicate a row the screen contract explicitly names as shared.
 - **D23 — A4 adds `@file:Suppress("TooManyFunctions")` to `AutomotiveContentViewModel.kt` and
   records the class's growth as debt for a later slice, rather than splitting it now.** The
-  file is at 19 functions against detekt's `thresholdInFiles: 20`, and the class-level suppression
+  file was at 19 functions against detekt's `thresholdInFiles: 20`, and the class-level suppression
   added in A3 does not cover the file threshold, so A4's three methods break the build without
   action. Splitting a ViewModel that four screens depend on is a refactor, not a screen slice; doing
   it inside A4 would make three screens the smaller half of the work. **This is the third
@@ -475,18 +525,20 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   inferring driving state or drawing a custom keyboard. It also keeps the existing voice-search
   boundary intact: system/Assistant voice search reaches `PlaybackService.onSearch` /
   `onGetSearchResult`; the app records no audio and requests no `RECORD_AUDIO`.
-- **D32 — A6 searches on explicit submit, not on every keypress.** A head-unit search field should
+- **D78 — A6 searches on explicit submit, not on every keypress.** A head-unit search field should
   not create repository work while the driver is still editing. Screen 6 exists only after a
   committed query, so the ViewModel stores draft `query` separately from `submittedQuery`.
-- **D33 — A6 ships song-only results; album, artist and playlist result cards are deferred to
+- **D79 — A6 ships song-only results; album, artist and playlist result cards are deferred to
   T4.** `SongRepository.searchSongs()` and `MediaBrowseTree.search()` are song-search contracts
   today. The original album/artist card wording needs a typed result model, repository search APIs
   and a valid artist destination before the UI can be honest. **Delivered by T4**, which added all
-  three — see D43 to D47. (This number collides with the Favourites D33 above; both predate T4 and
-  are left as written rather than renumbered under references from other documents.)
-- **D34 — Recent searches are session-only in the automotive search ViewModel.** The PRD asks for
+  three — see D43 to D47.
+- **D80 — Recent searches are session-only in the automotive search ViewModel.** The PRD asks for
   recent searches but not durable history. Persisting query history adds privacy/storage questions
   that are not needed to make screen 5 useful; losing recents on process death is acceptable.
+
+  D78–D80 were numbered D32–D34 until 2026-10-22, colliding with Favourites' D32–D34 above; older
+  commits and PR descriptions use the old numbers.
 - **D35 — Search leaves `AutomotiveContentViewModel` instead of adding another suppression.** A4's
   D23 recorded that the class already owns too many unrelated domains. A6 depends only on
   `SongRepository.searchSongs()`, so a small `AutomotiveSearchViewModel` is the cleaner boundary.
@@ -497,9 +549,9 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   implementation and now shares one — `UxRestrictionState.cap()`, tested and mutation-checked.
   For search it produces both what the driver sees and the list a tap plays, and a divergence
   between those two is how a "play this" starts a track that was never on screen.
-  **`BrowseShell`'s ten `.take(maxItems)` calls do not follow this rule and are wrong by it** —
-  a parked driver's Home, Library and Favourites are being trimmed to a driving cap today.
-  Correcting them touches every A3/A4 call site and is tracked by T5, not by A6.
+  `BrowseShell`'s ten `.take(maxItems)` calls broke this rule, trimming a parked driver's Home,
+  Library and Favourites to the driving cap. **Closed by T5 (PR #35):** every list now goes through
+  `cap()`.
 - **D37 — A committed search drops the previous query's results.** The usual rule is to keep
   previous content during a refresh rather than blanking the screen, but here the header names the
   new query, so the previous query's songs underneath it would be a wrong answer rather than a
@@ -583,6 +635,12 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   Firebase also fires on hourly token refresh, which is not a session change. The snapshot members
   stay — mobile, playback and repository code read them — so T2 adds a channel rather than
   swapping an API.
+
+  Two limits on testing it. A Firebase client does not see a revoked token until it next refreshes,
+  up to an hour later, so a real passive revocation cannot be reproduced on demand; the fakes emit
+  the unauthenticated session directly. And collecting the real `authSession` under Robolectric
+  hangs — the SDK never delivers its initial callback on a paused looper — so the mapping is
+  exercised only through fakes.
 - **D49 — Passive session loss evicts the launcher and stops sync; it does not stop playback.**
   A revoked session takes the driver off `AuthenticatedApp` back to `CarAuthScreen` and stops
   catalogue sync. It sends no playback command. Killing foreground audio from an asynchronous
@@ -658,6 +716,11 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   and the car does nothing with it: the player stays empty, exactly as it would have been. Mobile
   raises a "Restore Error"; copying that to the car would put a dismissible dialog in front of a
   driver for something they cannot act on. Do not add one.
+
+  Restore is also not gated on driving state. It produces a paused mini player and no audio —
+  nothing the driver must act on — so it runs the same parked or moving. Gating it on
+  `isDistractionOptimized` would give the driver who comes back to a killed app a worse result
+  while moving, the opposite of what the restriction is for.
 - **D58 — The restored position is accurate to the save interval, not to the moment of death.**
   A real low-memory kill does not run `onDestroy()`, so `saveFinalState()` does not fire and the
   freshest state is whatever the 30s save loop or the pause-save left — up to 30 seconds behind.
@@ -673,8 +736,9 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   `SkeletonRowHeight` shadowing `CarListRowHeight` — so moving the height into the component
   changed nothing on screen and removed the shadowing. Spacing stayed a parameter because the four
   genuinely differ (12, 16, 24, 12dp) and each matches its own screen's rhythm; outer padding stays
-  on the caller's `modifier` rather than becoming a second way to say the same thing. There is no
-  `rows` parameter: every call site wants four, and the day one wants three is the day to add it.
+  on the caller's `modifier` rather than becoming a second way to say the same thing. **Amended by
+  #90:** a `rows` parameter (default four) arrived when the first caller needed fewer —
+  `DetailSkeleton` draws two under its hero.
 
   The card-grid skeletons in `CarLibraryScreen` and `CarBrowseScreen` were left alone. They draw
   aspect-ratio cards, not full-width rows; folding them in would mean a component with a shape
@@ -700,6 +764,11 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
 
   Mobile gained one thing it never had: a restored session shows the track's real duration instead
   of `0:00`, because the shared write sets a field mobile's own restore omitted.
+
+  The rule that follows: **a change under `:core:playback` is a change to both surfaces** — verify
+  both, or name the surface left out and why. Giving AAOS its own playback module is not the way
+  out: there is one `PlaybackService`, one session and one process, so only the client policy could
+  be split, and two copies of client policy is what produced T3's three divergences.
 - **D62 — Transport lives in `PlayerTransport`, and its `Boolean` means "reached the controller".**
   T13 finished what D61 started. Thirteen transport methods across the two ViewModels each opened
   with `stateCollector.controller ?: return` and then talked to `MediaController` directly; they now
@@ -718,6 +787,12 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   `clearQueue` a queue of one, and `skipNext` the end of a non-repeating queue. Those guards moved
   unchanged and stay silent: they are correct refusals, and wiring an error to them would put a
   dialog in front of a driver who tapped remove on the track that is playing.
+
+  It stays a `Boolean` rather than a `TransportResult` sealed type. "Dispatched" versus "ignored"
+  only matters where optimistic state is written, and the operations that write it (`setQueue`,
+  `shufflePlay`) have no guard that can ignore; the ones where `true` can mean "ignored" have no
+  caller that reads the value. **The trigger to introduce the type:** the first caller that must
+  tell a refusal from a dispatch.
 
   Per-surface differences were decided one at a time rather than merged: mobile keeps its offline and
   download pre-flight before `play()`, its optimistic seek write, its own `isShuffled` flag, and the
@@ -747,6 +822,10 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   `true` still does not promise the command arrived. The session can vanish between the check and the
   call; it means the controller was connected when the transport attempted it.
 
+  Clearing the field from `MediaController.Listener.onDisconnected` is not a substitute. The callback
+  is asynchronous, so there is a window where the session is gone and the field is not yet null —
+  precisely the window a driver taps in. The predicate closes it without waiting for a callback.
+
   Two consequences worth knowing. `PlayerTransport` hit detekt's 16-function class ceiling — which is
   inclusive — so the queue mutations split into `QueueTransport`, reached as `transport.queue`, and
   the availability predicate lives at file level. And mobile's snackbar host moved above
@@ -756,12 +835,16 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   **T15 — the predicate covers reads too.** `hasNextTrack()` and `restoreIfIdle()` open with
   `connectedOrNull()` as well, which is why it is `internal` rather than private to
   `PlayerTransport`. Reads still report nothing and start no reconnect — a query is not a user
-  action — so a disconnected controller now answers as no controller at all. T15 carries the two
-  failure shapes this closes, and why the collector's other reads did not need it.
+  action — so a disconnected controller now answers as no controller at all. Only these two reads
+  needed it: Media3's own `isPlaying()`, `hasNextMediaItem()`, `getMediaItemCount()` and friends
+  already answer `isConnected() && impl.xxx()`, so the position poller and the `Player.Listener`
+  fail closed on their own, and `release()` synthesizes no listener callback. These two were the
+  only places that built a claim on the safe default — an `|| repeatMode == All` that turned false
+  into true, and an idle check that read 0 as "empty, restore onto it". The collector does not also
+  null the field on disconnect: `ControllerConnection` (D65) owns the controller, and a second owner
+  would race it.
 
-  What this does **not** do is reconnect anything. The controller future is a `@Singleton` built once
-  in `PlaybackModule`, so a dead controller stays dead for the process; T11 tells the user, and
-  recovery is a separate ticket.
+  Reconnecting is D65's job; this decision only makes a dead controller visible.
 - **D64 — The connected half of playback is testable on the JVM: a real `MediaSession` over a fake
   player, under Robolectric.** `MediaController` is `@DoNotMock` with a package-private constructor,
   so for four tickets every claim about a *live* controller went to a device — T3's restore command,
@@ -817,6 +900,10 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   And a *query* cannot trigger a rebuild: mobile's `togglePlayPause` opens with `isPlaying()`, so on
   a null answer it asks for the toggle and lets that fail, or the play button would be the one
   control on either surface that gives up instead of recovering.
+
+  The car cannot show the original failure: backing out of `AutomotiveActivity` does not finish it
+  on the AAOS emulator image, so `onCleared()` never runs there (checked against the pre-fix build,
+  which kept playing). `SharedControllerFutureTest` is the evidence; a car pass is a regression check.
 
 - **D66 — A profile is a Firebase account, not one of the platform's car users.** The contract's
   screen 20 says "switch profile" and AAOS has two candidate meanings. Switching the vehicle's user
@@ -874,16 +961,16 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   falls back to the slow failure. A pure tracker keyed by network handle holds the rule; the monitor
   registers before it seeds, and only API 24–25 keep a synchronous read inside a callback. Mobile
   changes with it.
-- **D73 — The mini-player is inset beside the rail, and the rail runs full height.** §Layout has the
-  rail stop at the top of a full-width bar. Spanning the 1440dp reference unit, the bar ran under
+- **D73 — The mini-player is inset beside the rail, and the rail runs full height.** The design had
+  the rail stop at the top of a full-width bar. Spanning the 1440dp reference unit, the bar ran under
   the 176dp rail and cut it off 112dp above the bottom edge. `BrowseShell` now puts the bar in the
   content column, so it starts flush at the rail's edge (x = 176dp), not at the content's 48dp
   margin. The figures (2026-10-10): inset with the old five controls, the title and artist would
   get 296dp, so the device's real subtitle "America's Newest Praise & Worship Favourites" (327dp at
   16sp) would truncate. D74–D75 bring that to 440dp, against 384dp full width. `CarUiCases.kt`'s
   mini-player and rail cases follow the inset, so the measurement suites see the layout that ships.
-- **D74 — The queue and like buttons leave the mini-player.** §Chrome ends the bar with heart,
-  previous, play/pause, next and queue; it now carries previous, play/pause and next. The queue
+- **D74 — The queue and like buttons leave the mini-player.** The design ended the bar with heart,
+  previous, play/pause, next and queue; it carries previous, play/pause and next. The queue
   button carried no state, was the bar's only control without a circular wash, and opened a
   destination one tap from the full player. The first version of this entry kept the heart, on the
   grounds that it shows whether the song is liked and that liking is time-critical because the
@@ -906,11 +993,33 @@ Right:  heart, previous, play/pause in a 76px gold circle, next, queue — each 
   title and artist 24dp. There, the subtitle truncates in every layout, the old full-width bar
   included. The gaps between controls go from 16 to `CarControlGap` (24dp) for Design for
   Driving's 23dp minimum, paid for by the width that the removals in D74 free.
-- **D76 — The bar's top corners are rounded at `CarCardCornerRadius`.** §Chrome's bar is square.
+- **D76 — The bar's top corners are rounded at `CarCardCornerRadius`.** The design's bar was square.
   The top edge is the bar's only free edge, so both its corners round. The bottom two stay square
   against the OEM bar below. The top hairline became a `border` on the same shape, because a
   straight line drawn from corner to corner would leave the curves and cross empty space. The
   border draws on all four edges, so the bar also gets a 1dp line against the rail.
+- **D77 — The ambient glow and the full player's glow take their hue from the current cover
+  (T38).** Code cites the parts as D-T38.1–.6:
+  - **.1** Extraction is driven by the current song's cover URL, not by a composable: the app-root
+    ambient layer depends on no `AsyncImage`, so the theme survives the full player hiding
+    `BrowseShell`. Keyed on the URL, so tracks sharing a cover share one extraction.
+  - **.2** The car has its own Coil `ImageLoaderFactory` sharing the on-screen covers' disk cache,
+    without mobile's crossfade, which would animate covers while driving. The extractor asks for a
+    small software bitmap (`allowHardware(false)`) because Palette needs pixels.
+  - **.3** Palette picks the mood; conditioning makes it safe. Every chosen colour is blended toward
+    the background until it composites no lighter than `CarRaised` — the two ambient tints as a
+    stacked pair (see §Contrast, measured).
+  - **.4** Two tints from two swatch fallback chains, ending at the fixed blue and purple.
+  - **.5** The full player gets the same conditioned theme. Left gold, the most visible artwork
+    surface would be the one that does not follow artwork.
+  - **.6** The applied theme changes only while parked; a track change while driving holds the
+    previous theme until the car parks (§Motion).
+
+  Rejected: a server-side `dominantColor` on each song deletes the extraction but does nothing for
+  the conditioning, which is the half that can fail the build, and needs a backfill of the whole
+  catalogue. `material-color-utilities` has no standalone Android artifact. Sampling and blurring the
+  cover (YouTube's ambient mode) is a continuously updating background in the driver's periphery,
+  with no luminance ceiling to assert on.
 
 ## Components
 
@@ -920,45 +1029,31 @@ Screens must compose from shared car components rather than each screen inventin
 chrome, buttons, cards, rows or empty states. This is both a maintenance rule and a safety
 rule: a one-off button is how a 76dp target or contrast rule regresses.
 
-| Component | Build/reuse rule |
-|---|---|
-| `CarSystemBar` / current `CarTopBar` | Evolve the existing top bar into the shared 80dp system bar; do not create per-screen bars |
-| `CarNavRail` | New shared rail; every destination screen uses the same instance and active-state logic |
-| `CarMiniPlayer` | Reuse and re-theme the existing component; add the queue button and combined artwork/title target. The queue button later left again (D74) |
-| `CarPillButton` / primary CTA | New shared 76dp button primitive for gold and ghost actions |
-| `CarChip` | Not built. A6's browse-by shortcuts use `CarPillButton`'s ghost variant (D39); build the chip only when a second consumer needs selected/segmented states |
-| `CarContentCard` | New shared card primitive for album, playlist, mix, genre and recommendation cards |
-| `CarTrackRow` | New shared track row for favourites, album, playlist, queue and search result lists |
-| `CarPlaybackControls` | Shared full-player transport controls; mini-player may use a compact wrapper around the same semantics |
-| `CarRestrictionDialog` | Shared refusal/eviction explanation for every driving restriction |
-| `CarEmptyState` | Shared empty-state layout with optional CTA |
-| `CarRowSkeleton` | Shared loading placeholder for row lists: four blocks at `CarListRowHeight`, always static. Built by T7 — this row said `CarLoadingSkeleton` and named a component that did not exist, which is how four screens ended up drawing their own |
-| `CarDownloadRow` | Shared downloads row with parked-only remove actions. Built by A9 |
-| `CarDrivingHelperChip` | Shared "why is this locked" chip for the queue and Downloads. Built by A9, which found the queue and Downloads each carrying a copy. Its fill is opaque `#181824`, not a gold wash: over the ambient layer a 12% wash measured 6.94:1, under NFR-2, while the same chip over the queue passed |
+The inventory — what exists, what each is for, and what was designed but not built — is
+`AAOS_SCREEN_CONTRACT.md` §Shared Component Inventory. The visual specs:
 
-- **Primary CTA:** gold `#C9A84C` fill, `#0A0A0C` text, 20px weight 600, 14px radius, 76px tall.
+- **Primary CTA:** gold `#C9A84C` fill, `#0A0A0C` text, 20sp weight 600, fully rounded, 76dp tall.
 - **Secondary button:** transparent fill, 1px `rgba(255,255,255,0.12)` border, white text, 76px tall.
 - **Content card:** 20px radius, `#181824` fill, 1px `rgba(255,255,255,0.06)` border. On focus,
   the border becomes gold. Any lift or scale transition is parked-only.
-- **Filter chip:** fully rounded, 76px tall, 28px horizontal padding. Selected chips use a gold
-  fill with dark bold text; unselected use `#1E1E2A` with a hairline white border.
+- **Filter chip** (`CarChip`, no production caller): fully rounded, 76px tall, 28px horizontal
+  padding. Selected chips use a gold fill with dark bold text; unselected use `#1E1E2A` with a
+  hairline white border.
 - **Text input:** 76px tall, 16px radius, `#1E1E2A` fill. Focused inputs take a 2px gold border
   and a soft gold outer glow.
 - **Track list row:** 80px tall, 52px art at 8px radius, title 18px white, artist 15px `#ACACBC`,
   duration right-aligned in `#ACACBC`. The currently playing row carries a 3px gold bar on its
   left edge.
-- **Parked-mode badge:** a gold-outlined pill with a small car icon and the text
-  "Parked mode only", used only on screens that are unavailable while driving.
+- **Parked-mode badge:** designed as a gold-outlined pill reading "Parked mode only"; not built,
+  because no parked-only flow carries one (D69).
 
 ### Touch targets
 
-The minimum is **76 x 76** on the smallest side. Every interactive control in
-`docs/aaos-app.html` meets it — measured across all nine views, the smallest target is
-exactly 76.
-
-The mechanism is a `.hit` class carrying `min-width:76px; min-height:76px` around the glyph,
-so icons keep their visual size while the padding supplies the target. Do not shrink a
-control by deleting its wrapper.
+The minimum is **76 x 76dp** on the smallest side (`CarTouchTargetSize`), and
+`CarTouchTargetMeasurementTest` measures every interactive node in `CarUiCases.kt`'s cases against
+it. The mechanism is `Modifier.carTouchTarget()` (`CarPrimitives.kt`) where the target is a floor,
+or `Modifier.size(CarTouchTargetSize)` for an exact box; either way the icon keeps its visual size
+inside the target. Do not shrink a control by removing them.
 
 Three changes were structural rather than padding:
 
@@ -968,19 +1063,10 @@ Three changes were structural rather than padding:
 - **Filter chips are 76 tall** (were 56) and **pill buttons 76** (were 64).
 - **The mini-player's artwork and title are a single target**, not two. They were 64 x 64 and
   230 x 43 separately; merged they are 314 x 76, and tapping anywhere on the "now playing"
-  block opens the player.
+  block opens the player. The whole mini-player is that target now.
 
-Re-run the measurement after any layout change — several of these were introduced by
-otherwise harmless styling.
-
-`docs/aaos-screens.html` carries the same sizing. All 20 screens were re-checked after the
-change: the 80px bar takes 32px out of every content region, offset by reducing content
-padding from 40 to 32. Only the three screens that already clipped a trailing row still
-overflow (artist, album, queue), which is the intended scroll affordance rather than a
-layout fault.
-
-All figures are CSS px on a 1920 x 1080 canvas. Convert to dp against the target head unit's
-density before judging compliance; at ~1.0 density they map 1:1, above that they shrink.
+Run the measurement after any layout change — several violations were introduced by otherwise
+harmless styling.
 
 ## Motion
 
@@ -988,7 +1074,8 @@ Motion is gated on the vehicle's UX-restriction state, not on taste.
 
 - **Parked:** the ambient background gradients may drift slowly, and their hue follows the
   current track's artwork, easing to a new cover's hue over 1.5s. The full player's glow follows it
-  too. Screen changes cross-fade, and the navigation rail's active pill slides between items.
+  too. The navigation rail's active pill slides between items. Screen changes may cross-fade; none
+  is built.
 - **Driving:** all decorative motion stops. The ambient gradients freeze in place, and the artwork
   hue holds: a track change while driving applies its hue only once parked. Only motion that
   carries information continues — the progress bar, the clock, and the play/pause state.
@@ -1003,9 +1090,9 @@ is moving* that is restricted.
 
 ## Driving restrictions
 
-`docs/aaos-app.html` enforces these while the mode switch reads Driving. They mirror
-`CarUxRestrictions` defaults; the shipping app must take the real values from
-`CarUxRestrictionsHandler` rather than hardcoding them.
+These mirror `CarUxRestrictions` defaults; the app takes the real values from
+`CarUxRestrictionsHandler` rather than hardcoding them. The flag-by-flag rules are
+`AAOS_PRD.md` §6.2, and `AAOS_DRIVING_STATE_TESTING.md` is how to exercise them.
 
 | Restriction | Behaviour while driving |
 |---|---|
@@ -1025,26 +1112,7 @@ Tab switching, playback transport, seeking, queue view/skip-to, and download vie
 available while driving. Setup, typed search, deletion, removal and clear actions do not.
 Queue reorder ships in no state (D26).
 
-Not yet enforced: no cumulative item count is carried *across* a browse session, and
-`getMaxRestrictedStringLength()` (120 chars) is unchecked. Neither currently binds, because
-no screen exceeds 21 items and no string approaches 120 characters — but both would need
-real enforcement before shipping.
-
-## Rendering rules
-
-The output is a finished product screen, as a user would see it. It is not a
-specification drawing.
-
-- Never draw measurement annotations, dimension lines, arrows, rulers, callouts,
-  or pixel labels such as "48px", "200px", or "380px" anywhere in the design.
-- Never print a state name as visible text. An active tab or selected chip is shown by
-  gold color and pill treatment alone — never by rendering the word "ACTIVE",
-  "SELECTED", "FOCUSED", or "DEFAULT" next to it.
-- Never let a font size, token name, or hex value leak into user-facing copy. Song and
-  artist labels contain only the song and artist name.
-- Never label the same thing twice. One heading per section, never an uppercase eyebrow
-  and a title-case heading saying the same words, and never a helper sentence repeated
-  in two columns.
-- Never leave an empty placeholder tile in a grid or chip group. Show only real items.
-- Use realistic content: plausible song, artist, album, and playlist names, and cover art
-  as abstract color gradients rather than photographs of people.
+Not enforced: no cumulative item count is carried *across* a browse session, and
+`getMaxRestrictedStringLength()` (120 chars) is unchecked — `UxFlags` reads only the depth and
+per-list item caps. Neither binds while every list goes through `cap()` and no string approaches
+120 characters. The string length is T37 finding 10.

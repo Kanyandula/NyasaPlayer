@@ -53,12 +53,10 @@ private val HeroLabelSize = 14.sp
  * Three sections: a resume hero, Continue Listening, and Popular Now. The design's
  * "Your Mixes" and "Recommended" are deliberately absent rather than renamed — the data layer
  * has neither a mixes nor a recommendation concept, and a section title promising
- * personalisation the backend does not do is worse than one fewer section (A2 spec, D1). The
- * slots remain, so adding a real recommender later is a data-source change.
+ * personalisation the backend does not do is worse than one fewer section (D1).
  *
- * The quick-access grid went with the arrival of the navigation rail (D5): three of its four
- * actions were rail destinations, and two navigation systems on one screen is the
- * muscle-memory problem the chrome contract exists to prevent.
+ * No quick-access grid (D5): three of its four actions are rail destinations, and two navigation
+ * systems on one screen is the muscle-memory problem the chrome contract exists to prevent.
  *
  * Each section has its own click callback, so the caller knows which section a song came from.
  * Each takes that section's own list: `playSong` resolves its start index with

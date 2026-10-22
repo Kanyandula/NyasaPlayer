@@ -134,7 +134,7 @@ class AutomotiveAuthViewModelTest {
     }
 
     /**
-     * D-T2.4: Firebase reports the session the moment credentials are accepted, before the profile
+     * D52: Firebase reports the session the moment credentials are accepted, before the profile
      * write. Entering the shell on that emission would drop the driver into a launcher whose
      * profile does not exist yet, and would leave the loading state it never exited.
      */

@@ -9,7 +9,7 @@
 | **Date** | 2026-08-02 |
 | **Repository** | `~/AndroidStudioProjects/NyasaPlayer`, module `:automotive` |
 | **Notion** | https://app.notion.com/p/3b0728b1385d81a3b210f41de12117c5 |
-| **Supersedes** | `docs/AAOS_UI_REDESIGN_PLAN.md` §1 (see §3.3) |
+| **Supersedes** | The 2026-04-23 redesign plan's §1 (see §3.3) |
 
 ---
 
@@ -29,21 +29,19 @@ The work is sequenced into **ten phases**. Phase A1 is foundation — tokens, to
 primitives, build variants, and the restriction layer. Phases A2–A9 deliver the AAOS screens.
 Project B is tracked separately; the AAOS release does not wait for the mobile brand migration.
 
-**Current state:** the phase table in §9 is the only place slice status lives. It links each
-slice's verification record, and carve-outs live in those records. This paragraph used to restate
-the merged count and went stale three times.
+**Current state:** shipped. The §9 table records what each phase delivered and in which PRs;
+where the app stood against each §12 criterion at ship is `docs/AAOS_SHIP_RECORD.md`.
 
 ---
 
 ## 2. Problem statement
 
-### 2.1 What is wrong today
+### 2.1 What was wrong (2026-08-02, before A1)
 
 **The app has two UIs and no decision about which one it is.** `PlaybackService`
 (`MediaLibraryService`) drives the OEM media template, while `AutomotiveActivity` hosts seven
-custom Compose screens. Both are live. `docs/AAOS_UI_REDESIGN_PLAN.md` §1.1 records this
-verbatim: *"This is a real Play Store risk, not just doc drift... Resolving it is a decision,
-not a cleanup."*
+custom Compose screens. Both are live. The redesign plan of the time called it *"a real Play
+Store risk, not just doc drift... Resolving it is a decision, not a cleanup."*
 
 **Driving restrictions are gated on the wrong signal.** `CarUxRestrictionsHandler` maps its
 `noTextEntry` field from `UX_RESTRICTIONS_NO_TEXT_MESSAGE` — the *messaging* restriction,
@@ -77,7 +75,7 @@ polish.
 
 | # | Goal | Measure of success |
 |---|---|---|
-| G1 | Resolve the two-UI ambiguity with a recorded decision | `AAOS_UI_REDESIGN_PLAN.md` no longer contradicts the shipped architecture |
+| G1 | Resolve the two-UI ambiguity with a recorded decision | No planning document contradicts the shipped architecture (§3.3) |
 | G2 | Enforce driving restrictions from real vehicle signals | Every `CarUxRestrictions` default the app models is read from the platform and acted on |
 | G3 | Every interactive control meets 76dp | Automated measurement returns zero controls below minimum |
 | G4 | Every non-disabled text pair clears AAA | Measured on every surface the token lands on, not just one |
@@ -114,7 +112,9 @@ the shipped manifest, so an activity declared with a launcher intent filter is p
 or not a flag hides it at runtime. The `playstore` product flavor ships a manifest with no
 launcher activity and only `PlaybackService`; the `oem` flavor adds the launcher.
 
-This supersedes `docs/AAOS_UI_REDESIGN_PLAN.md` §1.
+This supersedes the 2026-04-23 redesign plan's §1. The plan was removed on 2026-10-22; the Option B
+reasoning it held is `docs/AAOS_ARCHITECTURE.md` §6, and the Play rules it interpreted are
+`docs/AAOS_COMPLIANCE.md` → External Rules Interpreted.
 
 ---
 
@@ -128,7 +128,8 @@ input in motion.
 restriction signals do not distinguish them — so the app cannot either. Restrictions apply to
 the surface, not the person.
 
-**Context of use.** A 1920×1080 landscape head unit, dark cabin, glare, vibration, and a
+**Context of use.** A landscape head unit (the layout reference is 1440×800dp, `aaos-DESIGN.md`
+§Units), dark cabin, glare, vibration, and a
 vehicle that can transition from parked to moving **at any moment** — including while the user
 is mid-interaction. That last property drives one of the more consequential requirements
 (FR-2.5).
@@ -222,7 +223,8 @@ by gating an entry point; this one cannot.
 
 ### 6.3 Functional — screens
 
-Twenty screens. Seven exist today in pre-design layouts; thirteen do not exist.
+Twenty screens. What shipped against each is `docs/AAOS_SHIP_RECORD.md`; where the build deviates
+from a row, the row names the `aaos-DESIGN.md` decision (Dn) that records why.
 
 **This table is the traceability matrix.** Every screen names its entry point, its primary
 actions, the states it must handle, and what it does while driving. A screen is not complete
@@ -235,10 +237,10 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 
 | # | Screen | Entry point | Primary actions | States | While driving | Data | Phase |
 |---|---|---|---|---|---|---|---|
-| 1 | CarAuthScreen | App launch when signed out | Google / phone / email sign-in | loading, error | **Refused** — parked only | Auth VM | A7 |
-| 2 | CarPinOptInScreen | After first sign-in | Enter PIN, Enable, Not now | partial entry, error | **Refused** — `NO_SETUP` | Auth VM | A7 |
-| 3 | CarHomeScreen | Rail: Home (default) | Play a recent item, open a mix | loading, empty, error | Allowed; lists truncated | Content VM | A2 |
-| 4 | CarBrowseScreen | Rail: Browse | Filter by chip, open a genre | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
+| 1 | CarAuthScreen | App launch when signed out | Google / phone / email sign-in — *phone and email deferred (D70, T19)* | loading, error | **Refused** — parked only | Auth VM | A7 |
+| 2 | CarPinOptInScreen — *deferred (D67, T18)* | After first sign-in | Enter PIN, Enable, Not now | partial entry, error | **Refused** — `NO_SETUP` | Auth VM | A7 |
+| 3 | CarHomeScreen | Rail: Home (default) | Play a recent item, open a mix — *no mixes: the backend has no recommender (D1)* | loading, empty, error | Allowed; lists truncated | Content VM | A2 |
+| 4 | CarBrowseScreen | Rail: Browse | Filter by chip, open a genre — *no chips (D11); a genre card shuffle-plays it (D9)* | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
 | 5 | CarSearchScreen | System bar: search | Type via system IME when allowed, voice prompt, recent, browse-by shortcuts | idle, recent-empty, no query | Text entry refused; voice offered | Search VM | A6 |
 | 6 | CarSearchResultsScreen | Submitting a search | Top song result, song rows, clear/back | loading, empty results, error | Results allowed; active text entry refused | Search VM | A6 |
 | 7 | CarLibraryScreen | Rail: Library | Open playlist, album or artist | loading, empty, error | Allowed; drill-down refused | Content VM | A3 |
@@ -248,13 +250,13 @@ liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `Automotive
 | 11 | CarAlbumScreen | Library → album, or search result | Play, download, play one | empty, loading | **Refused** past depth cap | Content VM | A3 |
 | 12 | CarFullPlayerScreen | Mini-player artwork/title | Play/pause, skip, seek, shuffle, repeat, like, queue | buffering, error → 19 | **Allowed** — playback control | Player VM | A5 |
 | 13 | CarQueueScreen | Full player's Up Next card (the mini-player's queue icon left in `aaos-DESIGN.md` D74) | **P:** skip to, remove, clear · **D:** skip to only | empty queue | Viewable; edit actions refused, list truncated | Player VM | A5 |
-| 14 | CarSettingsScreen | System bar: settings | Toggle prefs, sign out | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
-| 15 | CarDownloadsScreen | Library → Downloads chip | **P:** remove one, remove all · **D:** view only | empty, in-progress | Viewable; delete actions refused | Content VM | A9 |
+| 14 | CarSettingsScreen | System bar: settings | Toggle prefs, sign out — *account, sign out and about only (D70)* | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
+| 15 | CarDownloadsScreen | Library → Downloads card | **P:** remove one, remove all · **D:** view only | empty, in-progress | Viewable; delete actions refused | Content VM | A9 |
 | 16 | CarNoConnectionScreen — *not a screen: offline play fails fast into the error overlay; the banner stays (D71)* | Network loss | — | — | Allowed | NetworkMonitor | A8 |
 | 17 | CarEmptyFavouritesScreen | Favourites with none liked | Browse music | — | Allowed | Content VM | A4 |
 | 18 | CarLoadingScreen — *satisfied by the per-screen skeletons in Home, Browse and Library (D71)* | Initial content load | none | — | Allowed | Content VM | A8 |
 | 19 | CarPlaybackErrorOverlay | Playback failure | Retry, Skip next, Dismiss | — | **Allowed** — must be dismissible while driving | Player VM | A8 |
-| 20 | CarProfileSwitcherScreen | System bar: avatar | Switch, add profile | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
+| 20 | CarProfileSwitcherScreen | System bar: avatar | Switch, add profile — *one remembered account, no picker (D66)* | — | **Refused** — `NO_SETUP` | Auth VM | A7 |
 
 **Cross-cutting requirements that apply to every screen**, and are therefore not repeated per
 row: the chrome contract (NFR-4), the 76dp touch target (NFR-1), contrast (NFR-2), text sizing
@@ -289,8 +291,8 @@ contract owns implementation completeness.
 - **`android.car.jar` is `compileOnly`** and its stub methods throw `RuntimeException("Stub!")`.
   Platform types therefore cannot appear in JVM unit tests, which dictates that restriction
   logic is written as pure functions over primitives.
-- **All design figures are CSS px on a 1920×1080 canvas**, not dp. The conversion rule lives in
-  `docs/aaos-DESIGN.md` §Units.
+- **Design figures are CSS px on a 1920×1080 canvas**, not dp. The conversion rule, and the
+  1440×800dp reference head unit the layout is checked on, are `docs/aaos-DESIGN.md` §Units.
 - **Dark theme only.**
 
 ---
@@ -300,10 +302,6 @@ contract owns implementation completeness.
 **Source of truth:** `docs/aaos-DESIGN.md` — tokens, chrome contract, component specs, and
 measured contrast. `docs/AAOS_SCREEN_CONTRACT.md` turns that system into per-screen
 implementation requirements.
-
-**Reference implementations:**
-- `docs/aaos-screens.html` — all 20 screens, static
-- `docs/aaos-app.html` — navigable prototype with restrictions enforced
 
 ### 7.1 Visual identity
 
@@ -317,8 +315,8 @@ made by habit.
 
 ### 7.2 Chrome contract
 
-Three regions render identically on every screen: an 80dp system bar, an 80dp navigation rail,
-and the persistent mini-player. This is a contract rather than a guideline because the original
+Three regions render identically on every screen: an 80dp system bar, a 176dp navigation rail,
+and the persistent mini-player, inset beside the rail (`aaos-DESIGN.md` §Layout, D73–D76). This is a contract rather than a guideline because the original
 generated designs drifted — six screens produced six different system bars, and only two of six
 carried the rail.
 
@@ -371,7 +369,8 @@ in motion. An activity without that declaration is not merely un-styled while dr
 platform will not let the driver see it.
 
 The custom launcher is the product and is intended to remain usable in motion, so it must
-declare it. **No activity in this repository currently does.**
+declare it. `AutomotiveActivity` declares it in `automotive/src/oem/AndroidManifest.xml` (OG-2,
+checked in `AAOS_SHIP_RECORD.md`).
 
 **`docs/AAOS_COMPLIANCE.md` is the normative owner of every gate identifier** — `OG-*` for the
 `oem` variant, `MG-*` for `playstore`, `HR-*` for host-render smoke tests. This PRD does not
@@ -401,13 +400,14 @@ voice playback works, and custom actions reflect state.
 
 `HR-4` and `HR-8` cannot be verified by screenshot — Now Playing renders on `FLAG_SECURE`
 distant-display surfaces. Use `dumpsys media_session` as the oracle; it exposes playback state
-and the resolved custom-action list. Recorded in `docs/AAOS_ARCHITECTURE.md`, established
-during PR #13.
+and the resolved custom-action list. Recorded in `docs/AAOS_COMPLIANCE.md` → Host-Render Smoke
+Tests, established during PR #13.
 
 ### 8.5 When these gates run
 
-Both variants build on every change (NFR-7). The manifest gates (§8.2 and §8.3) are cheap and should
-be automated from A1, when the flavors are created. The host-render tests (`HR-*`, §8.4) are manual and run
+Both variants build on every change (NFR-7). The manifest gates (§8.2 and §8.3) are cheap; they are
+checked by hand against the built APKs (`AAOS_COMPLIANCE.md` gives the commands; the last run is
+`AAOS_SHIP_RECORD.md`), not automated. The host-render tests (`HR-*`, §8.4) are manual and run
 before any Play submission decision, not per-commit — the `playstore` variant is a preserved
 option, not an actively shipped artifact.
 
@@ -415,21 +415,20 @@ option, not an actively shipped artifact.
 
 ## 9. Phasing
 
-Scope is fixed until this table is done (owner, 2026-09-15). Order: Exit, A9, then ship. T19 and
-T18 are deferred past ship by the owner. Anything else found on the way goes to `docs/BACKLOG.md`,
-unless it is a bug a driver would hit or a safety gap.
+T19 and T18 are deferred past ship by the owner (2026-09-15). Anything found along the way goes to
+`docs/BACKLOG.md`, unless it is a bug a driver would hit or a safety gap.
 
-| Phase | Delivers | Depends on | Status |
+| Phase | Delivers | Depends on | Delivered |
 |---|---|---|---|
 | **A1** | Tokens, touch-target primitive, 5 components, `oem`/`playstore` flavors, restriction layer + gate + eviction, re-theme of 10 existing files | — | Merged — PR #14 |
 | **A2** | Chrome contract, Home, ambient motion | A1 | Merged — PR #16 |
 | **A3** | Browse, Library, Playlist, Album | A2 | Merged and device-verified — PRs #18-#20 |
 | **A4** | Favourites, ArtistLikedSongs, EmptyFavourites | A2 | Merged and device-verified — PRs #21-#23 |
 | **A5** | FullPlayer, Queue | A2 | Merged and device-verified — PR #24; retryable-error and restore follow-ups recorded |
-| **A6** | Search, SearchResults | A2 + A6 design | Merged and device-verified — PR #27; `docs/AAOS_A6_VERIFICATION.md`; T5-T8 follow-ups recorded |
+| **A6** | Search, SearchResults | A2 + A6 design | Merged and device-verified — PR #27; T5-T8 follow-ups recorded |
 | **A7** | Settings, ProfileSwitcher, PinOptIn, Auth | A1 restrictions | Merged and device-verified — PR #51 (parked and driving pass in the PR); PinOptIn (T18, deferred by D67) and phone and email sign-in (T19) deferred past ship by the owner, 2026-09-15 |
-| **A8** | PlaybackError, NoConnection (behaviour), Loading (satisfied) — Downloads moved to A9 | A2 | Merged and device-verified — PR #59; `docs/AAOS_A8_VERIFICATION.md` |
-| **A9** | Car downloads: `SongDownloadManager` into a shared module, local-URI resolution in shared code (restore included), parked-only download actions, Downloads screen, Library row | A8 | Merged and device-verified — PR #67; `docs/AAOS_A9_VERIFICATION.md` (download pass closed 2026-09-17) |
+| **A8** | PlaybackError, NoConnection (behaviour), Loading (satisfied) — Downloads moved to A9 | A2 | Merged and device-verified — PR #59 |
+| **A9** | Car downloads: `SongDownloadManager` into a shared module, local-URI resolution in shared code (restore included), parked-only download actions, Downloads screen, Library row | A8 | Merged and device-verified — PR #67 (download pass closed 2026-09-17, #69) |
 | **Exit** | §12 criteria 2 and 3: one automated measurement of touch targets (76dp) and text contrast (7:1) across the launcher | A1–A8 | Merged — PR #63; measured by CarTouchTargetMeasurementTest and CarTextContrastMeasurementTest, every list at each scroll step; the two destructive pairs are the recorded AA exception |
 | **Project B** | Mobile brand migration — **separate PRD, non-blocking** | A1 tokens | Not started |
 
@@ -449,11 +448,11 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 
 | Risk | Impact | Likelihood | Mitigation |
 |---|---|---|---|
-| Launcher activity is not declared distraction optimised, so the platform blocks it while driving | The custom launcher — the product — is unusable in motion, and the entire restriction layer is moot | **Was certain until found** | Gate OG-1; added to A1's flavor task |
-| ~~No adb recipe exists to put the emulator into a driving state~~ **Retired 2026-08-08** | Restriction layer ships unverified end to end | Medium | A1 Task 1 found one; `docs/AAOS_DRIVING_STATE_TESTING.md` |
+| Launcher activity is not declared distraction optimised, so the platform blocks it while driving | The custom launcher — the product — is unusable in motion, and the entire restriction layer is moot | **Was certain until found** | Gate OG-2; added to A1's flavor task |
+| ~~No adb recipe exists to put the emulator into a driving state~~ **Retired 2026-08-08** | Restriction layer ships unverified end to end | Medium | A1 found one; `docs/AAOS_DRIVING_STATE_TESTING.md` |
 | Play policy changes, making the deferred compliant path urgent | Rework | Low | `playstore` flavor is built and kept green from A1 onward |
 | Design figures are px, hardware is dp at unknown density | Controls smaller in practice than measured | Medium | Conversion rule recorded; requires validation on real hardware |
-| Smallest rendered text is 15px | May be too small at arm's length | Medium | Flagged in the design doc as a floor to revisit, pending device testing |
+| Smallest rendered text is 14sp (timestamps and captions; artist names are 15sp) | May be too small at arm's length | Medium | Flagged in the design doc as a floor to revisit, pending device testing |
 | Mobile brand migration inverts every filled CTA | Wide visual regression surface in `:app` | High | Isolated as Project B with its own spec and review |
 | Seven existing screens re-laid-out across four phases | Regressions between phases | Medium | Each phase independently testable; screens keep working throughout |
 
@@ -466,7 +465,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 | ~~Q1~~ | ~~Can the emulator be put into a driving state, and how?~~ **Resolved 2026-08-08: yes, and it is scriptable — but only on a `userdebug` image.** Recipe and the AVD comparison are in `docs/AAOS_DRIVING_STATE_TESTING.md`. | — | Closed |
 | ~~Q2~~ | ~~How does text entry work on a head unit — on-screen keyboard when parked, voice-only when driving? The 20 screens do not solve this; the prototype only draws a disabled field.~~ **Resolved 2026-08-20:** A6 uses the platform/system IME when `UX_RESTRICTIONS_NO_KEYBOARD` is absent and replaces editing with a system/Assistant voice-search prompt when it is present. The app draws no custom keyboard and records no audio. A6 shipped song-only submitted results; T4 added album, artist and playlist result cards to the launcher, while the media-session path stays song-only (D43-D47). | — | Closed |
 | Q3 | Is 15px acceptable for secondary text at arm's length, or should the floor rise? | Device testing | Type scale across all phases |
-| ~~Q4~~ | ~~Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted?~~ **Resolved 2026-08-02: bannered, not deleted.** §1.1 and §2 are load-bearing history — the two-surface inventory and the Play policy reasoning a future submission must still satisfy. | — | Closed |
+| ~~Q4~~ | ~~Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted?~~ **Resolved 2026-08-02: bannered, not deleted. Deleted 2026-10-22**, once its load-bearing parts lived elsewhere: the two-surface inventory in the root `CLAUDE.md` → AAOS rendering, the Play policy reasoning in `AAOS_COMPLIANCE.md` and `AAOS_ARCHITECTURE.md` §6. | — | Closed |
 | ~~Q5~~ | ~~Does Downloads belong in the custom launcher, given it is content browse rather than settings?~~ **Resolved 2026-08-03:** yes for the `oem` launcher. The screen is part of A9 (moved from A8 by D71); delete/remove actions remain parked-only, and the `playstore` path can expose offline content through the media browse tree if needed later. | — | Closed |
 
 ---
@@ -489,10 +488,11 @@ The programme is complete when:
    (§8.2). Host-render smoke tests (`HR-*`, §8.4) are required only before a
    Play submission decision, not for this release.
 6. Detekt reports zero issues.
-7. ~~`docs/AAOS_UI_REDESIGN_PLAN.md` no longer contradicts the shipped architecture.~~ **Done** — superseded banner added 2026-08-02.
+7. ~~The redesign plan no longer contradicts the shipped architecture.~~ **Done** — superseded banner
+   added 2026-08-02; the plan was removed 2026-10-22.
 
-Where `main` stands against every criterion above, with the evidence and what is still owed:
-`docs/AAOS_SHIP_RECORD.md`.
+Where `main` stood against every criterion above at ship (2026-09-16), with the evidence and what
+was still owed: `docs/AAOS_SHIP_RECORD.md`.
 
 **Project B is explicitly not an acceptance criterion.** Migrating the mobile app to gold is
 tracked separately and must not gate the AAOS release — it carries a wide visual regression
@@ -504,22 +504,13 @@ surface across `:app` that has nothing to do with the car experience.
 
 ### 13.1 Measured reference data
 
-| Pair | Ratio | Verdict |
-|---|---|---|
-| White on card `#181824` | 17.6:1 | AAA |
-| Gold `#C9A84C` on obsidian | 8.7:1 | AAA |
-| Dark `#0A0A0C` on gold | 8.7:1 | AAA |
-| Secondary `#ACACBC` on obsidian | 8.8:1 | AAA |
-| Secondary `#ACACBC` on card | 7.9:1 | AAA |
-| Secondary `#ACACBC` on raised `#1E1E2A` | 7.4:1 | AAA — **binding surface** |
-| *(former)* `#A0A0B0` on card | 6.8:1 | **AA only — the defect** |
-| White on gold | 2.29:1 | Unusable — never do this |
+Contrast pairs: `docs/aaos-DESIGN.md` → "Contrast, measured".
 
 **`CarUxRestrictions` flag values**, read from `android.car.jar`:
 `NO_FILTERING 2` · `NO_KEYBOARD 8` · `NO_VIDEO 16` · `NO_SETUP 64` · `NO_TEXT_MESSAGE 128`
 
-**Brand migration blast radius:** 32 files reference the purple brand. 29 use the token name
-and cascade automatically; 4 hardcode the hex and need hand edits.
+**Brand migration blast radius** (counted 2026-08-02): most files reference the purple brand by
+token name and cascade automatically; a handful hardcode the hex and need hand edits.
 
 ### 13.2 Related documents
 
@@ -528,13 +519,9 @@ and cascade automatically; 4 hardcode the hex and need hand edits.
 | `docs/aaos-DESIGN.md` | Design system source of truth |
 | `docs/AAOS_SCREEN_CONTRACT.md` | Per-screen UI, CTA, state, motion and component-reuse contract |
 | `docs/AAOS_COMPLIANCE.md` | Variant-specific AAOS compliance gates and verification contract |
-| `docs/aaos-screens.html` | 20 screens, static reference |
-| `docs/aaos-app.html` | Interactive prototype |
-| `docs/superpowers/specs/2026-08-02-aaos-foundation-restrictions-design.md` | A1 spec |
-| `docs/superpowers/plans/2026-08-02-aaos-foundation-restrictions.md` | A1 implementation plan |
 | `docs/AAOS_ARCHITECTURE.md` | Module and playback architecture |
-| `docs/AAOS_UI_REDESIGN_PLAN.md` | **Superseded** by §3.3 — bannered, retained for its §1.1 and §2 |
-| `docs/AAOS_DRIVING_STATE_TESTING.md` | To be created by A1 Task 1 |
+| `docs/AAOS_DRIVING_STATE_TESTING.md` | Driving-state adb recipe, oracles, AVD caps and emulator traps |
+| `docs/AAOS_SHIP_RECORD.md` | Where the app stood against §12 at ship |
 
 ### 13.3 Glossary
 

@@ -25,7 +25,7 @@ import java.io.File
  *
  * `markFailed` is an `UPDATE`, so until a row exists it writes nothing: an offline tap used to
  * vanish on both surfaces — no failed row for the car's Downloads screen to show, and nothing for
- * mobile to say (`docs/T29_VERIFICATION.md`, 2026-09-19).
+ * mobile to say (T29's phone pass, 2026-09-19).
  *
  * Against the real [OfflineDownloadRepository] rather than a fake of it, because the bug was in
  * how `addDownload` and `markFailed` meet. `NetworkMonitor` starts offline and only a connectivity

@@ -113,7 +113,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
      * `errorMessage`, so AutomotiveApp.kt:480-481 hands screen 8 `isLoading = false`,
      * `errorMessage = null` and an empty list — and CarFavouriteMusicScreen.kt:81 falls to the
      * empty branch. A driver whose liked songs failed to load is told they have none, and
-     * offered a CTA off the tab. Spec §4.1 puts this in the error branch with a retry.
+     * offered a CTA off the tab. Screen 8's contract puts this in the error branch with a retry (D34).
      */
     @Test
     fun failedLikedSongsLoad_reportsAnErrorRatherThanAnEmptyLibrary() = runTest {

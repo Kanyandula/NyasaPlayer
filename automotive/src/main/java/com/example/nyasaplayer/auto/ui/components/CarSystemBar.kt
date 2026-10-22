@@ -117,12 +117,12 @@ private fun AppLogo(modifier: Modifier = Modifier) {
 }
 
 /**
- * Search, settings and profile — all three live since A7.
+ * Search, settings and profile.
  *
- * The disabled path in [SystemBarControl] is kept, not dead: it is how the next control that
- * arrives before its destination announces itself, which is what FR-2.6 asks for.
+ * Every caller passes a click handler, so the disabled path in [SystemBarControl] is unreachable
+ * today; it is how a control that ships before its destination would render (D3, FR-2.6).
  *
- * Wi-fi, bluetooth and battery are deliberately absent — see the A2 spec, D7.
+ * Wi-fi, bluetooth and battery are deliberately absent (D7).
  */
 @Composable
 private fun SystemBarControls(

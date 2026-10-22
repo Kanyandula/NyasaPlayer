@@ -110,8 +110,8 @@ class CarRestrictionGateTest {
     @Test
     fun driving_allowsQueueLocation_mutationIsGatedElsewhere() {
         // The queue may be VIEWED while driving, so the location is allowed.
-        // Remove/reorder/clear are actions, gated by the screen reading UxRestrictionState —
-        // see the spec, "Location gating vs action gating". Not this function's job.
+        // Remove and clear are actions, gated by the screen from the driving state it is handed —
+        // see AAOS_SCREEN_CONTRACT.md, Global Implementation Rules. Not this function's job.
         assertEquals(GateResult.Allowed, gate(at(overlay = CarOverlay.Queue), driving))
     }
 

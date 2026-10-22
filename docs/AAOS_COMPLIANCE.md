@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Applies to** | `:automotive` AAOS upgrade |
-| **Status** | Binding for A1 and later AAOS UI phases |
+| **Status** | Binding for any `:automotive` change |
 | **Date** | 2026-08-03 |
 | **Primary PRD** | `docs/AAOS_PRD.md` |
 | **Notion** | https://app.notion.com/p/3b0728b1385d81afbfade86ccddd1eeb |
@@ -50,7 +50,7 @@ References:
 The `oem` flavor is intentionally not the Play media submission artifact. The `playstore`
 flavor exists so that a future Play path remains viable without contaminating the product UI.
 
-Crash reporting and what it sends are inventoried in `docs/CRASH_REPORTING.md` (T24, T25).
+Crash reporting and what it sends are inventoried in `docs/CRASH_REPORTING.md`.
 
 ## `oem` Gates
 
@@ -70,9 +70,8 @@ Run these against the merged `oem` APK manifest and emulator behavior.
 | OG-10 | The app does not request `RECORD_AUDIO` and does not implement an in-app audio recorder for voice search |
 | OG-11 | Decorative animation freezes while driving and is disabled when platform animator duration scale is `0` |
 
-OG-2 should land only after the behavior behind it is true. Adding the metadata before A1's
-restriction, touch-target and contrast gates pass would make a false safety claim to the
-platform.
+OG-2 is a safety claim to the platform, so it landed only once the restriction, touch-target and
+contrast gates behind it passed (A1). A change that breaks one of those breaks the claim.
 
 ## `playstore` Gates
 
@@ -136,6 +135,25 @@ not always available. Use `dumpsys media_session` for playback state and custom 
 | `automotive/src/playstore` | Adds no launcher activity |
 | `:core:playback` | Contributes `PlaybackService` through manifest merging |
 
-The verification commands in
-`docs/superpowers/plans/2026-08-02-aaos-foundation-restrictions.md` Task 13 are the first
-implementation of these gates.
+Checking the merged manifests (`aapt2` is under `$ANDROID_HOME/build-tools/<version>/` if it is
+not on the PATH):
+
+```bash
+./gradlew :automotive:assembleOemDebug :automotive:assemblePlaystoreDebug
+# OG-2: non-zero
+aapt2 dump xmltree --file AndroidManifest.xml \
+  automotive/build/outputs/apk/oem/debug/automotive-oem-debug.apk | grep -c distractionOptimized
+# OG-1 / MG-1: non-zero for oem, 0 for playstore
+aapt2 dump xmltree --file AndroidManifest.xml \
+  automotive/build/outputs/apk/oem/debug/automotive-oem-debug.apk | grep -c android.intent.category.LAUNCHER
+aapt2 dump xmltree --file AndroidManifest.xml \
+  automotive/build/outputs/apk/playstore/debug/automotive-playstore-debug.apk | grep -c android.intent.category.LAUNCHER
+```
+
+Lint both flavors (`:automotive:lintOemDebug :automotive:lintPlaystoreDebug`): linting only `oem`
+leaves unchecked the one variant whose manifest Play reviews.
+
+Debug builds of both flavors carry two exported activities that release builds do not:
+`ui-test-manifest`'s `ComponentActivity` and `ui-tooling`'s `PreviewActivity`, both from
+`debugImplementation`. Accepted rather than suppressed — debug builds go only to verification head
+units — and confirmed absent from `playstoreRelease`, the manifest Play's review reads.

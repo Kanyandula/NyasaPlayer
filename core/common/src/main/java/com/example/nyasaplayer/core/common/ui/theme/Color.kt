@@ -15,8 +15,7 @@ val NyasaPrimary = Color(0xFFA855F7)
 val NyasaPrimaryDark = Color(0xFF7C3AED)
 
 // --- Champagne gold: AAOS brand accent -------------------------------------
-// Added for the AAOS design system. Mobile still uses NyasaPrimary; it migrates
-// to gold in Project B. See docs/superpowers/specs/2026-08-02-aaos-foundation-restrictions-design.md 1.2
+// Mobile stays on NyasaPrimary until it migrates to gold in Project B (docs/AAOS_PRD.md 3.2).
 //
 // Gold is a LIGHT colour. Never put white text on it — that measures 2.29:1.
 // Always use NyasaOnGold for labels on a gold fill.

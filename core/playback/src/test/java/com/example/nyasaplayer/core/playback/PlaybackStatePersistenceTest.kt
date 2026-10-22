@@ -16,9 +16,8 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 /**
- * The restore contract, which both surfaces depend on and neither could test before T3:
- * `PlaybackStatePersistence` used to read the signed-in user through `FirebaseUser`, which no
- * fake can construct. It reads `AuthRepository.currentUserId` now (plan D-T3.2).
+ * The restore contract, which both surfaces depend on. Testable because `PlaybackStatePersistence`
+ * reads `AuthRepository.currentUserId`, not a `FirebaseUser` no fake can construct (D54).
  */
 class PlaybackStatePersistenceTest {
 
@@ -115,7 +114,7 @@ class PlaybackStatePersistenceTest {
         assertEquals("b", restored.song.mediaId)
     }
 
-    // ── The saved song wins over the saved index (plan D-T3.8) ──
+    // ── The saved song wins over the saved index (D55) ──
 
     @Test
     fun restore_songDeletedEarlierInQueue_stillResumesTheSavedSong() = runTest {

@@ -16,10 +16,9 @@ import org.junit.Test
  * A supplier returning null is the whole harness. **Note the argument is named:** `onUnavailable` is
  * the last parameter, so a bare trailing lambda would bind to the callback, not the controller.
  *
- * What cannot be covered here: the `isConnected == false` branch, and anything a connected
- * controller does — including a guard refusing an operation without reporting. Both need a real
- * `MediaSession`, which this module has no harness for. They are covered by the manual pass in
- * `docs/superpowers/plans/2026-08-26-aaos-t11-dead-controller.md`.
+ * What this does not cover: the `isConnected == false` branch, and anything a connected controller
+ * does — including a guard refusing an operation without reporting. Both need a real
+ * `MediaSession`; `ConnectedTransportTest` covers them over one (D64).
  */
 class PlayerTransportTest {
 
