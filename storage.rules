@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Catalog media (audio, covers, genre artwork). The apps stream through tokenized download
+    // URLs, which bypass these rules, so the read rule covers only SDK and REST reads. No app
+    // writes to Storage; uploads go through the Firebase console or admin credentials, which
+    // also bypass the rules.
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
