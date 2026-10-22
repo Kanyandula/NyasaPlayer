@@ -101,7 +101,7 @@ rounded:
 spacing:
   margin-screen: 48px
   system-bar-height: 80px
-  nav-rail-width: 176px      # was 80 with the label under the icon — see "Units"
+  nav-rail-width: 80px       # design value. Implemented as 176dp, label beside the icon — see "Units"
   mini-player-height: 88px   # design value. Implementation target is 112dp — see "Units"
   touch-target-min: 76px
   padding-card: 24px
@@ -114,7 +114,8 @@ spacing:
 ## Units — read before using any number here
 
 **The design was drawn in CSS px on a 1920 x 1080 canvas; the implementation is in dp.** The
-frontmatter and the visual specs below keep that canvas's px figures. The sizes that bind live in
+frontmatter and the component specs keep that canvas's px figures; the Layout and Chrome sections
+describe the chrome as built, in dp and sp. The sizes that bind live in
 `automotive/.../ui/theme/AutomotiveDimens.kt`, and where the two differ, the code is authoritative.
 
 Conversion rule, settled in A1:
@@ -327,8 +328,11 @@ Right:  previous and next in 76dp circles of 10% white, play/pause in an 80dp go
 The whole bar is one target that opens the full player.
 ```
 
-**Implementation deviations and decisions.** Numbered across phases — D1–D7 from A2, D8–D18 from
-A3, D19 on from later phases — and cited by number from the code.
+**Implementation deviations and decisions.** Numbered across the PRD's phases (`AAOS_PRD.md` §9) —
+D1–D7 from A2, D8–D18 from A3, D19 on from later phases and tickets — and cited by number from the
+code. Some sit out of sequence beside the decisions they belong with: D78–D80 among A6's search
+decisions (numbered D32–D34 until 2026-10-22, colliding with Favourites' D32–D34; older commits
+and PR descriptions use the old numbers), and D81 after T4's D43–D47.
 
 - **D1 — Home ships Continue Listening, Popular Now and a resume hero; "Your Mixes" and
   "Recommended" are dropped, not renamed.** The backend has no recommender, and a truthful section
@@ -406,7 +410,7 @@ A3, D19 on from later phases — and cited by number from the code.
   `contentState.playlists` is empty in exactly D16's gap; `first()` suspends until the emission
   instead of racing it. The cost is a wrong error offline rather than a hang.
 - **D18 — Library's playlist cards render the gold placeholder, not the first resolved track's
-  artwork.** The spec defines playlist artwork as the first resolved track's `resolvedCoverUrl`
+  artwork.** The A3 design defines playlist artwork as the first resolved track's `resolvedCoverUrl`
   (same derivation `deriveFavoriteArtists()` uses for artist avatars), and `CarPlaylistScreen`
   already shows it once a playlist is opened — so the same playlist reads as gold-placeholder on
   Library and real artwork one tap later, visible inconsistency within one journey. Accepted
@@ -540,9 +544,6 @@ A3, D19 on from later phases — and cited by number from the code.
 - **D80 — Recent searches are session-only in the automotive search ViewModel.** The PRD asks for
   recent searches but not durable history. Persisting query history adds privacy/storage questions
   that are not needed to make screen 5 useful; losing recents on process death is acceptable.
-
-  D78–D80 were numbered D32–D34 until 2026-10-22, colliding with Favourites' D32–D34 above; older
-  commits and PR descriptions use the old numbers.
 - **D35 — Search leaves `AutomotiveContentViewModel` instead of adding another suppression.** A4's
   D23 recorded that the class already owns too many unrelated domains. A6 depends only on
   `SongRepository.searchSongs()`, so a small `AutomotiveSearchViewModel` is the cleaner boundary.
@@ -572,8 +573,8 @@ A3, D19 on from later phases — and cited by number from the code.
   the field — under `NO_KEYBOARD` it would be the silent no-op FR-2.6 prohibits. The submit CTA
   is gated the same way: a query typed while parked survives in state, so without the gate a
   moving vehicle would show a Search button offering to run terms the driver can no longer read.
-- **D40 — Opening search does not auto-focus the field.** The A6 spec's manual checklist expects
-  the keyboard on open. Auto-focusing raises the IME over `Recent searches` and `Browse by`, the
+- **D40 — Opening search does not auto-focus the field.** A6's manual checklist expected the
+  keyboard on open. Auto-focusing raises the IME over `Recent searches` and `Browse by`, the
   two fastest paths out of the sheet, on every press of a control labelled Search — and it would
   make the `Songs` shortcut, whose entire job is focusing the field, meaningless. The field
   focuses on tap or through `Songs`. Recorded as a deliberate deviation from the checklist
@@ -617,7 +618,7 @@ A3, D19 on from later phases — and cited by number from the code.
   catalogue.
 - **D45 — Artist search matches names only, not the genre column.** `ArtistEntity.genres` is a
   JSON-encoded list, so matching it means a LIKE over serialized text that also hits punctuation
-  and ids. The spec allowed genre matching only if it could be done without that, and it cannot.
+  and ids. T4 allowed genre matching only if it could be done without that, and it cannot.
 - **D46 — A catalogue artist is a different destination from the liked-songs artist.**
   `CarDestination.CatalogArtist` loads artist metadata plus every catalogue track by that artist,
   and renders through the same body as album and playlist detail — which has no like affordance.
@@ -670,10 +671,11 @@ A3, D19 on from later phases — and cited by number from the code.
   behind an interface is what made the auth gate testable, without adding Mockito or MockK. The
   mobile app keeps injecting the concrete manager; Hilt binds both.
 - **D52 — An explicit sign-in owns entry into the shell until its own success path finishes, and
-  finishes by applying whatever the listener last reported.** Firebase reports the session the moment credentials are accepted, which is before the
-  profile write. Entering the shell on that emission would drop the driver into a launcher whose
-  profile does not exist yet and strand the loading state it never left, so authenticated emissions
-  are ignored for UI entry while a sign-in is in flight. Unauthenticated emissions are always
+  finishes by applying whatever the listener last reported.** Firebase reports the session the
+  moment credentials are accepted, which is before the profile write. Entering the shell on that
+  emission would drop the driver into a launcher whose profile does not exist yet and strand the
+  loading state it never left, so authenticated emissions are ignored for UI entry while a sign-in
+  is in flight. Unauthenticated emissions are always
   honoured — those are revocations, the sign-in they interrupt is already doomed, and deferring
   them leaves the driver watching a spinner until some credential call times out. Catalogue sync
   is deliberately not deferred either: the catalogue is not user-scoped.
@@ -788,8 +790,8 @@ A3, D19 on from later phases — and cited by number from the code.
   at all — no Media3 command primitive appears above `:core:playback`.
 
   It is a class rather than more methods on the collector because the collector has ten functions
-  against detekt's `thresholdInClasses: 16`, and this project does not answer a threshold with a
-  suppression (D23). The constraint produced the better shape: a transport is constructible in a
+  against detekt's `thresholdInClasses: 16`, and another suppression would add to the debt D23
+  records. The constraint produced the better shape: a transport is constructible in a
   unit test from `{ null }`, with no collector, no `MediaController` and no Robolectric — which is
   how the null-controller branch got its first automated coverage after being the cause of T11.
 
@@ -801,8 +803,10 @@ A3, D19 on from later phases — and cited by number from the code.
 
   It stays a `Boolean` rather than a `TransportResult` sealed type. "Dispatched" versus "ignored"
   only matters where optimistic state is written, and the operations that write it (`setQueue`,
-  `shufflePlay`) have no guard that can ignore; the ones where `true` can mean "ignored" have no
-  caller that reads the value. **The trigger to introduce the type:** the first caller that must
+  `shufflePlay`) have no guard that can ignore. Of the ones where `true` can mean "ignored", only
+  `skipNext` has a reader — `skipNextAfterError` plays on `true`, and the error overlay offers it
+  only when another track is queued, so the refusal is not reachable there. **The trigger to
+  introduce the type:** the first caller that must
   tell a refusal from a dispatch.
 
   Per-surface differences were decided one at a time rather than merged: mobile keeps its offline and
@@ -912,9 +916,9 @@ A3, D19 on from later phases — and cited by number from the code.
   a null answer it asks for the toggle and lets that fail, or the play button would be the one
   control on either surface that gives up instead of recovering.
 
-  The car cannot show the original failure: backing out of `AutomotiveActivity` does not finish it
-  on the AAOS emulator image, so `onCleared()` never runs there (checked against the pre-fix build,
-  which kept playing). `SharedControllerFutureTest` is the evidence; a car pass is a regression check.
+  The car cannot show the original failure — backing out does not finish `AutomotiveActivity` on the
+  emulator image (`AAOS_DRIVING_STATE_TESTING.md` → Emulator traps) — so `SharedControllerFutureTest`
+  is the evidence and a car pass is a regression check.
 
 - **D66 — A profile is a Firebase account, not one of the platform's car users.** The contract's
   screen 20 says "switch profile" and AAOS has two candidate meanings. Switching the vehicle's user
@@ -1043,7 +1047,7 @@ rule: a one-off button is how a 76dp target or contrast rule regresses.
 The inventory — what exists, what each is for, and what was designed but not built — is
 `AAOS_SCREEN_CONTRACT.md` §Shared Component Inventory. The visual specs:
 
-- **Primary CTA:** gold `#C9A84C` fill, `#0A0A0C` text, 20sp weight 600, fully rounded, 76dp tall.
+- **Primary CTA:** gold `#C9A84C` fill, `#0A0A0C` text, 20px weight 600, fully rounded, 76px tall.
 - **Secondary button:** transparent fill, 1px `rgba(255,255,255,0.12)` border, white text, 76px tall.
 - **Content card:** 20px radius, `#181824` fill, 1px `rgba(255,255,255,0.06)` border. On focus,
   the border becomes gold. Any lift or scale transition is parked-only.
@@ -1064,7 +1068,7 @@ The minimum is **76 x 76dp** on the smallest side (`CarTouchTargetSize`), and
 `CarTouchTargetMeasurementTest` measures every interactive node in `CarUiCases.kt`'s cases against
 it. The mechanism is `Modifier.carTouchTarget()` (`CarPrimitives.kt`) where the target is a floor,
 or `Modifier.size(CarTouchTargetSize)` for an exact box; either way the icon keeps its visual size
-inside the target. Do not shrink a control by removing them.
+inside the target. Do not shrink a control by taking its target away.
 
 Three changes were structural rather than padding:
 

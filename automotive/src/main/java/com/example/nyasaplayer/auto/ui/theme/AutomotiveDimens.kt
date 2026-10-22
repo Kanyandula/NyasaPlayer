@@ -11,8 +11,7 @@ val CarTouchTargetSize = 76.dp
 // Standard album art / avatar thumbnail used in lists
 val CarListArtSize = 80.dp
 
-// Default CarContentCard width and art size (album/playlist/genre/artist tiles), and the
-// footprint LibrarySkeleton reserves to match
+// Default CarContentCard width and art size, and the footprint LibrarySkeleton reserves to match.
 val CarContentCardSize = 130.dp
 
 val CarCardCornerRadius = 20.dp

@@ -165,8 +165,7 @@ parked sign-in/setup flows.
 
 Both surfaces hold one: `PlayerViewModel` polls position at 250ms, `AutomotivePlayerViewModel` at
 500ms. Restore policy (`aaos-DESIGN.md` D61), transport (D62, D63) and reconnection (D65) live in
-`:core:playback` behind it, so **a change under `:core:playback` is a change to both surfaces** —
-verify both, or name the one left out.
+`:core:playback` behind it, which is why a change there is a change to both surfaces (D61).
 
 ---
 

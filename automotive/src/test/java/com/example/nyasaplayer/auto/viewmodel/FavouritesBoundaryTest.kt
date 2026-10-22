@@ -472,7 +472,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
      * Row #6, raised by qa from a surviving mutation, not by red.
      *
      * `reloadUserContent()` clears `heldLikedSongs`. Deleting that line left every other test green,
-     * so nothing defended it — the same shape as the A3 guard that was removed unnoticed.
+     * so nothing defended it.
      *
      * It is load-bearing: the hold survives a user switch otherwise. A is on Favourites when an
      * emission is held; the account switches; B's own liked songs arrive and publish normally
@@ -505,7 +505,7 @@ class FavouritesBoundaryTest : FavouritesTestCase() {
     }
 
     /**
-     * Row #5. `reloadUserContent()`'s same-user guard only protects the same-user case. A null
+     * Row #5. `reloadUserContent()`'s guard only protects the same-user case. A null
      * `currentUserId` is not equal to the old one, so it falls through, cancels all three
      * user-scoped collectors and clears their state — and then the three restarts each hit
      * their own `?: return` and no-op. Nothing recovers it short of process death.

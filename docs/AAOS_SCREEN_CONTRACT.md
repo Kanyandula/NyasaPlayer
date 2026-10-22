@@ -143,17 +143,17 @@ interaction and accessibility treatment.
 - Every parked-only CTA has one of two behaviors while driving: hidden when not needed, or
   visible disabled with an explanation. Silent no-ops are prohibited.
 
-## Phase Acceptance Additions
+## Acceptance Additions
 
-Each phase spec must list:
+Any change that adds or reworks a launcher screen must state, in its PR:
 
-- Screens delivered in that phase.
+- Screens delivered or changed.
 - Shared components created or evolved.
 - CTAs and driving-mode behavior for each screen.
 - Loading, empty, error and offline states.
 - Motion used while parked and what freezes while driving.
-- Automated checks or manual screenshot/emulator checks used before marking the phase complete.
+- Automated checks or manual screenshot/emulator checks used before calling it done.
 
-If a screen cannot be completed because data is missing, the phase must either wire the existing
+If a screen cannot be completed because data is missing, the change must either wire the existing
 repository/ViewModel source or explicitly record the missing data as a new blocker. Do not ship
 static placeholder data in production screens.

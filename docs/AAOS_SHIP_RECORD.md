@@ -3,6 +3,9 @@
 What `docs/AAOS_PRD.md` §12 asks for, and what is true of `main` on the date below. One line per
 criterion, each pointing at the evidence rather than restating it.
 
+The tickets and verification records this cites were removed from the tree on 2026-10-22; open
+items are lines in `docs/BACKLOG.md`, and every file stays readable in git at `48e1442`.
+
 - **Date:** 2026-09-16
 - **Commit:** `4b2b882` — A9 (#67) on top of MG-2 (#66) and Exit (#63)
 - **Gate run today:** `./gradlew :automotive:assembleOemDebug :automotive:assembleOemRelease
@@ -48,9 +51,6 @@ descriptor declares `<uses name="media" />`, and `playstore` ships no app activi
   `Pixel_9_Pro_Fold_API_35`. Mobile still owes T3's D55 index fix and T7's skeletons, which that
   sitting did not reach. Two new mobile findings went to `docs/BACKLOG.md`, neither driver-facing.
 - **T18 and T19**, deferred past ship by the §12 exception, and parked in `docs/BACKLOG.md`.
-
-Ticket files (`docs/tickets/`) other than T37 were removed on 2026-10-22; open items are lines in
-`docs/BACKLOG.md`, and every ticket stays readable in git at `48e1442`.
 - **The `HR-*` host-render smoke tests** (§8.4) are not part of this release: they run before a Play
   submission decision, which §3.2 makes a later business call.
 - Everything else outstanding is one line each in `docs/BACKLOG.md`.

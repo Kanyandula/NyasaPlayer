@@ -3,7 +3,7 @@
 `docs/AAOS_PRD.md` is finished as written before anything here is picked up (owner, 2026-09-15).
 One line per item. An item becomes a `docs/tickets/` entry only when it is picked up, or if it turns
 out to be a bug a driver or user would hit, or a safety gap. Ticket numbers below are the ones the
-items were filed under; their files are in git history.
+items were filed under; their files are readable in git with `git show 48e1442:docs/tickets/<file>`.
 
 ## Filed, parked
 
@@ -25,8 +25,8 @@ items were filed under; their files are in git history.
   airplane mode, and record what the Snackbar host does — a failed write with no Snackbar is the
   defect either way.
 - **T34** — split `AutomotiveContentViewModel`, past detekt's 16 in-class threshold and held open by
-  the file-level suppression D23 says this project does not use. Split along downloads; done when
-  the `TooManyFunctions` suppression can be deleted.
+  the file-level suppression D23 recorded as debt. Split along downloads; done when the
+  `TooManyFunctions` suppression can be deleted.
 - **T35** — four owed device checks, none a suspected bug: on mobile, T3's D55 index fix and T7's
   skeletons; on the car, T13's `skipNext` repeat-all wrap and a driving-state pass after T13/T14.
   The phone sitting of 2026-09-19 cleared five others (T10, T13, T14, T25, T29) and not these.
@@ -36,8 +36,8 @@ items were filed under; their files are in git history.
   `ControllerConnectionTest`, 2 in `PlaybackStatePersistenceTest`, 1 in `SharedControllerFutureTest`.
   No weakness shown, none ruled out. Method: `docs/CODING_GUIDELINES.md` → Testing.
 - **T37** — PRD §12 criterion 1 says the screens "match `docs/aaos-DESIGN.md`"; only three floors
-  were ever measured, so there is **no evidence either way**. 10 live findings, 7 checked against
-  the source and 3 not; nothing in it is a priority anyone set
+  were ever measured, so there is **no evidence either way**. Each finding says whether it was
+  checked against the source; nothing in it is a priority anyone set
   (`docs/tickets/T37-design-conformance-never-measured.md`).
 
 ## Known, not fixed
@@ -69,17 +69,16 @@ items were filed under; their files are in git history.
   `CarGradientOrange` is used.
 - `SongDownloadManager.cancelDownload` has no caller on either surface.
 - `CarSystemBar`'s disabled-control branch is unreachable: every caller passes a click handler.
-- Mobile Home's notifications button does nothing (`HomeScreen.kt`, `onClick = { }`).
+- Mobile Home's notifications button does nothing (`HomeScreen.kt`, `onClick = { /* notifications */ }`).
 - `:app` may not need `media3-exoplayer` or `media3-ui` — it imports neither. Unverified without a
   build.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
 - The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:308`), not as a modal over the queue.
 - Six resolution sites still read the download index without awaiting it — the `resolveLocalUri`
   calls in `playSong` (two) and `shufflePlay` (one) of both `PlayerViewModel` and
-  `AutomotivePlayerViewModel`.
-  T32 gave the two suspend paths an await and left these: they are non-suspend, and a tap is far
-  slower than the load. If one ever lost the race the user would see "no connection" on a downloaded
-  song.
+  `AutomotivePlayerViewModel`. T32 gave the two suspend paths an await and left these: they are
+  non-suspend, and a tap is far slower than the load. If one ever lost the race the user would see
+  "no connection" on a downloaded song.
 - `onControllerLost`'s single-attempt guard (`compareAndSet`) is untested on both sides, and
   untestable in the current harness: `ControllerConnection.reconnect()` resolves inside the first
   command, so no second command can arrive mid-rebuild. Two tests claimed to cover it and did not
@@ -98,10 +97,10 @@ items were filed under; their files are in git history.
   A NOTICE file is the cheap fix if this ever matters for distribution.
 - The measurement harness models ~133dp more vertical room than a real head unit.
   `InContentSlot` (`CarUiCases.kt`) subtracts the app's own chrome — nav rail, system bar,
-  mini-player, margins — leaving 480dp at 1024x768, but the device also loses the OS status bar
-  and the climate bar and measured ~347dp. Two card-clipping defects reached a device through a
-  green suite because of it, and `the first content card ... drawn whole` still passes on the
-  broken build (mutation-checked). Teaching `ContentSlot` the OS chrome would re-baseline all 120
+  mini-player, margins — but not the OS status and climate bars a device also loses: at 1024x768
+  that left 480dp in the harness against ~347dp measured on the device. Two card-clipping defects
+  reached a device through a green suite because of it, and `the first content card ... drawn
+  whole` still passes on the broken build (mutation-checked). Teaching `ContentSlot` the OS chrome would re-baseline all 120
   cases, so it is its own piece of work. The full player has the same gap outside the slot: at the
   800dp canvas the Up Next row passed while a 628dp AVD window clipped it off. #103 pins the
   player cases to 628dp; setting the whole canvas to h628dp also squeezes the loading skeletons on

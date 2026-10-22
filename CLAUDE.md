@@ -122,6 +122,9 @@ AAOS rendering — two surfaces, both live:
   `docs/AAOS_SCREEN_CONTRACT.md` (screens and shared components), `docs/AAOS_COMPLIANCE.md`
   (gates and Play policy), `docs/aaos-DESIGN.md` (visual design and the numbered decisions, Dn).
   The superseded 2026-04-23 "template only" decision is `docs/AAOS_ARCHITECTURE.md` §6.
+- `Tn` in comments and docs names a ticket. Ticket files other than T37 were removed on 2026-10-22;
+  open ones are lines in `docs/BACKLOG.md`, and all stay readable with
+  `git show 48e1442:docs/tickets/<file>` (verification records likewise, under `docs/`).
 - **A change under `:core:playback` is a change to both surfaces.** Verify mobile and car, or say
   which one was left out and why.
 
@@ -181,9 +184,8 @@ screen under `automotive/src/main/java/.../ui/`:
   bars are taken. It is not the 1024x768 `AAOS_AOSP_33_userdebug` AVD used for driving state, and
   it is not the 1920x1080 CSS-px canvas `docs/aaos-DESIGN.md` is authored on — that document's
   §Units gives the conversion rule, and anything taken from it needs converting first.
-- **Size from the window, not from a constant.** A layout tuned to one head unit's width leaves the
-  rest as dead margin. The full player derives its art from `min(windowHeight - padding, width/3)`
-  and lets its column take what is left up to a cap; copy that shape rather than a fixed dp pair.
+- **Size from the window, not from a constant** — the full player's art and column are the pattern
+  to copy (`docs/aaos-DESIGN.md` §Units).
 - **Three measurement suites are the contract**, all fed by `CarUiCases.kt`'s cases and run by
   `./gradlew :automotive:testOemDebugUnitTest`: `CarTouchTargetMeasurementTest` (>=76dp),
   `CarTextSizeMeasurementTest` (>=14sp, >=18sp for a control's own label) and

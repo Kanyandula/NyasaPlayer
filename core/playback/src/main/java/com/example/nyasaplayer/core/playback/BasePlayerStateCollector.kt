@@ -61,10 +61,11 @@ abstract class BasePlayerStateCollector(
     protected open fun onPlayerUnavailable() {}
 
     /**
-     * A command found a controller that was there but **disconnected** — the state T16 closed on
-     * the grounds that nothing known produces it in a live process.
+     * A command found a controller that was there but **disconnected** — the state the
+     * dead-controller investigation (T16) closed on the grounds that nothing known produces it in a
+     * live process.
      *
-     * A `disconnected` report reopens that investigation (docs/CRASH_REPORTING.md, Non-fatals), and
+     * A `disconnected` report reopens it (docs/CRASH_REPORTING.md, Non-fatals; D65), and
      * the log line alone only exists in the logcat of a plugged-in device. This is the tripwire that
      * carries it off the device (T27): the surfaces override it and record a non-fatal. A `null`
      * controller is ordinary and does not fire this.
@@ -106,7 +107,7 @@ abstract class BasePlayerStateCollector(
      */
     private fun onControllerLost() {
         if (!reconnecting.compareAndSet(false, true)) return
-        // T16 tripwire: `disconnected` here reopens the investigation (CRASH_REPORTING.md); `null` is expected.
+        // T16 tripwire: `disconnected` here reopens the dead-controller investigation; `null` is expected.
         val foundDisconnected = controller != null
         val state = if (foundDisconnected) "disconnected" else "null"
         Log.w(TAG, "Command found no usable controller ($state); rebuilding")

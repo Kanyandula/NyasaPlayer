@@ -67,10 +67,9 @@ fun CarModalScrim(
  * dismissing the modal underneath the driver's finger. A card with no guard at all does leak that
  * way — measured, not assumed.
  *
- * Prefer this to `clickable(enabled = false)`, which blocks the tap just as effectively; the reason
- * is semantics, not dismissal. A disabled clickable
- * publishes an interactive-but-disabled node to accessibility services, announcing a control that
- * was never there (FR-2.6); `detectTapGestures` publishes nothing.
+ * Prefer this to `clickable(enabled = false)`: both block the tap, but a disabled clickable publishes
+ * an interactive-but-disabled node to accessibility services, announcing a control that was never
+ * there (FR-2.6); `detectTapGestures` publishes nothing.
  *
  * The restriction dialog deliberately does not use this: it is a fixed 780dp wide with its own
  * corner radius and padding.

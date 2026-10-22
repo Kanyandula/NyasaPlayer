@@ -126,7 +126,7 @@ See `docs/AAOS_PRD.md` §3.3.
 - **Login Screen**: Email/password fields, "Forgot password?" link, gradient "Sign In" button, Google Sign-In via Credential Manager API, "OR" divider, navigation to Sign Up
 - **Sign Up Screen**: Registration with email/password, navigation back to Login
 - **AuthRepository**: `currentUser`, `currentUserId`, `isAuthenticated`, `authSession` (a `Flow<AuthSession>`), `signInWithEmail()`, `signUpWithEmail()`, `signInWithCredential()`, `sendPasswordResetEmail()`, `signOut()`
-- **Navigation**: Proper `popUpTo(inclusive = true)` prevents back-navigating to splash/login after auth
+- **Navigation**: Proper `popUpTo(inclusive = true)` prevents back-navigating to login after auth
 
 ### Home Screen (HomeScreen)
 - Header with profile avatar placeholder, greeting ("Welcome back"), notification bell icon

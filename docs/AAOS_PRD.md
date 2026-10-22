@@ -228,8 +228,9 @@ from a row, the row names the `aaos-DESIGN.md` decision (Dn) that records why.
 
 **This table is the traceability matrix.** Every screen names its entry point, its primary
 actions, the states it must handle, and what it does while driving. A screen is not complete
-until every column is satisfied. Per-screen acceptance criteria live in that phase's spec;
-this table is what those specs are written against, so nothing is silently dropped.
+until every column is satisfied. Per-screen acceptance criteria lived in each phase's spec (in git
+history since 2026-10-22); this table is what they were written against, so nothing was silently
+dropped.
 
 Data sources are existing repository components: `AutomotiveContentViewModel` (catalogue,
 liked songs, search), `AutomotivePlayerViewModel` (playback, queue), `AutomotiveAuthViewModel`
@@ -464,7 +465,7 @@ it keeps the app visually coherent at every commit rather than half-purple for f
 |---|---|---|---|
 | ~~Q1~~ | ~~Can the emulator be put into a driving state, and how?~~ **Resolved 2026-08-08: yes, and it is scriptable — but only on a `userdebug` image.** Recipe and the AVD comparison are in `docs/AAOS_DRIVING_STATE_TESTING.md`. | — | Closed |
 | ~~Q2~~ | ~~How does text entry work on a head unit — on-screen keyboard when parked, voice-only when driving? The 20 screens do not solve this; the prototype only draws a disabled field.~~ **Resolved 2026-08-20:** A6 uses the platform/system IME when `UX_RESTRICTIONS_NO_KEYBOARD` is absent and replaces editing with a system/Assistant voice-search prompt when it is present. The app draws no custom keyboard and records no audio. A6 shipped song-only submitted results; T4 added album, artist and playlist result cards to the launcher, while the media-session path stays song-only (D43-D47). | — | Closed |
-| Q3 | Is 15px acceptable for secondary text at arm's length, or should the floor rise? | Device testing | Type scale across all phases |
+| Q3 | Is 14sp (the smallest text; artist names are 15sp) acceptable at arm's length, or should the floor rise? | Device testing | Type scale across all phases |
 | ~~Q4~~ | ~~Does `AAOS_UI_REDESIGN_PLAN.md` get a superseded banner, or get deleted?~~ **Resolved 2026-08-02: bannered, not deleted. Deleted 2026-10-22**, once its load-bearing parts lived elsewhere: the two-surface inventory in the root `CLAUDE.md` → AAOS rendering, the Play policy reasoning in `AAOS_COMPLIANCE.md` and `AAOS_ARCHITECTURE.md` §6. | — | Closed |
 | ~~Q5~~ | ~~Does Downloads belong in the custom launcher, given it is content browse rather than settings?~~ **Resolved 2026-08-03:** yes for the `oem` launcher. The screen is part of A9 (moved from A8 by D71); delete/remove actions remain parked-only, and the `playstore` path can expose offline content through the media browse tree if needed later. | — | Closed |
 

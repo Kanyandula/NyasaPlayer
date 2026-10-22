@@ -193,8 +193,8 @@ class CarTouchTargetMeasurementTest {
      *
      * **What this cannot see.** `InContentSlot` models the app's own chrome only, so the slot is
      * taller than a real head unit's and the 180dp card size that prompted this test still passes
-     * here — mutation-checked, not assumed. Measured in `docs/BACKLOG.md`; what the
-     * test does hold is the invariant, against a card gross enough to overrun even that slot.
+     * here — mutation-checked, not assumed. Measured in `docs/BACKLOG.md`; what the test does hold
+     * is the invariant, against a card gross enough to overrun even that slot.
      */
     @Test
     @Config(qualifiers = "w1024dp-h768dp-xhdpi")

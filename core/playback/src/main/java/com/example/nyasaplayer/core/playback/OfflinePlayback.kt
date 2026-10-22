@@ -6,8 +6,7 @@ import com.example.nyasaplayer.core.common.models.Song
  * Can start right now: the network is up, or the file is already on this device.
  *
  * Reads [Song.resolvedAudioUrl], the field `SongMediaItemMapper` streams from. Knows nothing about
- * downloads — a song is local because a caller rewrote its URI to a `file:` one, which both surfaces
- * do.
+ * downloads — a song is local because a caller rewrote its URI to a `file:` one, as both surfaces do.
  */
 fun Song.isPlayableNow(isOnline: Boolean): Boolean =
     isOnline || resolvedAudioUrl.startsWith("file:")

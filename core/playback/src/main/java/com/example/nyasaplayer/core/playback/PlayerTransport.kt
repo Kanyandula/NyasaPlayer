@@ -9,8 +9,8 @@ import com.example.nyasaplayer.core.common.models.Song
 /**
  * Every transport action both surfaces perform, in one place.
  *
- * One place, so the two surfaces cannot drift apart (D61, D62) and a dead controller reports instead
- * of turning every button into a silent no-op (T11, D63).
+ * Shared so the two surfaces cannot drift apart (D61, D62), and so a dead controller reports
+ * instead of turning every button into a silent no-op (T11, D63).
  *
  * **What the `Boolean` means: the controller was reached.** It does *not* mean the operation had an
  * effect. [skipToQueueItem] still ignores an out-of-range index, [removeFromQueue] still ignores the
@@ -152,8 +152,8 @@ class QueueTransport(
  *
  * `internal` because the collector's reads answer with it too (T15).
  *
- * File-level rather than a member, to keep `PlayerTransport` under detekt's 16-function class
- * threshold; a suppression is not how this project answers that (D23).
+ * File-level rather than a member: it keeps `PlayerTransport` under detekt's 16-function class
+ * threshold without a suppression (D23).
  */
 internal fun MediaController?.connectedOrNull(): MediaController? = this?.takeIf { it.isConnected }
 

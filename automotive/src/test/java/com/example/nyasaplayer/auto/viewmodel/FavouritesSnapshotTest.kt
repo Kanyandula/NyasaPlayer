@@ -110,9 +110,10 @@ class FavouritesSnapshotTest : FavouritesTestCase() {
     }
 
     /**
-     * Every other test stayed green with the `?:` in `favourites = state.favourites ?: state.likedSongs`
-     * replaced by a plain `state.likedSongs` — none of them unlikes a second time *after* the live flow has moved,
-     * which is the only way a re-freeze is observable. Without this the never-re-freeze half of
+     * Every other test stayed green with the `?:` in
+     * `favourites = state.favourites ?: state.likedSongs` replaced by a plain `state.likedSongs` —
+     * none of them unlikes a second time *after* the live flow has moved, which is the only way a
+     * re-freeze is observable. Without this the never-re-freeze half of
      * the guard is deletable with no test going red.
      */
     @Test

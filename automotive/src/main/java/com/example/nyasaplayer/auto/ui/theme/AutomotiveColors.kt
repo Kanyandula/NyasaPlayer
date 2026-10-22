@@ -95,8 +95,7 @@ val CarErrorText = Color(0xFFFF8A80)
 val CarAmbientBlue = Color(0x641A3A5C)
 val CarAmbientPurple = Color(0x3C643CB4)
 
-// Content artwork gradients, not brand. Only CarGradientOrange has a caller; the rest are
-// unused (docs/BACKLOG.md).
+// Content artwork gradients, not brand.
 
 // Pink → Dark Red
 val CarGradientPink = Color(0xFFEC4899)

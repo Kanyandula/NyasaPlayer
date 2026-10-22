@@ -47,7 +47,7 @@ private val SubtitleSize = 20.sp
 /**
  * Album detail — screen 11.
  *
- * Download is parked-only, and stays on screen disabled while driving (D12).
+ * Download is parked-only: while driving it stays on screen, disabled (D12).
  */
 @Composable
 @Suppress("LongParameterList")

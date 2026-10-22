@@ -48,8 +48,8 @@ private val RailIconLabelGap = 16.dp
 private val RailPillInset = 8.dp
 private val RailPillRadius = 20.dp
 
-// Shorter than the 88dp row it marks: the row keeps its tap area, and at the full height on a
-// 176dp rail the highlight read as a panel rather than a selection.
+// Shorter than the 88dp row it marks, which keeps the full height as its tap area: a full-height
+// highlight on a 176dp rail reads as a panel, not a selection.
 private val RailPillHeight = 64.dp
 private val RailPillVerticalInset = (RailItemHeight - RailPillHeight) / 2
 

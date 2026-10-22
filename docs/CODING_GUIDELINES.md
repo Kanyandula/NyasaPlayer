@@ -30,8 +30,8 @@ Key points:
 
 The configuration enforces `maxIssues: 0`: any finding not already in `detekt-baseline.xml` fails
 the build. `./gradlew detektBaseline` absorbs every current finding into that file — never run it
-to turn a red build green. This project answers a size threshold by splitting, not by suppressing
-(`aaos-DESIGN.md` D23).
+to turn a red build green. Prefer splitting to suppressing a size threshold: the file-level
+`TooManyFunctions` suppressions that exist are recorded debt (`aaos-DESIGN.md` D23), not precedent.
 
 ### Android Lint
 
