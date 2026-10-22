@@ -66,10 +66,8 @@ private const val SkeletonCardCount = 4
  *
  * Favourites is one card showing the liked count, not a list: it is a shortcut to a rail
  * destination that already renders that list, and two surfaces rendering identical content is a
- * visible bug (A2 D2). Downloads is one card into screen 15, live since A9 — it rendered disabled
- * from A3 so Library would not change shape when it landed (D13). Account chrome is not here:
- * sign-out moved to Settings when
- * A7 built screen 14 (D68), closing D14.
+ * visible bug (D2). Downloads is one card into screen 15, never hidden (D13). Account chrome is
+ * not here: sign-out lives in Settings (D68).
  */
 @Suppress("LongParameterList")
 @Composable
@@ -193,7 +191,7 @@ private fun LibraryRows(
                             title = playlist.name,
                             onClick = { onPlaylistClick(playlist) },
                             subtitle = "${playlist.songIds.size} songs",
-                            // D18 stands: still the gold placeholder, only the glyph on it changes.
+                            // The gold placeholder (D18), with the queue glyph.
                             placeholderIcon = QueueMusicIcon,
                         )
                     }
@@ -247,7 +245,7 @@ private fun LibraryRows(
             }
         }
 
-        // Never omitted, and no longer disabled: A9 gave it a screen (D13).
+        // Always shown (D13).
         item {
             LibraryRow(title = "Downloads") {
                 item {
@@ -289,9 +287,8 @@ private fun LibraryRow(
  * double-counts and Compose coerces the second row short.
  * `BrowseSkeleton` spaces its rows the same way for the same reason.
  *
- * Hand-derived, and unasserted: `libraryCase("loading")` renders at `MeasurementQualifiers`
- * (1280x800), not the 1024x720 this was worked out for, and the suite's clipping check skips
- * non-interactive nodes.
+ * Hand-derived for 1024x720. `CarTouchTargetMeasurementTest`'s skeleton check asserts it, but only
+ * at `MeasurementQualifiers` (1280x800), which is roomier.
  */
 @Composable
 private fun LibrarySkeleton(modifier: Modifier = Modifier) {

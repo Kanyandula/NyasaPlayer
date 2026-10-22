@@ -36,8 +36,7 @@ private val RowLabelSize = 22.sp
 private val RowValueSize = 18.sp
 private val CloseIconSize = 28.dp
 
-// The pairing measured in A3 and shipped on the Library button: the red only ever sits on its
-// own 15% wash, never on CarRaised.
+// The measured pairing: the red only ever sits on its own 15% wash, never on CarRaised.
 private const val SignOutWashAlpha = 0.15f
 
 /**

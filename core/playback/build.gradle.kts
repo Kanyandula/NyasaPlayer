@@ -50,9 +50,9 @@ dependencies {
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-    // T17 spike: stand up a real MediaSession on the JVM so a MediaController can be connected to
+    // Robolectric stands up a real MediaSession on the JVM so a MediaController can be connected to
     // it. MediaController is @DoNotMock with a package-private constructor, so this is the only way
-    // to test anything that talks to one.
+    // to test anything that talks to one (D64).
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.junit)
 }

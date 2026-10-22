@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Applies to** | 20-screen `oem` AAOS launcher |
-| **Status** | Binding implementation contract for A2-A9 |
+| **Applies to** | `oem` AAOS launcher: the 20 designed screens plus screen 21 (T4) |
+| **Status** | Binding for any change to the launcher UI |
 | **Date** | 2026-08-03 |
 | **Primary PRD** | `docs/AAOS_PRD.md` |
 | **Design system** | `docs/aaos-DESIGN.md` |
@@ -19,10 +19,7 @@ If documents conflict, resolve in this order:
 1. `docs/AAOS_COMPLIANCE.md` for AAOS safety and variant compliance.
 2. `docs/AAOS_PRD.md` for product scope and phase acceptance.
 3. This file for per-screen and shared-component implementation detail.
-4. `docs/aaos-DESIGN.md`, `docs/aaos-screens.html`, `docs/aaos-app.html` for visual reference.
-
-The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical input. Their
-72px touch target, 48px system bar and pending-screen status are superseded by checked-in docs.
+4. `docs/aaos-DESIGN.md` for visual reference and the numbered design decisions (Dn).
 
 ## Global Implementation Rules
 
@@ -66,7 +63,7 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | Accent | Gold `#C9A84C` only for active, focus, CTA, progress and play control |
 | Secondary text | `#ACACBC`; do not revert to `#A0A0B0` |
 | Disabled text | `#555568`; disabled controls are nonfunctional |
-| Parked motion | Ambient drift, album-art hue tint, screen cross-fade and rail-pill slide are allowed |
+| Parked motion | Ambient drift, album-art hue tint and rail-pill slide; a screen cross-fade is allowed but not built |
 | Driving motion | Decorative motion freezes; progress/clock/play state continue |
 | Reduced motion | Disable decorative motion when `Settings.Global.ANIMATOR_DURATION_SCALE == 0` |
 
@@ -74,29 +71,42 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 
 | Component | Reuse / build requirement | Required states |
 |---|---|---|
-| `CarSystemBar` / evolved `CarTopBar` | One 80dp shared top bar: wordmark, search, settings, clock/status (the avatar moved to the rail, `aaos-DESIGN.md` D77) | normal, driving-restricted affordance, focus |
-| `CarNavRail` | One 176dp shared rail for Home, Browse, Library, Favourites, with the profile row under them (`aaos-DESIGN.md` D77, D78) | selected, unselected, focused, disabled only if a destination is unavailable |
-| `CarMiniPlayer` | Re-theme existing component; artwork/title is one target; add queue button (removed again, `aaos-DESIGN.md` D74) | playing, paused, buffering, error, no item |
+Grep `auto/ui/components/` before writing a new one: a near-copy of an existing component ships as
+visible drift.
+
+| Component | Reuse / build requirement | Required states |
+|---|---|---|
+| `CarSystemBar` | One 80dp shared top bar: logo and wordmark, search, settings, clock (the profile entry is in the rail, `aaos-DESIGN.md` D82) | normal, focus |
+| `CarNavRail` | One 176dp shared rail for Home, Browse, Library, Favourites, icon beside an 18sp label, with the profile row under the tabs (`aaos-DESIGN.md` D82, D83) | selected, unselected, focused |
+| `CarMiniPlayer` | One target that opens the full player; previous, play/pause, next (`aaos-DESIGN.md` D73–D76) | playing, paused, buffering, error, no item |
 | `CarPillButton` | Shared gold/ghost/destructive-safe button primitive | enabled, focused, disabled, loading |
-| `CarIconButton` | Shared circular/square icon target wrapper | enabled, focused, selected, disabled |
-| `CarChip` | Shared filter / browse-by / segmented chip — built, `CarControls.kt`. A6 browse-by still uses the ghost `CarPillButton` (D39) | selected, unselected, focused, disabled |
-| `CarContentCard` | Album, playlist, mix, genre, recommendation card | normal, focused, playing, unavailable |
+| `CarChip` | Filter / segmented chip, built in `CarControls.kt` but with no production caller: browse-by uses the ghost `CarPillButton` (D39) and Browse has no filter chips (D11) | selected, unselected, focused, disabled |
+| `CarSectionHeader` | Section title above a row or list (`CarControls.kt`) | — |
+| `CarContentCard` | Album, playlist, genre and library card | normal, focused, playing, unavailable |
 | `CarTrackRow` | Track list row for songs, queue, albums, playlists, search | normal, focused, current, playing, disabled action |
-| `CarPlaybackControls` | Full-player control cluster | play, pause, loading, shuffle on/off, repeat mode |
 | `CarRestrictionDialog` | Shared driving restriction explanation | entry refused, evicted after drive transition |
+| `CarModalScrim` / `CarModalCard` | The backdrop and card every modal shares (`CarModal.kt`) | — |
+| `CarSignOutConfirmation` | Sign-out confirmation, shown by the shell (D68) | — |
+| `CarSheetHeader` / `CarInfoRow` / `CarSignOutRow` | Settings and Profile sheet chrome (`CarSheetChrome.kt`) | — |
 | `CarEmptyState` | Shared empty/offline/no-results layout with optional CTA | no CTA, one CTA, two CTA |
-| `CarRowSkeleton` | Shared placeholders (named `CarLoadingSkeleton` in earlier drafts) | static, parked-only shimmer if ever added |
+| `CarRowSkeleton` | Shared row-list placeholder; `rows` defaults to four | static, parked-only shimmer if ever added |
+| `CarErrorOverlay` | Playback error overlay (screen 19) | recoverable, fatal |
 | `CarDownloadRow` | Downloads list row | downloaded, in-progress, failed, queued, delete-disabled |
-| `CarParkedBadge` | Small parked-only indicator | visible on parked-only flows, absent elsewhere |
+| `CarDrivingHelperChip` | "Why is this locked" chip for the queue and Downloads; opaque fill | driving |
+| `CarAmbientBackground` | App-root ambient layer, hue from the artwork (D77) | parked drift, driving freeze |
+
+Designed but not built: `CarIconButton`, `CarPlaybackControls` (the full player and mini-player
+each draw their own transport) and `CarParkedBadge` (no parked-only flow carries a badge, D69).
+Tracked by T37.
 
 ## Screen Contract
 
 | # | Screen | UI and CTAs | Required states | Driving behavior | Phase |
 |---|---|---|---|---|---|
-| 1 | `CarAuthScreen` | Gold wordmark, parked badge, Google sign-in, retry on failure (the button returns beneath the error) | loading, error, signed-out | Refused by `NO_SETUP`; no keyboard while driving | A2 · phone and email sign-in deferred, D70 |
+| 1 | `CarAuthScreen` | Logo, wordmark, Google sign-in, retry on failure (the button returns beneath the error) | loading, error, signed-out | Refused by `NO_SETUP`; no keyboard while driving | A7 · phone and email sign-in deferred, D70 |
 | 2 | `CarPinOptInScreen` | PIN dots, numeric keypad, Enable PIN, Not now, back | partial entry, validation error, loading | Refused by `NO_SETUP` | Deferred — no PIN affordance ships until its storage and lockout questions are answered (D67) |
-| 3 | `CarHomeScreen` | Continue Listening cards, Your Mixes, Recommended, Play card/item | loading, empty, error, offline banner | Allowed; lists truncated by item cap | A2 |
-| 4 | `CarBrowseScreen` | Filter chips, genre/mood/category cards, Play/open category | loading, empty, error | Allowed at root; deep drill-down refused by depth cap | A3 |
+| 3 | `CarHomeScreen` | Resume hero, Continue Listening, Popular Now — no Mixes or Recommended (D1) | loading, empty, error, offline banner | Allowed; lists truncated by item cap | A2 |
+| 4 | `CarBrowseScreen` | Genre cards that shuffle-play the genre (D9); no filter chips (D11) | loading, empty, error | Allowed at root; deep drill-down refused by depth cap | A3 |
 | 5 | `CarSearchScreen` | Search field when `NO_KEYBOARD` is absent, system voice prompt, recent searches, browse-by shortcuts, clear query | idle, recent-empty, no query | Typed entry refused; system/Assistant voice offered | A6 |
 | 6 | `CarSearchResultsScreen` | Top result of any type, then Songs rows and Albums/Artists/Playlists card sections in fixed order, clear/back | loading, no results, error | Results view allowed; active text entry refused; one cumulative cap across every section | A6 · T4 |
 | 7 | `CarLibraryScreen` | Category rows for Playlists, Albums, Artists, Favourites, Downloads; recently played | loading, empty, error | Allowed at root; drill-down refused past cap | A3 |
@@ -104,7 +114,7 @@ The Desktop design notes in `/Users/admin/Desktop/AAOS-Design` are historical in
 | 9 | `CarArtistLikedSongsScreen` | Artist hero, Play all, track rows, unlike | loading, empty, error | Refused when beyond depth cap | A4 |
 | 10 | `CarPlaylistScreen` | Playlist hero, Play, Shuffle, track rows, save/offline if supported | loading, empty, error | Refused when beyond depth cap | A3 |
 | 11 | `CarAlbumScreen` | Album hero, Play, Download, track rows | loading, empty, error, download progress | Refused when beyond depth cap; download mutation parked-only | A3 |
-| 12 | `CarFullPlayerScreen` | Large artwork, title/artist, play/pause, prev/next, seek, like, shuffle, repeat, queue | buffering, paused, playing, error overlay | Allowed; playback control remains available | A5 |
+| 12 | `CarFullPlayerScreen` | Artwork sized from the window, source label, title/artist, seek, shuffle/prev/play/next/repeat, like, Up Next card (the way into the queue) | buffering, paused, playing, error overlay | Allowed; playback control remains available | A5 |
 | 13 | `CarQueueScreen` | Up Next, skip-to row tap, close, clear, remove controls while parked | empty, current track, playing indicator | View/skip-to allowed; remove/clear refused, list truncated | A5 |
 | 14 | `CarSettingsScreen` | Account, sign out, about — no parked badge and no audio quality (D69, D70) | account, no display name | Refused by `NO_SETUP`, as a sheet rather than a destination (D69) | A7 |
 | 15 | `CarDownloadsScreen` | Downloaded content rows, storage bar, remove one, remove all, retry failed | empty, in-progress, failed, offline | View allowed; delete/remove refused | A9 |
@@ -133,17 +143,17 @@ interaction and accessibility treatment.
 - Every parked-only CTA has one of two behaviors while driving: hidden when not needed, or
   visible disabled with an explanation. Silent no-ops are prohibited.
 
-## Phase Acceptance Additions
+## Acceptance Additions
 
-Each phase spec must list:
+Any change that adds or reworks a launcher screen must state, in its PR:
 
-- Screens delivered in that phase.
+- Screens delivered or changed.
 - Shared components created or evolved.
 - CTAs and driving-mode behavior for each screen.
 - Loading, empty, error and offline states.
 - Motion used while parked and what freezes while driving.
-- Automated checks or manual screenshot/emulator checks used before marking the phase complete.
+- Automated checks or manual screenshot/emulator checks used before calling it done.
 
-If a screen cannot be completed because data is missing, the phase must either wire the existing
+If a screen cannot be completed because data is missing, the change must either wire the existing
 repository/ViewModel source or explicitly record the missing data as a new blocker. Do not ship
 static placeholder data in production screens.

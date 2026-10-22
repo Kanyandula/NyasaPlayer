@@ -45,7 +45,7 @@ private val SubtitleSize = 20.sp
  * Screen 9 — an artist's liked songs, reached by drilling down from Library.
  *
  * Unlike screen 8, this list is a live filter over the caller's liked songs, not a freeze:
- * unliking a row here removes it on the next emission (spec D25). [pendingUnlikes] still drives
+ * unliking a row here removes it on the next emission (D25). [pendingUnlikes] still drives
  * the heart, so the row the driver actually hit hollows immediately — otherwise a mis-tap on the
  * heart at the row's edge unlikes a song with no feedback beyond the row disappearing.
  */

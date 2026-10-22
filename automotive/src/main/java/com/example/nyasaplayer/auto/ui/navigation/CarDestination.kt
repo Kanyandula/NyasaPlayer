@@ -19,7 +19,7 @@ sealed interface CarDestination : java.io.Serializable {
      *
      * Separate from [Artist], which is the driver's liked songs by that artist: it renders
      * hearts and drops rows live on unlike, which is not what an arbitrary catalogue artist is
-     * (spec 3.4). No name is carried because the metadata read is Room-backed and answers
+     * (D46). No name is carried because the metadata read is Room-backed and answers
      * immediately, including after process death.
      */
     data class CatalogArtist(val artistId: String) : CarDestination

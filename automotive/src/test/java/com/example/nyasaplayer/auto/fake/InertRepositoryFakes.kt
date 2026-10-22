@@ -109,9 +109,8 @@ class FakeUserRepository : UserRepository {
 }
 
 /**
- * [currentUserId] is the only member any A3 test reads. [currentUser] stays null because
- * `FirebaseUser` is an abstract SDK class with no constructible form — the reason
- * `currentUserId` was added to the interface in Task 2.
+ * [currentUser] stays null because `FirebaseUser` is an abstract SDK class with no constructible
+ * form — the reason the interface has `currentUserId` at all (D54).
  *
  * [currentUserId] is a `var` so a test can switch accounts mid-run and drive
  * `reloadUserContent()`'s clearing path — the interface declares it a `val`, which a `var`

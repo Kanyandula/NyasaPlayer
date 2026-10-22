@@ -83,8 +83,7 @@ data class CarDetailDownload(
 )
 
 /**
- * The Download control for [tracks] — screen 11's third primary action, unblocked once the
- * downloader moved into a shared module (D12).
+ * The Download control for [tracks] — screen 11's third primary action (D12).
  *
  * Aggregate, not per-track: the control acts on the whole album, so it reports the whole album.
  * Order matters — an album already downloaded reads "Downloaded" whether or not the car is moving,

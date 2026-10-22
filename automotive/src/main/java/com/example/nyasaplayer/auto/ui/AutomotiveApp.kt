@@ -108,8 +108,8 @@ fun AutomotiveApp(
  * Which of the two worlds the driver is in.
  *
  * Separate from [AutomotiveApp] so a test can render the real branch: the signed-in side needs
- * three Hilt ViewModels, and passing it in means the gate itself is testable without them. Since
- * T2 the state behind it is live, so a session revoked on another device closes the shell here.
+ * three Hilt ViewModels, and passing it in means the gate itself is testable without them. The
+ * state behind it is live (T2), so a session revoked on another device closes the shell here.
  */
 @Composable
 internal fun AuthGate(
@@ -188,7 +188,7 @@ private fun AuthenticatedApp(
         confirmSignOut = false
     }
 
-    // The platform's own NO_KEYBOARD answer, not a driving guess (spec D31).
+    // The platform's own NO_KEYBOARD answer, not a driving guess (D31).
     val canType = !playerState.restrictions.noTextEntry
 
     // One tab-selection path for the rail and for the search sheet's browse-by shortcuts, so
@@ -207,7 +207,7 @@ private fun AuthenticatedApp(
         drillDown = destination
     }
 
-    // What the driver can see, capped cumulatively across every section (spec 3.6). Remembered
+    // What the driver can see, capped cumulatively across every section (D81). Remembered
     // for the same reason as rememberVisible: the 500ms position poller hands this composable a
     // new AutomotiveUiState twice a second, and re-capping on each would churn the whole sheet.
     val visibleResults = remember(searchState.results, playerState.restrictions) {
@@ -251,7 +251,7 @@ private fun AuthenticatedApp(
     }
 
     // Symmetric with the detail effect. openFavourites() does not freeze — the freeze happens at
-    // the first unlike (spec D19) — but closeFavourites() must run on leaving, or the next visit
+    // the first unlike (D19) — but closeFavourites() must run on leaving, or the next visit
     // inherits the previous visit's held-back rows.
     LaunchedEffect(currentScreen) {
         if (currentScreen == CarScreen.Favourites) {
@@ -488,9 +488,9 @@ internal fun carUiLocation(
 ): CarUiLocation = CarUiLocation(
     tab = tab,
     overlay = overlay,
-    // Every destination is one step from a tab root (D8). There is no depth 2 in A3.
+    // Every destination is one step from a tab root (D8).
     drillDepth = if (drillDown != null) 1 else 0,
-    // Settings and Profile are live from A7; the gate refuses both under NO_SETUP.
+    // The gate refuses Settings and Profile under NO_SETUP.
     sheet = sheet,
     // Open-but-idle search is browsing, not typing, and stays allowed while driving. Only an
     // active editable field is text entry, which is why this is the ViewModel's explicit flag
@@ -514,7 +514,7 @@ private fun <T> rememberVisible(items: List<T>, restrictions: UxRestrictionState
  * Where a search result card goes.
  *
  * Each type has a different answer — a song plays, the rest open a detail screen — which is the
- * whole reason the result keeps its type down to the tap (spec 3.6). Internal so the routing is
+ * whole reason the result keeps its type down to the tap (D81). Internal so the routing is
  * testable without standing up the Hilt-backed shell.
  */
 internal fun routeSearchResult(
@@ -530,7 +530,7 @@ internal fun routeSearchResult(
             onOpenDetail(CarDestination.Album(result.album.id))
 
         // Not CarDestination.Artist: that one is the driver's liked songs by this artist, which
-        // is not what a catalogue search result means (spec 3.4).
+        // is not what a catalogue search result means (D46).
         is AutomotiveSearchResult.ArtistResult ->
             onOpenDetail(CarDestination.CatalogArtist(result.artist.id))
 
@@ -865,7 +865,7 @@ private fun BrowseShell(
  *
  * Which fields it reads *is* the behaviour: pointing [CarFavouriteMusicScreen] at the catalogue's
  * `isLoading`/`errorMessage` instead of the favourites pair puts a genres failure over screen 17
- * (A4 review row #8). CarFavouritesRouteTest fails when that happens.
+ * (D34). CarFavouritesRouteTest fails when that happens.
  */
 @Suppress("LongParameterList")
 @Composable
@@ -907,8 +907,8 @@ internal fun CarFavouritesRoute(
 /**
  * Binds one screen's freeze contract onto the shared like callback.
  *
- * The flag is the difference between Favourites (freeze, spec D19) and the artist drill-down
- * (live, spec D25), and swapping the two reverts the slice while every unit test stays green —
+ * The flag is the difference between Favourites (freeze, D19) and the artist drill-down
+ * (live, D25), and swapping the two reverts the slice while every unit test stays green —
  * they all call the ViewModel directly. It is a named argument at both call sites for that
  * reason; a Kotlin function type cannot take one at its own invocation.
  */
@@ -1007,7 +1007,7 @@ private fun DetailRoute(
 
 /**
  * The two account sheets: settings from the system bar's gear, profile from the rail's profile
- * row (A7, D77).
+ * row (A7, D82).
  *
  * Together because they are one decision — both are parked-only, both show the same account, and
  * both hand the same sign-out request back to the shell rather than confirming it themselves.

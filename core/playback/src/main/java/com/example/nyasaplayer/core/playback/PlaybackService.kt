@@ -421,7 +421,7 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
-    // ── Player.Listener for auto-advance ──
+    // ── Player.Listener: queue sync, origin, persistence ──
 
     private val playerListener = object : Player.Listener {
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {

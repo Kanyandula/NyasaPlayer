@@ -12,7 +12,7 @@ import com.example.nyasaplayer.auto.ui.components.CarEmptyState
  * Rendered in place by [CarFavouriteMusicScreen] rather than being a navigation destination.
  * Favourites is a tab root at drill depth 0; a destination would sit at depth 1, where
  * `maxContentDepth` can refuse it — blocking a driver from a screen whose only content is
- * "you have nothing yet". See spec D21.
+ * "you have nothing yet". See D21.
  */
 @Composable
 fun CarEmptyFavouritesScreen(

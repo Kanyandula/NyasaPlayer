@@ -55,7 +55,7 @@ private val ControlSpacing = 8.dp
  *
  * Both controls open a sheet: [onSearchClick] the search sheet (A6), [onSettingsClick] settings
  * (A7). The gate refuses settings while the vehicle is moving; this bar does not know that and
- * does not need to. The profile entry moved to the bottom of [CarNavRail] (D77).
+ * does not need to. The profile entry moved to the bottom of [CarNavRail] (D82).
  */
 @Composable
 fun CarSystemBar(
@@ -112,12 +112,12 @@ private fun AppLogo(modifier: Modifier = Modifier) {
 }
 
 /**
- * Search and settings, both live since A7. Profile was the third until it moved to the rail (D77).
+ * Search and settings. The profile entry lives at the bottom of the rail (D82).
  *
- * The disabled path in [SystemBarControl] is kept, not dead: it is how the next control that
- * arrives before its destination announces itself, which is what FR-2.6 asks for.
+ * Every caller passes a click handler, so the disabled path in [SystemBarControl] is unreachable
+ * today; it is how a control that ships before its destination would render (D3, FR-2.6).
  *
- * Wi-fi, bluetooth and battery are deliberately absent — see the A2 spec, D7.
+ * Wi-fi, bluetooth and battery are deliberately absent (D7).
  */
 @Composable
 private fun SystemBarControls(

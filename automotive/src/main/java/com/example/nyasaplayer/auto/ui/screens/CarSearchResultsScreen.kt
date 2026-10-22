@@ -70,7 +70,7 @@ internal const val SearchResultsListTag = "searchResults"
  *
  * [results] is what the driver can actually see: the caller has already applied the cumulative
  * driving cap, so nothing here can render a card the platform disallowed. Taps carry the typed
- * result back out, because each type goes somewhere different (spec 3.6).
+ * result back out, because each type goes somewhere different (D81).
  *
  * Sections keep a fixed order — songs, albums, artists, playlists — so the screen does not
  * reorder itself as different types come back for different queries. Empty ones are omitted.

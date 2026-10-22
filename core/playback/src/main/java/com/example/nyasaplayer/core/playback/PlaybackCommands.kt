@@ -40,8 +40,8 @@ fun Bundle.getQueueOrigin(): QueueOrigin = queueOriginOf(
 /**
  * Hands a [RestoredPlayback] to `PlaybackService`, which applies the queue paused.
  *
- * The returned future carries the service's verdict. The car waits for it before showing anything;
- * mobile discards it and shows the track either way, which T3 left alone as out of its scope.
+ * The returned future carries the service's verdict. `restoreIfIdle` awaits it, so neither surface
+ * shows a session the service refused (D61).
  */
 fun MediaController.sendRestoreState(restored: RestoredPlayback): ListenableFuture<SessionResult> {
     val args = Bundle().apply {

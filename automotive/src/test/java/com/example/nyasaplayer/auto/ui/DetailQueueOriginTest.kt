@@ -5,7 +5,7 @@ import com.example.nyasaplayer.core.playback.QueueOrigin
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** T03: a detail screen plays from the collection it shows, named once it has loaded. */
+/** A detail screen plays from the collection it shows, named once it has loaded. */
 class DetailQueueOriginTest {
 
     @Test

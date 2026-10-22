@@ -2,66 +2,85 @@
 
 `docs/AAOS_PRD.md` is finished as written before anything here is picked up (owner, 2026-09-15).
 One line per item. An item becomes a `docs/tickets/` entry only when it is picked up, or if it turns
-out to be a bug a driver or user would hit, or a safety gap.
+out to be a bug a driver or user would hit, or a safety gap. Ticket numbers below are the ones the
+items were filed under (`docs/CODING_GUIDELINES.md` → References in comments and docs).
 
-## Specced or filed tickets, parked
+## Filed, parked
 
-- **T20** — audio quality preference (`docs/tickets/T20-audio-quality-preference.md`).
-- **T19** — car phone and email sign-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T19-car-auth-phone-and-email.md`).
-- **T18** — car PIN opt-in; deferred past ship, the PRD's §12 exception (`docs/tickets/T18-car-pin-opt-in.md`).
-- **T8** — search draft-query hoist, deferred on measurement (`docs/tickets/T8-automotive-search-draft-query-hoist.md`).
-- **T33** — a like made while Firestore was unreachable may not survive the reconnect; seen once,
-  not reproduced (`docs/tickets/T33-like-across-reconnect.md`).
-- **T34** — split `AutomotiveContentViewModel`; 24 functions against detekt's 16, held open by the
-  file-level suppression D23 says this project does not use
-  (`docs/tickets/T34-split-automotive-content-viewmodel.md`).
-- **T35** — the four owed device checks, collected into one sitting
-  (`docs/tickets/T35-owed-device-checks.md`).
-- **T36** — `MediaBrowseTree`'s 17 tests, never challenged by a mutation that compiled
-  (`docs/tickets/T36-sweep-mediabrowsetree-tests.md`).
+- **T20** — an audio-quality preference (D70). First check whether the catalogue has more than one
+  rendition per song; if not, it is a backend ticket.
+- **T19** — car phone and email sign-in, deferred past ship by the PRD's §12 exception (D70).
+  `AuthRepository` has both methods; a head unit with no SIM should not offer phone sign-in.
+- **T18** — car PIN opt-in, deferred past ship by the PRD's §12 exception (D67). Spec what the PIN
+  protects, where its hash lives and the lockout first — or drop US-3.
+- **T8** — hoisting the search draft query out of the app-root state. The mechanism is real (a
+  keystroke invalidates `AuthenticatedApp`), the cost is not: all 109 composables are skippable and
+  seven keystrokes dropped 0 frames on a healthy emulator (2026-08-21). Reopen if typing lag is
+  reported on a real head unit.
+- **T33** — a like made while Firestore was unreachable may not survive the reconnect; seen once in
+  T13's offline pass, not reproduced. Reproduce by going offline at the Firestore level, not just
+  airplane mode, and record what the Snackbar host does — a failed write with no Snackbar is the
+  defect either way.
+- **T34** — split `AutomotiveContentViewModel`, past detekt's 16 in-class threshold and held open by
+  the file-level suppression D23 recorded as debt. Split along downloads; done when the
+  `TooManyFunctions` suppression can be deleted.
+- **T35** — four owed device checks, none a suspected bug: on mobile, T3's D55 index fix and T7's
+  skeletons; on the car, T13's `skipNext` repeat-all wrap and a driving-state pass after T13/T14.
+- **T36** — 32 of `:core:playback`'s tests went unchallenged by the 2026-09-19 mutation sweep, 17 of
+  them in `MediaBrowseTreeTest` (its `getItem`/`search` mutations did not compile). The full list is
+  `docs/TEST_MUTATION_SWEEP.md` at `48e1442`; method: `docs/CODING_GUIDELINES.md` → Testing.
 - **T37** — PRD §12 criterion 1 says the screens "match `docs/aaos-DESIGN.md`"; only three floors
-  were ever measured, so there is **no evidence either way**. 10 live findings, 8 checked against
-  the source and 3 not; nothing in it is a priority anyone set
+  were ever measured, so there is **no evidence either way**. Each finding says whether it was
+  checked against the source; nothing in it is a priority anyone set
   (`docs/tickets/T37-design-conformance-never-measured.md`).
-
-## Owed phone checks — cleared 2026-09-19
-
-All five ran on `Pixel_9_Pro_Fold_API_35` in one sitting: T25 (release crash sent, debug crash not,
-one event on the dashboard), T29 (offline banner, refusal wording, recovery), T13 (transport set,
-`dismiss()`, the offline-buffering pause), T14 (both ways of finishing the Activity), T10 (restore
-after `force-stop`, with the service watched from the first launch).
-
-Still owed on mobile, and not covered by that sitting: T3's D55 index fix and T7's skeletons, both
-named in T10's and T14's own "still owed" notes. Still owed on the car: T13's `skipNext` repeat-all
-wrap and a driving-state pass (T13, T14). All four are now collected in
-`docs/tickets/T35-owed-device-checks.md`.
 
 ## Known, not fixed
 
 - `songs/0CvN4z9xMVoRSi6iTjgp` (`mediaId` 190, "mighty") is 705 bytes of zeros in Firebase Storage
-  with `durationMs` 0 — a broken upload in the catalogue, not an app bug
-  (`docs/AAOS_A9_VERIFICATION.md`, 2026-09-17).
-
-- A 404 is called "No Connection" on the car (`docs/AAOS_A8_VERIFICATION.md`, "Findings recorded, not fixed here").
+  with `durationMs` 0 — a broken upload in the catalogue, not an app bug (A9 device pass,
+  2026-09-17).
+- A 404 is called "No Connection" on the car: `onPlaybackError` treats `cause is IOException` as a
+  network failure, and a bad HTTP response or an unparseable file is an `IOException` too
+  (`AutomotivePlayerViewModel`).
+- Offline, a seek backwards fails even inside the current track: ExoPlayer keeps no back-buffer, so
+  audio already played has to come from the network again, and the error overlay shows (A8).
+- After a track change while paused, the car's scrubber keeps the previous track's position until
+  playback starts (A8).
+- `CarRestrictionDialog`'s card has no touch guard, so tapping the body dismisses it while the driver
+  may still be reading the reason. Changing a refusal dialog's dismissal is a product call.
+- `CarAlbumScreen`, `CarPlaylistScreen` and `CarArtistScreen` are identical forwarders to
+  `CarDetailBody`, differing in one empty-state string; selecting it at the one call site removes
+  ~110 lines. The exact/prefix/substring match ladder exists four times (two DAO `CASE` blocks,
+  `matchQuality()`, `FirebasePlaylistRepository.nameMatchTier`) — a drift risk, not a task.
+- `core/data`'s test `FakeSongRepository.getSongsByIds` does not preserve request order, unlike every
+  real implementation.
+- `PlayerViewModel` has no unit tests. `:app` has no Robolectric, but `:core:playback` drives a real
+  `MediaController` on the JVM (`aaos-DESIGN.md` D64), so "the ViewModel is not JVM-testable" is an
+  assumption to check.
+- `CarAuthScreen` shows the wordmark "NyasaPlayer", where the system bar and the brand rule say
+  "Nyasa Music" (T37 finding 1).
+- 11 of the 12 gradient colours at the bottom of `AutomotiveColors.kt` have no reference; only
+  `CarGradientOrange` is used.
+- `SongDownloadManager.cancelDownload` has no caller on either surface.
+- `CarSystemBar`'s disabled-control branch is unreachable: every caller passes a click handler.
+- Mobile Home's notifications button does nothing (`HomeScreen.kt`, `onClick = { /* notifications */ }`).
+- `:app`'s backup rules are the template default (`allowBackup="true"`, no include or exclude), so
+  cloud backup and device transfer take the whole data directory: Room, preferences, downloaded
+  files and Crashlytics' unsent reports. Decide explicit excludes, or `allowBackup="false"`.
+- `:app` may not need `media3-exoplayer` or `media3-ui` — it imports neither. Unverified without a
+  build.
 - The outlined `CarPillButton` border is 1.4:1 against WCAG 1.4.11's 3:1 for component boundaries (non-text, outside NFR-2).
 - The queue's `RemoveConfirmDialog` renders inline inside its lazy item (`CarQueueScreen.kt:308`), not as a modal over the queue.
-- Six resolution sites still read the download index without awaiting it —
-  `PlayerViewModel.kt:190,195,213` and `AutomotivePlayerViewModel.kt:273,280,297`. T32 gave the two
-  suspend paths an await and left these: they are non-suspend, and a tap is far slower than the
-  load. If one ever lost the race the user would see "no connection" on a downloaded song
-  (`docs/tickets/T32-download-path-cache-race.md`, 2026-09-19).
-- 32 of `:core:playback`'s 106 tests were never challenged by the 2026-09-19 mutation sweep —
-  mostly `MediaBrowseTree`'s `getItem` and `search`, whose mutations would not compile
-  (`docs/TEST_MUTATION_SWEEP.md` lists them). No weakness shown, none ruled out either. The
-  17-test `MediaBrowseTree` block is now `docs/tickets/T36-sweep-mediabrowsetree-tests.md`.
+- Six resolution sites still read the download index without awaiting it — the `resolveLocalUri`
+  calls in `playSong` (two) and `shufflePlay` (one) of both `PlayerViewModel` and
+  `AutomotivePlayerViewModel`. T32 gave the two suspend paths an await and left these: they are
+  non-suspend, and a tap is far slower than the load. If one ever lost the race the user would see
+  "no connection" on a downloaded song.
 - `onControllerLost`'s single-attempt guard (`compareAndSet`) is untested on both sides, and
   untestable in the current harness: `ControllerConnection.reconnect()` resolves inside the first
   command, so no second command can arrive mid-rebuild. Two tests claimed to cover it and did not
   (T14's, renamed 2026-09-19; T27 hit the same wall). Testing it needs a seam that can hold a
   rebuild open.
-- A like may not survive a reconnect after Firestore was unreachable — seen once, not reproduced
-  (`docs/T13_VERIFICATION.md`, 2026-09-19). Ticketed as T33.
-- `AutomotiveContentViewModel` is past detekt's function threshold and now owns downloads too; its file-level `TooManyFunctions` note says the next slice to touch it should split it, and A9 added to it instead (PRD §6.3 names the content VM as screen 15's data source). Ticketed as T34.
 - `CarNavRail` maps `CarScreen` twice — `iconFor()` and `labelFor()` are back-to-back `when`
   blocks over the same enum (in `CarNavRail.kt`). `:app` already solved this shape with a
   data-driven `NavItem(route, labelResId, icon)` list (`NyasaBottomNavBar.kt:42`). Low risk today:
@@ -75,16 +94,20 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   A NOTICE file is the cheap fix if this ever matters for distribution.
 - The measurement harness models ~133dp more vertical room than a real head unit.
   `InContentSlot` (`CarUiCases.kt`) subtracts the app's own chrome — nav rail, system bar,
-  mini-player, margins — leaving 480dp at 1024x768, but the device also loses the OS status bar
-  and the climate bar and measured ~347dp. Two card-clipping defects reached a device through a
-  green suite because of it, and `the first content card ... drawn whole` still passes on the
-  broken build (mutation-checked). Teaching `ContentSlot` the OS chrome would re-baseline all 120
+  mini-player, margins — but not the OS status and climate bars a device also loses: at 1024x768
+  that left 480dp in the harness against ~347dp measured on the device. Two card-clipping defects
+  reached a device through a green suite because of it, and `the first content card ... drawn
+  whole` still passes on the broken build (mutation-checked). Teaching `ContentSlot` the OS chrome would re-baseline all 120
   cases, so it is its own piece of work. The full player has the same gap outside the slot: at the
-  800dp canvas T04's Up Next row passed while a 628dp AVD window clipped it off. T05 pins the
+  800dp canvas the Up Next row passed while a 628dp AVD window clipped it off. #103 pins the
   player cases to 628dp; setting the whole canvas to h628dp also squeezes the loading skeletons on
   Home, Favourites and the three detail screens, and one Downloads row, which is the rest of this.
+- `./gradlew test` runs most suites twice: `:automotive`'s as both `oem` and `playstore` (they
+  differ only by manifest, and no test reads the flavor), and the `:core:*` modules' in debug and
+  release. `testDebugUnitTest :automotive:testOemDebugUnitTest` runs each once; the lasting fix is a
+  `beforeVariants` rule disabling those host-test variants.
 - Detekt never scans test sources. `build.gradle.kts` scopes `source.setFrom(...)` to
-  `*/src/main/java` only, so the 80-odd files under `src/test` are unlinted — an unused import in
+  `*/src/main/java` only, so the 90-odd files under `src/test` are unlinted — an unused import in
   `CarTouchTargetMeasurementTest` passed a green `detekt` run and was found by review instead.
   Pre-existing, and adding the test roots will surface a backlog of its own.
 - The full player's transport row does not fill the column it sits in. Five controls at 76/76/96/76/76
@@ -104,7 +127,7 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
   capped list starts at the current item, but only once it falls past the first page — and was not
   checked. The likely fix is `rememberLazyListState(initialFirstVisibleItemIndex = currentIndex)`
   for the parked list.
-- The car's rail has no minimum window height. With the profile row (D77) it needs 452dp, so the
+- The car's rail has no minimum window height. With the profile row (D82) it needs 452dp, so the
   window needs 532dp, plus the offline banner's height when offline; a 1024x600 head unit clips the
   row by 104dp, and its four tabs alone already overflowed by 4dp. No minimum is documented and the
   measurement cases only run at a 628dp window, so nothing would catch it. A scrolling rail is the
@@ -112,5 +135,5 @@ wrap and a driving-state pass (T13, T14). All four are now collected in
 - The three Robolectric measurement classes can fail as a group under parallel Gradle workers,
   with `NoSuchMethodError` and "Could not write XML test results"; `--max-workers=1` passes
   cleanly. Reported by a review of PR #95 and reproduced there on a fresh daemon. Not reproduced
-  in this session across roughly a dozen runs, so it is recorded rather than diagnosed — but a
+  across roughly a dozen later runs (2026-09-20), so it is recorded rather than diagnosed — but a
   gate that fails on worker count and not on code is one nobody will trust for long.

@@ -47,10 +47,7 @@ private val SubtitleSize = 20.sp
 /**
  * Album detail — screen 11.
  *
- * The Download button arrived with A9, which moved `SongDownloadManager` out of `:app` and into
- * `:core:data`. Until then `:automotive` could reach `DownloadRepository` — Room bookkeeping —
- * but nothing that fetches a file, so a button here would have claimed a download was in progress
- * forever (D12). It is parked-only, and stays on screen disabled while driving.
+ * Download is parked-only: while driving it stays on screen, disabled (D12).
  */
 @Composable
 @Suppress("LongParameterList")
@@ -121,7 +118,7 @@ fun CarPlaylistScreen(
  *
  * Not `CarArtistLikedSongsScreen`: that one is scoped to the driver's likes and renders hearts
  * that remove rows on tap. This is every song the catalogue has by the artist, so it reuses the
- * album/playlist body, which has no like affordance (spec 3.4).
+ * album/playlist body, which has no like affordance (D46).
  */
 @Composable
 fun CarArtistScreen(

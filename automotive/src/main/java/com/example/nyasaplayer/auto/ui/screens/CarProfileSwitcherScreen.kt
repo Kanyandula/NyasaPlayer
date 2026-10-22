@@ -25,7 +25,7 @@ private val BodySize = 20.sp
 private val BodyLineHeight = 28.sp
 
 /**
- * Profile — screen 20, opened by the profile row at the bottom of the rail (D77).
+ * Profile — screen 20, opened by the profile row at the bottom of the rail (D82).
  *
  * A profile here is a **Firebase account**, not one of the platform's car users: switching those
  * needs privileged permissions the app does not hold, and it is a whole-vehicle change to put

@@ -28,7 +28,7 @@ class CarSearchScreenTest {
 
     /**
      * Under `NO_KEYBOARD` the sheet keeps no editable field, no Search CTA and no Songs chip —
-     * each would be a control that cannot do anything (FR-2.6, spec D31). A6 checked this by hand.
+     * each would be a control that cannot do anything (FR-2.6, D31).
      */
     @Test
     fun `no keyboard hides the field and its CTA but keeps browse-by`() {

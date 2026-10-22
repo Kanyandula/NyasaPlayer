@@ -33,10 +33,9 @@ private const val CompactModalWidthFraction = 0.72f
 /**
  * The dimmed backdrop every modal in the shell sits on, and the tap that dismisses it.
  *
- * All three modals — sign-out, playback error, restriction refusal — carried their own copy of
- * this until T22. Their *cards* are not all the same, so this owns the backdrop only and each
- * modal brings its own content: two of them use [CarModalCard], the restriction dialog has its
- * own geometry.
+ * All three modals — sign-out, playback error, restriction refusal — share it (T22). Their *cards*
+ * are not all the same, so this owns the backdrop only and each modal brings its own content: two
+ * of them use [CarModalCard], the restriction dialog has its own geometry.
  *
  * Anything placed in [content] that should not dismiss on tap must consume touches itself —
  * a tap that no child consumes bubbles here.
@@ -68,10 +67,9 @@ fun CarModalScrim(
  * dismissing the modal underneath the driver's finger. A card with no guard at all does leak that
  * way — measured, not assumed.
  *
- * `CarErrorOverlay` previously used `clickable(enabled = false)`, which blocks the tap just as
- * effectively; the reason to prefer this one is semantics, not dismissal. A disabled clickable
- * publishes an interactive-but-disabled node to accessibility services, announcing a control that
- * was never there (FR-2.6); `detectTapGestures` publishes nothing.
+ * Prefer this to `clickable(enabled = false)`: both block the tap, but a disabled clickable publishes
+ * an interactive-but-disabled node to accessibility services, announcing a control that was never
+ * there (FR-2.6); `detectTapGestures` publishes nothing.
  *
  * The restriction dialog deliberately does not use this: it is a fixed 780dp wide with its own
  * corner radius and padding.

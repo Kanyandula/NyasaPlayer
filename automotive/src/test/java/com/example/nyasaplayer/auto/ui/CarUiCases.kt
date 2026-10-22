@@ -310,8 +310,8 @@ private fun InCrampedContentSlot(content: @Composable BoxScope.() -> Unit) {
 /**
  * What the slot came to on the emulator with the offline banner up, screen margins included: the
  * panel's 768dp less the car's own bars, the app's system bar and its mini-player. Measured from
- * the screenshots in `docs/tickets/T30-remove-all-dialog-clipped.md`, where the card had 276dp to
- * live in — not a number chosen to make a point.
+ * T30's emulator screenshots, where the card had 276dp to live in — not a number chosen to make a
+ * point.
  */
 private val CrampedSlotHeight = 372.dp
 
@@ -323,8 +323,8 @@ private fun InAppWindow(content: @Composable BoxScope.() -> Unit) {
 
 /**
  * The app window on the reference AVD (1080x600px at 120dpi) once the OS status and climate bars
- * are taken, per `dumpsys window` (h628dp). The 800dp canvas let a clipped Up Next strip pass
- * (T05); see the harness-height entry in docs/BACKLOG.md.
+ * are taken, per `dumpsys window` (h628dp). The 800dp canvas let a clipped Up Next strip pass; see
+ * the harness-height entry in docs/BACKLOG.md.
  */
 private val AppWindowHeight = 628.dp
 
@@ -348,8 +348,8 @@ private val Songs = listOf(
 private val NowPlaying = Songs[1]
 
 /**
- * A real title and artist from the catalogue, at the length the old 536dp column could not hold:
- * on the AVD this rendered as "I will sing of your joy for..." with the artist cut too.
+ * A real title and artist from the catalogue, long enough to truncate on the AVD if the full
+ * player's column shrinks: a 536dp column rendered it as "I will sing of your joy for...".
  */
 private val LongTitleSong = Song(
     mediaId = "s7",
@@ -873,7 +873,7 @@ private fun playerCases(): List<CarUiCase> = listOf(
     PlayerCase("buffering, repeat one", BufferingSnapshot, liked = true),
     // A real-length title and artist, so the three suites measure the player with them in place.
     PlayerCase("playing, a full-length title and artist", PlayingSnapshot.copy(currentSong = LongTitleSong), true),
-    // Up Next (T04): PlayingSnapshot above has a next item; these are the two shapes without one.
+    // Up Next: PlayingSnapshot above has a next item; these are the two shapes without one.
     PlayerCase("last track, repeat off (no up next)", PausedSnapshot.copy(currentQueueIndex = Songs.lastIndex), false),
     PlayerCase(
         "empty queue (no up next)",

@@ -172,9 +172,9 @@ class ConnectedTransportTest {
 
     @Test
     fun removeFromQueue_onTheCurrentItem_refusesWithoutReporting() {
-        // The case T11's plan had to leave untested: `true` means the controller was reached, and a
-        // guard declining is not a failure — wiring an error here would put a dialog in front of a
-        // driver who tapped remove on the track that is playing.
+        // Needs a real controller (D64), so PlayerTransportTest cannot reach it: `true` means the
+        // controller was reached, and a guard declining is not a failure — wiring an error here would
+        // put a dialog in front of a driver who tapped remove on the track that is playing.
         assertTrue(transport.queue.removeFromQueue(0))
         idle()
 
@@ -200,7 +200,7 @@ class ConnectedTransportTest {
         assertEquals(0, unavailableReports)
     }
 
-    // ── The condition T11 could not reach ──
+    // ── A controller that was connected and is not any more (T11) ──
 
     @Test
     fun releasedController_isNotConnected_andEveryCommandRefuses() {

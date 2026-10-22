@@ -113,7 +113,7 @@ class SongDownloadManager @Inject constructor(
         _refusals.emit(reason)
     }
 
-    /** Not on [SongDownloads]: no screen offers it. Cancelling mid-flight is still phone-only. */
+    /** Not on [SongDownloads]: no screen on either surface calls it. */
     fun cancelDownload(mediaId: String) {
         scope.launch {
             _activeDownloads.update { it - mediaId }

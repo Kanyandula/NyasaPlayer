@@ -10,7 +10,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Release gate: whole driver journeys across the fourteen fixes, not per-row assertions.
+ * Release gate: whole driver journeys across the fourteen fixes, not per-row assertions. Row
+ * numbers are `FavouritesBoundaryTest`'s.
  *
  * Every step here is already covered in isolation by `FavouritesBoundaryTest` and
  * `FavouritesSnapshotTest`. What these add is the *composition* — the rows were fixed one at a
@@ -20,7 +21,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class FavouritesJourneyTest : FavouritesTestCase() {
 
-    /** Enter Favourites, unlike, leave, return. Rows #1, #2, #19-freeze, #20-guard. */
+    /** Enter Favourites, unlike, leave, return. Rows #1 and #2, D19's freeze, D20's guard. */
     @Test
     fun journey_unlikeHoldsTheRowUntilTheVisitEnds() = runTest {
         songs.songs.value = listOf(song("a"), song("b"), song("c"))

@@ -143,7 +143,7 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
-    // Artwork theme: hue from the cover, never raw colour (T38 / D-T38.3). Not -ktx: its only
+    // Artwork theme: hue from the cover, never raw colour (T38 / D77.3). Not -ktx: its only
     // addition is a get(target) operator nothing here uses.
     implementation(libs.androidx.palette)
 

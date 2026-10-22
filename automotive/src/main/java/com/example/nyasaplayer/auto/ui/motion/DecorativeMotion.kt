@@ -73,7 +73,7 @@ fun rememberAnimatorDurationScale(): State<Float> {
 /**
  * A decorative colour that eases to [target] when [animate] (from [decorativeMotionEnabled]) and
  * otherwise jumps straight to it: a parked update with animations off still lands, it just does not
- * move (NFR-6). While driving the artwork theme itself holds (D-T38.6), so this rarely has a change
+ * move (NFR-6). While driving the artwork theme itself holds (D77.6), so this rarely has a change
  * to show then.
  *
  * Eased in sRGB, not the Oklab `animateColorAsState` uses. Both ends are held to the CarRaised

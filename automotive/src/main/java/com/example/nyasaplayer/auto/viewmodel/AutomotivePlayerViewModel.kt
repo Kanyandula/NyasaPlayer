@@ -89,7 +89,7 @@ class AutomotivePlayerViewModel @Inject constructor(
 
         override fun onPlaybackError(error: PlaybackException) {
             // A player not trying to play (a paused restore, a guard-paused stream) leaves the driver
-            // nothing to act on (T3, D-T3.5); pressing play re-prepares it.
+            // nothing to act on (D57); pressing play re-prepares it.
             // ponytail: relies on PlaybackService calling play() before a load can fail; a command
             // path that sets playWhenReady after starting a load would swallow its error.
             if (!playbackState.value.playWhenReady) return
@@ -169,7 +169,7 @@ class AutomotivePlayerViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    /** The current cover's theme, applied only while parked (T07 / D-T38.6). */
+    /** The current cover's theme, applied only while parked (D77.6). */
     private fun observeArtworkTheme() {
         appliedArtworkTheme(
             coverUrls = stateCollector.playbackState.map { it.currentSong?.resolvedCoverUrl },
@@ -220,7 +220,7 @@ class AutomotivePlayerViewModel @Inject constructor(
      *
      * A failed or absent restore does nothing at all — the player stays empty, which is what it
      * would have been anyway. An error overlay here would put a dialog in front of a driver for
-     * something they cannot act on (spec D-T3.5).
+     * something they cannot act on (D57).
      */
     private fun restorePreviousSession() {
         viewModelScope.launch {

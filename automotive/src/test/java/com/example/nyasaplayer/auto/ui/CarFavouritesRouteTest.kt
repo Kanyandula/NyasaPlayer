@@ -14,8 +14,7 @@ import org.robolectric.RobolectricTestRunner
  * Screen 8 reads the favourites loading/error pair, not the catalogue's.
  *
  * Point [CarFavouritesRoute] at `contentState.errorMessage` and the first test fails; at
- * `contentState.isLoading` and the second does. That is the A4 review row #8 defect, which until
- * T1 nothing executable could catch.
+ * `contentState.isLoading` and the second does — a genres failure painted over screen 17 (D34).
  */
 @RunWith(RobolectricTestRunner::class)
 class CarFavouritesRouteTest {

@@ -10,12 +10,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Both system-bar controls are live from A7.
- *
- * Settings spent A2–A6 rendering disabled, which is the correct way to show a control with nowhere
- * to go (FR-2.6) and exactly the state this locks the bar out of now that it has a sheet: a
- * disabled control swallows its click, so the click would count zero. Profile was the third
- * control until it moved to the rail (D77); `CarNavRailTest` covers it there.
+ * Both system-bar controls are live. A disabled control — the right way to show one with nowhere to
+ * go (FR-2.6, D3) — swallows its click, so a regression to it would count zero here. The profile
+ * entry is in the rail (D82); `CarNavRailTest` covers it there.
  */
 @RunWith(RobolectricTestRunner::class)
 class CarSystemBarTest {

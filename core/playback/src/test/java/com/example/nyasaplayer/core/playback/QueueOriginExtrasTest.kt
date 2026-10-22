@@ -17,7 +17,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
 /**
- * T02: the origin the service publishes as session extras reaches every collector's snapshot, over a
+ * The origin the service publishes as session extras reaches every collector's snapshot, over a
  * real `MediaSession` and `MediaController`.
  */
 @OptIn(ExperimentalCoroutinesApi::class)

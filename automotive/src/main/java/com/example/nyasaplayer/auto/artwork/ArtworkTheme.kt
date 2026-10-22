@@ -53,8 +53,8 @@ data class ArtworkSwatches(
 
 /**
  * The theme for a cover's swatches: a hue from the artwork at the calibrated strength, darkened
- * until it composites no lighter than [CarRaised] (D-T38.3), or [ArtworkThemeDefaults] when the
- * cover offers no usable hue at all (D-T38.4).
+ * until it composites no lighter than [CarRaised] (D77.3), or [ArtworkThemeDefaults] when the
+ * cover offers no usable hue at all (D77.4).
  */
 fun artworkThemeFrom(swatches: ArtworkSwatches): ArtworkTheme {
     val primary = with(swatches) { firstUsable(vibrant, muted, darkVibrant, darkMuted, dominant) }
@@ -67,7 +67,7 @@ fun artworkThemeFrom(swatches: ArtworkSwatches): ArtworkTheme {
 /**
  * The two ambient tints are conditioned together, as if the secondary sat right on the primary's
  * centre: where the circles overlap their light adds, and one tint each at the ceiling measured over
- * it at the drift's lowest frame (T08). Stacking is the worst any window shape can do, so the pair
+ * it at the drift's lowest frame. Stacking is the worst any window shape can do, so the pair
  * holds on all of them. The full player's glow is a single layer and keeps its own ceiling.
  */
 internal fun artworkThemeFromSeeds(@ColorInt primary: Int, @ColorInt secondary: Int): ArtworkTheme {

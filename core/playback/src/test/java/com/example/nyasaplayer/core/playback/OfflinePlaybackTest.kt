@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The one offline rule both surfaces will share (A8, D71). Plain JVM: it reads two strings.
+ * The one offline rule both surfaces share (A8, D71, T28). Plain JVM: it reads two strings.
  *
  * `file:/` with one slash is what `File.toURI()` produces, which is how mobile builds local URIs.
  */

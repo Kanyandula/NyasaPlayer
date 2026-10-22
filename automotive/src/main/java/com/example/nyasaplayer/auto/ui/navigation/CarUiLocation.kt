@@ -5,7 +5,7 @@ enum class CarOverlay { FullPlayer, Queue }
 
 /**
  * Full-screen sheets over the shell rather than tabs: search and settings open from the system bar,
- * profile from the row under the rail's tabs (D77). None of them is a rail destination.
+ * profile from the row under the rail's tabs (D82). None of them is a rail destination.
  */
 enum class CarSheet { Settings, Profile, Search }
 
@@ -21,9 +21,8 @@ data class CarUiLocation(
     /**
      * The surface on top, or null for the tab itself.
      *
-     * Nothing reads this yet: [gate] refuses on [sheet], [textEntryActive] and [drillDepth] only,
-     * which is why the queue rendering above the full player while this said `FullPlayer` never
-     * misbehaved. Carried so the first rule that needs it has somewhere to read from.
+     * Nothing reads this yet: [gate] refuses on [sheet], [textEntryActive] and [drillDepth] only.
+     * Carried so the first rule that needs it has somewhere to read from.
      */
     val overlay: CarOverlay? = null,
     val drillDepth: Int = 0,

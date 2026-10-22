@@ -31,9 +31,8 @@ import java.util.Locale
  * metadata the design sets at 15 and 16sp deliberately. So the floor applies when the nearest
  * clickable ancestor holds exactly one text.
  *
- * Rail tabs used to be exempt, because an 80dp rail could not hold "Favourites" at 18sp. The rail
- * is 176dp now and its labels sit beside their icons at 18sp, so the exemption is gone and NFR-3
- * is enforced as written — shrinking a rail label back below the floor fails here.
+ * Rail tab labels sit beside their icons and are held to 18sp like any control's label, so NFR-3
+ * is enforced as written — shrinking a rail label below the floor fails here.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

@@ -25,7 +25,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The profile row at the bottom of the rail (D77). Measured between node bounds, so it reads
+ * The profile row at the bottom of the rail (D82). Measured between node bounds, so it reads
  * layout only and not Robolectric's font metrics.
  */
 @RunWith(RobolectricTestRunner::class)

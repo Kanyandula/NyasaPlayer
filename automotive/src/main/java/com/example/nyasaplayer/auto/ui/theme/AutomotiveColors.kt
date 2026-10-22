@@ -50,9 +50,8 @@ val CarDivider = Color(0x14FFFFFF)
  * Destructive actions as **foreground** — red text on its own 15% wash (`CarSignOutRow`, the
  * queue's "Clear Queue").
  *
- * The value `CarLibraryScreen` has shipped privately since A3, promoted here rather than copied when
- * sign-out moved to Settings (A7). Measures 4.59:1 against the washed chrome it lands on, which is
- * AA, not AAA — see the design doc's contrast table.
+ * Measures 4.59:1 against the washed chrome it lands on, which is AA, not AAA — see the design doc's
+ * contrast table.
  *
  * **Never use this as a solid fill under white text.** It measures 3.49:1 that way, which fails AA.
  * That is what [CarSignOutRedSolid] is for, and why the two are separate tokens rather than one
@@ -68,8 +67,6 @@ val CarSignOutRed = Color(0xFFEF5350)
  * White text and icon on this fill measure 5.62:1 (AA) from rendered pixels. The button's edge
  * against the modal card `#181824` is 3.13:1, clearing the 3:1 that a non-text UI boundary needs,
  * so the fill still reads as a button.
- *
- * A3 through A7 used [CarSignOutRed] here, at 3.49:1 — below AA. This token is the fix (T21).
  */
 val CarSignOutRedSolid = Color(0xFFC62828)
 
@@ -98,31 +95,30 @@ val CarErrorText = Color(0xFFFF8A80)
 val CarAmbientBlue = Color(0x641A3A5C)
 val CarAmbientPurple = Color(0x3C643CB4)
 
-// Gradient pairs shared across AAOS screens. These are content artwork gradients,
-// not brand — they stay as they are.
+// Content artwork gradients, not brand.
 
-// Pink → Dark Red  (Home: Radio, Browse: Trending Now)
+// Pink → Dark Red
 val CarGradientPink = Color(0xFFEC4899)
 val CarGradientRose = Color(0xFFBE123C)
 
-// Red → Dark Red  (Home: Favorites)
+// Red → Dark Red
 val CarGradientRed = Color(0xFFEF4444)
 val CarGradientRedDark = Color(0xFFB91C1C)
 
-// Blue → Indigo  (Home: Trending)
+// Blue → Indigo
 val CarGradientBlue = Color(0xFF3B82F6)
 val CarGradientIndigo = Color(0xFF4338CA)
 
-// Blue → Cyan  (Browse: New Releases)
+// Blue → Cyan
 val CarGradientBlueCyan = Color(0xFF06B6D4)
 
-// Green → Dark Green  (Browse: Top Charts)
+// Green → Dark Green
 val CarGradientGreen = Color(0xFF22C55E)
 val CarGradientGreenDark = Color(0xFF059669)
 
-// Orange → Dark Orange  (Browse: Genres, Error icon start)
+// Orange → Dark Orange (CarGradientOrange starts the error icon)
 val CarGradientOrange = Color(0xFFF97316)
 val CarGradientOrangeDark = Color(0xFFD97706)
 
-// Indigo → Dark Indigo  (Browse: Podcasts)
+// Indigo → Dark Indigo
 val CarGradientIndigoPurple = Color(0xFF6366F1)

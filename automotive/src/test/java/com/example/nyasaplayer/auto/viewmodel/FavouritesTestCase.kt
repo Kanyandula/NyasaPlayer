@@ -51,7 +51,7 @@ abstract class FavouritesTestCase {
     protected fun likedSong(id: String) = LikedSong(mediaId = id, likedAt = 1L)
 
     /**
-     * Exactly what screen 8 draws, mirroring AutomotiveApp.kt:465. Asserting on `likedSongs`
+     * Exactly what screen 8 draws, mirroring `CarFavouritesRoute` in AutomotiveApp.kt. Asserting on `likedSongs`
      * alone would prove nothing about the screen; asserting on `favourites` alone would skip
      * the case where no freeze was ever taken.
      */

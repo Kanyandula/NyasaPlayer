@@ -363,7 +363,7 @@ class TestArtistRepository : ArtistRepository {
     override suspend fun getArtistsByPopularity(limit: Int): List<Artist> =
         artists.value.sortedByDescending { it.popularity }.take(limit)
 
-    // T4 adds artist search for the custom launcher; the browse tree stays song-only (spec 5).
+    // Artist search is launcher-only; the browse tree stays song-only (D47).
     override suspend fun searchArtists(query: String, limit: Int): List<Artist> =
         error("MediaBrowseTree does not search artists")
 }

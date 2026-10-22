@@ -173,7 +173,10 @@ class PlayerViewModel @Inject constructor(
         }.launchIn(viewModelScope)
     }
 
-    /** The car's stall guard, now mobile's too (T28). */
+    /**
+     * Pauses a stream that cannot load offline, by the same `isStreamStalledOffline` rule the car uses
+     * (T28) — though without the car's confirm delay.
+     */
     private fun handleOfflineBuffering(snapshot: PlaybackSnapshot) {
         if (snapshot.isStreamStalledOffline(isOnline)) {
             stateCollector.transport.pause()
@@ -254,8 +257,7 @@ class PlayerViewModel @Inject constructor(
 
     fun togglePlayPause() {
         val transport = stateCollector.transport
-        // Reads the live player, as this did before the transport existed: the snapshot's
-        // isPlaying lags a listener callback behind it.
+        // Reads the live player: the snapshot's isPlaying lags a listener callback behind it.
         val isPlaying = transport.isPlaying() ?: run {
             // The query is silent by design and cannot trigger a rebuild, so ask for the toggle and
             // let it fail: that routes through the same reconnect every other control gets, and the

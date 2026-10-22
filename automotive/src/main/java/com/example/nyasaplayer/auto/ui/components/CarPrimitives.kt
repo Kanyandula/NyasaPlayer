@@ -13,8 +13,8 @@ import com.example.nyasaplayer.auto.ui.theme.CarTouchTargetSize
  * clickable whose drawn size is smaller than [CarTouchTargetSize] — icon buttons,
  * hearts, transport controls, chevrons.
  *
- * Do not remove it to tighten spacing. Every sub-minimum target in the HTML prototype
- * (docs/aaos-screens.html) was introduced exactly that way.
+ * Do not remove it to tighten spacing. Every sub-minimum target in the original HTML prototype
+ * was introduced exactly that way.
  *
  * Existing code often writes `Modifier.size(CarTouchTargetSize)` instead, which pins an
  * exact box. Prefer this modifier where the target is a floor and the content may be

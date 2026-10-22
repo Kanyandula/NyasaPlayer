@@ -110,10 +110,10 @@ class FavouritesSnapshotTest : FavouritesTestCase() {
     }
 
     /**
-     * Added beyond the brief's eight. Every one of those stayed green with the `?:` in
-     * `favourites = state.favourites ?: state.likedSongs` replaced by a plain
-     * `state.likedSongs` — none of them unlikes a second time *after* the live flow has moved,
-     * which is the only way a re-freeze is observable. Without this the never-re-freeze half of
+     * Every other test stayed green with the `?:` in
+     * `favourites = state.favourites ?: state.likedSongs` replaced by a plain `state.likedSongs` —
+     * none of them unlikes a second time *after* the live flow has moved, which is the only way a
+     * re-freeze is observable. Without this the never-re-freeze half of
      * the guard is deletable with no test going red.
      */
     @Test
@@ -237,7 +237,7 @@ class FavouritesSnapshotTest : FavouritesTestCase() {
 
     @Test
     fun unfrozenUnlike_pendsAndWritesWithoutTakingAFreeze() = runTest {
-        // The artist liked-songs drill-down (spec D25): a live list that removes rows
+        // The artist liked-songs drill-down (D25): a live list that removes rows
         // immediately. A freeze taken there would leak into the next Favourites visit, because
         // closeFavourites() is driven by a tab change and the drill-down stays on Library.
         songs.songs.value = listOf(song("a"), song("b"))
@@ -258,7 +258,7 @@ class FavouritesSnapshotTest : FavouritesTestCase() {
     fun unfrozenToggleAfterAFreeze_leavesTheFreezeIntact() = runTest {
         // Pins the `else` branch of the freeze capture, which is the identity: an unfrozen toggle
         // must preserve a freeze already taken, not clear it. No other test drives freeze = true
-        // followed by freeze = false, so changing that branch to `null` passes all 13 others —
+        // followed by freeze = false, so changing that branch to `null` passes every other test —
         // and a driver who unlikes on Favourites, drills into an artist, unlikes there and comes
         // back would find the held-back row silently reconciled.
         songs.songs.value = listOf(song("a"), song("b"))
